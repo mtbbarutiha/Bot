@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'دور دوریا',
-        short_name: 'دور دوریا',
+        name: 'Pet Dat',
+        short_name: 'Pet Dat',
         description: 'همبازی برای پت‌ات پیدا کن',
         theme_color: '#b6e0fe',
         background_color: '#f0f9ff',

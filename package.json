@@ -2,7 +2,7 @@
   "name": "hambazi",
   "version": "1.0.0",
   "private": true,
-  "description": "همبازی — پیدا کردن بازی برای سکشن (فاز ۱: UI)",
+  "description": "Pet Dat — پیدا کردن همبازی برای پت (فاز ۱: UI)",
   "scripts": {
     "dev": "npm run dev -w @hambazi/web",
     "build": "npm run build -w @hambazi/web",

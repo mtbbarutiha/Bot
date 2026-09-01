@@ -6,7 +6,7 @@ export function WelcomePage() {
   return (
     <div className="welcome-page">
       <div className="welcome-top">
-        <div className="welcome-logo">دور دوریا</div>
+        <div className="welcome-logo">Pet Dat</div>
         <div className="welcome-wave">
           <div className="welcome-pet">🐱</div>
         </div>
