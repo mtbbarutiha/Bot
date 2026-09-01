@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Globe, MapPin, Send, Smartphone } from 'lucide-react';
+import { PetAvatar } from '../components/PetAvatar';
 import { CURRENT_OWNER, MY_PET, formatAge } from '../data/mock';
 
 export function ProfilePage() {
@@ -8,9 +10,12 @@ export function ProfilePage() {
   return (
     <>
       <div className="profile-hero">
-        <div className="profile-avatar">{MY_PET.emoji}</div>
+        <PetAvatar type={MY_PET.type} size="lg" className="profile-avatar-wrap" />
         <div className="profile-name">{CURRENT_OWNER.name}</div>
-        <div className="profile-city">📍 {CURRENT_OWNER.city}</div>
+        <div className="profile-city">
+          <MapPin size={14} strokeWidth={2} />
+          {CURRENT_OWNER.city}
+        </div>
       </div>
 
       <div className="profile-section">
@@ -20,7 +25,7 @@ export function ProfilePage() {
         </div>
 
         <div className="my-pet-chip">
-          <div className="avatar">{MY_PET.emoji}</div>
+          <PetAvatar type={MY_PET.type} size="sm" />
           <div>
             <h3>{MY_PET.name}</h3>
             <p>{MY_PET.breed} · {formatAge(MY_PET)} · {MY_PET.neighborhood}</p>
@@ -46,18 +51,18 @@ export function ProfilePage() {
         </button>
 
         <div className="menu-item">
-          <div className="menu-icon">✈️</div>
+          <div className="menu-icon"><Send size={18} strokeWidth={2} /></div>
           <div className="menu-text">
             <strong>ربات تلگرام</strong>
             <small>petdate — فاز بعدی</small>
           </div>
         </div>
         <div className="menu-item">
-          <div className="menu-icon">🌐</div>
+          <div className="menu-icon"><Globe size={18} strokeWidth={2} /></div>
           <div className="menu-text"><strong>وب</strong><small>فعال</small></div>
         </div>
         <div className="menu-item">
-          <div className="menu-icon">📱</div>
+          <div className="menu-icon"><Smartphone size={18} strokeWidth={2} /></div>
           <div className="menu-text"><strong>PWA</strong><small>قابل نصب</small></div>
         </div>
       </div>

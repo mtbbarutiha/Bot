@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Check, Clock, Mail, MessageCircle } from 'lucide-react';
+import { PetAvatar } from '../components/PetAvatar';
 import { MOCK_MATCHES, MY_PET, formatTimeAgo } from '../data/mock';
 
 export function MatchesPage() {
@@ -25,7 +27,10 @@ export function MatchesPage() {
   return (
     <>
       <div className="page-title-block">
-        <h1>درخواست‌ها 💌</h1>
+        <h1>
+          درخواست‌ها
+          <Mail size={22} className="title-icon" />
+        </h1>
         <p>برای {MY_PET.name} · {pendingCount} جدید</p>
       </div>
 
@@ -34,12 +39,14 @@ export function MatchesPage() {
           className={`match-tab${tab === 'pending' ? ' active' : ''}`}
           onClick={() => setTab('pending')}
         >
+          <Clock size={14} strokeWidth={2} />
           در انتظار ({pendingCount})
         </button>
         <button
           className={`match-tab${tab === 'accepted' ? ' active' : ''}`}
           onClick={() => setTab('accepted')}
         >
+          <Check size={14} strokeWidth={2} />
           پذیرفته
         </button>
       </div>
@@ -49,7 +56,7 @@ export function MatchesPage() {
           {filtered.map((match) => (
             <div key={match.id} className="match-card">
               <div className="match-card-header">
-                <div className="match-avatar">{match.fromPet.emoji}</div>
+                <PetAvatar type={match.fromPet.type} size="sm" />
                 <div className="match-info">
                   <h3>{match.fromPet.name}</h3>
                   <p>{match.fromPet.breed} · {formatTimeAgo(match.createdAt)}</p>
@@ -58,18 +65,20 @@ export function MatchesPage() {
               {match.message && <p className="match-msg">«{match.message}»</p>}
               {match.status === 'pending' ? (
                 <div className="match-actions">
-                  <button className="btn-accept" onClick={() => handleAccept(match.id)}>✓ قبول</button>
+                  <button className="btn-accept" onClick={() => handleAccept(match.id)}>
+                    <Check size={16} strokeWidth={2.5} />
+                    قبول
+                  </button>
                   <button className="btn-reject" onClick={() => handleReject(match.id)}>رد</button>
-                  <Link to={`/pets/${match.fromPet.id}`} className="btn-reject" style={{ textAlign: 'center', lineHeight: '2.4' }}>
-                    پروفایل
-                  </Link>
+                  <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">پروفایل</Link>
                 </div>
               ) : (
                 <div className="match-actions">
-                  <button className="btn-reject" disabled style={{ opacity: 0.5 }}>💬 چت (فاز بعدی)</button>
-                  <Link to={`/pets/${match.fromPet.id}`} className="btn-accept" style={{ textAlign: 'center', lineHeight: '2.4' }}>
-                    پروفایل
-                  </Link>
+                  <button className="btn-reject" disabled style={{ opacity: 0.5 }}>
+                    <MessageCircle size={16} strokeWidth={2} />
+                    چت (فاز بعدی)
+                  </button>
+                  <Link to={`/pets/${match.fromPet.id}`} className="btn-accept btn-profile">پروفایل</Link>
                 </div>
               )}
             </div>
@@ -77,7 +86,9 @@ export function MatchesPage() {
         </div>
       ) : (
         <div className="empty-state">
-          <div className="icon">💌</div>
+          <div className="empty-icon">
+            <Mail size={40} strokeWidth={1.5} />
+          </div>
           <h3>{tab === 'pending' ? 'درخواست جدیدی نیست' : 'هنوز مچی نداری'}</h3>
           <Link to="/explore" className="cta-btn" style={{ display: 'inline-block', marginTop: 16, padding: '12px 24px' }}>
             جستجو

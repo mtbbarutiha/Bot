@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight } from 'lucide-react';
 import type { PetGender, PetSize, PetType } from '../types';
 import { PET_GENDER_LABELS, PET_SIZE_LABELS, PET_TYPE_LABELS } from '../types';
 
@@ -48,7 +49,7 @@ export function AddPetPage() {
         style={{ marginBottom: 16 }}
         aria-label="بازگشت"
       >
-        →
+        <ArrowRight size={20} strokeWidth={2} />
       </button>
 
       <h1>ثبت پت جدید</h1>
@@ -152,11 +153,11 @@ export function AddPetPage() {
         <div style={{ background: 'var(--blue-50)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 20 }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
             <input type="checkbox" checked={form.vaccinated} onChange={(e) => update('vaccinated', e.target.checked)} />
-            <span>واکسینه شده 💉</span>
+            <span>واکسینه شده</span>
           </label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <input type="checkbox" checked={form.neutered} onChange={(e) => update('neutered', e.target.checked)} />
-            <span>عقیم‌شده ✂️</span>
+            <span>عقیم‌شده</span>
           </label>
         </div>
 

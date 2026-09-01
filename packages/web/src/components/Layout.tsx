@@ -1,10 +1,12 @@
 import { NavLink, Outlet } from 'react-router-dom';
+import { Home, LayoutGrid, Mail, User } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-const navItems = [
-  { to: '/', icon: '🏠' },
-  { to: '/explore', icon: '⊞' },
-  { to: '/matches', icon: '💌' },
-  { to: '/profile', icon: '👤' },
+const navItems: { to: string; icon: LucideIcon; label: string }[] = [
+  { to: '/', icon: Home, label: 'خانه' },
+  { to: '/explore', icon: LayoutGrid, label: 'جستجو' },
+  { to: '/matches', icon: Mail, label: 'درخواست‌ها' },
+  { to: '/profile', icon: User, label: 'پروفایل' },
 ];
 
 export function Layout() {
@@ -19,9 +21,10 @@ export function Layout() {
             key={item.to}
             to={item.to}
             end={item.to === '/'}
-            className={({ isActive }) => (isActive ? 'active' : '')}
+            className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+            aria-label={item.label}
           >
-            {item.icon}
+            <item.icon size={22} strokeWidth={2} />
           </NavLink>
         ))}
       </nav>

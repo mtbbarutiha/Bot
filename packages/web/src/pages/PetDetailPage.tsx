@@ -1,5 +1,15 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import {
+  ArrowRight,
+  Check,
+  Heart,
+  MessageCircle,
+  PawPrint,
+  Phone,
+  Share2,
+} from 'lucide-react';
+import { PetAvatar } from '../components/PetAvatar';
 import { getPetById, formatAge, formatDistance, MY_PET } from '../data/mock';
 import { PET_TYPE_LABELS } from '../types';
 
@@ -15,7 +25,9 @@ export function PetDetailPage() {
   if (!pet) {
     return (
       <div className="empty-state" style={{ paddingTop: 80 }}>
-        <div className="icon">😿</div>
+        <div className="empty-icon">
+          <PawPrint size={40} strokeWidth={1.5} />
+        </div>
         <h3>پت پیدا نشد</h3>
         <button className="cta-btn" style={{ marginTop: 16 }} onClick={() => navigate('/explore')}>
           بازگشت
@@ -33,13 +45,17 @@ export function PetDetailPage() {
   return (
     <div className="detail-page">
       <div className="detail-header">
-        <button className="icon-btn" onClick={() => navigate(-1)} aria-label="بازگشت">→</button>
+        <button className="icon-btn" onClick={() => navigate(-1)} aria-label="بازگشت">
+          <ArrowRight size={20} strokeWidth={2} />
+        </button>
         <h1>جزئیات</h1>
         <div className="detail-header-actions">
-          <button className="icon-btn" onClick={() => setLiked(!liked)}>
-            {liked ? '❤️' : '🤍'}
+          <button className="icon-btn" onClick={() => setLiked(!liked)} aria-label="علاقه‌مندی">
+            <Heart size={20} strokeWidth={2} fill={liked ? 'currentColor' : 'none'} className={liked ? 'icon-liked' : ''} />
           </button>
-          <button className="icon-btn">↗</button>
+          <button className="icon-btn" aria-label="اشتراک">
+            <Share2 size={20} strokeWidth={2} />
+          </button>
         </div>
       </div>
 
@@ -47,7 +63,7 @@ export function PetDetailPage() {
         <p className="brand">{pet.breed}</p>
         <p className="subtitle">{PET_TYPE_LABELS[pet.type]}</p>
         <div className="glow-circle">
-          <span className="pet-emoji">{pet.emoji}</span>
+          <PetAvatar type={pet.type} size="xl" />
         </div>
         <h2 className="title">{pet.name}</h2>
         <div className="price-pill">{formatDistance(pet.distanceKm)}</div>
@@ -71,22 +87,29 @@ export function PetDetailPage() {
           </div>
         </div>
 
-        {pet.bio && (
-          <p className="detail-bio">{pet.bio}</p>
-        )}
+        {pet.bio && <p className="detail-bio">{pet.bio}</p>}
 
         <div className="detail-tags">
           {pet.traits.map((t) => (
             <span key={t} className="tag">{t}</span>
           ))}
-          {pet.vaccinated && <span className="tag green">💉 واکسینه</span>}
+          {pet.vaccinated && <span className="tag green">واکسینه</span>}
         </div>
       </div>
 
       {!isMyPet && (
-        <div className="detail-cta">
-          <button className="cta-btn" onClick={handleRequest} disabled={requested}>
-            {requested ? '✓ درخواست ارسال شد' : `🐾 درخواست همبازی برای ${MY_PET.name}`}
+        <div className="detail-action-bar">
+          <button className="action-circle" aria-label="تماس">
+            <Phone size={18} strokeWidth={2} />
+          </button>
+          <button className="action-circle" aria-label="پیام">
+            <MessageCircle size={18} strokeWidth={2} />
+          </button>
+          <button className="cta-main" onClick={handleRequest} disabled={requested}>
+            <span className="paw">
+              {requested ? <Check size={16} strokeWidth={2.5} /> : <PawPrint size={16} strokeWidth={2} />}
+            </span>
+            <span>{requested ? 'درخواست ارسال شد' : `درخواست همبازی برای ${MY_PET.name}`}</span>
           </button>
         </div>
       )}

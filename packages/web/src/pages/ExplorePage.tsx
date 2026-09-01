@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 import { PetGridCard } from '../components/PetGridCard';
-import { MOCK_PETS, MY_PET } from '../data/mock';
+import { CategoryPetIcon } from '../components/PetAvatar';
+import { CURRENT_OWNER, MOCK_PETS, MY_PET } from '../data/mock';
 import type { PetType } from '../types';
-import { PET_TYPE_EMOJI, PET_TYPE_LABELS } from '../types';
+import { PET_TYPE_LABELS } from '../types';
 
 const ALL = 'all' as const;
 const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird', 'rabbit'];
@@ -26,16 +28,23 @@ export function ExplorePage() {
       <div className="home-header compact">
         <div className="greeting">
           <h1>جستجو</h1>
-          <p>{filtered.length} پت نزدیک</p>
+          <p>{filtered.length} پت نزدیک {CURRENT_OWNER.city}</p>
         </div>
-        <div className="search-bar">
-          <input
-            type="search"
-            placeholder="جستجوی نژاد، نام..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          <span className="search-icon">🔍</span>
+        <div className="search-row-inline">
+          <div className="search-bar">
+            <input
+              type="search"
+              placeholder="جستجوی نژاد، نام..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            <span className="search-icon">
+              <Search size={18} strokeWidth={2} />
+            </span>
+          </div>
+          <button className="filter-btn" aria-label="فیلتر">
+            <SlidersHorizontal size={18} strokeWidth={2} />
+          </button>
         </div>
       </div>
 
@@ -48,7 +57,7 @@ export function ExplorePage() {
               onClick={() => setActiveCategory(cat)}
             >
               <div className="category-circle">
-                {cat === ALL ? '🐾' : PET_TYPE_EMOJI[cat]}
+                <CategoryPetIcon type={cat} />
               </div>
               <span>{cat === ALL ? 'همه' : PET_TYPE_LABELS[cat]}</span>
             </button>
@@ -63,7 +72,9 @@ export function ExplorePage() {
           </div>
         ) : (
           <div className="empty-state">
-            <div className="icon">😿</div>
+            <div className="empty-icon">
+              <Search size={40} strokeWidth={1.5} />
+            </div>
             <h3>پتی پیدا نشد</h3>
           </div>
         )}

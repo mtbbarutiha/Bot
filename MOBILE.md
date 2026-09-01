@@ -4,10 +4,15 @@
 
 این لینک رو توی **مرورگر گوشی** (Safari / Chrome) باز کن:
 
-**https://spotty-buses-clap.loca.lt**
+**https://stage-placed-passed-believed.trycloudflare.com/welcome**
 
-> اگر صفحهٔ «Tunnel Reminder» اومد، دکمه **Click to Continue** رو بزن.
-> این لینک موقتیه و وقتی سرور خاموش بشه کار نمی‌کنه.
+| صفحه | لینک |
+|------|------|
+| خوش‌آمد | `/welcome` |
+| خانه | `/` |
+| جزئیات پت | `/pets/1` |
+
+> این لینک موقتیه — وقتی سرور خاموش بشه کار نمی‌کنه.
 
 ### نصب به‌صورت اپ (PWA)
 1. لینک رو باز کن

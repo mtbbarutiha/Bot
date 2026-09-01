@@ -81,8 +81,9 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 
 .location-icon {
   width: 36px; height: 36px; border-radius: 50%;
-  background: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.85);
   display: flex; align-items: center; justify-content: center;
+  color: var(--blue-500);
 }
 
 .location-text small { display: block; font-size: 0.7rem; color: var(--text-muted); }
@@ -94,8 +95,11 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   width: 40px; height: 40px; border-radius: 50%;
   background: var(--white);
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; box-shadow: var(--shadow-sm); position: relative;
+  box-shadow: var(--shadow-sm); position: relative;
+  color: var(--text);
 }
+
+.icon-liked { color: #ef4444; }
 
 .icon-btn .badge-dot {
   position: absolute; top: 6px; right: 6px;
@@ -104,7 +108,12 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 
 .greeting { padding: 4px 20px 12px; }
-.greeting h1 { font-size: 1.75rem; font-weight: 800; }
+.greeting h1 {
+  font-size: 1.75rem; font-weight: 800;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.greeting-paw { color: var(--blue-500); flex-shrink: 0; }
 .greeting p { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
 
 .search-bar {
@@ -123,7 +132,9 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 
 .search-icon {
   position: absolute; left: 16px; top: 50%;
-  transform: translateY(-50%); color: var(--text-light);
+  transform: translateY(-50%);
+  color: var(--text-light);
+  display: flex; align-items: center;
 }
 
 .home-body { padding: 20px 0; }
@@ -159,6 +170,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .category-item.active .category-circle {
   background: var(--black);
   box-shadow: var(--shadow-md);
+  color: white;
 }
 
 .category-item span { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); }
@@ -179,16 +191,16 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .pet-grid-card.lavender { background: var(--lavender); }
 .pet-grid-card.pink { background: var(--pink); }
 
-.pet-grid-card .add-btn {
-  position: absolute; top: 10px; left: 10px;
-  width: 28px; height: 28px; border-radius: 50%;
-  background: var(--white);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; font-weight: 700; box-shadow: var(--shadow-sm); z-index: 2;
+.pet-grid-card .pet-img {
+  display: flex; justify-content: center; margin: 8px 0 10px;
 }
 
-.pet-grid-card .pet-img {
-  font-size: 3rem; text-align: center; margin: 8px 0 10px;
+.pet-grid-card .add-btn {
+  position: absolute; top: 10px; left: 10px;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: var(--shadow-sm); z-index: 2; color: var(--text);
 }
 
 .pet-grid-card .pet-name { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
@@ -197,6 +209,8 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   display: flex; align-items: center; gap: 4px;
   font-size: 0.75rem; color: var(--text-muted); margin-bottom: 6px;
 }
+
+.pet-grid-card .pet-rating svg { color: #f59e0b; }
 
 .pet-grid-card .pet-distance { font-size: 0.85rem; font-weight: 800; }
 
@@ -231,13 +245,13 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   padding: 0 8px; box-shadow: var(--shadow-nav); z-index: 100;
 }
 
-.floating-nav a {
+.floating-nav .nav-item {
   width: 44px; height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.2rem; color: #6b7280; transition: all 0.2s;
+  color: #6b7280; transition: all 0.2s;
 }
 
-.floating-nav a.active {
+.floating-nav .nav-item.active {
   background: var(--blue-400); color: white;
   box-shadow: 0 4px 12px rgba(59,130,246,0.4);
 }
@@ -264,8 +278,6 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   display: flex; align-items: center; justify-content: center;
   margin: 0 auto 16px;
 }
-
-.glow-circle .pet-emoji { font-size: 5.5rem; }
 
 .detail-hero .title { font-size: 1.5rem; font-weight: 800; margin-bottom: 10px; }
 
@@ -338,7 +350,14 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   padding-bottom: 0;
 }
 
-.welcome-pet { font-size: 8rem; margin-bottom: -30px; position: relative; z-index: 1; }
+.welcome-pet-icon {
+  width: 160px; height: 160px; border-radius: 50%;
+  background: white;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--blue-500);
+  box-shadow: var(--shadow-md);
+  margin-bottom: -30px; position: relative; z-index: 1;
+}
 
 .welcome-content { padding: 48px 28px 40px; flex: 1; }
 
@@ -370,7 +389,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   width: 44px; height: 44px; border-radius: 50%;
   background: var(--blue-400);
   display: flex; align-items: center; justify-content: center;
-  font-size: 1.1rem; margin-right: auto;
+  flex-shrink: 0; margin-right: auto; color: white;
 }
 
 .welcome-go .arrows { letter-spacing: -2px; opacity: 0.7; }
@@ -385,6 +404,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 
 .match-tab {
+  display: inline-flex; align-items: center; gap: 6px;
   padding: 8px 16px; border-radius: var(--radius-full);
   font-size: 0.85rem; font-weight: 600;
   background: #f3f4f6; color: var(--text-muted);
@@ -417,13 +437,15 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 
 .match-actions { display: flex; gap: 8px; }
-.match-actions button {
+.match-actions button, .btn-profile {
   flex: 1; padding: 10px; border-radius: var(--radius-full);
   font-size: 0.85rem; font-weight: 700;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
 
 .btn-accept { background: var(--blue-glow); color: var(--text); }
 .btn-reject { background: #f3f4f6; color: var(--text-muted); }
+.btn-profile { background: var(--blue-100); color: var(--text); text-align: center; }
 
 /* Profile */
 .profile-hero {
@@ -439,7 +461,34 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 
 .profile-name { font-size: 1.25rem; font-weight: 800; }
-.profile-city { font-size: 0.85rem; color: var(--text-muted); }
+.profile-hero .profile-avatar-wrap { margin: 0 auto 12px; }
+
+.profile-city {
+  font-size: 0.85rem; color: var(--text-muted);
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+
+.page-title-block h1 {
+  font-size: 1.5rem; font-weight: 800;
+  display: flex; align-items: center; gap: 8px;
+}
+
+.title-icon { color: var(--blue-500); }
+
+.search-row-inline {
+  display: flex; gap: 10px; padding: 0 20px 16px; align-items: center;
+}
+
+.search-row-inline .search-bar { flex: 1; margin: 0; }
+
+.empty-icon {
+  width: 72px; height: 72px; border-radius: 50%;
+  background: var(--blue-100);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 12px; color: var(--blue-500);
+}
+
+.empty-state .icon { display: none; }
 
 .profile-section { padding: 20px; }
 
@@ -494,7 +543,6 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .menu-text small { font-size: 0.75rem; color: var(--text-muted); }
 
 .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); }
-.empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
 .empty-state h3 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: 6px; }
 
 .toast {

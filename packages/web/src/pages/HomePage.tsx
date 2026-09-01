@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Bell, Mail, MapPin, PawPrint, Search } from 'lucide-react';
 import { PetGridCard } from '../components/PetGridCard';
+import { CategoryPetIcon } from '../components/PetAvatar';
 import { MOCK_MATCHES, MY_PET, getNearbyPets } from '../data/mock';
 import type { PetType } from '../types';
-import { PET_TYPE_EMOJI, PET_TYPE_LABELS } from '../types';
+import { PET_TYPE_LABELS } from '../types';
 
 const ALL = 'all' as const;
 const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird'];
@@ -36,7 +38,9 @@ export function HomePage() {
       <div className="home-header">
         <div className="top-bar">
           <div className="location-picker">
-            <div className="location-icon">📍</div>
+            <div className="location-icon">
+              <MapPin size={18} strokeWidth={2} />
+            </div>
             <div className="location-text">
               <small>محله شما</small>
               <strong>{MY_PET.neighborhood}، {MY_PET.city} ▾</strong>
@@ -44,15 +48,20 @@ export function HomePage() {
           </div>
           <div className="top-actions">
             <Link to="/matches" className="icon-btn" aria-label="درخواست‌ها">
-              💌
+              <Mail size={20} strokeWidth={2} />
               {pendingCount > 0 && <span className="badge-dot" />}
             </Link>
-            <button className="icon-btn" aria-label="اعلان‌ها">🔔</button>
+            <button className="icon-btn" aria-label="اعلان‌ها">
+              <Bell size={20} strokeWidth={2} />
+            </button>
           </div>
         </div>
 
         <div className="greeting">
-          <h1>petdate · برای {MY_PET.name} 🐾</h1>
+          <h1>
+            petdate · برای {MY_PET.name}
+            <PawPrint size={22} className="greeting-paw" />
+          </h1>
         </div>
 
         <div className="search-bar">
@@ -62,7 +71,9 @@ export function HomePage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <span className="search-icon">🔍</span>
+          <span className="search-icon">
+            <Search size={18} strokeWidth={2} />
+          </span>
         </div>
       </div>
 
@@ -80,7 +91,7 @@ export function HomePage() {
               onClick={() => setActiveCategory(cat)}
             >
               <div className="category-circle">
-                {cat === ALL ? '🐾' : PET_TYPE_EMOJI[cat]}
+                <CategoryPetIcon type={cat} />
               </div>
               <span>{cat === ALL ? 'همه' : PET_TYPE_LABELS[cat]}</span>
             </button>
@@ -100,7 +111,9 @@ export function HomePage() {
           </div>
         ) : (
           <div className="empty-state">
-            <div className="icon">🔍</div>
+            <div className="empty-icon">
+              <Search size={40} strokeWidth={1.5} />
+            </div>
             <h3>پتی پیدا نشد</h3>
             <p>فیلتر یا جستجو رو عوض کن</p>
           </div>
