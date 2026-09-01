@@ -4,7 +4,7 @@ import { Bell, ChevronDown, Mail, MapPin, Search } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
-import { MOCK_MATCHES, MY_PET, getNearbyPets } from '../data/mock';
+import { usePetStore } from '../hooks/usePetStore';
 import type { PetType } from '../types';
 import { PET_TYPE_LABELS } from '../types';
 
@@ -12,14 +12,15 @@ const ALL = 'all' as const;
 const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird', 'rabbit'];
 
 export function HomePage() {
+  const { myPet, matches, getNearbyPets } = usePetStore();
   const [activeCategory, setActiveCategory] = useState<PetType | typeof ALL>(ALL);
   const [search, setSearch] = useState('');
   const [showToast, setShowToast] = useState(false);
 
-  const pendingCount = MOCK_MATCHES.filter((m) => m.status === 'pending').length;
+  const pendingCount = matches.filter((m) => m.status === 'pending').length;
   const pets = activeCategory === ALL
-    ? getNearbyPets(MY_PET.id)
-    : getNearbyPets(MY_PET.id).filter((p) => p.type === activeCategory);
+    ? getNearbyPets(myPet.id)
+    : getNearbyPets(myPet.id).filter((p) => p.type === activeCategory);
 
   const filtered = search
     ? pets.filter((p) =>
@@ -47,7 +48,7 @@ export function HomePage() {
             <div className="location-text">
               <small>محله شما</small>
               <strong>
-                {MY_PET.neighborhood}، {MY_PET.city}
+                {myPet.neighborhood}، {myPet.city}
                 <ChevronDown size={14} strokeWidth={2} />
               </strong>
             </div>
@@ -65,7 +66,7 @@ export function HomePage() {
 
         <div className="greeting">
           <BrandMark className="greeting-brand" />
-          <h1>همبازی برای {MY_PET.name}</h1>
+          <h1>همبازی برای {myPet.name}</h1>
           <p>پت‌های نزدیک رو کشف کن و درخواست بده</p>
         </div>
 
@@ -133,7 +134,7 @@ export function HomePage() {
       {pendingCount > 0 && (
         <div className="promo-banner">
           <div className="promo-banner-icon"><Mail size={16} strokeWidth={2} /></div>
-          <p><strong>{pendingCount} درخواست جدید</strong> برای {MY_PET.name}</p>
+          <p><strong>{pendingCount} درخواست جدید</strong> برای {myPet.name}</p>
           <Link to="/matches" className="promo-btn">مشاهده</Link>
         </div>
       )}

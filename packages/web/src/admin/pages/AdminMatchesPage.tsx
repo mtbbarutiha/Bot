@@ -1,0 +1,86 @@
+import { Check, Trash2, X } from 'lucide-react';
+import { usePetStore } from '../../hooks/usePetStore';
+import { MATCH_STATUS_LABELS } from '../../types';
+
+export function AdminMatchesPage() {
+  const { matches, updateMatchStatus, deleteMatch } = usePetStore();
+
+  return (
+    <div className="admin-page">
+      <header className="admin-header">
+        <div>
+          <h1>درخواست‌های همبازی</h1>
+          <p>{matches.length} درخواست</p>
+        </div>
+      </header>
+
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>از</th>
+              <th>پیام</th>
+              <th>وضعیت</th>
+              <th>زمان</th>
+              <th>عملیات</th>
+            </tr>
+          </thead>
+          <tbody>
+            {matches.map((m) => (
+              <tr key={m.id}>
+                <td>
+                  <div className="admin-match-cell">
+                    <img src={m.fromPet.imageUrl} alt={m.fromPet.name} className="admin-thumb" />
+                    <div>
+                      <strong>{m.fromPet.name}</strong>
+                      <small>{m.fromPet.breed}</small>
+                    </div>
+                  </div>
+                </td>
+                <td>{m.message || '—'}</td>
+                <td>
+                  <span className={`admin-status admin-status--${m.status}`}>
+                    {MATCH_STATUS_LABELS[m.status]}
+                  </span>
+                </td>
+                <td>{new Date(m.createdAt).toLocaleDateString('fa-IR')}</td>
+                <td>
+                  <div className="admin-row-actions">
+                    {m.status === 'pending' && (
+                      <>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--success"
+                          onClick={() => updateMatchStatus(m.id, 'accepted')}
+                          title="قبول"
+                        >
+                          <Check size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className="admin-btn admin-btn--danger"
+                          onClick={() => updateMatchStatus(m.id, 'rejected')}
+                          title="رد"
+                        >
+                          <X size={14} />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--danger"
+                      onClick={() => deleteMatch(m.id)}
+                      title="حذف"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

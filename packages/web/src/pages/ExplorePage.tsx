@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
-import { CURRENT_OWNER, MOCK_PETS, MY_PET } from '../data/mock';
+import { usePetStore } from '../hooks/usePetStore';
 import type { PetType } from '../types';
 import { PET_TYPE_LABELS } from '../types';
 
@@ -10,12 +10,13 @@ const ALL = 'all' as const;
 const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird', 'rabbit'];
 
 export function ExplorePage() {
+  const { pets, myPet } = usePetStore();
   const [activeCategory, setActiveCategory] = useState<PetType | typeof ALL>(ALL);
   const [search, setSearch] = useState('');
 
-  const filtered = MOCK_PETS
+  const filtered = pets
     .filter((p) => {
-      if (p.id === MY_PET.id) return false;
+      if (p.id === myPet.id) return false;
       if (!p.lookingForPlaymate) return false;
       if (activeCategory !== ALL && p.type !== activeCategory) return false;
       if (search && !p.name.includes(search) && !p.breed.includes(search)) return false;
@@ -28,7 +29,7 @@ export function ExplorePage() {
       <div className="home-header compact">
         <div className="greeting">
           <h1>جستجو</h1>
-          <p>{filtered.length} پت نزدیک {CURRENT_OWNER.city}</p>
+          <p>{filtered.length} پت نزدیک {myPet.city}</p>
         </div>
         <div className="search-row-inline">
           <div className="search-bar">

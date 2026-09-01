@@ -2,25 +2,16 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Clock, Mail, MessageCircle } from 'lucide-react';
 import { PetAvatar } from '../components/PetAvatar';
-import { MOCK_MATCHES, MY_PET, formatTimeAgo } from '../data/mock';
+import { formatTimeAgo } from '../data/mock';
+import { usePetStore } from '../hooks/usePetStore';
 
 export function MatchesPage() {
-  const [matches, setMatches] = useState(MOCK_MATCHES);
+  const { matches, myPet, updateMatchStatus, deleteMatch } = usePetStore();
   const [tab, setTab] = useState<'pending' | 'accepted'>('pending');
 
   const filtered = matches.filter((m) =>
     tab === 'pending' ? m.status === 'pending' : m.status === 'accepted'
   );
-
-  const handleAccept = (id: number) => {
-    setMatches((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, status: 'accepted' as const } : m))
-    );
-  };
-
-  const handleReject = (id: number) => {
-    setMatches((prev) => prev.filter((m) => m.id !== id));
-  };
 
   const pendingCount = matches.filter((m) => m.status === 'pending').length;
 
@@ -31,7 +22,7 @@ export function MatchesPage() {
           درخواست‌ها
           <Mail size={22} className="title-icon" />
         </h1>
-        <p>برای {MY_PET.name} · {pendingCount} جدید</p>
+        <p>برای {myPet.name} · {pendingCount} جدید</p>
       </div>
 
       <div className="match-tabs">
@@ -65,11 +56,11 @@ export function MatchesPage() {
               {match.message && <p className="match-msg">«{match.message}»</p>}
               {match.status === 'pending' ? (
                 <div className="match-actions">
-                  <button className="btn-accept" onClick={() => handleAccept(match.id)}>
+                  <button className="btn-accept" onClick={() => updateMatchStatus(match.id, 'accepted')}>
                     <Check size={16} strokeWidth={2.5} />
                     قبول
                   </button>
-                  <button className="btn-reject" onClick={() => handleReject(match.id)}>رد</button>
+                  <button className="btn-reject" onClick={() => deleteMatch(match.id)}>رد</button>
                   <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">پروفایل</Link>
                 </div>
               ) : (

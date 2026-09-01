@@ -1,20 +1,23 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Globe, MapPin, Send, Smartphone } from 'lucide-react';
+import { Globe, MapPin, Send, Shield, Smartphone } from 'lucide-react';
 import { PetAvatar } from '../components/PetAvatar';
-import { CURRENT_OWNER, MY_PET, formatAge } from '../data/mock';
+import { formatAge } from '../data/mock';
+import { usePetStore } from '../hooks/usePetStore';
 
 export function ProfilePage() {
+  const { myPet, owners } = usePetStore();
+  const owner = owners.find((o) => o.id === myPet.ownerId) ?? owners[0];
   const [showToast, setShowToast] = useState(false);
 
   return (
     <>
       <div className="profile-hero">
-        <PetAvatar type={MY_PET.type} size="lg" imageUrl={MY_PET.imageUrl} name={MY_PET.name} className="profile-avatar-wrap" />
-        <div className="profile-name">{CURRENT_OWNER.name}</div>
+        <PetAvatar type={myPet.type} size="lg" imageUrl={myPet.imageUrl} name={myPet.name} className="profile-avatar-wrap" />
+        <div className="profile-name">{owner.name}</div>
         <div className="profile-city">
           <MapPin size={14} strokeWidth={2} />
-          {CURRENT_OWNER.city}
+          {owner.city}
         </div>
       </div>
 
@@ -25,21 +28,21 @@ export function ProfilePage() {
         </div>
 
         <div className="my-pet-chip">
-          <PetAvatar type={MY_PET.type} size="sm" imageUrl={MY_PET.imageUrl} name={MY_PET.name} />
+          <PetAvatar type={myPet.type} size="sm" imageUrl={myPet.imageUrl} name={myPet.name} />
           <div>
-            <h3>{MY_PET.name}</h3>
-            <p>{MY_PET.breed} · {formatAge(MY_PET)} · {MY_PET.neighborhood}</p>
+            <h3>{myPet.name}</h3>
+            <p>{myPet.breed} · {formatAge(myPet)} · {myPet.neighborhood}</p>
           </div>
         </div>
 
         <div className="form-group">
           <label className="form-label">نام صاحب</label>
-          <input className="form-input" defaultValue={CURRENT_OWNER.name} />
+          <input className="form-input" defaultValue={owner.name} />
         </div>
 
         <div className="form-group">
           <label className="form-label">شهر</label>
-          <input className="form-input" defaultValue={CURRENT_OWNER.city} />
+          <input className="form-input" defaultValue={owner.city} />
         </div>
 
         <button
@@ -64,6 +67,13 @@ export function ProfilePage() {
           <div className="menu-icon"><Smartphone size={18} strokeWidth={2} /></div>
           <div className="menu-text"><strong>PWA</strong><small>قابل نصب</small></div>
         </div>
+        <Link to="/admin/login" className="menu-item">
+          <div className="menu-icon"><Shield size={18} strokeWidth={2} /></div>
+          <div className="menu-text">
+            <strong>پنل ادمین</strong>
+            <small>مدیریت پت‌ها و درخواست‌ها</small>
+          </div>
+        </Link>
       </div>
 
       {showToast && <div className="toast" role="status">ذخیره شد (نمایشی)</div>}

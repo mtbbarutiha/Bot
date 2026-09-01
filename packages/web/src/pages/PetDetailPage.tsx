@@ -10,17 +10,19 @@ import {
   Share2,
 } from 'lucide-react';
 import { PetAvatar } from '../components/PetAvatar';
-import { getPetById, formatAge, formatDistance, MY_PET } from '../data/mock';
+import { formatAge, formatDistance } from '../data/mock';
+import { usePetStore } from '../hooks/usePetStore';
 import { PET_TYPE_LABELS } from '../types';
 
 export function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const pet = getPetById(Number(id));
+  const { getPetById: getPet, myPet } = usePetStore();
+  const pet = getPet(Number(id));
   const [requested, setRequested] = useState(false);
   const [liked, setLiked] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const isMyPet = pet?.id === MY_PET.id;
+  const isMyPet = pet?.id === myPet.id;
 
   if (!pet) {
     return (
@@ -109,7 +111,7 @@ export function PetDetailPage() {
             <span className="paw">
               {requested ? <Check size={16} strokeWidth={2.5} /> : <PawPrint size={16} strokeWidth={2} />}
             </span>
-            <span>{requested ? 'درخواست ارسال شد' : `درخواست همبازی برای ${MY_PET.name}`}</span>
+            <span>{requested ? 'درخواست ارسال شد' : `درخواست همبازی برای ${myPet.name}`}</span>
           </button>
         </div>
       )}
