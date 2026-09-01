@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg'],
       manifest: {
-        name: 'Pet Dat',
-        short_name: 'Pet Dat',
+        name: 'petdate',
+        short_name: 'petdate',
         description: 'همبازی برای پت‌ات پیدا کن',
         theme_color: '#b6e0fe',
         background_color: '#f0f9ff',

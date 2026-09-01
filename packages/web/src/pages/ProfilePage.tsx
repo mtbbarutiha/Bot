@@ -49,7 +49,7 @@ export function ProfilePage() {
           <div className="menu-icon">✈️</div>
           <div className="menu-text">
             <strong>ربات تلگرام</strong>
-            <small>Pet Dat — فاز بعدی</small>
+            <small>petdate — فاز بعدی</small>
           </div>
         </div>
         <div className="menu-item">

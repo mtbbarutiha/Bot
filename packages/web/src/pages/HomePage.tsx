@@ -52,7 +52,7 @@ export function HomePage() {
         </div>
 
         <div className="greeting">
-          <h1>Pet Dat · برای {MY_PET.name} 🐾</h1>
+          <h1>petdate · برای {MY_PET.name} 🐾</h1>
         </div>
 
         <div className="search-bar">
