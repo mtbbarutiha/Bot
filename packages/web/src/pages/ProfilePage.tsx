@@ -19,7 +19,7 @@ export function ProfilePage() {
       </div>
 
       <div className="profile-section">
-        <div className="section-row" style={{ padding: 0, marginBottom: 12 }}>
+        <div className="section-row section-row--flush">
           <h2>پت‌های من</h2>
           <Link to="/add-pet">+ افزودن</Link>
         </div>
@@ -43,8 +43,7 @@ export function ProfilePage() {
         </div>
 
         <button
-          className="cta-btn"
-          style={{ marginBottom: 24 }}
+          className="cta-btn cta-btn--spaced"
           onClick={() => { setShowToast(true); setTimeout(() => setShowToast(false), 2500); }}
         >
           ذخیره تغییرات

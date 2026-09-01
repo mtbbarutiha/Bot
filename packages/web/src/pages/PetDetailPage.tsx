@@ -24,12 +24,12 @@ export function PetDetailPage() {
 
   if (!pet) {
     return (
-      <div className="empty-state" style={{ paddingTop: 80 }}>
+      <div className="empty-state empty-state--top">
         <div className="empty-icon">
           <PawPrint size={40} strokeWidth={1.5} />
         </div>
         <h3>پت پیدا نشد</h3>
-        <button className="cta-btn" style={{ marginTop: 16 }} onClick={() => navigate('/explore')}>
+        <button className="cta-btn cta-btn--inline" onClick={() => navigate('/explore')}>
           بازگشت
         </button>
       </div>

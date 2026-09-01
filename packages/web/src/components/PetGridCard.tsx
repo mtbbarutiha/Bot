@@ -4,8 +4,6 @@ import type { Pet } from '../types';
 import { PetAvatar } from './PetAvatar';
 import { formatAge, formatDistance } from '../data/mock';
 
-const CARD_COLORS = ['lavender', 'pink'] as const;
-
 interface PetGridCardProps {
   pet: Pet;
   index: number;
@@ -13,10 +11,8 @@ interface PetGridCardProps {
 }
 
 export function PetGridCard({ pet, index, onQuickAdd }: PetGridCardProps) {
-  const color = CARD_COLORS[index % CARD_COLORS.length];
-
   return (
-    <Link to={`/pets/${pet.id}`} className={`pet-grid-card ${color}`}>
+    <Link to={`/pets/${pet.id}`} className="pet-grid-card" style={{ animationDelay: `${index * 40}ms` }}>
       {onQuickAdd && (
         <button
           className="add-btn"
@@ -26,18 +22,21 @@ export function PetGridCard({ pet, index, onQuickAdd }: PetGridCardProps) {
           }}
           aria-label={`درخواست همبازی ${pet.name}`}
         >
-          <Plus size={16} strokeWidth={2.5} />
+          <Plus size={15} strokeWidth={2.5} />
         </button>
       )}
       <div className="pet-img">
         <PetAvatar type={pet.type} size="lg" />
       </div>
-      <div className="pet-name">{pet.name}</div>
-      <div className="pet-rating">
-        <Star size={12} fill="currentColor" strokeWidth={0} />
-        <span>{pet.traits[0] || 'بازیگوش'}</span>
+      <div className="pet-card-body">
+        <div className="pet-name">{pet.name}</div>
+        <div className="pet-breed">{pet.breed}</div>
+        <div className="pet-rating">
+          <Star size={11} fill="currentColor" strokeWidth={0} />
+          <span>{pet.traits[0] || 'بازیگوش'}</span>
+        </div>
+        <div className="pet-distance">{formatDistance(pet.distanceKm)} · {formatAge(pet)}</div>
       </div>
-      <div className="pet-distance">{formatDistance(pet.distanceKm)} · {formatAge(pet)}</div>
     </Link>
   );
 }

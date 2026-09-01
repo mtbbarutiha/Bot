@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Cat, PawPrint } from 'lucide-react';
+import { BrandMark } from '../components/BrandMark';
 
 export function WelcomePage() {
   const navigate = useNavigate();
@@ -7,10 +8,11 @@ export function WelcomePage() {
   return (
     <div className="welcome-page">
       <div className="welcome-top">
-        <div className="welcome-logo">petdate</div>
+        <BrandMark className="welcome-logo" />
         <div className="welcome-wave">
+          <div className="welcome-wave-glow" aria-hidden />
           <div className="welcome-pet-icon">
-            <Cat size={96} strokeWidth={1.25} />
+            <Cat size={88} strokeWidth={1.25} />
           </div>
         </div>
       </div>
@@ -19,19 +21,18 @@ export function WelcomePage() {
         <div className="welcome-dots">
           <span className="active" /><span /><span />
         </div>
-        <h1>همبازی برای پت‌ات</h1>
-        <p>پت‌های نزدیک رو پیدا کن، درخواست بده و بازی کن — روی تلگرام، وب و PWA</p>
+        <h1>همبازی مناسب<br />برای پت‌ات</h1>
+        <p>پت‌های نزدیک رو پیدا کن، درخواست بده و با صاحب‌شون آشنا شو.</p>
 
         <div className="welcome-nav">
-          <button className="welcome-back" onClick={() => navigate(-1)} aria-label="بازگشت">
-            <ArrowRight size={22} strokeWidth={2} />
+          <button type="button" className="welcome-back" onClick={() => navigate(-1)} aria-label="بازگشت">
+            <ArrowRight size={20} strokeWidth={2} />
           </button>
-          <button className="welcome-go" onClick={() => navigate('/')}>
+          <button type="button" className="welcome-go" onClick={() => navigate('/')}>
+            <span>شروع کن</span>
             <span className="paw-icon">
-              <PawPrint size={20} strokeWidth={2} />
+              <PawPrint size={18} strokeWidth={2} />
             </span>
-            <span>بزن بریم</span>
-            <span className="arrows">›››</span>
           </button>
         </div>
       </div>

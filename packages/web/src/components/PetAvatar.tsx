@@ -9,55 +9,32 @@ const PET_ICON_MAP: Record<PetType, typeof Dog> = {
   other: PawPrint,
 };
 
-const PET_COLOR_MAP: Record<PetType, string> = {
-  dog: '#fb923c',
-  cat: '#a78bfa',
-  bird: '#38bdf8',
-  rabbit: '#f472b6',
-  other: '#94a3b8',
-};
-
 interface PetAvatarProps {
   type: PetType;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
 }
 
-const SIZES = {
-  sm: { box: 40, icon: 20 },
-  md: { box: 56, icon: 28 },
-  lg: { box: 80, icon: 40 },
-  xl: { box: 120, icon: 56 },
+const SIZE_CLASS = {
+  sm: 'pet-avatar--sm',
+  md: 'pet-avatar--md',
+  lg: 'pet-avatar--lg',
+  xl: 'pet-avatar--xl',
 };
 
 export function PetAvatar({ type, size = 'md', className = '' }: PetAvatarProps) {
   const PetIcon = PET_ICON_MAP[type];
-  const color = PET_COLOR_MAP[type];
-  const dim = SIZES[size];
+  const sizeClass = SIZE_CLASS[size];
 
   return (
-    <div
-      className={`pet-avatar ${className}`}
-      style={{
-        width: dim.box,
-        height: dim.box,
-        borderRadius: '50%',
-        background: `linear-gradient(145deg, ${color}22, ${color}44)`,
-        border: `2px solid ${color}55`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color,
-        flexShrink: 0,
-      }}
-    >
-      <PetIcon size={dim.icon} strokeWidth={1.75} />
+    <div className={`pet-avatar pet-avatar--${type} ${sizeClass} ${className}`}>
+      <PetIcon strokeWidth={1.75} />
     </div>
   );
 }
 
 export function CategoryPetIcon({ type }: { type: PetType | 'all' }) {
-  if (type === 'all') return <PawPrint size={26} strokeWidth={1.75} />;
+  if (type === 'all') return <PawPrint size={22} strokeWidth={2} />;
   const PetIcon = PET_ICON_MAP[type];
-  return <PetIcon size={26} strokeWidth={1.75} />;
+  return <PetIcon size={22} strokeWidth={2} />;
 }

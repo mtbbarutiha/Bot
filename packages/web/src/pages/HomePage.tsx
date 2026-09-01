@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, Mail, MapPin, PawPrint, Search } from 'lucide-react';
+import { Bell, ChevronDown, Mail, MapPin, Search } from 'lucide-react';
+import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
 import { MOCK_MATCHES, MY_PET, getNearbyPets } from '../data/mock';
@@ -36,57 +37,63 @@ export function HomePage() {
   return (
     <div className="home-page">
       <div className="home-header">
+        <div className="home-header-glow" aria-hidden />
+
         <div className="top-bar">
           <div className="location-picker">
             <div className="location-icon">
-              <MapPin size={18} strokeWidth={2} />
+              <MapPin size={17} strokeWidth={2} />
             </div>
             <div className="location-text">
               <small>محله شما</small>
-              <strong>{MY_PET.neighborhood}، {MY_PET.city} ▾</strong>
+              <strong>
+                {MY_PET.neighborhood}، {MY_PET.city}
+                <ChevronDown size={14} strokeWidth={2} />
+              </strong>
             </div>
           </div>
           <div className="top-actions">
             <Link to="/matches" className="icon-btn" aria-label="درخواست‌ها">
-              <Mail size={20} strokeWidth={2} />
+              <Mail size={18} strokeWidth={2} />
               {pendingCount > 0 && <span className="badge-dot" />}
             </Link>
             <button className="icon-btn" aria-label="اعلان‌ها">
-              <Bell size={20} strokeWidth={2} />
+              <Bell size={18} strokeWidth={2} />
             </button>
           </div>
         </div>
 
         <div className="greeting">
-          <h1>
-            petdate · برای {MY_PET.name}
-            <PawPrint size={22} className="greeting-paw" />
-          </h1>
+          <BrandMark className="greeting-brand" />
+          <h1>همبازی برای {MY_PET.name}</h1>
+          <p>پت‌های نزدیک رو کشف کن و درخواست بده</p>
         </div>
 
         <div className="search-bar">
+          <Search size={17} strokeWidth={2} className="search-icon" />
           <input
             type="search"
             placeholder="جستجوی نژاد، نام، محله..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <span className="search-icon">
-            <Search size={18} strokeWidth={2} />
-          </span>
         </div>
       </div>
 
       <div className="home-body">
         <div className="section-row">
-          <h2>دسته‌بندی</h2>
-          <Link to="/explore">مشاهده همه</Link>
+          <div>
+            <span className="section-label">فیلتر</span>
+            <h2>دسته‌بندی</h2>
+          </div>
+          <Link to="/explore" className="link-arrow">مشاهده همه</Link>
         </div>
 
         <div className="categories">
           {CATEGORIES.map((cat) => (
             <button
               key={cat}
+              type="button"
               className={`category-item${activeCategory === cat ? ' active' : ''}`}
               onClick={() => setActiveCategory(cat)}
             >
@@ -99,8 +106,11 @@ export function HomePage() {
         </div>
 
         <div className="section-row">
-          <h2>همبازی‌های نزدیک</h2>
-          <span className="muted">{filtered.length} پت</span>
+          <div>
+            <span className="section-label">پیشنهادی</span>
+            <h2>همبازی‌های نزدیک</h2>
+          </div>
+          <span className="count-badge">{filtered.length}</span>
         </div>
 
         {filtered.length > 0 ? (
@@ -112,7 +122,7 @@ export function HomePage() {
         ) : (
           <div className="empty-state">
             <div className="empty-icon">
-              <Search size={40} strokeWidth={1.5} />
+              <Search size={32} strokeWidth={1.5} />
             </div>
             <h3>پتی پیدا نشد</h3>
             <p>فیلتر یا جستجو رو عوض کن</p>
@@ -122,13 +132,14 @@ export function HomePage() {
 
       {pendingCount > 0 && (
         <div className="promo-banner">
-          <p><strong>{pendingCount} درخواست همبازی</strong> جدید داری!</p>
-          <Link to="/matches" className="promo-btn">ببین</Link>
+          <div className="promo-banner-icon"><Mail size={16} strokeWidth={2} /></div>
+          <p><strong>{pendingCount} درخواست جدید</strong> برای {MY_PET.name}</p>
+          <Link to="/matches" className="promo-btn">مشاهده</Link>
         </div>
       )}
 
       {showToast && (
-        <div className="toast" role="status">درخواست همبازی ارسال شد! (نمایشی)</div>
+        <div className="toast" role="status">درخواست همبازی ارسال شد</div>
       )}
     </div>
   );

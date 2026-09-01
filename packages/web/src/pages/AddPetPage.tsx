@@ -45,8 +45,7 @@ export function AddPetPage() {
     <div className="form-page">
       <button
         onClick={() => navigate(-1)}
-        className="icon-btn"
-        style={{ marginBottom: 16 }}
+        className="icon-btn icon-btn--spaced"
         aria-label="بازگشت"
       >
         <ArrowRight size={20} strokeWidth={2} />
@@ -85,7 +84,7 @@ export function AddPetPage() {
           />
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2">
           <div className="form-group">
             <label className="form-label">سن</label>
             <input
@@ -105,7 +104,7 @@ export function AddPetPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2">
           <div className="form-group">
             <label className="form-label">سایز</label>
             <select className="form-select" value={form.size} onChange={(e) => update('size', e.target.value)}>
@@ -124,7 +123,7 @@ export function AddPetPage() {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="form-grid-2">
           <div className="form-group">
             <label className="form-label">شهر</label>
             <input className="form-input" value={form.city} onChange={(e) => update('city', e.target.value)} />
@@ -150,12 +149,12 @@ export function AddPetPage() {
           />
         </div>
 
-        <div style={{ background: 'var(--blue-50)', borderRadius: 'var(--radius-md)', padding: 16, marginBottom: 20 }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+        <div className="form-check-group">
+          <label className="form-check">
             <input type="checkbox" checked={form.vaccinated} onChange={(e) => update('vaccinated', e.target.checked)} />
             <span>واکسینه شده</span>
           </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <label className="form-check">
             <input type="checkbox" checked={form.neutered} onChange={(e) => update('neutered', e.target.checked)} />
             <span>عقیم‌شده</span>
           </label>

@@ -90,7 +90,7 @@ export function MatchesPage() {
             <Mail size={40} strokeWidth={1.5} />
           </div>
           <h3>{tab === 'pending' ? 'درخواست جدیدی نیست' : 'هنوز مچی نداری'}</h3>
-          <Link to="/explore" className="cta-btn" style={{ display: 'inline-block', marginTop: 16, padding: '12px 24px' }}>
+          <Link to="/explore" className="cta-btn cta-btn--inline">
             جستجو
           </Link>
         </div>
