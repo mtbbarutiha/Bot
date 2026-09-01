@@ -5,11 +5,6 @@ import { CURRENT_OWNER, MY_PET, formatAge } from '../data/mock';
 export function ProfilePage() {
   const [showToast, setShowToast] = useState(false);
 
-  const handleSave = () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2500);
-  };
-
   return (
     <>
       <div className="profile-hero">
@@ -24,9 +19,9 @@ export function ProfilePage() {
           <Link to="/add-pet">+ افزودن</Link>
         </div>
 
-        <div className="my-pet-strip" style={{ margin: '0 0 20px' }}>
+        <div className="my-pet-chip">
           <div className="avatar">{MY_PET.emoji}</div>
-          <div className="info">
+          <div>
             <h3>{MY_PET.name}</h3>
             <p>{MY_PET.breed} · {formatAge(MY_PET)} · {MY_PET.neighborhood}</p>
           </div>
@@ -42,41 +37,32 @@ export function ProfilePage() {
           <input className="form-input" defaultValue={CURRENT_OWNER.city} />
         </div>
 
-        <button className="cta-btn dark" style={{ marginBottom: 28 }} onClick={handleSave}>
+        <button
+          className="cta-btn"
+          style={{ marginBottom: 24 }}
+          onClick={() => { setShowToast(true); setTimeout(() => setShowToast(false), 2500); }}
+        >
           ذخیره تغییرات
         </button>
 
-        <div className="profile-menu">
-          <div className="menu-item">
-            <div className="menu-icon">✈️</div>
-            <div className="menu-text">
-              <strong>ربات تلگرام</strong>
-              <small>دور دوریا — فاز بعدی</small>
-            </div>
-            <span className="menu-arrow">‹</span>
+        <div className="menu-item">
+          <div className="menu-icon">✈️</div>
+          <div className="menu-text">
+            <strong>ربات تلگرام</strong>
+            <small>دور دوریا — فاز بعدی</small>
           </div>
-          <div className="menu-item">
-            <div className="menu-icon">🌐</div>
-            <div className="menu-text">
-              <strong>وب</strong>
-              <small>فعال</small>
-            </div>
-            <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>●</span>
-          </div>
-          <div className="menu-item">
-            <div className="menu-icon">📱</div>
-            <div className="menu-text">
-              <strong>PWA</strong>
-              <small>قابل نصب روی موبایل</small>
-            </div>
-            <span style={{ fontSize: '0.7rem', color: '#10b981', fontWeight: 700 }}>●</span>
-          </div>
+        </div>
+        <div className="menu-item">
+          <div className="menu-icon">🌐</div>
+          <div className="menu-text"><strong>وب</strong><small>فعال</small></div>
+        </div>
+        <div className="menu-item">
+          <div className="menu-icon">📱</div>
+          <div className="menu-text"><strong>PWA</strong><small>قابل نصب</small></div>
         </div>
       </div>
 
-      {showToast && (
-        <div className="toast" role="status">تنظیمات ذخیره شد (نمایشی)</div>
-      )}
+      {showToast && <div className="toast" role="status">ذخیره شد (نمایشی)</div>}
     </>
   );
 }

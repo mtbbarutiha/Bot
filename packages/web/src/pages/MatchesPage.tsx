@@ -24,29 +24,23 @@ export function MatchesPage() {
 
   return (
     <>
-      <div className="greeting" style={{ paddingTop: 20 }}>
+      <div className="page-title-block">
         <h1>درخواست‌ها 💌</h1>
         <p>برای {MY_PET.name} · {pendingCount} جدید</p>
       </div>
 
-      <div className="categories" style={{ paddingBottom: 16 }}>
+      <div className="match-tabs">
         <button
-          className={`category-item${tab === 'pending' ? ' active' : ''}`}
+          className={`match-tab${tab === 'pending' ? ' active' : ''}`}
           onClick={() => setTab('pending')}
         >
-          <div className="category-circle" style={{ width: 48, height: 48, fontSize: '1rem' }}>
-            ⏳
-          </div>
-          <span>در انتظار ({pendingCount})</span>
+          در انتظار ({pendingCount})
         </button>
         <button
-          className={`category-item${tab === 'accepted' ? ' active' : ''}`}
+          className={`match-tab${tab === 'accepted' ? ' active' : ''}`}
           onClick={() => setTab('accepted')}
         >
-          <div className="category-circle" style={{ width: 48, height: 48, fontSize: '1rem' }}>
-            ✓
-          </div>
-          <span>پذیرفته</span>
+          پذیرفته
         </button>
       </div>
 
@@ -58,55 +52,22 @@ export function MatchesPage() {
                 <div className="match-avatar">{match.fromPet.emoji}</div>
                 <div className="match-info">
                   <h3>{match.fromPet.name}</h3>
-                  <p>{match.fromPet.breed} · {match.fromPet.neighborhood}</p>
+                  <p>{match.fromPet.breed} · {formatTimeAgo(match.createdAt)}</p>
                 </div>
-                <span style={{ fontSize: '0.7rem', color: 'var(--text-light)' }}>
-                  {formatTimeAgo(match.createdAt)}
-                </span>
               </div>
-
-              {match.message && (
-                <p className="match-msg">«{match.message}»</p>
-              )}
-
+              {match.message && <p className="match-msg">«{match.message}»</p>}
               {match.status === 'pending' ? (
                 <div className="match-actions">
-                  <button className="btn-accept" onClick={() => handleAccept(match.id)}>
-                    ✓ قبول
-                  </button>
-                  <button className="btn-reject" onClick={() => handleReject(match.id)}>
-                    رد
-                  </button>
-                  <Link
-                    to={`/pets/${match.fromPet.id}`}
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: '999px',
-                      background: 'var(--blue-100)',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                    }}
-                  >
+                  <button className="btn-accept" onClick={() => handleAccept(match.id)}>✓ قبول</button>
+                  <button className="btn-reject" onClick={() => handleReject(match.id)}>رد</button>
+                  <Link to={`/pets/${match.fromPet.id}`} className="btn-reject" style={{ textAlign: 'center', lineHeight: '2.4' }}>
                     پروفایل
                   </Link>
                 </div>
               ) : (
                 <div className="match-actions">
-                  <button className="btn-accept" disabled style={{ opacity: 0.5 }}>
-                    💬 چت (فاز بعدی)
-                  </button>
-                  <Link
-                    to={`/pets/${match.fromPet.id}`}
-                    style={{
-                      flex: 1,
-                      textAlign: 'center',
-                      padding: '10px',
-                      borderRadius: '999px',
-                      background: '#f3f4f6',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                    }}
-                  >
+                  <button className="btn-reject" disabled style={{ opacity: 0.5 }}>💬 چت (فاز بعدی)</button>
+                  <Link to={`/pets/${match.fromPet.id}`} className="btn-accept" style={{ textAlign: 'center', lineHeight: '2.4' }}>
                     پروفایل
                   </Link>
                 </div>
@@ -118,8 +79,7 @@ export function MatchesPage() {
         <div className="empty-state">
           <div className="icon">💌</div>
           <h3>{tab === 'pending' ? 'درخواست جدیدی نیست' : 'هنوز مچی نداری'}</h3>
-          <p>برو جستجو کن و همبازی پیدا کن!</p>
-          <Link to="/explore" className="cta-btn dark" style={{ display: 'inline-block', marginTop: 16, padding: '12px 24px' }}>
+          <Link to="/explore" className="cta-btn" style={{ display: 'inline-block', marginTop: 16, padding: '12px 24px' }}>
             جستجو
           </Link>
         </div>

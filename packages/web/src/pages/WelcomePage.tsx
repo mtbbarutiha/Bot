@@ -5,26 +5,27 @@ export function WelcomePage() {
 
   return (
     <div className="welcome-page">
-      <div className="welcome-hero">
-        <div className="welcome-cat-frame">🐱</div>
+      <div className="welcome-top">
+        <div className="welcome-logo">دور دوریا</div>
+        <div className="welcome-wave">
+          <div className="welcome-pet">🐱</div>
+        </div>
       </div>
 
       <div className="welcome-content">
-        <h1>همبازی پت‌ات رو پیدا کن</h1>
-        <p>
-          پت‌های نزدیک رو ببین، درخواست همبازی بده و با صاحب‌شون آشنا شو.
-          روی تلگرام، وب و PWA.
-        </p>
-
-        <button className="welcome-cta" onClick={() => navigate('/')}>
-          <span className="paw-icon">🐾</span>
-          <span>شروع کن</span>
-        </button>
-
         <div className="welcome-dots">
-          <span className="active" />
-          <span />
-          <span />
+          <span className="active" /><span /><span />
+        </div>
+        <h1>همبازی برای پت‌ات</h1>
+        <p>پت‌های نزدیک رو پیدا کن، درخواست بده و بازی کن — روی تلگرام، وب و PWA</p>
+
+        <div className="welcome-nav">
+          <button className="welcome-back" onClick={() => navigate(-1)} aria-label="بازگشت">→</button>
+          <button className="welcome-go" onClick={() => navigate('/')}>
+            <span className="paw-icon">🐾</span>
+            <span>بزن بریم</span>
+            <span className="arrows">›››</span>
+          </button>
         </div>
       </div>
     </div>
