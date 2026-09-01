@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { DEFAULT_IMAGES, DOG_PHOTOS, CAT_PHOTOS, imageForType, petImg } from '../data/petImages';
+import { DEFAULT_IMAGES, DOG_PHOTOS, CAT_PHOTOS, imageForType, petLocal } from '../data/petImages';
 import { usePetStore } from '../hooks/usePetStore';
 import type { PetGender, PetSize, PetType } from '../types';
 import { PET_GENDER_LABELS, PET_SIZE_LABELS, PET_TYPE_EMOJI, PET_TYPE_LABELS } from '../types';
@@ -105,10 +105,10 @@ export function AddPetPage() {
               <button
                 key={photoId}
                 type="button"
-                className={`admin-gallery-item${form.imageUrl === petImg(photoId) ? ' active' : ''}`}
-                onClick={() => update('imageUrl', petImg(photoId))}
+                className={`admin-gallery-item${form.imageUrl === petLocal(photoId) ? ' active' : ''}`}
+                onClick={() => update('imageUrl', petLocal(photoId))}
               >
-                <img src={petImg(photoId, 100, 100)} alt="" />
+                <img src={petLocal(photoId)} alt="" />
               </button>
             ))}
           </div>

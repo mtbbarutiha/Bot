@@ -5,7 +5,7 @@ import {
   MY_PET,
 } from './mock';
 
-const STORAGE_KEY = 'petdate_store_v1';
+const STORAGE_KEY = 'petdate_store_v2';
 
 export interface AppStore {
   pets: Pet[];
