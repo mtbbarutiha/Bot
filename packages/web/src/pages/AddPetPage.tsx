@@ -1,37 +1,76 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { DEFAULT_IMAGES, DOG_PHOTOS, CAT_PHOTOS, imageForType, petImg } from '../data/petImages';
+import { usePetStore } from '../hooks/usePetStore';
 import type { PetGender, PetSize, PetType } from '../types';
-import { PET_GENDER_LABELS, PET_SIZE_LABELS, PET_TYPE_LABELS } from '../types';
+import { PET_GENDER_LABELS, PET_SIZE_LABELS, PET_TYPE_EMOJI, PET_TYPE_LABELS } from '../types';
 
 const PET_TYPES = Object.keys(PET_TYPE_LABELS) as PetType[];
 const PET_SIZES = Object.keys(PET_SIZE_LABELS) as PetSize[];
 const PET_GENDERS = Object.keys(PET_GENDER_LABELS) as PetGender[];
 
+const GALLERY: Partial<Record<PetType, readonly string[]>> = {
+  dog: DOG_PHOTOS,
+  cat: CAT_PHOTOS,
+};
+
 export function AddPetPage() {
   const navigate = useNavigate();
+  const { addPet, myPet } = usePetStore();
   const [showToast, setShowToast] = useState(false);
   const [form, setForm] = useState({
     name: '',
     type: 'dog' as PetType,
     breed: '',
-    age: '',
+    age: '1',
     ageUnit: 'year' as 'month' | 'year',
     size: 'medium' as PetSize,
     gender: 'male' as PetGender,
-    city: 'تهران',
+    city: myPet.city,
     neighborhood: '',
     bio: '',
+    imageUrl: DEFAULT_IMAGES.dog,
     vaccinated: true,
     neutered: false,
   });
 
+  const gallery = useMemo(() => GALLERY[form.type] ?? [], [form.type]);
+
   const update = (field: string, value: string | boolean) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [field]: value };
+      if (field === 'type' && typeof value === 'string') {
+        const t = value as PetType;
+        next.imageUrl = imageForType(t, 0);
+      }
+      return next;
+    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    addPet({
+      name: form.name,
+      type: form.type,
+      breed: form.breed,
+      age: Number(form.age) || 1,
+      ageUnit: form.ageUnit,
+      size: form.size,
+      gender: form.gender,
+      city: form.city,
+      neighborhood: form.neighborhood,
+      ownerName: myPet.ownerName,
+      ownerId: myPet.ownerId,
+      imageUrl: form.imageUrl,
+      emoji: PET_TYPE_EMOJI[form.type],
+      bio: form.bio,
+      traits: ['بازیگوش'],
+      vaccinated: form.vaccinated,
+      neutered: form.neutered,
+      lookingForPlaymate: true,
+      distanceKm: 0.5,
+    });
     setShowToast(true);
     setTimeout(() => {
       setShowToast(false);
@@ -52,7 +91,29 @@ export function AddPetPage() {
       </button>
 
       <h1>ثبت پت جدید</h1>
-      <p className="subtitle">مثل ربات تلگرام — اطلاعات پت‌ات رو وارد کن</p>
+      <p className="subtitle">عکس و اطلاعات پت‌ات رو وارد کن</p>
+
+      <div className="add-pet-preview">
+        <img src={form.imageUrl} alt={form.name || 'پت'} />
+      </div>
+
+      {gallery.length > 0 && (
+        <div className="add-pet-gallery">
+          <label className="form-label">انتخاب عکس</label>
+          <div className="admin-gallery-grid">
+            {gallery.slice(0, 8).map((photoId) => (
+              <button
+                key={photoId}
+                type="button"
+                className={`admin-gallery-item${form.imageUrl === petImg(photoId) ? ' active' : ''}`}
+                onClick={() => update('imageUrl', petImg(photoId))}
+              >
+                <img src={petImg(photoId, 100, 100)} alt="" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="form-group">
@@ -166,7 +227,7 @@ export function AddPetPage() {
       </form>
 
       {showToast && (
-        <div className="toast" role="status">پت ثبت شد! (نمایشی)</div>
+        <div className="toast" role="status">پت ثبت شد!</div>
       )}
     </div>
   );

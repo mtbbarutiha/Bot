@@ -4,6 +4,7 @@ import { Bell, ChevronDown, Mail, MapPin, Search } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
+import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { usePetStore } from '../hooks/usePetStore';
 import type { PetType } from '../types';
 import { PET_TYPE_LABELS } from '../types';
@@ -18,6 +19,7 @@ export function HomePage() {
   const [showToast, setShowToast] = useState(false);
 
   const pendingCount = matches.filter((m) => m.status === 'pending').length;
+  const firstPending = matches.find((m) => m.status === 'pending');
   const pets = activeCategory === ALL
     ? getNearbyPets(myPet.id)
     : getNearbyPets(myPet.id).filter((p) => p.type === activeCategory);
@@ -122,9 +124,7 @@ export function HomePage() {
           </div>
         ) : (
           <div className="empty-state">
-            <div className="empty-icon">
-              <Search size={32} strokeWidth={1.5} />
-            </div>
+            <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
             <h3>پتی پیدا نشد</h3>
             <p>فیلتر یا جستجو رو عوض کن</p>
           </div>
@@ -133,6 +133,9 @@ export function HomePage() {
 
       {pendingCount > 0 && (
         <div className="promo-banner">
+          {firstPending && (
+            <img src={firstPending.fromPet.imageUrl} alt="" className="promo-banner-photo" />
+          )}
           <div className="promo-banner-icon"><Mail size={16} strokeWidth={2} /></div>
           <p><strong>{pendingCount} درخواست جدید</strong> برای {myPet.name}</p>
           <Link to="/matches" className="promo-btn">مشاهده</Link>

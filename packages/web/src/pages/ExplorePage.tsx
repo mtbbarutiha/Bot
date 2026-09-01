@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
+import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { usePetStore } from '../hooks/usePetStore';
 import type { PetType } from '../types';
 import { PET_TYPE_LABELS } from '../types';
@@ -73,9 +74,7 @@ export function ExplorePage() {
           </div>
         ) : (
           <div className="empty-state">
-            <div className="empty-icon">
-              <Search size={40} strokeWidth={1.5} />
-            </div>
+            <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
             <h3>پتی پیدا نشد</h3>
           </div>
         )}

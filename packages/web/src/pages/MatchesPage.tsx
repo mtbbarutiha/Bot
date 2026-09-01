@@ -3,10 +3,12 @@ import { Link } from 'react-router-dom';
 import { Check, Clock, Mail, MessageCircle } from 'lucide-react';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatTimeAgo } from '../data/mock';
+import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { usePetStore } from '../hooks/usePetStore';
 
 export function MatchesPage() {
   const { matches, myPet, updateMatchStatus, deleteMatch } = usePetStore();
+
   const [tab, setTab] = useState<'pending' | 'accepted'>('pending');
 
   const filtered = matches.filter((m) =>
@@ -46,40 +48,47 @@ export function MatchesPage() {
         <div className="match-list">
           {filtered.map((match) => (
             <div key={match.id} className="match-card">
-              <div className="match-card-header">
-                <PetAvatar type={match.fromPet.type} size="sm" imageUrl={match.fromPet.imageUrl} name={match.fromPet.name} />
-                <div className="match-info">
-                  <h3>{match.fromPet.name}</h3>
-                  <p>{match.fromPet.breed} · {formatTimeAgo(match.createdAt)}</p>
+              <Link to={`/pets/${match.fromPet.id}`} className="match-card-photo">
+                <img src={match.fromPet.imageUrl} alt={match.fromPet.name} />
+                <div className="match-card-photo-overlay">
+                  <strong>{match.fromPet.name}</strong>
+                  <span>{match.fromPet.breed}</span>
                 </div>
+              </Link>
+              <div className="match-card-body">
+                <div className="match-card-header">
+                  <PetAvatar type={match.fromPet.type} size="sm" imageUrl={match.fromPet.imageUrl} name={match.fromPet.name} />
+                  <div className="match-info">
+                    <h3>{match.fromPet.name}</h3>
+                    <p>{formatTimeAgo(match.createdAt)}</p>
+                  </div>
+                </div>
+                {match.message && <p className="match-msg">«{match.message}»</p>}
+                {match.status === 'pending' ? (
+                  <div className="match-actions">
+                    <button className="btn-accept" onClick={() => updateMatchStatus(match.id, 'accepted')}>
+                      <Check size={16} strokeWidth={2.5} />
+                      قبول
+                    </button>
+                    <button className="btn-reject" onClick={() => deleteMatch(match.id)}>رد</button>
+                    <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">پروفایل</Link>
+                  </div>
+                ) : (
+                  <div className="match-actions">
+                    <button className="btn-reject" disabled style={{ opacity: 0.5 }}>
+                      <MessageCircle size={16} strokeWidth={2} />
+                      چت (فاز بعدی)
+                    </button>
+                    <Link to={`/pets/${match.fromPet.id}`} className="btn-accept btn-profile">پروفایل</Link>
+                  </div>
+                )}
               </div>
-              {match.message && <p className="match-msg">«{match.message}»</p>}
-              {match.status === 'pending' ? (
-                <div className="match-actions">
-                  <button className="btn-accept" onClick={() => updateMatchStatus(match.id, 'accepted')}>
-                    <Check size={16} strokeWidth={2.5} />
-                    قبول
-                  </button>
-                  <button className="btn-reject" onClick={() => deleteMatch(match.id)}>رد</button>
-                  <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">پروفایل</Link>
-                </div>
-              ) : (
-                <div className="match-actions">
-                  <button className="btn-reject" disabled style={{ opacity: 0.5 }}>
-                    <MessageCircle size={16} strokeWidth={2} />
-                    چت (فاز بعدی)
-                  </button>
-                  <Link to={`/pets/${match.fromPet.id}`} className="btn-accept btn-profile">پروفایل</Link>
-                </div>
-              )}
             </div>
           ))}
         </div>
       ) : (
         <div className="empty-state">
-          <div className="empty-icon">
-            <Mail size={40} strokeWidth={1.5} />
-          </div>
+          <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
           <h3>{tab === 'pending' ? 'درخواست جدیدی نیست' : 'هنوز مچی نداری'}</h3>
           <Link to="/explore" className="cta-btn cta-btn--inline">
             جستجو

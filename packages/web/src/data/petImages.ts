@@ -83,3 +83,11 @@ export const DEFAULT_IMAGES: Record<PetType, string> = {
   rabbit: petImg(RABBIT_PHOTOS[0]),
   other: petImg(OTHER_PHOTOS[0]),
 };
+
+export const WELCOME_PHOTOS = [
+  petImg(DOG_PHOTOS[0], 400, 400),
+  petImg(CAT_PHOTOS[0], 400, 400),
+  petImg(DOG_PHOTOS[4], 400, 400),
+] as const;
+
+export const EMPTY_STATE_PHOTO = petImg(CAT_PHOTOS[7], 200, 200);

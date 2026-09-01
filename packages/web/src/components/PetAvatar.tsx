@@ -1,13 +1,5 @@
-import { Bird, Cat, Dog, PawPrint, Rabbit } from 'lucide-react';
+import { DEFAULT_IMAGES } from '../data/petImages';
 import type { PetType } from '../types';
-
-const PET_ICON_MAP: Record<PetType, typeof Dog> = {
-  dog: Dog,
-  cat: Cat,
-  bird: Bird,
-  rabbit: Rabbit,
-  other: PawPrint,
-};
 
 interface PetAvatarProps {
   type: PetType;
@@ -33,27 +25,27 @@ export function PetAvatar({
   variant = 'circle',
   className = '',
 }: PetAvatarProps) {
-  const PetIcon = PET_ICON_MAP[type];
   const sizeClass = SIZE_CLASS[size];
   const variantClass = variant === 'cover' ? 'pet-avatar--cover' : '';
-
-  if (imageUrl) {
-    return (
-      <div className={`pet-avatar pet-avatar--photo ${sizeClass} ${variantClass} ${className}`}>
-        <img src={imageUrl} alt={name || 'پت'} loading="lazy" decoding="async" />
-      </div>
-    );
-  }
+  const src = imageUrl || DEFAULT_IMAGES[type];
 
   return (
-    <div className={`pet-avatar pet-avatar--${type} ${sizeClass} ${variantClass} ${className}`}>
-      <PetIcon strokeWidth={1.75} />
+    <div className={`pet-avatar pet-avatar--photo ${sizeClass} ${variantClass} ${className}`}>
+      <img
+        src={src}
+        alt={name || 'پت'}
+        loading="lazy"
+        decoding="async"
+        onError={(e) => {
+          const img = e.currentTarget;
+          if (img.src !== DEFAULT_IMAGES[type]) img.src = DEFAULT_IMAGES[type];
+        }}
+      />
     </div>
   );
 }
 
 export function CategoryPetIcon({ type }: { type: PetType | 'all' }) {
-  if (type === 'all') return <PawPrint size={22} strokeWidth={2} />;
-  const PetIcon = PET_ICON_MAP[type];
-  return <PetIcon size={22} strokeWidth={2} />;
+  const src = type === 'all' ? DEFAULT_IMAGES.dog : DEFAULT_IMAGES[type];
+  return <img src={src} alt="" className="category-photo" />;
 }

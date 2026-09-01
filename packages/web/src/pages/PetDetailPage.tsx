@@ -9,8 +9,8 @@ import {
   Phone,
   Share2,
 } from 'lucide-react';
-import { PetAvatar } from '../components/PetAvatar';
 import { formatAge, formatDistance } from '../data/mock';
+import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { usePetStore } from '../hooks/usePetStore';
 import { PET_TYPE_LABELS } from '../types';
 
@@ -27,9 +27,7 @@ export function PetDetailPage() {
   if (!pet) {
     return (
       <div className="empty-state empty-state--top">
-        <div className="empty-icon">
-          <PawPrint size={40} strokeWidth={1.5} />
-        </div>
+        <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
         <h3>پت پیدا نشد</h3>
         <button className="cta-btn cta-btn--inline" onClick={() => navigate('/explore')}>
           بازگشت
@@ -46,32 +44,37 @@ export function PetDetailPage() {
 
   return (
     <div className="detail-page">
-      <div className="detail-header">
-        <button className="icon-btn" onClick={() => navigate(-1)} aria-label="بازگشت">
-          <ArrowRight size={20} strokeWidth={2} />
-        </button>
-        <h1>جزئیات</h1>
-        <div className="detail-header-actions">
-          <button className="icon-btn" onClick={() => setLiked(!liked)} aria-label="علاقه‌مندی">
-            <Heart size={20} strokeWidth={2} fill={liked ? 'currentColor' : 'none'} className={liked ? 'icon-liked' : ''} />
+      <div className="detail-hero-banner">
+        <img src={pet.imageUrl} alt={pet.name} className="detail-hero-img" />
+        <div className="detail-hero-overlay" />
+        <div className="detail-header detail-header--overlay">
+          <button className="icon-btn icon-btn--glass" onClick={() => navigate(-1)} aria-label="بازگشت">
+            <ArrowRight size={20} strokeWidth={2} />
           </button>
-          <button className="icon-btn" aria-label="اشتراک">
-            <Share2 size={20} strokeWidth={2} />
-          </button>
+          <h1>{pet.name}</h1>
+          <div className="detail-header-actions">
+            <button className="icon-btn icon-btn--glass" onClick={() => setLiked(!liked)} aria-label="علاقه‌مندی">
+              <Heart size={20} strokeWidth={2} fill={liked ? 'currentColor' : 'none'} className={liked ? 'icon-liked' : ''} />
+            </button>
+            <button className="icon-btn icon-btn--glass" aria-label="اشتراک">
+              <Share2 size={20} strokeWidth={2} />
+            </button>
+          </div>
         </div>
-      </div>
-
-      <div className="detail-hero">
-        <p className="brand">{pet.breed}</p>
-        <p className="subtitle">{PET_TYPE_LABELS[pet.type]}</p>
-        <div className="glow-circle">
-          <PetAvatar type={pet.type} size="xl" imageUrl={pet.imageUrl} name={pet.name} />
+        <div className="detail-hero-caption">
+          <span className="brand">{pet.breed}</span>
+          <span className="price-pill">{formatDistance(pet.distanceKm)}</span>
         </div>
-        <h2 className="title">{pet.name}</h2>
-        <div className="price-pill">{formatDistance(pet.distanceKm)}</div>
       </div>
 
       <div className="detail-info">
+        <div className="detail-title-row">
+          <div>
+            <h2 className="title">{pet.name}</h2>
+            <p className="subtitle">{PET_TYPE_LABELS[pet.type]} · {formatAge(pet)}</p>
+          </div>
+        </div>
+
         <div className="detail-specs">
           <div className="spec-item">
             <div className="spec-value">{formatAge(pet)}</div>

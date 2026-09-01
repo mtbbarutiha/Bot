@@ -13,7 +13,9 @@ export function ProfilePage() {
   return (
     <>
       <div className="profile-hero">
-        <PetAvatar type={myPet.type} size="lg" imageUrl={myPet.imageUrl} name={myPet.name} className="profile-avatar-wrap" />
+        <div className="profile-hero-photo">
+          <img src={myPet.imageUrl} alt={myPet.name} />
+        </div>
         <div className="profile-name">{owner.name}</div>
         <div className="profile-city">
           <MapPin size={14} strokeWidth={2} />
