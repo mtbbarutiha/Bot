@@ -56,7 +56,7 @@ export function MatchesPage() {
           {filtered.map((match) => (
             <div key={match.id} className="match-card">
               <div className="match-card-header">
-                <PetAvatar type={match.fromPet.type} size="sm" />
+                <PetAvatar type={match.fromPet.type} size="sm" imageUrl={match.fromPet.imageUrl} name={match.fromPet.name} />
                 <div className="match-info">
                   <h3>{match.fromPet.name}</h3>
                   <p>{match.fromPet.breed} · {formatTimeAgo(match.createdAt)}</p>

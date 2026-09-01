@@ -10,7 +10,7 @@ export function ProfilePage() {
   return (
     <>
       <div className="profile-hero">
-        <PetAvatar type={MY_PET.type} size="lg" className="profile-avatar-wrap" />
+        <PetAvatar type={MY_PET.type} size="lg" imageUrl={MY_PET.imageUrl} name={MY_PET.name} className="profile-avatar-wrap" />
         <div className="profile-name">{CURRENT_OWNER.name}</div>
         <div className="profile-city">
           <MapPin size={14} strokeWidth={2} />
@@ -25,7 +25,7 @@ export function ProfilePage() {
         </div>
 
         <div className="my-pet-chip">
-          <PetAvatar type={MY_PET.type} size="sm" />
+          <PetAvatar type={MY_PET.type} size="sm" imageUrl={MY_PET.imageUrl} name={MY_PET.name} />
           <div>
             <h3>{MY_PET.name}</h3>
             <p>{MY_PET.breed} · {formatAge(MY_PET)} · {MY_PET.neighborhood}</p>

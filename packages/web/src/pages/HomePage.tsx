@@ -9,7 +9,7 @@ import type { PetType } from '../types';
 import { PET_TYPE_LABELS } from '../types';
 
 const ALL = 'all' as const;
-const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird'];
+const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird', 'rabbit'];
 
 export function HomePage() {
   const [activeCategory, setActiveCategory] = useState<PetType | typeof ALL>(ALL);

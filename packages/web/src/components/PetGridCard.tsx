@@ -26,7 +26,7 @@ export function PetGridCard({ pet, index, onQuickAdd }: PetGridCardProps) {
         </button>
       )}
       <div className="pet-img">
-        <PetAvatar type={pet.type} size="lg" />
+        <PetAvatar type={pet.type} size="lg" imageUrl={pet.imageUrl} name={pet.name} variant="cover" />
       </div>
       <div className="pet-card-body">
         <div className="pet-name">{pet.name}</div>

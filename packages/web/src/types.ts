@@ -19,6 +19,7 @@ export interface Pet {
   neighborhood: string;
   ownerName: string;
   ownerId: number;
+  imageUrl: string;
   emoji: string;
   bio?: string;
   traits: string[];

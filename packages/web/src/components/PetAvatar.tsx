@@ -12,6 +12,9 @@ const PET_ICON_MAP: Record<PetType, typeof Dog> = {
 interface PetAvatarProps {
   type: PetType;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  imageUrl?: string;
+  name?: string;
+  variant?: 'circle' | 'cover';
   className?: string;
 }
 
@@ -22,12 +25,28 @@ const SIZE_CLASS = {
   xl: 'pet-avatar--xl',
 };
 
-export function PetAvatar({ type, size = 'md', className = '' }: PetAvatarProps) {
+export function PetAvatar({
+  type,
+  size = 'md',
+  imageUrl,
+  name = '',
+  variant = 'circle',
+  className = '',
+}: PetAvatarProps) {
   const PetIcon = PET_ICON_MAP[type];
   const sizeClass = SIZE_CLASS[size];
+  const variantClass = variant === 'cover' ? 'pet-avatar--cover' : '';
+
+  if (imageUrl) {
+    return (
+      <div className={`pet-avatar pet-avatar--photo ${sizeClass} ${variantClass} ${className}`}>
+        <img src={imageUrl} alt={name || 'پت'} loading="lazy" decoding="async" />
+      </div>
+    );
+  }
 
   return (
-    <div className={`pet-avatar pet-avatar--${type} ${sizeClass} ${className}`}>
+    <div className={`pet-avatar pet-avatar--${type} ${sizeClass} ${variantClass} ${className}`}>
       <PetIcon strokeWidth={1.75} />
     </div>
   );

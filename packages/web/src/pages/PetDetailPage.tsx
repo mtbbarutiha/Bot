@@ -63,7 +63,7 @@ export function PetDetailPage() {
         <p className="brand">{pet.breed}</p>
         <p className="subtitle">{PET_TYPE_LABELS[pet.type]}</p>
         <div className="glow-circle">
-          <PetAvatar type={pet.type} size="xl" />
+          <PetAvatar type={pet.type} size="xl" imageUrl={pet.imageUrl} name={pet.name} />
         </div>
         <h2 className="title">{pet.name}</h2>
         <div className="price-pill">{formatDistance(pet.distanceKm)}</div>
