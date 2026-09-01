@@ -1,161 +1,227 @@
-import type { Game, Section } from '../types';
+import type { MatchRequest, OwnerProfile, Pet } from '../types';
 
-export const CURRENT_USER = {
+export const CURRENT_OWNER: OwnerProfile = {
   id: 1,
   name: 'محمد',
-  sectionId: 1,
-  sectionName: 'سکشن فوتبال تهران',
+  city: 'تهران',
+  pets: [
+    {
+      id: 101,
+      name: 'رکس',
+      type: 'dog',
+      breed: 'گلدن رتریور',
+      age: 2,
+      ageUnit: 'year',
+      size: 'large',
+      gender: 'male',
+      city: 'تهران',
+      neighborhood: 'ونک',
+      ownerName: 'محمد',
+      ownerId: 1,
+      emoji: '🐕',
+      bio: 'خیلی بازیگوش و دوست‌داشتنی. عاشق توپ و پارک!',
+      traits: ['بازیگوش', 'اجتماعی', 'آموزش‌دیده'],
+      vaccinated: true,
+      neutered: true,
+      lookingForPlaymate: true,
+      distanceKm: 0,
+    },
+  ],
 };
 
-export const MOCK_SECTIONS: Section[] = [
+export const MY_PET = CURRENT_OWNER.pets[0];
+
+export const MOCK_PETS: Pet[] = [
   {
     id: 1,
-    name: 'سکشن فوتبال تهران',
-    description: 'دوستان فوتبال‌باز تهران — بازی‌های هفتگی',
+    name: 'لوسی',
+    type: 'dog',
+    breed: 'هاسکی',
+    age: 3,
+    ageUnit: 'year',
+    size: 'large',
+    gender: 'female',
     city: 'تهران',
-    memberCount: 24,
-    emoji: '⚽',
+    neighborhood: 'نیاوران',
+    ownerName: 'سارا',
+    ownerId: 2,
+    emoji: '🐕‍🦺',
+    bio: 'انرژی بالا! دوست داره با سگ‌های بزرگ بازی کنه.',
+    traits: ['پرانرژی', 'بازیگوش'],
+    vaccinated: true,
+    neutered: true,
+    lookingForPlaymate: true,
+    distanceKm: 1.2,
   },
   {
     id: 2,
-    name: 'سکشن والیبال اصفهان',
-    description: 'گروه والیبال اصفهان — ساحلی و سالنی',
-    city: 'اصفهان',
-    memberCount: 18,
-    emoji: '🏐',
+    name: 'میمو',
+    type: 'cat',
+    breed: 'پرشین',
+    age: 1,
+    ageUnit: 'year',
+    size: 'small',
+    gender: 'male',
+    city: 'تهران',
+    neighborhood: 'جردن',
+    ownerName: 'علی',
+    ownerId: 3,
+    emoji: '🐈',
+    bio: 'آروم ولی بازیگوش با گربه‌های دیگه.',
+    traits: ['آرام', 'بازیگوش'],
+    vaccinated: true,
+    neutered: false,
+    lookingForPlaymate: true,
+    distanceKm: 0.8,
   },
   {
     id: 3,
-    name: 'سکشن بسکتبال شیراز',
-    description: 'بسکتبال شیراز — آماتور و حرفه‌ای',
-    city: 'شیراز',
-    memberCount: 12,
-    emoji: '🏀',
+    name: 'ماکس',
+    type: 'dog',
+    breed: 'ژرمن شپرد',
+    age: 4,
+    ageUnit: 'year',
+    size: 'large',
+    gender: 'male',
+    city: 'تهران',
+    neighborhood: 'سعادت‌آباد',
+    ownerName: 'رضا',
+    ownerId: 4,
+    emoji: '🐕',
+    bio: 'سگ نگهبان ولی با بچه‌ها و پت‌های دیگه مهربونه.',
+    traits: ['وفادار', 'محافظ'],
+    vaccinated: true,
+    neutered: true,
+    lookingForPlaymate: true,
+    distanceKm: 2.5,
   },
   {
     id: 4,
-    name: 'سکشن فوتسال کرج',
-    description: 'فوتسال آقایان و بانوان کرج',
-    city: 'کرج',
-    memberCount: 20,
-    emoji: '🥅',
-  },
-];
-
-function daysFromNow(days: number, hour = 18): string {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  d.setHours(hour, 0, 0, 0);
-  return d.toISOString();
-}
-
-export const MOCK_GAMES: Game[] = [
-  {
-    id: 1,
-    title: 'فوتبال پنجشنبه شب',
-    gameType: 'football',
-    sectionId: 1,
-    sectionName: 'سکشن فوتبال تهران',
-    hostName: 'علی رضایی',
-    location: 'زمین چمن پارک ملت',
-    scheduledAt: daysFromNow(1, 19),
-    maxPlayers: 10,
-    currentPlayers: 7,
-    status: 'open',
-    description: 'نیاز به ۲ دروازه‌بان داریم. کفش چمنی الزامی.',
-  },
-  {
-    id: 2,
-    title: 'والیبال شنبه صبح',
-    gameType: 'volleyball',
-    sectionId: 2,
-    sectionName: 'سکشن والیبال اصفهان',
-    hostName: 'سارا محمدی',
-    location: 'سالن ورزشی آزادی',
-    scheduledAt: daysFromNow(3, 9),
-    maxPlayers: 12,
-    currentPlayers: 8,
-    status: 'open',
-    description: 'سطح متوسط. همه خوش‌آمدید!',
-  },
-  {
-    id: 3,
-    title: 'بسکتبال ۳ به ۳',
-    gameType: 'basketball',
-    sectionId: 3,
-    sectionName: 'سکشن بسکتبال شیراز',
-    hostName: 'رضا کریمی',
-    location: 'پارک کوهسنگی',
-    scheduledAt: daysFromNow(2, 17),
-    maxPlayers: 6,
-    currentPlayers: 6,
-    status: 'full',
-    description: 'بازی دوستانه ۳ به ۳',
-  },
-  {
-    id: 4,
-    title: 'فوتسال جمعه عصر',
-    gameType: 'futsal',
-    sectionId: 4,
-    sectionName: 'سکشن فوتسال کرج',
-    hostName: 'امیر حسینی',
-    location: 'سالن فوتسال المپیک',
-    scheduledAt: daysFromNow(4, 16),
-    maxPlayers: 10,
-    currentPlayers: 4,
-    status: 'open',
+    name: 'پونی',
+    type: 'rabbit',
+    breed: 'هلندی',
+    age: 8,
+    ageUnit: 'month',
+    size: 'small',
+    gender: 'female',
+    city: 'تهران',
+    neighborhood: 'پونک',
+    ownerName: 'مریم',
+    ownerId: 5,
+    emoji: '🐇',
+    bio: 'خرگوش کوچولوی بازیگوش. دنبال همبازی خرگوش یا گربه آروم.',
+    traits: ['بازیگوش', 'خجالتی'],
+    vaccinated: false,
+    neutered: false,
+    lookingForPlaymate: true,
+    distanceKm: 3.1,
   },
   {
     id: 5,
-    title: 'تنیس دوشنبه',
-    gameType: 'tennis',
-    sectionId: 1,
-    sectionName: 'سکشن فوتبال تهران',
-    hostName: 'نیما احمدی',
-    location: 'باشگاه تنیس ونک',
-    scheduledAt: daysFromNow(5, 10),
-    maxPlayers: 4,
-    currentPlayers: 2,
-    status: 'open',
-    description: 'دوبل مردان — سطح مبتدی تا متوسط',
+    name: 'چیچی',
+    type: 'bird',
+    breed: 'عروس هلندی',
+    age: 2,
+    ageUnit: 'year',
+    size: 'small',
+    gender: 'male',
+    city: 'تهران',
+    neighborhood: 'ولنجک',
+    ownerName: 'نیما',
+    ownerId: 6,
+    emoji: '🦜',
+    bio: 'عاشق آواز و بازی. دنبال پرنده هم‌جنس.',
+    traits: ['اجتماعی', 'آوازخوان'],
+    vaccinated: false,
+    neutered: false,
+    lookingForPlaymate: true,
+    distanceKm: 1.8,
   },
   {
     id: 6,
-    title: 'شطرنج و بازی فکری',
-    gameType: 'board',
-    sectionId: 2,
-    sectionName: 'سکشن والیبال اصفهان',
-    hostName: 'مریم نوری',
-    location: 'کافه بازی مرکز شهر',
-    scheduledAt: daysFromNow(2, 20),
-    maxPlayers: 8,
-    currentPlayers: 5,
-    status: 'open',
+    name: 'بوبی',
+    type: 'dog',
+    breed: 'پودل',
+    age: 1,
+    ageUnit: 'year',
+    size: 'small',
+    gender: 'male',
+    city: 'تهران',
+    neighborhood: 'زعفرانیه',
+    ownerName: 'الهام',
+    ownerId: 7,
+    emoji: '🐩',
+    bio: 'پودل کوچولوی باهوش. عاشق بازی با سگ‌های کوچیک.',
+    traits: ['باهوش', 'بازیگوش', 'آموزش‌دیده'],
+    vaccinated: true,
+    neutered: true,
+    lookingForPlaymate: true,
+    distanceKm: 2.0,
   },
 ];
 
-export function getGamesForSection(sectionId: number): Game[] {
-  return MOCK_GAMES.filter((g) => g.sectionId === sectionId && g.status === 'open');
+export const MOCK_MATCHES: MatchRequest[] = [
+  {
+    id: 1,
+    fromPet: MOCK_PETS[0],
+    toPetId: MY_PET.id,
+    message: 'سلام! لوسی عاشق گلدن‌هاست. بریم پارک؟',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 3600000).toISOString(),
+  },
+  {
+    id: 2,
+    fromPet: MOCK_PETS[5],
+    toPetId: MY_PET.id,
+    message: 'بوبی هم سگ کوچیک دوست داره بازی کنه!',
+    status: 'pending',
+    createdAt: new Date(Date.now() - 7200000).toISOString(),
+  },
+  {
+    id: 3,
+    fromPet: MOCK_PETS[2],
+    toPetId: MY_PET.id,
+    message: 'ماکس آماده ملاقاته 🐾',
+    status: 'accepted',
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+  },
+];
+
+export function getPetById(id: number): Pet | undefined {
+  if (id === MY_PET.id) return MY_PET;
+  return MOCK_PETS.find((p) => p.id === id);
 }
 
-export function getGameById(id: number): Game | undefined {
-  return MOCK_GAMES.find((g) => g.id === id);
+export function getNearbyPets(excludeId?: number): Pet[] {
+  return MOCK_PETS
+    .filter((p) => p.lookingForPlaymate && p.id !== excludeId)
+    .sort((a, b) => a.distanceKm - b.distanceKm);
 }
 
-export function getSectionById(id: number): Section | undefined {
-  return MOCK_SECTIONS.find((s) => s.id === id);
+export function getCompatiblePets(myPet: Pet): Pet[] {
+  return getNearbyPets(myPet.id).filter((p) => {
+    if (p.type !== myPet.type && !(p.type === 'cat' && myPet.type === 'rabbit')) return false;
+    if (myPet.size === 'small' && p.size === 'large') return false;
+    if (myPet.size === 'large' && p.size === 'small' && p.type === 'dog') return false;
+    return true;
+  });
 }
 
-export function formatPersianDate(iso: string): string {
-  return new Intl.DateTimeFormat('fa-IR', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(new Date(iso));
+export function formatAge(pet: Pet): string {
+  const unit = pet.ageUnit === 'year' ? 'سال' : 'ماه';
+  return `${pet.age} ${unit}`;
 }
 
-export function spotsLeft(game: Game): number {
-  return game.maxPlayers - game.currentPlayers;
+export function formatDistance(km: number): string {
+  if (km === 0) return 'همینجا';
+  if (km < 1) return `${Math.round(km * 1000)} متر`;
+  return `${km.toFixed(1)} کیلومتر`;
+}
+
+export function formatTimeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const hours = Math.floor(diff / 3600000);
+  if (hours < 1) return 'چند دقیقه پیش';
+  if (hours < 24) return `${hours} ساعت پیش`;
+  return `${Math.floor(hours / 24)} روز پیش`;
 }

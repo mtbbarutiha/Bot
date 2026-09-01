@@ -1,61 +1,78 @@
-export type GameType =
-  | 'football'
-  | 'volleyball'
-  | 'basketball'
-  | 'futsal'
-  | 'tennis'
-  | 'board'
-  | 'other';
+export type PetType = 'dog' | 'cat' | 'bird' | 'rabbit' | 'other';
 
-export type GameStatus = 'open' | 'full' | 'cancelled' | 'completed';
+export type PetSize = 'small' | 'medium' | 'large';
 
-export interface Section {
+export type PetGender = 'male' | 'female';
+
+export type MatchStatus = 'pending' | 'accepted' | 'rejected';
+
+export interface Pet {
   id: number;
   name: string;
-  description?: string;
-  city?: string;
-  memberCount: number;
+  type: PetType;
+  breed: string;
+  age: number;
+  ageUnit: 'month' | 'year';
+  size: PetSize;
+  gender: PetGender;
+  city: string;
+  neighborhood: string;
+  ownerName: string;
+  ownerId: number;
   emoji: string;
+  bio?: string;
+  traits: string[];
+  vaccinated: boolean;
+  neutered: boolean;
+  lookingForPlaymate: boolean;
+  distanceKm: number;
 }
 
-export interface Game {
+export interface MatchRequest {
   id: number;
-  title: string;
-  gameType: GameType;
-  sectionId: number;
-  sectionName: string;
-  hostName: string;
-  location: string;
-  scheduledAt: string;
-  maxPlayers: number;
-  currentPlayers: number;
-  status: GameStatus;
-  description?: string;
+  fromPet: Pet;
+  toPetId: number;
+  message?: string;
+  status: MatchStatus;
+  createdAt: string;
 }
 
-export const GAME_TYPE_LABELS: Record<GameType, string> = {
-  football: 'فوتبال',
-  volleyball: 'والیبال',
-  basketball: 'بسکتبال',
-  futsal: 'فوتسال',
-  tennis: 'تنیس',
-  board: 'بازی فکری',
+export interface OwnerProfile {
+  id: number;
+  name: string;
+  city: string;
+  pets: Pet[];
+}
+
+export const PET_TYPE_LABELS: Record<PetType, string> = {
+  dog: 'سگ',
+  cat: 'گربه',
+  bird: 'پرنده',
+  rabbit: 'خرگوش',
   other: 'سایر',
 };
 
-export const GAME_TYPE_EMOJI: Record<GameType, string> = {
-  football: '⚽',
-  volleyball: '🏐',
-  basketball: '🏀',
-  futsal: '🥅',
-  tennis: '🎾',
-  board: '🎲',
-  other: '🎯',
+export const PET_TYPE_EMOJI: Record<PetType, string> = {
+  dog: '🐕',
+  cat: '🐈',
+  bird: '🐦',
+  rabbit: '🐇',
+  other: '🐾',
 };
 
-export const GAME_STATUS_LABELS: Record<GameStatus, string> = {
-  open: 'باز',
-  full: 'تکمیل',
-  cancelled: 'لغو شده',
-  completed: 'برگزار شده',
+export const PET_SIZE_LABELS: Record<PetSize, string> = {
+  small: 'کوچک',
+  medium: 'متوسط',
+  large: 'بزرگ',
+};
+
+export const PET_GENDER_LABELS: Record<PetGender, string> = {
+  male: 'نر',
+  female: 'ماده',
+};
+
+export const MATCH_STATUS_LABELS: Record<MatchStatus, string> = {
+  pending: 'در انتظار',
+  accepted: 'پذیرفته',
+  rejected: 'رد شده',
 };

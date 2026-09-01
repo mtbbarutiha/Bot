@@ -1,123 +1,123 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { GameCard } from '../components/GameCard';
-import { SectionCard } from '../components/SectionCard';
-import {
-  CURRENT_USER,
-  MOCK_GAMES,
-  MOCK_SECTIONS,
-  getGamesForSection,
-} from '../data/mock';
-import './HomePage.css';
+import { PetCardLarge } from '../components/PetCardLarge';
+import { CURRENT_OWNER, MOCK_MATCHES, MY_PET, getNearbyPets } from '../data/mock';
+import type { PetType } from '../types';
+import { PET_TYPE_EMOJI, PET_TYPE_LABELS } from '../types';
+
+const ALL = 'all' as const;
+const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird'];
 
 export function HomePage() {
-  const [showToast, setShowToast] = useState(false);
-  const myGames = getGamesForSection(CURRENT_USER.sectionId);
-  const openGames = MOCK_GAMES.filter((g) => g.status === 'open').slice(0, 4);
+  const [activeCategory, setActiveCategory] = useState<PetType | typeof ALL>(ALL);
+  const [search, setSearch] = useState('');
 
-  const handleInstall = () => {
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2500);
-  };
+  const pendingCount = MOCK_MATCHES.filter((m) => m.status === 'pending').length;
+  const pets = activeCategory === ALL
+    ? getNearbyPets(MY_PET.id)
+    : getNearbyPets(MY_PET.id).filter((p) => p.type === activeCategory);
+
+  const filtered = search
+    ? pets.filter((p) =>
+        p.name.includes(search) ||
+        p.breed.includes(search) ||
+        p.neighborhood.includes(search)
+      )
+    : pets;
 
   return (
-    <div className="page home-page">
-      <div className="hero">
-        <div className="hero-content">
-          <div className="hero-emoji">🎮</div>
-          <h1 className="hero-title">همبازی</h1>
-          <p className="hero-subtitle">
-            برای سکشن‌ت بازی پیدا کن — روی تلگرام، وب و PWA
-          </p>
-          <div className="hero-stats">
-            <div>
-              <div className="hero-stat-value">{MOCK_SECTIONS.length}</div>
-              <div className="hero-stat-label">سکشن فعال</div>
-            </div>
-            <div>
-              <div className="hero-stat-value">{MOCK_GAMES.filter((g) => g.status === 'open').length}</div>
-              <div className="hero-stat-label">بازی باز</div>
-            </div>
-            <div>
-              <div className="hero-stat-value">{MOCK_SECTIONS.reduce((s, x) => s + x.memberCount, 0)}</div>
-              <div className="hero-stat-label">بازیکن</div>
-            </div>
-          </div>
-          <div className="platform-badges">
-            <span className="platform-badge">📱 PWA</span>
-            <span className="platform-badge">🌐 وب</span>
-            <span className="platform-badge">✈️ تلگرام</span>
-          </div>
+    <>
+      <div className="top-bar">
+        <div className="greeting-block">
+          <h1>سلام، {CURRENT_OWNER.name} 🐾</h1>
+          <p>صبح بخیر — برای {MY_PET.name} همبازی پیدا کن</p>
         </div>
+        <Link to="/matches" className="icon-btn" aria-label="اعلان‌ها">
+          🔔
+          {pendingCount > 0 && <span className="badge-dot" />}
+        </Link>
       </div>
 
-      <div className="install-banner">
-        <div className="install-banner-text">
-          <strong>نصب اپ همبازی</strong>
-          برای دسترسی سریع‌تر، اپ را به صفحه اصلی اضافه کن
+      <div className="search-row">
+        <div className="search-bar">
+          <input
+            type="search"
+            placeholder="جستجو بر اساس نژاد، سایز یا نام..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          <span className="search-icon">🔍</span>
         </div>
-        <button className="btn btn-sm btn-secondary" onClick={handleInstall}>
-          نصب
-        </button>
+        <button className="filter-btn" aria-label="فیلتر">☰</button>
       </div>
 
-      {myGames.length > 0 && (
-        <section className="home-section">
-          <div className="section-header">
-            <h2 className="section-title">بازی‌های سکشن من</h2>
-            <Link to={`/sections/${CURRENT_USER.sectionId}`} className="btn btn-ghost btn-sm">
-              همه
-            </Link>
-          </div>
-          <p className="section-desc">
-            {CURRENT_USER.sectionName} — {myGames.length} بازی باز
-          </p>
-          <div className="stack">
-            {myGames.map((game) => (
-              <GameCard key={game.id} game={game} />
-            ))}
-          </div>
-        </section>
+      <div className="my-pet-chip">
+        <div className="avatar">{MY_PET.emoji}</div>
+        <div className="info">
+          <h3>{MY_PET.name} — پت من</h3>
+          <p>{MY_PET.breed} · {MY_PET.neighborhood}</p>
+        </div>
+        <Link to="/profile" style={{ marginRight: 'auto', fontSize: '0.8rem', fontWeight: 700, color: 'var(--orange)' }}>
+          ویرایش
+        </Link>
+      </div>
+
+      <div className="section-row">
+        <h2>دسته‌بندی</h2>
+        <Link to="/explore">مشاهده همه</Link>
+      </div>
+
+      <div className="categories">
+        {CATEGORIES.map((cat) => (
+          <button
+            key={cat}
+            className={`category-item${activeCategory === cat ? ' active' : ''}`}
+            onClick={() => setActiveCategory(cat)}
+          >
+            <div className="category-circle">
+              {cat === ALL ? '🐾' : PET_TYPE_EMOJI[cat]}
+            </div>
+            <span>{cat === ALL ? 'همه' : PET_TYPE_LABELS[cat]}</span>
+          </button>
+        ))}
+      </div>
+
+      {pendingCount > 0 && (
+        <div className="promo-banner">
+          <p><strong>{pendingCount} درخواست همبازی</strong> جدید!</p>
+          <Link to="/matches" className="promo-btn">ببین</Link>
+        </div>
       )}
 
-      <section className="home-section">
-        <div className="section-header">
-          <h2 className="section-title">بازی‌های پیشنهادی</h2>
-          <Link to="/sections" className="btn btn-ghost btn-sm">
-            همه سکشن‌ها
-          </Link>
-        </div>
-        <div className="stack">
-          {openGames.map((game) => (
-            <GameCard key={game.id} game={game} />
+      <div className="section-row">
+        <h2>همبازی‌های نزدیک</h2>
+        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{filtered.length} پت</span>
+      </div>
+
+      {filtered.length > 0 ? (
+        <div className="pet-list">
+          {filtered.map((pet) => (
+            <PetCardLarge key={pet.id} pet={pet} />
           ))}
         </div>
-      </section>
-
-      <section className="home-section">
-        <div className="section-header">
-          <h2 className="section-title">سکشن‌های محبوب</h2>
-        </div>
-        <div className="stack">
-          {MOCK_SECTIONS.slice(0, 3).map((section) => (
-            <SectionCard
-              key={section.id}
-              section={section}
-              gameCount={getGamesForSection(section.id).length}
-            />
-          ))}
-        </div>
-      </section>
-
-      <Link to="/create" className="btn btn-primary btn-block home-cta">
-        ➕ ساخت بازی جدید
-      </Link>
-
-      {showToast && (
-        <div className="toast" role="status">
-          در مرورگر موبایل از منو «Add to Home Screen» استفاده کن
+      ) : (
+        <div className="empty-state">
+          <div className="icon">🔍</div>
+          <h3>پتی پیدا نشد</h3>
+          <p>فیلتر یا جستجو رو عوض کن</p>
         </div>
       )}
-    </div>
+
+      <div style={{ padding: '20px' }}>
+        <Link
+          to="/add-pet"
+          className="welcome-cta"
+          style={{ display: 'flex', textDecoration: 'none' }}
+        >
+          <span className="paw-icon">🐾</span>
+          <span>ثبت پت جدید</span>
+        </Link>
+      </div>
+    </>
   );
 }
