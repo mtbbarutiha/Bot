@@ -943,284 +943,148 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 
 .cta-btn--spaced { margin-bottom: 24px; }
 
-/* ── Welcome ── */
+/* ── Welcome (full-screen hero) ── */
 .welcome-page {
+  position: relative;
   min-height: 100dvh;
   max-width: 430px;
   margin: 0 auto;
-  background: var(--surface);
-  display: flex;
-  flex-direction: column;
-}
-
-.welcome-visual {
-  position: relative;
-  flex: 1;
-  min-height: 58vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: calc(env(safe-area-inset-top, 0px) + 28px) 24px 36px;
   overflow: hidden;
-  background: linear-gradient(165deg, #0f172a 0%, #1e293b 55%, #334155 100%);
+  background: #1a1208;
 }
 
-.welcome-visual__mesh {
+.welcome-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 40%;
+}
+
+.welcome-overlay {
   position: absolute;
   inset: 0;
   background:
-    radial-gradient(ellipse 80% 60% at 20% 10%, rgba(59, 130, 246, 0.22) 0%, transparent 55%),
-    radial-gradient(ellipse 70% 50% at 85% 75%, rgba(139, 92, 246, 0.14) 0%, transparent 50%);
+    linear-gradient(180deg, rgba(15, 23, 42, 0.55) 0%, rgba(15, 23, 42, 0.08) 38%, rgba(15, 23, 42, 0.15) 62%, rgba(15, 23, 42, 0.72) 100%);
   pointer-events: none;
 }
 
-.welcome-visual__glow {
-  position: absolute;
-  bottom: -40px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 320px;
-  height: 160px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse, rgba(59, 130, 246, 0.25) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.welcome-header {
+.welcome-body {
   position: relative;
   z-index: 2;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 28px;
-}
-
-.welcome-title {
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 20px)
+    24px
+    calc(env(safe-area-inset-bottom, 0px) + 28px);
 }
 
-.welcome-title-brand {
+.welcome-topbar {
+  display: flex;
+  justify-content: center;
+}
+
+.welcome-hero-text {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding-bottom: 28px;
+  color: white;
+}
+
+.welcome-hero-text h1 {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.welcome-hero-brand {
   display: inline-flex;
   align-items: baseline;
-  font-size: 2.4rem;
+  font-size: 3rem;
   font-weight: 800;
   letter-spacing: -0.06em;
   line-height: 1;
   text-transform: lowercase;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
 }
 
-.welcome-title-pet {
-  color: var(--slate-900);
-}
-
-.welcome-title-date {
-  color: var(--primary);
-}
-
-.welcome-title-tag {
-  font-size: 1.05rem;
-  font-weight: 700;
-  color: var(--slate-600);
-  letter-spacing: -0.02em;
-}
-
-/* Stacked swipe cards */
-.welcome-stack {
-  position: relative;
-  z-index: 2;
-  width: min(100%, 268px);
-  height: 340px;
-  margin: 0 auto;
-}
-
-.welcome-stack__card {
-  position: absolute;
-  inset: 0;
-  border-radius: 28px;
-  overflow: hidden;
-  background: var(--slate-800);
-  border: 2px solid rgba(255, 255, 255, 0.92);
-  box-shadow: 0 24px 56px rgba(0, 0, 0, 0.35);
-  transform: rotate(var(--stack-rotate, 0deg)) translateY(var(--stack-y, 0)) scale(var(--stack-scale, 1));
-  opacity: var(--stack-opacity, 1);
-  transition: transform 0.4s ease, opacity 0.4s ease;
-}
-
-.welcome-stack__card img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center 30%;
-  display: block;
-}
-
-.welcome-stack__card--2::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, transparent 45%, rgba(15, 23, 42, 0.75) 100%);
-  pointer-events: none;
-}
-
-.welcome-stack__info {
-  position: absolute;
-  right: 18px;
-  bottom: 18px;
-  left: 18px;
-  z-index: 1;
+.welcome-hero-pet {
   color: white;
 }
 
-.welcome-stack__info strong {
-  display: block;
-  font-size: 1.15rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  margin-bottom: 2px;
+.welcome-hero-date {
+  color: #93c5fd;
 }
 
-.welcome-stack__info span {
-  font-size: 0.78rem;
-  color: rgba(255, 255, 255, 0.82);
-  font-weight: 500;
-}
-
-.welcome-stack__match {
-  position: absolute;
-  left: 50%;
-  top: 52%;
-  transform: translate(-50%, -50%);
-  z-index: 5;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-  color: white;
-  border: 3px solid white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 10px 28px rgba(239, 68, 68, 0.45);
-  animation: welcome-pulse 2.4s ease-in-out infinite;
-}
-
-@keyframes welcome-pulse {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  50% { transform: translate(-50%, -50%) scale(1.08); }
-}
-
-.welcome-content {
-  padding: 32px 28px calc(36px + env(safe-area-inset-bottom, 0px));
-  background: var(--surface);
-  border-radius: 28px 28px 0 0;
-  margin-top: -24px;
-  position: relative;
-  z-index: 3;
-  box-shadow: 0 -12px 40px rgba(15, 23, 42, 0.08);
-}
-
-.welcome-content h1 {
-  margin-bottom: 10px;
-}
-
-.welcome-content h1:not(.welcome-title) {
-  font-size: 1.75rem;
+.welcome-hero-tag {
+  font-size: 1.35rem;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1.35;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.3);
 }
 
-.welcome-content h1 span {
-  color: var(--primary);
+.welcome-hero-text p {
+  font-size: 0.92rem;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.65;
+  max-width: 280px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.25);
 }
 
-.welcome-content p {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  margin-bottom: 22px;
-}
-
-.welcome-features {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 28px;
-}
-
-.welcome-features li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 0.84rem;
-  font-weight: 600;
-  color: var(--slate-700);
-}
-
-.welcome-feature-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
-  background: var(--brand-50);
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.welcome-nav {
+.welcome-footer {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.welcome-back {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--surface);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--slate-700);
+.welcome-cta {
+  flex: 1;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1.5px solid rgba(255, 255, 255, 0.45);
+  color: white;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   transition: all var(--transition);
 }
 
-.welcome-back:active { transform: scale(0.96); }
-
-.welcome-go {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--slate-900);
-  border-radius: var(--radius-md);
-  padding: 8px 8px 8px 22px;
-  color: white;
-  font-weight: 700;
-  font-size: 0.95rem;
-  transition: background var(--transition);
+.welcome-cta:hover {
+  background: rgba(255, 255, 255, 0.32);
 }
 
-.welcome-go:hover { background: var(--slate-800); }
+.welcome-cta:active {
+  transform: scale(0.98);
+}
 
-.welcome-go .paw-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: var(--radius-sm);
-  background: var(--primary);
+.welcome-skip {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  color: white;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: white;
+  flex-shrink: 0;
+  transition: all var(--transition);
+}
+
+.welcome-skip:active {
+  transform: scale(0.96);
 }
 
 /* ── Matches ── */

@@ -42,11 +42,8 @@ export const DEFAULT_IMAGES: Record<PetType, string> = {
   other: petLocal(OTHER_PHOTOS[0]),
 };
 
-export const WELCOME_STACK = [
-  { src: petLocal('cat-04'), name: 'لونا', meta: 'پرشین · ۱ ساله' },
-  { src: petLocal('dog-03'), name: 'چی‌چی', meta: 'هاسکی · ۳ ساله' },
-  { src: petLocal('dog-08'), name: 'ماکس', meta: 'گلدن · ۲ ساله' },
-] as const;
+/** Full-screen welcome hero — cute running dogs */
+export const WELCOME_HERO = petLocal('dog-03');
 
 export const EMPTY_STATE_PHOTO = petLocal(CAT_PHOTOS[7]);
 
