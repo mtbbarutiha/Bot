@@ -956,7 +956,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 
 .cta-btn--spaced { margin-bottom: 24px; }
 
-/* ── Welcome (mockup-style hero) ── */
+/* ── Welcome splash ── */
 .welcome-page {
   position: relative;
   min-height: 100dvh;
@@ -972,18 +972,19 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 42%;
+  object-position: center 38%;
 }
 
 .welcome-overlay {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(91, 168, 210, 0.35) 0%, rgba(91, 168, 210, 0) 22%, rgba(91, 168, 210, 0) 70%, rgba(91, 168, 210, 0.45) 100%);
+    linear-gradient(180deg, rgba(15, 23, 42, 0.12) 0%, transparent 32%),
+    linear-gradient(0deg, rgba(15, 23, 42, 0.22) 0%, transparent 28%);
   pointer-events: none;
 }
 
-.welcome-body {
+.welcome-content {
   position: relative;
   z-index: 2;
   min-height: 100dvh;
@@ -991,63 +992,75 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   flex-direction: column;
   justify-content: space-between;
   padding:
-    calc(env(safe-area-inset-top, 0px) + 48px)
-    28px
-    calc(env(safe-area-inset-bottom, 0px) + 36px);
+    calc(env(safe-area-inset-top, 0px) + 56px)
+    24px
+    calc(env(safe-area-inset-bottom, 0px) + 40px);
 }
 
-.welcome-headline {
+.welcome-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  color: white;
 }
 
-.welcome-headline .brand-mark {
-  justify-content: center;
+.welcome-brand-mark {
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
 }
 
-.welcome-headline .logotype--light {
-  background: none;
-  -webkit-background-clip: unset;
-  background-clip: unset;
-  color: #ffffff;
-  -webkit-text-fill-color: #ffffff;
-  font-size: 2.75rem;
-  text-shadow: 0 2px 20px rgba(15, 23, 42, 0.12);
+.welcome-brand-mark .brand-mark-icon {
+  filter: drop-shadow(0 8px 24px rgba(15, 23, 42, 0.2));
 }
 
-.welcome-headline-sub {
-  margin-top: 10px;
-  font-size: 1.05rem;
+.welcome-brand-mark .brand-mark-word,
+.welcome-brand-mark .logotype--light {
+  font-size: 3.1rem;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  filter: drop-shadow(0 3px 18px rgba(15, 23, 42, 0.18));
+}
+
+.welcome-tagline {
+  margin-top: 14px;
+  font-size: 1.12rem;
   font-weight: 700;
   letter-spacing: -0.02em;
-  color: rgba(255, 255, 255, 0.92);
-  text-shadow: 0 1px 12px rgba(15, 23, 42, 0.15);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.94);
+  text-shadow: 0 2px 14px rgba(15, 23, 42, 0.2);
+  max-width: 260px;
 }
 
-.welcome-footer {
+.welcome-actions {
   display: flex;
   justify-content: center;
+  padding-top: 12px;
 }
 
 .welcome-cta {
   width: 100%;
-  max-width: 320px;
-  height: 56px;
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.28);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1.5px solid rgba(255, 255, 255, 0.5);
-  color: white;
-  font-size: 1.05rem;
+  max-width: 340px;
+  height: 58px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.26);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+  font-size: 1.08rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   transition: all var(--transition);
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  box-shadow:
+    0 10px 32px rgba(15, 23, 42, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .welcome-cta:hover {
-  background: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.36);
+  border-color: rgba(255, 255, 255, 0.7);
 }
 
 .welcome-cta:active {

@@ -10,13 +10,18 @@ export function WelcomePage() {
       <img className="welcome-bg" src={WELCOME_HERO} alt="petdate" />
       <div className="welcome-overlay" aria-hidden />
 
-      <div className="welcome-body">
-        <header className="welcome-headline">
-          <BrandMark variant="light" size="hero" showIcon={false} />
-          <p className="welcome-headline-sub">همبازی برای پت‌ات</p>
+      <div className="welcome-content">
+        <header className="welcome-brand">
+          <BrandMark
+            variant="light"
+            size="hero"
+            iconSize={52}
+            className="welcome-brand-mark"
+          />
+          <p className="welcome-tagline">همبازی برای پت‌ات</p>
         </header>
 
-        <div className="welcome-footer">
+        <footer className="welcome-actions">
           <button
             type="button"
             className="welcome-cta"
@@ -24,7 +29,7 @@ export function WelcomePage() {
           >
             شروع کن
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );
