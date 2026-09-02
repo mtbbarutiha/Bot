@@ -1,4 +1,5 @@
 import { LogoIcon } from './LogoIcon';
+import { Logotype } from './Logotype';
 
 interface BrandMarkProps {
   className?: string;
@@ -20,9 +21,7 @@ export function BrandMark({
       {showIcon && (
         <LogoIcon size={iconSize} variant={variant} className="brand-mark-icon" />
       )}
-      <span className="brand-mark-word" aria-label="petdate" title="petdate">
-        <span className="brand-mark-pet">pet</span><span className="brand-mark-date">date</span>
-      </span>
+      <Logotype variant={variant} className="brand-mark-word" />
     </span>
   );
 }

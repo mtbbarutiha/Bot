@@ -100,30 +100,36 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 
 .brand-mark-word {
-  display: inline-flex;
-  align-items: baseline;
-  line-height: 1;
   font-size: 1.28rem;
+}
+
+.logotype {
+  display: inline-block;
   font-weight: 700;
   letter-spacing: -0.055em;
+  line-height: 1;
   text-transform: lowercase;
+  white-space: nowrap;
 }
 
-.brand-mark-pet {
-  color: var(--slate-900);
+.logotype--dark {
+  background: linear-gradient(90deg, var(--slate-900) 0 42.857%, var(--primary) 42.857% 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
-.brand-mark-date {
-  color: var(--primary);
-  font-weight: 600;
+.logotype--light {
+  background: linear-gradient(90deg, #ffffff 0 42.857%, #93c5fd 42.857% 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
-.brand-mark--light .brand-mark-pet {
-  color: white;
-}
-
-.brand-mark--light .brand-mark-date {
-  color: #93c5fd;
+.brand-mark--light .logotype--dark {
+  background: linear-gradient(90deg, #ffffff 0 42.857%, #93c5fd 42.857% 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 .greeting-brand {
@@ -1793,14 +1799,6 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   padding: 32px 28px;
   box-shadow: var(--shadow-md);
   text-align: center;
-}
-
-.admin-brand .brand-mark-pet {
-  color: white;
-}
-
-.admin-brand .brand-mark-date {
-  color: #93c5fd;
 }
 
 .admin-brand .brand-mark-word {

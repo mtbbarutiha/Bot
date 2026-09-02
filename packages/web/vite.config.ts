@@ -7,7 +7,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'logo.svg', 'pets/**/*'],
+      includeAssets: ['favicon.svg', 'logo.svg', 'logotype.svg', 'pets/**/*'],
       manifest: {
         name: 'petdate',
         short_name: 'petdate',
