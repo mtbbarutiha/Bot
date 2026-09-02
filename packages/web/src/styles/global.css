@@ -972,153 +972,93 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 32%;
+  object-position: center 52%;
 }
 
 .welcome-overlay {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(180deg, rgba(15, 23, 42, 0.08) 0%, transparent 28%),
-    linear-gradient(0deg, rgba(15, 23, 42, 0.06) 42%, rgba(255, 255, 255, 0.94) 58%, #ffffff 100%);
+    linear-gradient(180deg, rgba(15, 23, 42, 0.18) 0%, transparent 18%),
+    linear-gradient(0deg, rgba(15, 23, 42, 0.28) 0%, transparent 22%);
   pointer-events: none;
 }
 
-.welcome-float {
-  position: absolute;
+.welcome-ui {
+  position: relative;
   z-index: 2;
-  top: calc(env(safe-area-inset-top, 0px) + 52px);
-  left: 0;
-  right: 0;
+  min-height: 100dvh;
   display: flex;
-  justify-content: center;
-  padding: 0 24px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 44px)
+    24px
+    calc(env(safe-area-inset-bottom, 0px) + 32px);
+}
+
+.welcome-top {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
 }
 
 .welcome-brand-mark {
-  flex-direction: column;
-  align-items: center;
-  gap: 14px;
-}
-
-.welcome-brand-mark .brand-mark-icon {
-  filter: drop-shadow(0 8px 28px rgba(15, 23, 42, 0.22));
+  justify-content: center;
 }
 
 .welcome-brand-mark .brand-mark-word,
 .welcome-brand-mark .logotype--light {
-  font-size: 2.85rem;
+  font-size: 2.1rem;
   font-weight: 800;
   letter-spacing: -0.06em;
-  filter: drop-shadow(0 3px 20px rgba(15, 23, 42, 0.2));
+  filter: drop-shadow(0 2px 14px rgba(15, 23, 42, 0.2));
 }
 
-.welcome-sheet {
-  position: absolute;
-  z-index: 3;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: var(--surface);
-  border-radius: 28px 28px 0 0;
-  box-shadow: 0 -20px 60px rgba(15, 23, 42, 0.14);
-  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+.welcome-brand-mark .brand-mark-icon {
+  filter: drop-shadow(0 4px 16px rgba(15, 23, 42, 0.18));
 }
 
-.welcome-sheet-handle {
-  width: 42px;
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: var(--slate-200);
-  margin: 12px auto 0;
+.welcome-tagline {
+  margin-top: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 10px rgba(15, 23, 42, 0.25);
 }
 
-.welcome-sheet-body {
-  padding: 20px 28px 28px;
-}
-
-.welcome-sheet-title {
-  font-size: 1.65rem;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  line-height: 1.35;
-  margin-bottom: 8px;
-  color: var(--slate-900);
-}
-
-.welcome-sheet-desc {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  margin-bottom: 20px;
-}
-
-.welcome-sheet-features {
-  list-style: none;
+.welcome-bottom {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-bottom: 24px;
-}
-
-.welcome-sheet-features li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-size: 0.86rem;
-  font-weight: 600;
-  color: var(--slate-700);
-}
-
-.welcome-feature-dot {
-  width: 34px;
-  height: 34px;
-  border-radius: 11px;
-  background: var(--brand-50);
-  color: var(--primary);
-  display: flex;
-  align-items: center;
   justify-content: center;
-  flex-shrink: 0;
 }
 
 .welcome-cta {
   width: 100%;
-  height: 54px;
-  border-radius: var(--radius-md);
-  background: var(--slate-900);
-  color: white;
-  font-size: 1rem;
+  max-width: 340px;
+  height: 56px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+  font-size: 1.05rem;
   font-weight: 700;
   letter-spacing: -0.01em;
-  transition: background var(--transition), transform var(--transition);
-  box-shadow: var(--shadow-md);
+  transition: all var(--transition);
+  box-shadow:
+    0 8px 28px rgba(15, 23, 42, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 
 .welcome-cta:hover {
-  background: var(--slate-800);
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .welcome-cta:active {
   transform: scale(0.98);
-}
-
-.welcome-skip {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  margin-top: 14px;
-  padding: 8px;
-  color: var(--text-tertiary);
-  font-size: 0.84rem;
-  font-weight: 600;
-  transition: color var(--transition);
-}
-
-.welcome-skip:hover {
-  color: var(--text-secondary);
 }
 
 /* ── Matches ── */
