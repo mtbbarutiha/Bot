@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, MapPin, MessageCircle, PawPrint, Sparkles } from 'lucide-react';
+import { ArrowRight, MapPin, MessageCircle, PawPrint } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
 import { WelcomeStack } from '../components/WelcomeStack';
 import { WELCOME_STACK } from '../data/petImages';
@@ -21,22 +21,20 @@ export function WelcomePage() {
 
         <header className="welcome-header">
           <BrandMark className="brand-mark--lg" iconSize={36} variant="light" />
-          <span className="welcome-badge">
-            <Sparkles size={13} strokeWidth={2.5} />
-            همبازی برای پت‌ها
-          </span>
         </header>
 
         <WelcomeStack pets={WELCOME_STACK} />
       </div>
 
       <div className="welcome-content">
-        <h1>
-          بهترین همبازی
-          <br />
-          <span>برای پت‌ات</span>
+        <h1 className="welcome-title">
+          <span className="welcome-title-brand" aria-label="petdate">
+            <span className="welcome-title-pet">pet</span>
+            <span className="welcome-title-date">date</span>
+          </span>
+          <span className="welcome-title-tag">همبازی برای پت‌ات</span>
         </h1>
-        <p>پت‌های نزدیک رو کشف کن، درخواست بده و با صاحب‌شون آشنا شو.</p>
+        <p>با petdate پت‌های نزدیک رو کشف کن، درخواست بده و با صاحب‌شون آشنا شو.</p>
 
         <ul className="welcome-features">
           {FEATURES.map(({ icon: Icon, label }) => (
