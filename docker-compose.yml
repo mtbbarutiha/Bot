@@ -1,0 +1,80 @@
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: petdate-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: petdate
+      POSTGRES_PASSWORD: petdate
+      POSTGRES_DB: petdate
+    ports:
+      - "5432:5432"
+    volumes:
+      - petdate_postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U petdate -d petdate"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: petdate-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - petdate_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: petdate-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: petdate
+      MINIO_ROOT_PASSWORD: petdate_secret
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - petdate_minio_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9000/minio/health/live || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  elasticsearch:
+    profiles:
+      - search
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.15.0
+    container_name: petdate-elasticsearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - petdate_elasticsearch_data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  petdate_postgres_data:
+  petdate_redis_data:
+  petdate_minio_data:
+  petdate_elasticsearch_data:
