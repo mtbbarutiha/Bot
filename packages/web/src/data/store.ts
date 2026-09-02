@@ -153,6 +153,34 @@ class PetStore {
     this.persist();
   }
 
+  sendPlaydateRequest(data: {
+    toPetId: number;
+    message?: string;
+    scheduledAt?: string;
+    location?: string;
+  }): MatchRequest {
+    const nextId = Math.max(0, ...this.data.matches.map((m) => m.id)) + 1;
+    const created: MatchRequest = {
+      id: nextId,
+      fromPet: { ...this.data.myPet },
+      toPetId: data.toPetId,
+      message: data.message,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      scheduledAt: data.scheduledAt,
+      location: data.location,
+    };
+    this.data.matches = [created, ...this.data.matches];
+    this.persist();
+    return created;
+  }
+
+  hasPendingRequest(toPetId: number): boolean {
+    return this.data.matches.some(
+      (m) => m.toPetId === toPetId && m.fromPet.id === this.data.myPet.id && m.status === 'pending'
+    );
+  }
+
   updateOwner(id: number, patch: Partial<OwnerProfile>) {
     this.data.owners = this.data.owners.map((o) =>
       o.id === id ? { ...o, ...patch } : o

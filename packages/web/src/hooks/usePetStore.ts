@@ -17,6 +17,8 @@ export function usePetStore() {
     deletePet: petStore.deletePet.bind(petStore),
     updateMatchStatus: petStore.updateMatchStatus.bind(petStore),
     deleteMatch: petStore.deleteMatch.bind(petStore),
+    sendPlaydateRequest: petStore.sendPlaydateRequest.bind(petStore),
+    hasPendingRequest: petStore.hasPendingRequest.bind(petStore),
     updateOwner: petStore.updateOwner.bind(petStore),
     resetStore: petStore.reset.bind(petStore),
   };

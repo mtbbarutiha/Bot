@@ -49,6 +49,25 @@ export interface PetProfile {
   updatedAt: string;
 }
 
+export type PlaydateStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
+
+export interface PlaydateRequest {
+  id: number;
+  fromPetId: number;
+  toPetId: number;
+  fromUserId: number;
+  toUserId?: number;
+  message?: string;
+  status: PlaydateStatus;
+  scheduledAt?: string;
+  location?: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Populated on list/detail responses */
+  fromPet?: PetProfile;
+  toPet?: PetProfile;
+}
+
 export interface BotSession {
   telegramId: string;
   userId?: number;
@@ -57,6 +76,13 @@ export interface BotSession {
   locale: string;
   updatedAt: string;
 }
+
+export const PLAYDATE_STATUS_LABELS: Record<PlaydateStatus, string> = {
+  pending: 'در انتظار',
+  accepted: 'پذیرفته',
+  rejected: 'رد شده',
+  cancelled: 'لغو شده',
+};
 
 export const USER_ROLES: UserRole[] = [
   'pet_owner',

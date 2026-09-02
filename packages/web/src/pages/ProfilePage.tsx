@@ -1,20 +1,42 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Globe, MapPin, Send, Shield, Smartphone } from 'lucide-react';
+import { ChevronLeft, Globe, MapPin, Send, Shield, Smartphone } from 'lucide-react';
+import type { UserRole } from '@petdate/shared';
+import { ONBOARDING_STATUS_LABELS, USER_ROLE_LABELS } from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
 import { usePetStore } from '../hooks/usePetStore';
+import { useUserStore } from '../hooks/useUserStore';
+
+const WIZARD_LINKS: Partial<Record<UserRole, string>> = {
+  pet_owner: '/onboarding/pet',
+  vet: '/onboarding/wizard/vet',
+  no_pet: '/onboarding/wizard/no_pet',
+  pet_seeker: '/onboarding/wizard/pet_seeker',
+  community_seeker: '/onboarding/wizard/community_seeker',
+  trainer: '/onboarding/wizard/trainer',
+  pet_sitter: '/onboarding/wizard/pet_sitter',
+};
 
 export function ProfilePage() {
   const { myPet, owners } = usePetStore();
+  const { user } = useUserStore();
   const owner = owners.find((o) => o.id === myPet.ownerId) ?? owners[0];
   const [showToast, setShowToast] = useState(false);
+
+  const onboardingLabel =
+    user.onboarding === 'none'
+      ? 'شروع نشده'
+      : ONBOARDING_STATUS_LABELS[user.onboarding as keyof typeof ONBOARDING_STATUS_LABELS] ?? user.onboarding;
+
+  const wizardLink = user.role ? WIZARD_LINKS[user.role] : '/onboarding/role';
+  const needsWizard = user.onboarding !== 'profile_complete';
 
   return (
     <>
       <div className="profile-hero">
-          <BrandMark className="profile-brand" iconSize={26} />
+        <BrandMark className="profile-brand" iconSize={26} />
         <div className="profile-hero-photo">
           <img src={myPet.imageUrl} alt={myPet.name} />
         </div>
@@ -26,27 +48,60 @@ export function ProfilePage() {
       </div>
 
       <div className="profile-section">
-        <div className="section-row section-row--flush">
-          <h2>پت‌های من</h2>
-          <Link to="/add-pet">+ افزودن</Link>
-        </div>
-
-        <div className="my-pet-chip">
-          <PetAvatar type={myPet.type} size="sm" imageUrl={myPet.imageUrl} name={myPet.name} />
-          <div>
-            <h3>{myPet.name}</h3>
-            <p>{myPet.breed} · {formatAge(myPet)} · {myPet.neighborhood}</p>
+        <div className="profile-status-card">
+          <div className="profile-status-row">
+            <span className="profile-status-label">نقش</span>
+            <span className="profile-status-value">
+              {user.role ? USER_ROLE_LABELS[user.role] : 'انتخاب نشده'}
+            </span>
           </div>
+          <div className="profile-status-row">
+            <span className="profile-status-label">وضعیت پروفایل</span>
+            <span className={`profile-status-badge${needsWizard ? ' incomplete' : ' complete'}`}>
+              {onboardingLabel}
+            </span>
+          </div>
+          {user.telegramId && (
+            <div className="profile-status-row">
+              <span className="profile-status-label">تلگرام</span>
+              <span className="profile-status-value">متصل (@Petdatebot)</span>
+            </div>
+          )}
+          {needsWizard && wizardLink && (
+            <Link to={wizardLink} className="profile-wizard-link">
+              تکمیل پروفایل
+              <ChevronLeft size={16} strokeWidth={2} />
+            </Link>
+          )}
         </div>
 
-        <div className="form-group">
-          <label className="form-label">نام صاحب</label>
-          <input className="form-input" defaultValue={owner.name} />
-        </div>
+        {user.role === 'pet_owner' && (
+          <>
+            <div className="section-row section-row--flush">
+              <h2>پت‌های من</h2>
+              <Link to="/add-pet">+ افزودن</Link>
+            </div>
 
-        <div className="form-group">
-          <label className="form-label">شهر</label>
-          <input className="form-input" defaultValue={owner.city} />
+            <div className="my-pet-chip">
+              <PetAvatar type={myPet.type} size="sm" imageUrl={myPet.imageUrl} name={myPet.name} />
+              <div>
+                <h3>{myPet.name}</h3>
+                <p>{myPet.breed} · {formatAge(myPet)} · {myPet.neighborhood}</p>
+              </div>
+            </div>
+          </>
+        )}
+
+        <div className="profile-services">
+          <h2>خدمات</h2>
+          <div className="service-links">
+            <Link to="/clinics" className="service-link-card">🩺 کلینیک‌های نزدیک</Link>
+            <Link to="/shop" className="service-link-card">🛒 فروشگاه پت</Link>
+            <Link to="/vet-consult" className="service-link-card">💬 مشاوره دامپزشک</Link>
+            {user.role === 'pet_owner' && (
+              <Link to="/explore" className="service-link-card">🐾 کشف همبازی</Link>
+            )}
+          </div>
         </div>
 
         <button
@@ -60,7 +115,7 @@ export function ProfilePage() {
           <div className="menu-icon"><Send size={18} strokeWidth={2} /></div>
           <div className="menu-text">
             <strong>ربات تلگرام</strong>
-            <small>petdate — فاز بعدی</small>
+            <small>@Petdatebot — هم‌تراز با وب</small>
           </div>
         </div>
         <div className="menu-item">

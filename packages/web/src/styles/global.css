@@ -1997,3 +1997,434 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   .admin-page { padding: 20px 16px; }
   .admin-form-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Onboarding ── */
+.onboarding-page {
+  min-height: 100dvh;
+  padding: 24px 20px calc(32px + var(--safe-bottom));
+  background: linear-gradient(180deg, var(--brand-50) 0%, var(--surface) 40%);
+}
+
+.onboarding-header {
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.onboarding-header h1 {
+  font-size: 1.45rem;
+  margin-top: 16px;
+  font-weight: 800;
+}
+
+.onboarding-header p {
+  color: var(--text-secondary);
+  margin-top: 8px;
+  font-size: 0.92rem;
+}
+
+.role-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.role-card {
+  text-align: right;
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: border-color var(--transition), transform var(--transition);
+}
+
+.role-card:active { transform: scale(0.98); }
+.role-card:hover { border-color: var(--brand-300); }
+
+.role-card-label {
+  display: block;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.role-card-desc {
+  display: block;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.role-badge {
+  display: inline-block;
+  background: var(--brand-100);
+  color: var(--brand-700);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.wizard-form { margin-top: 8px; }
+
+/* ── Profile status ── */
+.profile-status-card {
+  background: var(--slate-50);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.profile-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.profile-status-row:last-of-type { border-bottom: none; }
+
+.profile-status-label { color: var(--text-secondary); font-size: 0.88rem; }
+.profile-status-value { font-weight: 600; font-size: 0.9rem; }
+
+.profile-status-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.profile-status-badge.incomplete { background: #fef3c7; color: #b45309; }
+.profile-status-badge.complete { background: var(--success-bg); color: #047857; }
+
+.profile-wizard-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--primary);
+  color: white;
+  border-radius: var(--radius-md);
+  font-weight: 700;
+}
+
+.profile-services { margin: 20px 0; }
+.profile-services h2 { font-size: 1rem; margin-bottom: 12px; }
+
+.service-links {
+  display: grid;
+  gap: 10px;
+}
+
+.service-link-card {
+  padding: 14px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+}
+
+/* ── Trait chips ── */
+.trait-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trait-chip {
+  padding: 8px 14px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.trait-chip.active {
+  background: var(--brand-100);
+  border-color: var(--brand-400);
+  color: var(--brand-700);
+}
+
+/* ── Service pages ── */
+.service-page { padding-bottom: calc(var(--bottom-nav-height) + 16px); }
+
+.home-services {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+
+.home-service-chip {
+  flex-shrink: 0;
+  padding: 10px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  box-shadow: var(--shadow-xs);
+}
+
+.map-placeholder {
+  position: relative;
+  height: 200px;
+  margin: 0 16px 20px;
+  background: linear-gradient(135deg, var(--brand-100), var(--brand-200));
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.map-placeholder-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.map-pin {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: white;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  transform: translate(-50%, -50%);
+}
+
+.map-pin.active {
+  background: var(--primary);
+  color: white;
+  scale: 1.15;
+}
+
+.map-placeholder-label {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  background: rgba(255,255,255,0.85);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+}
+
+.clinic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 0 16px;
+}
+
+.clinic-card {
+  text-align: right;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.clinic-card.active { border-color: var(--primary); box-shadow: var(--shadow-sm); }
+
+.clinic-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.clinic-card-header h3 { font-size: 1rem; }
+
+.clinic-rating {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--warning);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.clinic-address { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; }
+
+.clinic-meta {
+  display: flex;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  margin-bottom: 10px;
+}
+
+.clinic-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.service-action-bar {
+  position: fixed;
+  bottom: calc(var(--bottom-nav-height) + 8px);
+  left: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 10;
+}
+
+.link-btn {
+  text-align: center;
+  color: var(--primary);
+  font-weight: 600;
+  padding: 8px;
+}
+
+.shop-categories {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 16px;
+  overflow-x: auto;
+}
+
+.shop-cat-btn {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.shop-cat-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  padding: 0 16px;
+}
+
+.product-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 14px;
+}
+
+.product-card.out-of-stock { opacity: 0.6; }
+
+.product-emoji { font-size: 2rem; margin-bottom: 8px; }
+.product-card h3 { font-size: 0.92rem; margin-bottom: 4px; }
+.product-desc { font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 10px; }
+
+.product-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.product-price { font-weight: 700; font-size: 0.88rem; color: var(--brand-700); }
+
+.product-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px;
+  background: var(--brand-50);
+  color: var(--primary);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 0.82rem;
+}
+
+.consult-types {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  padding: 0 16px 20px;
+}
+
+.consult-type-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 16px 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.consult-type-card.active {
+  border-color: var(--primary);
+  background: var(--brand-50);
+}
+
+.consult-type-card small { color: var(--text-secondary); font-size: 0.75rem; }
+
+.consult-schedule {
+  padding: 0 16px;
+}
+
+.consult-schedule h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 1rem;
+  margin-bottom: 16px;
+}
+
+/* ── Playdate modal ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 100;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.modal-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: var(--surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  padding: 24px 20px calc(24px + var(--safe-bottom));
+}
+
+.modal-sheet h2 { font-size: 1.15rem; margin-bottom: 4px; }
+.modal-sheet > p { color: var(--text-secondary); margin-bottom: 20px; font-size: 0.9rem; }
+
+.match-schedule {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+.detail-health {
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--slate-50);
+  border-radius: var(--radius-sm);
+  font-size: 0.88rem;
+}
+
+.tag.blue { background: var(--brand-100); color: var(--brand-700); }
+
+.empty-state--role { padding: 40px 24px; }
+.empty-state--role p { color: var(--text-secondary); margin: 8px 0 20px; }

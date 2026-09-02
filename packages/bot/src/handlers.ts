@@ -1,9 +1,10 @@
 import type { Bot } from 'grammy';
+import { InlineKeyboard } from 'grammy';
 import type { UserRole } from '@petdate/shared';
 import { USER_ROLE_LABELS } from '@petdate/shared';
 import { registerTelegramUser, setUserRole } from './api-client';
 import { config } from './config';
-import { exploreKeyboard, roleKeyboard, webAppKeyboard } from './keyboards';
+import { exploreKeyboard, roleKeyboard } from './keyboards';
 import { setSessionRole, upsertSession } from './session';
 
 function displayName(from: { first_name: string; last_name?: string; username?: string }): string {
@@ -56,11 +57,17 @@ export function registerHandlers(bot: Bot): void {
 
     const label = USER_ROLE_LABELS[role];
     const profileUrl = `${config.webUrl}/profile?from=telegram&tg=${telegramId}`;
+    const onboardingUrl = `${config.webUrl}/onboarding/role?from=telegram&tg=${telegramId}`;
 
     await ctx.answerCallbackQuery({ text: `نقش «${label}» ثبت شد` });
     await ctx.editMessageText(
       `عالی! نقش تو «${label}» شد. 🎉\n\nبرای تکمیل پروفایل و استفاده کامل از petdate، می‌تونی از وب‌اپ ادامه بدی:`,
-      { reply_markup: webAppKeyboard(profileUrl) }
+      {
+        reply_markup: new InlineKeyboard()
+          .url('🌐 تکمیل پروفایل', profileUrl)
+          .row()
+          .url('📝 ویزارد نقش', onboardingUrl),
+      }
     );
   });
 

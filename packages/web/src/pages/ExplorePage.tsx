@@ -1,20 +1,63 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { usePetStore } from '../hooks/usePetStore';
+import { useUserStore } from '../hooks/useUserStore';
 import type { PetType } from '../types';
 import { PET_TYPE_LABELS } from '../types';
 
 const ALL = 'all' as const;
 const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird', 'rabbit'];
 
+const ROLE_EMPTY_MESSAGES: Record<string, { title: string; desc: string; cta?: string; to?: string }> = {
+  vet: {
+    title: 'حالت دامپزشک',
+    desc: 'برای مشاهده همبازی‌ها به عنوان صاحب پت وارد شو یا از مشاوره آنلاین استفاده کن.',
+    cta: 'مشاوره دامپزشک',
+    to: '/vet-consult',
+  },
+  no_pet: {
+    title: 'هنوز پتی نداری؟',
+    desc: 'می‌تونی فروشگاه و کلینیک‌ها رو ببینی یا دنبال پت بگردی.',
+    cta: 'فروشگاه پت',
+    to: '/shop',
+  },
+  pet_seeker: {
+    title: 'دنبال پت می‌گردی؟',
+    desc: 'به زودی آگهی‌های پت‌های قابل‌انتخاب اضافه می‌شه. فعلاً جامعه رو کشف کن.',
+    cta: 'کلینیک‌های نزدیک',
+    to: '/clinics',
+  },
+  community_seeker: {
+    title: 'جامعه petdate',
+    desc: 'به زودی گروه‌ها و رویدادها اضافه می‌شن. فعلاً پت‌های نزدیک رو ببین.',
+  },
+  trainer: {
+    title: 'حالت مربی',
+    desc: 'به زودی درخواست‌های آموزشی نمایش داده می‌شه.',
+    cta: 'پروفایل',
+    to: '/profile',
+  },
+  pet_sitter: {
+    title: 'حالت نگهبان پت',
+    desc: 'به زودی درخواست‌های نگهبانی نمایش داده می‌شه.',
+    cta: 'پروفایل',
+    to: '/profile',
+  },
+};
+
 export function ExplorePage() {
   const { pets, myPet } = usePetStore();
+  const { user } = useUserStore();
   const [activeCategory, setActiveCategory] = useState<PetType | typeof ALL>(ALL);
   const [search, setSearch] = useState('');
+
+  const isPetOwner = !user.role || user.role === 'pet_owner';
+  const roleEmpty = user.role && !isPetOwner ? ROLE_EMPTY_MESSAGES[user.role] : null;
 
   const filtered = pets
     .filter((p) => {
@@ -25,6 +68,25 @@ export function ExplorePage() {
       return true;
     })
     .sort((a, b) => a.distanceKm - b.distanceKm);
+
+  if (roleEmpty) {
+    return (
+      <div className="home-page">
+        <div className="page-title-block">
+          <BrandMark className="greeting-brand" iconSize={22} />
+          <h1>جستجو</h1>
+        </div>
+        <div className="empty-state empty-state--role">
+          <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
+          <h3>{roleEmpty.title}</h3>
+          <p>{roleEmpty.desc}</p>
+          {roleEmpty.cta && roleEmpty.to && (
+            <Link to={roleEmpty.to} className="cta-btn cta-btn--inline">{roleEmpty.cta}</Link>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="home-page">
@@ -78,6 +140,7 @@ export function ExplorePage() {
           <div className="empty-state">
             <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
             <h3>پتی پیدا نشد</h3>
+            <p>فیلتر رو عوض کن یا بعداً دوباره سر بزن</p>
           </div>
         )}
       </div>

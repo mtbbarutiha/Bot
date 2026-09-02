@@ -24,7 +24,7 @@ export function WelcomePage() {
           <button
             type="button"
             className="welcome-cta"
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/onboarding/role')}
           >
             شروع کن
           </button>

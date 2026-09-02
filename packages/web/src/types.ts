@@ -23,6 +23,7 @@ export interface Pet {
   emoji: string;
   bio?: string;
   traits: string[];
+  healthNotes?: string;
   vaccinated: boolean;
   neutered: boolean;
   lookingForPlaymate: boolean;
@@ -36,6 +37,8 @@ export interface MatchRequest {
   message?: string;
   status: MatchStatus;
   createdAt: string;
+  scheduledAt?: string;
+  location?: string;
 }
 
 export interface OwnerProfile {

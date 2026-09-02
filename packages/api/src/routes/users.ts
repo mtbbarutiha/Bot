@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import type { UserRole } from '@petdate/shared';
-import { USER_ROLES } from '@petdate/shared';
+import type { OnboardingStatus, UserRole } from '@petdate/shared';
+import { ONBOARDING_STATUS_LABELS, USER_ROLES } from '@petdate/shared';
 import { dbService } from '../db';
 
 export const usersRouter = Router();
@@ -28,6 +28,10 @@ usersRouter.get('/telegram/:telegramId', (req, res) => {
   res.json(user);
 });
 
+function isOnboardingStatus(value: unknown): value is OnboardingStatus {
+  return typeof value === 'string' && value in ONBOARDING_STATUS_LABELS;
+}
+
 usersRouter.patch('/telegram/:telegramId/role', (req, res) => {
   const { role } = req.body;
   if (!isUserRole(role)) {
@@ -35,6 +39,48 @@ usersRouter.patch('/telegram/:telegramId/role', (req, res) => {
     return;
   }
   const user = dbService.setUserRoleByTelegramId(req.params.telegramId, role);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(user);
+});
+
+usersRouter.patch('/telegram/:telegramId/onboarding', (req, res) => {
+  const { onboarding } = req.body;
+  if (!isOnboardingStatus(onboarding)) {
+    res.status(400).json({ error: 'وضعیت آنبوردینگ نامعتبر است' });
+    return;
+  }
+  const user = dbService.setUserOnboardingByTelegramId(req.params.telegramId, onboarding);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(user);
+});
+
+usersRouter.patch('/:id/role', (req, res) => {
+  const { role } = req.body;
+  if (!isUserRole(role)) {
+    res.status(400).json({ error: 'نقش نامعتبر است' });
+    return;
+  }
+  const user = dbService.setUserRole(Number(req.params.id), role);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(user);
+});
+
+usersRouter.patch('/:id/onboarding', (req, res) => {
+  const { onboarding } = req.body;
+  if (!isOnboardingStatus(onboarding)) {
+    res.status(400).json({ error: 'وضعیت آنبوردینگ نامعتبر است' });
+    return;
+  }
+  const user = dbService.setUserOnboarding(Number(req.params.id), onboarding);
   if (!user) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;

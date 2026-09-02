@@ -18,5 +18,9 @@ export function exploreKeyboard(webUrl: string): InlineKeyboard {
   return new InlineKeyboard()
     .url('🔍 کشف همبازی‌ها', `${webUrl}/explore`)
     .row()
-    .url('➕ ثبت پت', `${webUrl}/add-pet`);
+    .url('➕ ثبت پت', `${webUrl}/onboarding/pet`)
+    .row()
+    .url('🩺 کلینیک‌ها', `${webUrl}/clinics`)
+    .row()
+    .url('👤 پروفایل', `${webUrl}/profile`);
 }

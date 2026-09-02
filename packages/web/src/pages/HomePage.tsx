@@ -6,6 +6,7 @@ import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { usePetStore } from '../hooks/usePetStore';
+import { useUserStore } from '../hooks/useUserStore';
 import type { PetType } from '../types';
 import { PET_TYPE_LABELS } from '../types';
 
@@ -13,7 +14,8 @@ const ALL = 'all' as const;
 const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird', 'rabbit'];
 
 export function HomePage() {
-  const { myPet, matches, getNearbyPets } = usePetStore();
+  const { myPet, matches, getNearbyPets, sendPlaydateRequest } = usePetStore();
+  const { user } = useUserStore();
   const [activeCategory, setActiveCategory] = useState<PetType | typeof ALL>(ALL);
   const [search, setSearch] = useState('');
   const [showToast, setShowToast] = useState(false);
@@ -32,10 +34,17 @@ export function HomePage() {
       )
     : pets;
 
-  const handleQuickAdd = () => {
+  const handleQuickAdd = (pet: import('../types').Pet) => {
+    sendPlaydateRequest({
+      toPetId: pet.id,
+      message: `سلام ${pet.name}! ${myPet.name} دنبال همبازیه 🐾`,
+      location: pet.neighborhood,
+    });
     setShowToast(true);
     setTimeout(() => setShowToast(false), 2500);
   };
+
+  const isPetOwner = !user.role || user.role === 'pet_owner';
 
   return (
     <div className="home-page">
@@ -84,6 +93,14 @@ export function HomePage() {
       </div>
 
       <div className="home-body">
+        <div className="home-services">
+          <Link to="/clinics" className="home-service-chip">🩺 کلینیک</Link>
+          <Link to="/shop" className="home-service-chip">🛒 فروشگاه</Link>
+          <Link to="/vet-consult" className="home-service-chip">💬 مشاوره</Link>
+        </div>
+
+        {isPetOwner ? (
+          <>
         <div className="section-row">
           <div>
             <span className="section-label">فیلتر</span>
@@ -127,6 +144,15 @@ export function HomePage() {
             <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
             <h3>پتی پیدا نشد</h3>
             <p>فیلتر یا جستجو رو عوض کن</p>
+          </div>
+        )}
+          </>
+        ) : (
+          <div className="empty-state empty-state--role">
+            <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
+            <h3>خوش اومدی به petdate!</h3>
+            <p>از منوی پروفایل خدمات کلینیک، فروشگاه و مشاوره رو امتحان کن.</p>
+            <Link to="/profile" className="cta-btn cta-btn--inline">پروفایل</Link>
           </div>
         )}
       </div>

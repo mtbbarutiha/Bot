@@ -12,6 +12,8 @@ import {
   infra,
 } from './config/infra';
 import { gamesRouter } from './routes/games';
+import { petsRouter } from './routes/pets';
+import { playdatesRouter } from './routes/playdates';
 import { sectionsRouter } from './routes/sections';
 import { usersRouter } from './routes/users';
 
@@ -46,6 +48,8 @@ app.get('/api/health/infra', (_req, res) => {
 });
 
 app.use('/api/games', gamesRouter);
+app.use('/api/pets', petsRouter);
+app.use('/api/playdate-requests', playdatesRouter);
 app.use('/api/sections', sectionsRouter);
 app.use('/api/users', usersRouter);
 

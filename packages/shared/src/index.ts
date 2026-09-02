@@ -1,6 +1,6 @@
 export * from './petdate';
 
-import type { UserRole } from './petdate';
+import type { OnboardingStatus, UserRole } from './petdate';
 
 export type GameType =
   | 'football'
@@ -13,6 +13,14 @@ export type GameType =
 
 export type GameStatus = 'open' | 'full' | 'cancelled' | 'completed';
 
+export {
+  ONBOARDING_STATUS_LABELS,
+  PLAYDATE_STATUS_LABELS,
+  USER_ROLE_LABELS,
+  USER_ROLES,
+} from './petdate';
+export type { OnboardingStatus, PlaydateRequest, PlaydateStatus, PetProfile } from './petdate';
+
 export interface User {
   id: number;
   telegramId?: string;
@@ -20,6 +28,7 @@ export interface User {
   username?: string;
   sectionId?: number;
   role?: UserRole;
+  onboarding?: OnboardingStatus;
   createdAt: string;
 }
 

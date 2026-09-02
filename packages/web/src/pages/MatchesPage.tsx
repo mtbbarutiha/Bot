@@ -1,16 +1,36 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Clock, Mail, MessageCircle } from 'lucide-react';
+import { Calendar, Check, Clock, Mail, MapPin, MessageCircle } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatTimeAgo } from '../data/mock';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { usePetStore } from '../hooks/usePetStore';
+import { useUserStore } from '../hooks/useUserStore';
 
 export function MatchesPage() {
   const { matches, myPet, updateMatchStatus, deleteMatch } = usePetStore();
-
+  const { user } = useUserStore();
   const [tab, setTab] = useState<'pending' | 'accepted'>('pending');
+
+  const isPetOwner = !user.role || user.role === 'pet_owner';
+
+  if (!isPetOwner) {
+    return (
+      <>
+        <div className="page-title-block">
+          <BrandMark className="greeting-brand" iconSize={22} />
+          <h1>درخواست‌ها</h1>
+        </div>
+        <div className="empty-state empty-state--role">
+          <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
+          <h3>همبازی برای صاحبان پت</h3>
+          <p>این بخش برای نقش «صاحب پت» فعاله. از پروفایل نقشت رو تغییر بده یا خدمات دیگه رو امتحان کن.</p>
+          <Link to="/profile" className="cta-btn cta-btn--inline">پروفایل</Link>
+        </div>
+      </>
+    );
+  }
 
   const filtered = matches.filter((m) =>
     tab === 'pending' ? m.status === 'pending' : m.status === 'accepted'
@@ -66,6 +86,18 @@ export function MatchesPage() {
                   </div>
                 </div>
                 {match.message && <p className="match-msg">«{match.message}»</p>}
+                {match.scheduledAt && (
+                  <p className="match-schedule">
+                    <Calendar size={14} strokeWidth={2} />
+                    {new Date(match.scheduledAt).toLocaleDateString('fa-IR')}
+                    {match.location && (
+                      <>
+                        <MapPin size={14} strokeWidth={2} />
+                        {match.location}
+                      </>
+                    )}
+                  </p>
+                )}
                 {match.status === 'pending' ? (
                   <div className="match-actions">
                     <button className="btn-accept" onClick={() => updateMatchStatus(match.id, 'accepted')}>

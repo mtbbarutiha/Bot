@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import type { Game, GamePlayer, GameStatus, GameType, Section, User, UserRole } from '@petdate/shared';
+import type { Game, GamePlayer, GameStatus, GameType, OnboardingStatus, PetProfile, PlaydateRequest, PlaydateStatus, Section, User, UserRole } from '@petdate/shared';
 
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'petdate.db');
 
@@ -60,6 +60,40 @@ function initSchema() {
       joined_at TEXT NOT NULL DEFAULT (datetime('now')),
       UNIQUE(game_id, user_id)
     );
+
+    CREATE TABLE IF NOT EXISTS pets (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      owner_id INTEGER NOT NULL REFERENCES users(id),
+      name TEXT NOT NULL,
+      species TEXT NOT NULL,
+      breed TEXT,
+      age_months INTEGER,
+      bio TEXT,
+      vaccinated INTEGER NOT NULL DEFAULT 0,
+      neutered INTEGER NOT NULL DEFAULT 0,
+      looking_for_playmate INTEGER NOT NULL DEFAULT 1,
+      personality TEXT NOT NULL DEFAULT '{}',
+      health TEXT NOT NULL DEFAULT '{}',
+      image_url TEXT,
+      city TEXT,
+      neighborhood TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS playdate_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      from_pet_id INTEGER NOT NULL REFERENCES pets(id),
+      to_pet_id INTEGER NOT NULL REFERENCES pets(id),
+      from_user_id INTEGER NOT NULL REFERENCES users(id),
+      to_user_id INTEGER REFERENCES users(id),
+      message TEXT,
+      status TEXT NOT NULL DEFAULT 'pending',
+      scheduled_at TEXT,
+      location TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
   migrateSchema();
 }
@@ -68,6 +102,9 @@ function migrateSchema() {
   const columns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
   if (!columns.some((c) => c.name === 'role')) {
     db.exec("ALTER TABLE users ADD COLUMN role TEXT");
+  }
+  if (!columns.some((c) => c.name === 'onboarding')) {
+    db.exec("ALTER TABLE users ADD COLUMN onboarding TEXT NOT NULL DEFAULT 'role_selected'");
   }
 }
 
@@ -117,7 +154,57 @@ function mapUser(row: Record<string, unknown>): User {
     username: row.username as string | undefined,
     sectionId: row.section_id as number | undefined,
     role: row.role as UserRole | undefined,
+    onboarding: (row.onboarding as OnboardingStatus | undefined) ?? undefined,
     createdAt: row.created_at as string,
+  };
+}
+
+function parseJsonObject(value: unknown): Record<string, unknown> {
+  if (typeof value === 'string') {
+    try {
+      return JSON.parse(value) as Record<string, unknown>;
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function mapPet(row: Record<string, unknown>): PetProfile {
+  return {
+    id: row.id as number,
+    ownerId: row.owner_id as number,
+    name: row.name as string,
+    species: row.species as string,
+    breed: row.breed as string | undefined,
+    ageMonths: row.age_months as number | undefined,
+    bio: row.bio as string | undefined,
+    vaccinated: Boolean(row.vaccinated),
+    neutered: Boolean(row.neutered),
+    lookingForPlaymate: Boolean(row.looking_for_playmate),
+    personality: parseJsonObject(row.personality),
+    health: parseJsonObject(row.health),
+    imageUrl: row.image_url as string | undefined,
+    city: row.city as string | undefined,
+    neighborhood: row.neighborhood as string | undefined,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+function mapPlaydate(row: Record<string, unknown>): PlaydateRequest {
+  return {
+    id: row.id as number,
+    fromPetId: row.from_pet_id as number,
+    toPetId: row.to_pet_id as number,
+    fromUserId: row.from_user_id as number,
+    toUserId: row.to_user_id as number | undefined,
+    message: row.message as string | undefined,
+    status: row.status as PlaydateStatus,
+    scheduledAt: row.scheduled_at as string | undefined,
+    location: row.location as string | undefined,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
   };
 }
 
@@ -211,8 +298,19 @@ export const dbService = {
   },
 
   setUserRole(userId: number, role: UserRole): User | null {
-    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId);
+    db.prepare("UPDATE users SET role = ?, onboarding = 'role_selected' WHERE id = ?").run(role, userId);
     return this.getUserById(userId);
+  },
+
+  setUserOnboarding(userId: number, onboarding: OnboardingStatus): User | null {
+    db.prepare('UPDATE users SET onboarding = ? WHERE id = ?').run(onboarding, userId);
+    return this.getUserById(userId);
+  },
+
+  setUserOnboardingByTelegramId(telegramId: string, onboarding: OnboardingStatus): User | null {
+    const user = this.getUserByTelegramId(telegramId);
+    if (!user) return null;
+    return this.setUserOnboarding(user.id, onboarding);
   },
 
   setUserRoleByTelegramId(telegramId: string, role: UserRole): User | null {
@@ -335,5 +433,175 @@ export const dbService = {
       userName: row.user_name as string,
       joinedAt: row.joined_at as string,
     }));
+  },
+
+  listPets(filters?: { ownerId?: number; lookingForPlaymate?: boolean }): PetProfile[] {
+    let sql = 'SELECT * FROM pets WHERE 1=1';
+    const params: unknown[] = [];
+    if (filters?.ownerId) {
+      sql += ' AND owner_id = ?';
+      params.push(filters.ownerId);
+    }
+    if (filters?.lookingForPlaymate !== undefined) {
+      sql += ' AND looking_for_playmate = ?';
+      params.push(filters.lookingForPlaymate ? 1 : 0);
+    }
+    sql += ' ORDER BY updated_at DESC';
+    return (db.prepare(sql).all(...params) as Record<string, unknown>[]).map(mapPet);
+  },
+
+  getPet(id: number): PetProfile | null {
+    const row = db.prepare('SELECT * FROM pets WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? mapPet(row) : null;
+  },
+
+  createPet(data: {
+    ownerId: number;
+    name: string;
+    species: string;
+    breed?: string;
+    ageMonths?: number;
+    bio?: string;
+    vaccinated?: boolean;
+    neutered?: boolean;
+    lookingForPlaymate?: boolean;
+    personality?: Record<string, unknown>;
+    health?: Record<string, unknown>;
+    imageUrl?: string;
+    city?: string;
+    neighborhood?: string;
+  }): PetProfile {
+    const result = db
+      .prepare(
+        `INSERT INTO pets (
+          owner_id, name, species, breed, age_months, bio,
+          vaccinated, neutered, looking_for_playmate, personality, health,
+          image_url, city, neighborhood
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        data.ownerId,
+        data.name,
+        data.species,
+        data.breed ?? null,
+        data.ageMonths ?? null,
+        data.bio ?? null,
+        data.vaccinated ? 1 : 0,
+        data.neutered ? 1 : 0,
+        data.lookingForPlaymate !== false ? 1 : 0,
+        JSON.stringify(data.personality ?? {}),
+        JSON.stringify(data.health ?? {}),
+        data.imageUrl ?? null,
+        data.city ?? null,
+        data.neighborhood ?? null
+      );
+    return mapPet(db.prepare('SELECT * FROM pets WHERE id = ?').get(result.lastInsertRowid) as Record<string, unknown>);
+  },
+
+  updatePet(id: number, patch: Partial<{
+    name: string;
+    species: string;
+    breed: string;
+    ageMonths: number;
+    bio: string;
+    vaccinated: boolean;
+    neutered: boolean;
+    lookingForPlaymate: boolean;
+    personality: Record<string, unknown>;
+    health: Record<string, unknown>;
+    imageUrl: string;
+    city: string;
+    neighborhood: string;
+  }>): PetProfile | null {
+    const existing = this.getPet(id);
+    if (!existing) return null;
+
+    const fields: string[] = [];
+    const values: unknown[] = [];
+
+    if (patch.name !== undefined) { fields.push('name = ?'); values.push(patch.name); }
+    if (patch.species !== undefined) { fields.push('species = ?'); values.push(patch.species); }
+    if (patch.breed !== undefined) { fields.push('breed = ?'); values.push(patch.breed); }
+    if (patch.ageMonths !== undefined) { fields.push('age_months = ?'); values.push(patch.ageMonths); }
+    if (patch.bio !== undefined) { fields.push('bio = ?'); values.push(patch.bio); }
+    if (patch.vaccinated !== undefined) { fields.push('vaccinated = ?'); values.push(patch.vaccinated ? 1 : 0); }
+    if (patch.neutered !== undefined) { fields.push('neutered = ?'); values.push(patch.neutered ? 1 : 0); }
+    if (patch.lookingForPlaymate !== undefined) { fields.push('looking_for_playmate = ?'); values.push(patch.lookingForPlaymate ? 1 : 0); }
+    if (patch.personality !== undefined) { fields.push('personality = ?'); values.push(JSON.stringify(patch.personality)); }
+    if (patch.health !== undefined) { fields.push('health = ?'); values.push(JSON.stringify(patch.health)); }
+    if (patch.imageUrl !== undefined) { fields.push('image_url = ?'); values.push(patch.imageUrl); }
+    if (patch.city !== undefined) { fields.push('city = ?'); values.push(patch.city); }
+    if (patch.neighborhood !== undefined) { fields.push('neighborhood = ?'); values.push(patch.neighborhood); }
+
+    if (fields.length === 0) return existing;
+
+    fields.push("updated_at = datetime('now')");
+    values.push(id);
+    db.prepare(`UPDATE pets SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    return this.getPet(id);
+  },
+
+  listPlaydateRequests(filters?: {
+    userId?: number;
+    petId?: number;
+    status?: PlaydateStatus;
+  }): PlaydateRequest[] {
+    let sql = 'SELECT * FROM playdate_requests WHERE 1=1';
+    const params: unknown[] = [];
+
+    if (filters?.userId) {
+      sql += ' AND (from_user_id = ? OR to_user_id = ?)';
+      params.push(filters.userId, filters.userId);
+    }
+    if (filters?.petId) {
+      sql += ' AND (from_pet_id = ? OR to_pet_id = ?)';
+      params.push(filters.petId, filters.petId);
+    }
+    if (filters?.status) {
+      sql += ' AND status = ?';
+      params.push(filters.status);
+    }
+
+    sql += ' ORDER BY created_at DESC';
+    return (db.prepare(sql).all(...params) as Record<string, unknown>[]).map(mapPlaydate);
+  },
+
+  getPlaydateRequest(id: number): PlaydateRequest | null {
+    const row = db.prepare('SELECT * FROM playdate_requests WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    return row ? mapPlaydate(row) : null;
+  },
+
+  createPlaydateRequest(data: {
+    fromPetId: number;
+    toPetId: number;
+    fromUserId: number;
+    toUserId?: number;
+    message?: string;
+    scheduledAt?: string;
+    location?: string;
+  }): PlaydateRequest {
+    const result = db
+      .prepare(
+        `INSERT INTO playdate_requests (
+          from_pet_id, to_pet_id, from_user_id, to_user_id, message, scheduled_at, location
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        data.fromPetId,
+        data.toPetId,
+        data.fromUserId,
+        data.toUserId ?? null,
+        data.message ?? null,
+        data.scheduledAt ?? null,
+        data.location ?? null
+      );
+    return mapPlaydate(
+      db.prepare('SELECT * FROM playdate_requests WHERE id = ?').get(result.lastInsertRowid) as Record<string, unknown>
+    );
+  },
+
+  updatePlaydateStatus(id: number, status: PlaydateStatus): PlaydateRequest | null {
+    db.prepare("UPDATE playdate_requests SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, id);
+    return this.getPlaydateRequest(id);
   },
 };
