@@ -42,20 +42,10 @@ export const DEFAULT_IMAGES: Record<PetType, string> = {
   other: petLocal(OTHER_PHOTOS[0]),
 };
 
-export const WELCOME_HERO = {
-  main: petLocal('dog-01'),
-  accent: petLocal('cat-01'),
-} as const;
-
-export const WELCOME_DUO = {
-  left: petLocal('dog-06'),
-  right: petLocal('cat-07'),
-} as const;
-
-export const WELCOME_PHOTOS = [
-  WELCOME_HERO.main,
-  WELCOME_HERO.accent,
-  petLocal('dog-03'),
+export const WELCOME_STACK = [
+  { src: petLocal('cat-04'), name: 'لونا', meta: 'پرشین · ۱ ساله' },
+  { src: petLocal('dog-03'), name: 'چی‌چی', meta: 'هاسکی · ۳ ساله' },
+  { src: petLocal('dog-08'), name: 'ماکس', meta: 'گلدن · ۲ ساله' },
 ] as const;
 
 export const EMPTY_STATE_PHOTO = petLocal(CAT_PHOTOS[7]);
