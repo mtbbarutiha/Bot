@@ -1,7 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, PawPrint } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
-import { WELCOME_PHOTOS } from '../data/petImages';
+import { PetDuoShowcase } from '../components/PetDuoShowcase';
+import { WELCOME_DUO } from '../data/petImages';
 
 export function WelcomePage() {
   const navigate = useNavigate();
@@ -12,11 +13,13 @@ export function WelcomePage() {
         <BrandMark className="welcome-logo brand-mark--lg" iconSize={40} />
         <div className="welcome-wave">
           <div className="welcome-wave-glow" aria-hidden />
-          <div className="welcome-photo-stack">
-            <img src={WELCOME_PHOTOS[0]} alt="سگ" className="welcome-photo welcome-photo--1" />
-            <img src={WELCOME_PHOTOS[1]} alt="گربه" className="welcome-photo welcome-photo--2" />
-            <img src={WELCOME_PHOTOS[2]} alt="پت" className="welcome-photo welcome-photo--3" />
-          </div>
+          <PetDuoShowcase
+            leftSrc={WELCOME_DUO.left}
+            rightSrc={WELCOME_DUO.right}
+            leftLabel="سگ"
+            rightLabel="گربه"
+            className="welcome-pet-duo"
+          />
         </div>
       </div>
 

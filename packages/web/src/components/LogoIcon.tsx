@@ -6,9 +6,23 @@ interface LogoIconProps {
   variant?: 'dark' | 'light';
 }
 
+function MiniPaw({ fill }: { fill: string }) {
+  return (
+    <g fill={fill}>
+      <circle cx="-5.4" cy="-6.2" r="2.35" />
+      <circle cx="-1.7" cy="-8.6" r="2.55" />
+      <circle cx="1.7" cy="-8.6" r="2.55" />
+      <circle cx="5.4" cy="-6.2" r="2.35" />
+      <ellipse cx="0" cy="1.8" rx="7" ry="6" />
+    </g>
+  );
+}
+
 export function LogoIcon({ size = 32, className = '', variant = 'dark' }: LogoIconProps) {
   const gid = useId().replace(/:/g, '');
   const isDark = variant === 'dark';
+  const pawFill = isDark ? '#ffffff' : '#0f172a';
+  const linkFill = isDark ? '#60a5fa' : '#2563eb';
 
   return (
     <svg
@@ -36,13 +50,22 @@ export function LogoIcon({ size = 32, className = '', variant = 'dark' }: LogoIc
         strokeWidth="1"
       />
 
-      <g fill={isDark ? '#ffffff' : '#0f172a'}>
-        <circle cx="14.5" cy="16.5" r="3.15" />
-        <circle cx="20.25" cy="13.25" r="3.45" />
-        <circle cx="26.25" cy="13.25" r="3.45" />
-        <circle cx="32" cy="16.5" r="3.15" />
-        <ellipse cx="23.25" cy="27.5" rx="10.25" ry="8.75" />
+      {/* connection glow */}
+      <circle cx="24" cy="24" r="9" fill={linkFill} opacity="0.14" />
+
+      {/* left paw */}
+      <g transform="translate(15 28) rotate(-22)">
+        <MiniPaw fill={pawFill} />
       </g>
+
+      {/* right paw — mirrored */}
+      <g transform="translate(33 28) rotate(22) scale(-1 1)">
+        <MiniPaw fill={pawFill} />
+      </g>
+
+      {/* link node */}
+      <circle cx="24" cy="23.5" r="2.6" fill={linkFill} />
+      <circle cx="24" cy="23.5" r="1" fill={isDark ? '#0f172a' : '#ffffff'} opacity="0.35" />
     </svg>
   );
 }
