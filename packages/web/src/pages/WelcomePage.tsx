@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
 import { WELCOME_HERO } from '../data/petImages';
 
@@ -8,25 +7,14 @@ export function WelcomePage() {
 
   return (
     <div className="welcome-page">
-      <img
-        className="welcome-bg"
-        src={WELCOME_HERO}
-        alt="petdate"
-      />
+      <img className="welcome-bg" src={WELCOME_HERO} alt="petdate" />
       <div className="welcome-overlay" aria-hidden />
 
       <div className="welcome-body">
-        <header className="welcome-topbar">
-          <BrandMark iconSize={32} variant="light" />
+        <header className="welcome-headline">
+          <BrandMark variant="light" size="hero" showIcon={false} />
+          <p className="welcome-headline-sub">همبازی برای پت‌ات</p>
         </header>
-
-        <div className="welcome-hero-text">
-          <h1>
-            <BrandMark variant="light" size="hero" showIcon={false} />
-            <span className="welcome-hero-tag">همبازی برای پت‌ات</span>
-          </h1>
-          <p>با petdate پت‌های نزدیک رو پیدا کن و با صاحب‌شون آشنا شو</p>
-        </div>
 
         <div className="welcome-footer">
           <button
@@ -35,14 +23,6 @@ export function WelcomePage() {
             onClick={() => navigate('/')}
           >
             شروع کن
-          </button>
-          <button
-            type="button"
-            className="welcome-skip"
-            onClick={() => navigate(-1)}
-            aria-label="بازگشت"
-          >
-            <ChevronLeft size={20} strokeWidth={2} />
           </button>
         </div>
       </div>
