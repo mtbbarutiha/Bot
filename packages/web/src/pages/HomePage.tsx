@@ -67,7 +67,7 @@ export function HomePage() {
         </div>
 
         <div className="greeting">
-          <BrandMark className="greeting-brand" />
+          <BrandMark className="greeting-brand" iconSize={22} />
           <h1>همبازی برای {myPet.name}</h1>
           <p>پت‌های نزدیک رو کشف کن و درخواست بده</p>
         </div>

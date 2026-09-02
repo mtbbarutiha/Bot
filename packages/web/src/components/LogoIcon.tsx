@@ -1,0 +1,51 @@
+import { useId } from 'react';
+
+interface LogoIconProps {
+  size?: number;
+  className?: string;
+}
+
+export function LogoIcon({ size = 32, className = '' }: LogoIconProps) {
+  const gid = useId().replace(/:/g, '');
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 48 48"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      className={className}
+      aria-hidden
+    >
+      <defs>
+        <linearGradient id={`${gid}-bg`} x1="8" y1="4" x2="40" y2="44" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#1d4ed8" />
+          <stop offset="1" stopColor="#3b82f6" />
+        </linearGradient>
+        <linearGradient id={`${gid}-shine`} x1="14" y1="8" x2="34" y2="28" gradientUnits="userSpaceOnUse">
+          <stop stopColor="#ffffff" stopOpacity="0.28" />
+          <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      <rect width="48" height="48" rx="14" fill={`url(#${gid}-bg)`} />
+      <rect width="48" height="48" rx="14" fill={`url(#${gid}-shine)`} />
+
+      {/* paw toes */}
+      <circle cx="16.5" cy="17" r="3.6" fill="white" />
+      <circle cx="24" cy="13.5" r="3.9" fill="white" />
+      <circle cx="31.5" cy="17" r="3.6" fill="white" />
+
+      {/* heart pad */}
+      <path
+        d="M24 36.5c-.4 0-.8-.2-1.1-.5-2.8-2.5-6.4-5.2-8.7-8.1-2.1-2.6-2.8-5.2-2.1-7.6.6-2 2.4-3.4 4.6-3.6.9-.1 1.8.1 2.6.5.5.3 1 .7 1.4 1.2.4-.5.9-.9 1.4-1.2.8-.4 1.7-.6 2.6-.5 2.2.2 4 1.6 4.6 3.6.7 2.4 0 5-2.1 7.6-2.3 2.9-5.9 5.6-8.7 8.1-.3.3-.7.5-1.1.5z"
+        fill="white"
+      />
+
+      {/* accent dot — connection spark */}
+      <circle cx="33" cy="33" r="3" fill="#f97316" />
+      <circle cx="33" cy="33" r="1.2" fill="white" opacity="0.9" />
+    </svg>
+  );
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, PawPrint } from 'lucide-react';
+import { Lock } from 'lucide-react';
+import { LogoIcon } from '../../components/LogoIcon';
 import { loginAdmin } from '../auth';
 
 export function AdminLoginPage() {
@@ -21,7 +22,7 @@ export function AdminLoginPage() {
     <div className="admin-login-page">
       <form className="admin-login-card" onSubmit={handleSubmit}>
         <div className="admin-login-icon">
-          <PawPrint size={32} strokeWidth={2} />
+          <LogoIcon size={52} />
         </div>
         <h1>ورود ادمین</h1>
         <p>پنل مدیریت petdate</p>
