@@ -16,6 +16,7 @@ export function getDb(): Database.Database {
     db.pragma('foreign_keys = ON');
     initSchema();
     seedIfEmpty();
+    seedDemoPetsIfEmpty();
   }
   return db;
 }
@@ -144,6 +145,22 @@ function seedIfEmpty() {
   );
 
   db.prepare('INSERT INTO game_players (game_id, user_id) VALUES (?, ?)').run(1, 1);
+}
+
+function seedDemoPetsIfEmpty() {
+  const count = db.prepare('SELECT COUNT(*) as c FROM pets').get() as { c: number };
+  if (count.c > 0) return;
+
+  db.prepare("UPDATE users SET role = 'pet_owner', onboarding = 'profile_complete' WHERE id IN (1, 2)").run();
+
+  const insertPet = db.prepare(`
+    INSERT INTO pets (owner_id, name, species, breed, age_months, bio, vaccinated, neutered, looking_for_playmate, city, neighborhood)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  insertPet.run(1, 'ماکس', 'dog', 'گلدن رتریور', 24, 'بسیار بازیگوش و اجتماعی', 1, 1, 1, 'تهران', 'جردن');
+  insertPet.run(1, 'لونا', 'cat', 'پرشین', 18, 'آرام و مهربان', 1, 1, 1, 'تهران', 'ولنجک');
+  insertPet.run(2, 'راکی', 'dog', 'هاسکی', 30, 'دوست داره دویدن', 1, 0, 1, 'تهران', 'سعادت‌آباد');
 }
 
 function mapUser(row: Record<string, unknown>): User {

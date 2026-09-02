@@ -1,4 +1,5 @@
-import { InlineKeyboard } from 'grammy';
+import { InlineKeyboard, Keyboard } from 'grammy';
+import type { PetProfile } from '@petdate/shared';
 import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
@@ -11,34 +12,82 @@ export function roleKeyboard(): InlineKeyboard {
   return kb;
 }
 
-export function webAppKeyboard(webUrl: string): InlineKeyboard | undefined {
-  if (!isTelegramInlineUrl(webUrl)) return undefined;
-  return new InlineKeyboard().url('🌐 ادامه در petdate', webUrl);
+export function mainMenuKeyboard(): Keyboard {
+  return new Keyboard()
+    .text('🔍 کشف همبازی')
+    .text('🐾 پت‌های من')
+    .row()
+    .text('📬 درخواست‌ها')
+    .text('👤 پروفایل')
+    .row()
+    .text('➕ ثبت پت')
+    .text('❓ راهنما')
+    .resized();
 }
 
-export function exploreKeyboard(webUrl?: string): InlineKeyboard | undefined {
-  const base = webUrl ?? effectiveWebUrl();
-  if (!isTelegramInlineUrl(base)) return undefined;
-
+export function speciesKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
-    .url('🔍 کشف همبازی‌ها', `${base}/explore`)
+    .text('🐕 سگ', 'species:dog')
+    .text('🐈 گربه', 'species:cat')
     .row()
-    .url('➕ ثبت پت', `${base}/onboarding/pet`)
-    .row()
-    .url('🩺 کلینیک‌ها', `${base}/clinics`)
-    .row()
-    .url('👤 پروفایل', `${base}/profile`);
+    .text('🐾 سایر', 'species:other');
 }
 
-export function profileLinksKeyboard(telegramId: string, webUrl?: string): InlineKeyboard | undefined {
-  const base = webUrl ?? effectiveWebUrl();
-  if (!isTelegramInlineUrl(base)) return undefined;
+export function skipKeyboard(callback: string): InlineKeyboard {
+  return new InlineKeyboard().text('⏭ رد کردن', callback);
+}
 
-  const profileUrl = `${base}/profile?from=telegram&tg=${telegramId}`;
-  const onboardingUrl = `${base}/onboarding/role?from=telegram&tg=${telegramId}`;
+export function exploreListKeyboard(pets: PetProfile[], page: number, pageSize: number): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  const start = page * pageSize;
+  const slice = pets.slice(start, start + pageSize);
 
+  slice.forEach((pet) => {
+    kb.text(`${pet.name} (${pet.city ?? '—'})`, `explore:pet:${pet.id}`).row();
+  });
+
+  const totalPages = Math.ceil(pets.length / pageSize);
+  if (totalPages > 1) {
+    if (page > 0) kb.text('◀️ قبلی', `explore:page:${page - 1}`);
+    kb.text(`${page + 1}/${totalPages}`, 'noop');
+    if (page < totalPages - 1) kb.text('بعدی ▶️', `explore:page:${page + 1}`);
+  }
+  return kb;
+}
+
+export function petDetailKeyboard(petId: number, canRequest: boolean): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  if (canRequest) kb.text('🤝 درخواست همبازی', `playdate:ask:${petId}`).row();
+  kb.text('🔙 بازگشت به لیست', 'explore:back');
+  return kb;
+}
+
+export function fromPetKeyboard(pets: PetProfile[], toPetId: number): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  pets.forEach((pet) => {
+    kb.text(pet.name, `playdate:from:${pet.id}:${toPetId}`).row();
+  });
+  kb.text('❌ انصراف', 'playdate:cancel');
+  return kb;
+}
+
+export function playdateActionKeyboard(requestId: number): InlineKeyboard {
   return new InlineKeyboard()
-    .url('🌐 تکمیل پروفایل', profileUrl)
-    .row()
-    .url('📝 ویزارد نقش', onboardingUrl);
+    .text('✅ قبول', `playdate:accept:${requestId}`)
+    .text('❌ رد', `playdate:reject:${requestId}`);
 }
+
+export function webLinksKeyboard(telegramId: string): InlineKeyboard | undefined {
+  const base = effectiveWebUrl();
+  if (!isTelegramInlineUrl(base)) return undefined;
+  return new InlineKeyboard().url('🌐 باز کردن petdate', `${base}/profile?from=telegram&tg=${telegramId}`);
+}
+
+export const MENU_LABELS = new Set([
+  '🔍 کشف همبازی',
+  '🐾 پت‌های من',
+  '📬 درخواست‌ها',
+  '👤 پروفایل',
+  '➕ ثبت پت',
+  '❓ راهنما',
+]);

@@ -108,5 +108,5 @@ export async function upsertSession(
 }
 
 export async function setSessionRole(telegramId: string, role: UserRole, userId?: number): Promise<BotSession> {
-  return upsertSession(telegramId, { role, userId, step: 'profile_hint' });
+  return upsertSession(telegramId, { role, userId, step: 'ready' });
 }

@@ -72,9 +72,30 @@ export interface BotSession {
   telegramId: string;
   userId?: number;
   role?: UserRole;
-  step: 'start' | 'role_select' | 'profile_hint' | 'ready';
+  step: BotStep;
   locale: string;
+  draftPet?: PetDraft;
+  selectedPetId?: number;
+  selectedToPetId?: number;
+  explorePage?: number;
   updatedAt: string;
+}
+
+export type BotStep =
+  | 'start'
+  | 'role_select'
+  | 'pet_name'
+  | 'pet_species'
+  | 'pet_breed'
+  | 'pet_city'
+  | 'playdate_message'
+  | 'ready';
+
+export interface PetDraft {
+  name?: string;
+  species?: string;
+  breed?: string;
+  city?: string;
 }
 
 export const PLAYDATE_STATUS_LABELS: Record<PlaydateStatus, string> = {

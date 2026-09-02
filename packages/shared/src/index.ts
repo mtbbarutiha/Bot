@@ -19,7 +19,7 @@ export {
   USER_ROLE_LABELS,
   USER_ROLES,
 } from './petdate';
-export type { OnboardingStatus, PlaydateRequest, PlaydateStatus, PetProfile } from './petdate';
+export type { BotStep, OnboardingStatus, PetDraft, PlaydateRequest, PlaydateStatus, PetProfile } from './petdate';
 
 export interface User {
   id: number;
