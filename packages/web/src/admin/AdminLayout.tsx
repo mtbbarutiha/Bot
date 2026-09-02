@@ -7,6 +7,7 @@ import {
   Users,
 } from 'lucide-react';
 import { LogoIcon } from '../components/LogoIcon';
+import { BrandMark } from '../components/BrandMark';
 import { logoutAdmin } from './auth';
 
 const NAV = [
@@ -28,11 +29,9 @@ export function AdminLayout() {
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <div className="admin-brand">
-          <LogoIcon size={34} />
-          <div>
-            <strong>petdate</strong>
-            <small>پنل مدیریت</small>
-          </div>
+          <LogoIcon size={32} />
+          <BrandMark showIcon={false} />
+          <small className="admin-brand-sub">پنل مدیریت</small>
         </div>
 
         <nav className="admin-nav">

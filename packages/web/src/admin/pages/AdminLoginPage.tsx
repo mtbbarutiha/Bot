@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
-import { LogoIcon } from '../../components/LogoIcon';
+import { BrandMark } from '../../components/BrandMark';
 import { loginAdmin } from '../auth';
 
 export function AdminLoginPage() {
@@ -21,11 +21,8 @@ export function AdminLoginPage() {
   return (
     <div className="admin-login-page">
       <form className="admin-login-card" onSubmit={handleSubmit}>
-        <div className="admin-login-icon">
-          <LogoIcon size={52} />
-        </div>
-        <h1>ورود ادمین</h1>
-        <p>پنل مدیریت petdate</p>
+        <BrandMark className="brand-mark--center brand-mark--lg admin-login-brand" iconSize={48} />
+        <p className="admin-login-subtitle">ورود به پنل مدیریت</p>
 
         <div className="form-group">
           <label className="form-label">رمز عبور</label>

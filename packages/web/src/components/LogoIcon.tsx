@@ -3,10 +3,12 @@ import { useId } from 'react';
 interface LogoIconProps {
   size?: number;
   className?: string;
+  variant?: 'dark' | 'light';
 }
 
-export function LogoIcon({ size = 32, className = '' }: LogoIconProps) {
+export function LogoIcon({ size = 32, className = '', variant = 'dark' }: LogoIconProps) {
   const gid = useId().replace(/:/g, '');
+  const isDark = variant === 'dark';
 
   return (
     <svg
@@ -19,33 +21,28 @@ export function LogoIcon({ size = 32, className = '' }: LogoIconProps) {
       aria-hidden
     >
       <defs>
-        <linearGradient id={`${gid}-bg`} x1="8" y1="4" x2="40" y2="44" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#1d4ed8" />
-          <stop offset="1" stopColor="#3b82f6" />
-        </linearGradient>
-        <linearGradient id={`${gid}-shine`} x1="14" y1="8" x2="34" y2="28" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#ffffff" stopOpacity="0.28" />
-          <stop offset="1" stopColor="#ffffff" stopOpacity="0" />
+        <linearGradient id={`${gid}-surface`} x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+          <stop stopColor={isDark ? '#0f172a' : '#ffffff'} />
+          <stop offset="1" stopColor={isDark ? '#1e293b' : '#f8fafc'} />
         </linearGradient>
       </defs>
 
-      <rect width="48" height="48" rx="14" fill={`url(#${gid}-bg)`} />
-      <rect width="48" height="48" rx="14" fill={`url(#${gid}-shine)`} />
-
-      {/* paw toes */}
-      <circle cx="16.5" cy="17" r="3.6" fill="white" />
-      <circle cx="24" cy="13.5" r="3.9" fill="white" />
-      <circle cx="31.5" cy="17" r="3.6" fill="white" />
-
-      {/* heart pad */}
-      <path
-        d="M24 36.5c-.4 0-.8-.2-1.1-.5-2.8-2.5-6.4-5.2-8.7-8.1-2.1-2.6-2.8-5.2-2.1-7.6.6-2 2.4-3.4 4.6-3.6.9-.1 1.8.1 2.6.5.5.3 1 .7 1.4 1.2.4-.5.9-.9 1.4-1.2.8-.4 1.7-.6 2.6-.5 2.2.2 4 1.6 4.6 3.6.7 2.4 0 5-2.1 7.6-2.3 2.9-5.9 5.6-8.7 8.1-.3.3-.7.5-1.1.5z"
-        fill="white"
+      <rect
+        width="48"
+        height="48"
+        rx="13"
+        fill={`url(#${gid}-surface)`}
+        stroke={isDark ? 'rgba(255,255,255,0.06)' : 'rgba(15,23,42,0.08)'}
+        strokeWidth="1"
       />
 
-      {/* accent dot — connection spark */}
-      <circle cx="33" cy="33" r="3" fill="#f97316" />
-      <circle cx="33" cy="33" r="1.2" fill="white" opacity="0.9" />
+      <g fill={isDark ? '#ffffff' : '#0f172a'}>
+        <circle cx="14.5" cy="16.5" r="3.15" />
+        <circle cx="20.25" cy="13.25" r="3.45" />
+        <circle cx="26.25" cy="13.25" r="3.45" />
+        <circle cx="32" cy="16.5" r="3.15" />
+        <ellipse cx="23.25" cy="27.5" rx="10.25" ry="8.75" />
+      </g>
     </svg>
   );
 }

@@ -9,7 +9,7 @@ export function WelcomePage() {
   return (
     <div className="welcome-page">
       <div className="welcome-top">
-        <BrandMark className="welcome-logo brand-mark--lg" iconSize={38} />
+        <BrandMark className="welcome-logo brand-mark--lg" iconSize={40} />
         <div className="welcome-wave">
           <div className="welcome-wave-glow" aria-hidden />
           <div className="welcome-photo-stack">

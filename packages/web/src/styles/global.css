@@ -91,43 +91,71 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .brand-mark {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  font-size: 1.15rem;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  color: var(--slate-900);
+  gap: 10px;
+  user-select: none;
 }
 
 .brand-mark-icon {
   flex-shrink: 0;
-  filter: drop-shadow(0 2px 6px rgba(37, 99, 235, 0.25));
 }
 
-.brand-mark-text {
+.brand-mark-word {
+  display: inline-flex;
+  align-items: baseline;
   line-height: 1;
+  font-size: 1.28rem;
+  font-weight: 700;
+  letter-spacing: -0.055em;
+  text-transform: lowercase;
 }
 
-.brand-mark-accent { color: var(--primary); }
+.brand-mark-pet {
+  color: var(--slate-900);
+}
 
-.greeting-brand { font-size: 0.85rem; margin-bottom: 6px; }
+.brand-mark-date {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.brand-mark--light .brand-mark-pet {
+  color: white;
+}
+
+.brand-mark--light .brand-mark-date {
+  color: #93c5fd;
+}
+
+.greeting-brand {
+  font-size: 0.92rem;
+  margin-bottom: 8px;
+}
+
+.greeting-brand .brand-mark-word {
+  font-size: 1.02rem;
+}
 
 .welcome-logo {
-  font-size: 1.2rem;
+  position: absolute;
+  top: 24px;
+  right: 20px;
+  z-index: 3;
 }
 
-.welcome-logo .brand-mark-icon {
-  width: 30px;
-  height: 30px;
+.welcome-logo .brand-mark-word {
+  font-size: 1.35rem;
+}
+
+.brand-mark--lg .brand-mark-word {
+  font-size: 1.55rem;
 }
 
 .brand-mark--lg {
-  font-size: 1.45rem;
-  gap: 10px;
+  gap: 12px;
 }
 
-.brand-mark--lg .brand-mark-icon {
-  width: 38px;
-  height: 38px;
+.brand-mark--center {
+  justify-content: center;
 }
 
 /* ── App shell ── */
@@ -1534,14 +1562,19 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 
 .admin-brand {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
   padding: 8px 12px 28px;
   color: white;
 }
 
-.admin-brand strong { display: block; font-size: 1rem; }
-.admin-brand small { font-size: 0.72rem; color: var(--slate-400); }
+.admin-brand-sub {
+  font-size: 0.72rem;
+  color: var(--slate-400);
+  margin-top: -4px;
+  padding-right: 2px;
+}
 
 .admin-nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
 
@@ -1804,10 +1837,32 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   text-align: center;
 }
 
+.admin-brand .brand-mark-pet {
+  color: white;
+}
+
+.admin-brand .brand-mark-date {
+  color: #93c5fd;
+}
+
+.admin-brand .brand-mark-word {
+  font-size: 1.15rem;
+}
+
+.admin-login-brand {
+  margin-bottom: 8px;
+}
+
+.admin-login-subtitle {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  margin-bottom: 28px;
+}
+
 .admin-login-icon {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 18px;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 12px;
   display: flex;
   align-items: center;
   justify-content: center;
