@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { GameStatus, GameType } from '@hambazi/shared';
+import type { GameStatus, GameType } from '@petdate/shared';
 import { dbService } from '../db';
 
 export const gamesRouter = Router();

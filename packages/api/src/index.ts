@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
-import type { GameType } from '@hambazi/shared';
+import type { GameType } from '@petdate/shared';
 import { dbService, getDb } from './db';
 import { gamesRouter } from './routes/games';
 import { sectionsRouter } from './routes/sections';
@@ -19,7 +19,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'hambazi-api' });
+  res.json({ ok: true, service: 'petdate-api' });
 });
 
 app.use('/api/games', gamesRouter);
@@ -63,7 +63,7 @@ app.get('/api/my-section-games', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🎮 همبازی API روی پورت ${PORT} اجرا شد`);
+  console.log(`🐾 petdate API روی پورت ${PORT} اجرا شد`);
 });
 
 export { app, dbService };

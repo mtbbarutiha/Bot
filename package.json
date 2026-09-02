@@ -1,12 +1,12 @@
 {
-  "name": "hambazi",
+  "name": "petdate",
   "version": "1.0.0",
   "private": true,
   "description": "petdate — پیدا کردن همبازی برای پت (فاز ۱: UI)",
   "scripts": {
-    "dev": "npm run dev -w @hambazi/web",
-    "build": "npm run build -w @hambazi/web",
-    "preview": "npm run preview -w @hambazi/web"
+    "dev": "npm run dev -w @petdate/web",
+    "build": "npm run build -w @petdate/web",
+    "preview": "npm run preview -w @petdate/web"
   },
   "workspaces": [
     "packages/*"

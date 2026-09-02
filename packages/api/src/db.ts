@@ -1,8 +1,8 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import type { Game, GamePlayer, GameStatus, GameType, Section, User } from '@hambazi/shared';
+import type { Game, GamePlayer, GameStatus, GameType, Section, User } from '@petdate/shared';
 
-const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'hambazi.db');
+const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'petdate.db');
 
 let db: Database.Database;
 
