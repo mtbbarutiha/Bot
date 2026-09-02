@@ -29,7 +29,7 @@
   --primary-soft: var(--brand-50);
   --surface: #ffffff;
   --surface-raised: #ffffff;
-  --bg: var(--slate-50);
+  --bg: var(--brand-hero);
   --text: var(--slate-900);
   --text-secondary: var(--slate-500);
   --text-tertiary: var(--slate-400);
@@ -167,7 +167,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   min-height: 100dvh;
   max-width: 430px;
   margin: 0 auto;
-  background: var(--surface);
+  background: var(--brand-hero);
   position: relative;
   box-shadow: var(--shadow-lg);
 }
@@ -210,7 +210,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 
 /* ── Home header ── */
-.home-page { background: var(--slate-50); }
+.home-page { background: var(--brand-hero); }
 
 .home-header {
   position: relative;
@@ -377,6 +377,18 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 
 .home-body { padding: 24px 0 8px; }
+
+.home-body .section-row h2 {
+  color: white;
+}
+
+.home-body .section-label {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.home-body .link-arrow {
+  color: rgba(255, 255, 255, 0.95);
+}
 
 .section-row {
   display: flex;
@@ -699,7 +711,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 
 /* ── Detail page ── */
 .detail-page {
-  background: var(--surface);
+  background: var(--brand-hero);
   min-height: 100dvh;
   padding-bottom: 110px;
 }
@@ -1087,12 +1099,19 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   display: flex;
   align-items: center;
   gap: 8px;
+  color: white;
 }
 
 .page-title-block p {
   font-size: 0.85rem;
-  color: var(--text-secondary);
+  color: rgba(255, 255, 255, 0.85);
   margin-top: 4px;
+}
+
+.page-title-block .greeting-brand .logotype--dark {
+  background: linear-gradient(90deg, #ffffff 0 42.857%, var(--brand-200) 42.857% 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
 }
 
 .title-icon { color: var(--primary); }
@@ -1254,7 +1273,13 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   margin-top: 4px;
 }
 
-.profile-section { padding: 24px 20px; }
+.profile-section {
+  padding: 24px 20px;
+  background: var(--surface);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  margin-top: -16px;
+  position: relative;
+}
 
 .my-pet-chip {
   padding: 14px 16px;
@@ -1491,7 +1516,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 /* ── Desktop frame ── */
 @media (min-width: 431px) {
   body {
-    background: linear-gradient(145deg, #e0e7ff 0%, #f8fafc 40%, #f1f5f9 100%);
+    background: var(--brand-hero);
     padding: 20px 0;
   }
 

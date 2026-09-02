@@ -13,7 +13,7 @@ export default defineConfig({
         short_name: 'petdate',
         description: 'petdate — همبازی برای پت‌ات پیدا کن',
         theme_color: '#5ba8d2',
-        background_color: '#eef7fc',
+        background_color: '#5ba8d2',
         display: 'standalone',
         orientation: 'portrait',
         lang: 'fa',
