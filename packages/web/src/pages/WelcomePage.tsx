@@ -11,7 +11,7 @@ export function WelcomePage() {
       <img
         className="welcome-bg"
         src={WELCOME_HERO}
-        alt="پت‌های بازیگوش"
+        alt="petdate"
       />
       <div className="welcome-overlay" aria-hidden />
 
@@ -22,13 +22,10 @@ export function WelcomePage() {
 
         <div className="welcome-hero-text">
           <h1>
-            <span className="welcome-hero-brand" aria-label="petdate">
-              <span className="welcome-hero-pet">pet</span>
-              <span className="welcome-hero-date">date</span>
-            </span>
+            <BrandMark variant="light" size="hero" showIcon={false} />
             <span className="welcome-hero-tag">همبازی برای پت‌ات</span>
           </h1>
-          <p>پت‌های نزدیک رو پیدا کن و با صاحب‌شون آشنا شو</p>
+          <p>با petdate پت‌های نزدیک رو پیدا کن و با صاحب‌شون آشنا شو</p>
         </div>
 
         <div className="welcome-footer">

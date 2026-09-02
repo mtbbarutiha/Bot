@@ -22,7 +22,7 @@ export function AdminLoginPage() {
     <div className="admin-login-page">
       <form className="admin-login-card" onSubmit={handleSubmit}>
         <BrandMark className="brand-mark--center brand-mark--lg admin-login-brand" iconSize={48} />
-        <p className="admin-login-subtitle">ورود به پنل مدیریت</p>
+        <p className="admin-login-subtitle">ورود به petdate</p>
 
         <div className="form-group">
           <label className="form-label">رمز عبور</label>

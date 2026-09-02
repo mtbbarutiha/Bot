@@ -139,6 +139,13 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   font-size: 1.55rem;
 }
 
+.brand-mark--hero .brand-mark-word {
+  font-size: 3rem;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+}
+
 .brand-mark--lg {
   gap: 12px;
 }
@@ -1003,25 +1010,6 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   margin-bottom: 12px;
 }
 
-.welcome-hero-brand {
-  display: inline-flex;
-  align-items: baseline;
-  font-size: 3rem;
-  font-weight: 800;
-  letter-spacing: -0.06em;
-  line-height: 1;
-  text-transform: lowercase;
-  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
-}
-
-.welcome-hero-pet {
-  color: white;
-}
-
-.welcome-hero-date {
-  color: #93c5fd;
-}
-
 .welcome-hero-tag {
   font-size: 1.35rem;
   font-weight: 800;
@@ -1222,9 +1210,14 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 /* ── Profile ── */
 .profile-hero {
   text-align: center;
-  padding: 0 20px 28px;
+  padding: 20px 20px 28px;
   background: linear-gradient(180deg, var(--brand-50) 0%, var(--surface) 100%);
   border-bottom: 1px solid var(--border-light);
+}
+
+.profile-brand {
+  justify-content: center;
+  margin-bottom: 16px;
 }
 
 .profile-hero-photo {

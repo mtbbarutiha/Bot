@@ -6,7 +6,6 @@ import {
   PawPrint,
   Users,
 } from 'lucide-react';
-import { LogoIcon } from '../components/LogoIcon';
 import { BrandMark } from '../components/BrandMark';
 import { logoutAdmin } from './auth';
 
@@ -29,9 +28,8 @@ export function AdminLayout() {
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <div className="admin-brand">
-          <LogoIcon size={32} />
-          <BrandMark showIcon={false} />
-          <small className="admin-brand-sub">پنل مدیریت</small>
+          <BrandMark className="brand-mark--lg admin-brand-mark" iconSize={36} variant="light" />
+          <small className="admin-brand-sub">پنل مدیریت petdate</small>
         </div>
 
         <nav className="admin-nav">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Check, Clock, Mail, MessageCircle } from 'lucide-react';
+import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatTimeAgo } from '../data/mock';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
@@ -20,6 +21,7 @@ export function MatchesPage() {
   return (
     <>
       <div className="page-title-block">
+        <BrandMark className="greeting-brand" iconSize={22} />
         <h1>
           درخواست‌ها
           <Mail size={22} className="title-icon" />

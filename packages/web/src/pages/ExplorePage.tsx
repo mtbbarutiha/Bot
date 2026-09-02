@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
@@ -29,6 +30,7 @@ export function ExplorePage() {
     <div className="home-page">
       <div className="home-header compact">
         <div className="greeting">
+          <BrandMark className="greeting-brand" iconSize={22} />
           <h1>جستجو</h1>
           <p>{filtered.length} پت نزدیک {myPet.city}</p>
         </div>

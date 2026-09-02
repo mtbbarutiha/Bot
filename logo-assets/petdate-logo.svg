@@ -16,6 +16,5 @@
     <ellipse cx="0" cy="1.8" rx="7" ry="6"/>
   </g>
   <circle cx="24" cy="23.5" r="2.6" fill="#60a5fa"/>
-  <text x="60" y="32" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="700" letter-spacing="-0.06em" fill="#0f172a">pet</text>
-  <text x="108" y="32" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="600" letter-spacing="-0.06em" fill="#2563eb">date</text>
+  <text x="60" y="32" font-family="Inter, system-ui, sans-serif" font-size="28" font-weight="700" letter-spacing="-0.06em" fill="#0f172a">pet<tspan fill="#2563eb">date</tspan></text>
 </svg>

@@ -11,7 +11,7 @@ export default defineConfig({
       manifest: {
         name: 'petdate',
         short_name: 'petdate',
-        description: 'همبازی برای پت‌ات پیدا کن',
+        description: 'petdate — همبازی برای پت‌ات پیدا کن',
         theme_color: '#2563eb',
         background_color: '#f8fafc',
         display: 'standalone',

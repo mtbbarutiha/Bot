@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Globe, MapPin, Send, Shield, Smartphone } from 'lucide-react';
+import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
 import { usePetStore } from '../hooks/usePetStore';
@@ -13,6 +14,7 @@ export function ProfilePage() {
   return (
     <>
       <div className="profile-hero">
+          <BrandMark className="profile-brand" iconSize={26} />
         <div className="profile-hero-photo">
           <img src={myPet.imageUrl} alt={myPet.name} />
         </div>
