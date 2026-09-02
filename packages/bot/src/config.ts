@@ -20,6 +20,8 @@ export const config = {
   telegramBotUsername: optional('TELEGRAM_BOT_USERNAME'),
   apiUrl: optional('API_URL', 'http://localhost:3001')!,
   webUrl: optional('WEB_URL', 'http://localhost:5173')!,
+  /** Optional public URL (tunnel/prod) for Telegram inline link buttons. */
+  publicWebUrl: optional('PUBLIC_WEB_URL'),
   redisUrl: optional('REDIS_URL', 'redis://localhost:6379')!,
   webhookUrl: optional('BOT_WEBHOOK_URL'),
   webhookSecret: optional('BOT_WEBHOOK_SECRET'),

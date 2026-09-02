@@ -2,6 +2,7 @@ import { Bot } from 'grammy';
 import { assertBotToken, config } from './config';
 import { registerHandlers } from './handlers';
 import { connectRedis, disconnectRedis } from './session';
+import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
 async function main(): Promise<void> {
   const token = assertBotToken();
@@ -21,6 +22,10 @@ async function main(): Promise<void> {
     console.log('   (برای dev از polling استفاده کن — BOT_WEBHOOK_URL را خالی بگذار)');
   } else {
     console.log('🤖 petdate bot (polling) — Ctrl+C برای توقف');
+    const webUrl = effectiveWebUrl();
+    if (!isTelegramInlineUrl(webUrl)) {
+      console.warn(`   Web links disabled in chat (set PUBLIC_WEB_URL for HTTPS tunnel): ${webUrl}`);
+    }
     await bot.start({
       onStart: () => console.log(`   API: ${config.apiUrl} | Web: ${config.webUrl}`),
     });
