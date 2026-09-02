@@ -4,6 +4,13 @@ import dotenv from 'dotenv';
 import path from 'path';
 import type { GameType } from '@petdate/shared';
 import { dbService, getDb } from './db';
+import {
+  hasElasticsearchConfig,
+  hasPostgresConfig,
+  hasRedisConfig,
+  hasS3Config,
+  infra,
+} from './config/infra';
 import { gamesRouter } from './routes/games';
 import { sectionsRouter } from './routes/sections';
 import { usersRouter } from './routes/users';
@@ -20,6 +27,22 @@ app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'petdate-api' });
+});
+
+app.get('/api/health/infra', (_req, res) => {
+  res.json({
+    ok: true,
+    service: 'petdate-api',
+    storage: hasPostgresConfig() ? 'postgres' : 'sqlite',
+    infra: {
+      postgres: hasPostgresConfig(),
+      redis: hasRedisConfig(),
+      s3: hasS3Config(),
+      elasticsearch: hasElasticsearchConfig(),
+      telegramBot: Boolean(infra.telegram.botToken),
+      webUrl: infra.web.url,
+    },
+  });
 });
 
 app.use('/api/games', gamesRouter);

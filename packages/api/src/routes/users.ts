@@ -1,7 +1,13 @@
 import { Router } from 'express';
+import type { UserRole } from '@petdate/shared';
+import { USER_ROLES } from '@petdate/shared';
 import { dbService } from '../db';
 
 export const usersRouter = Router();
+
+function isUserRole(value: unknown): value is UserRole {
+  return typeof value === 'string' && USER_ROLES.includes(value as UserRole);
+}
 
 usersRouter.post('/register', (req, res) => {
   const { telegramId, name, username } = req.body;
@@ -15,6 +21,20 @@ usersRouter.post('/register', (req, res) => {
 
 usersRouter.get('/telegram/:telegramId', (req, res) => {
   const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(user);
+});
+
+usersRouter.patch('/telegram/:telegramId/role', (req, res) => {
+  const { role } = req.body;
+  if (!isUserRole(role)) {
+    res.status(400).json({ error: 'نقش نامعتبر است' });
+    return;
+  }
+  const user = dbService.setUserRoleByTelegramId(req.params.telegramId, role);
   if (!user) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;

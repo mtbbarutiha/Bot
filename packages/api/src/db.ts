@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import type { Game, GamePlayer, GameStatus, GameType, Section, User } from '@petdate/shared';
+import type { Game, GamePlayer, GameStatus, GameType, Section, User, UserRole } from '@petdate/shared';
 
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'petdate.db');
 
@@ -61,6 +61,14 @@ function initSchema() {
       UNIQUE(game_id, user_id)
     );
   `);
+  migrateSchema();
+}
+
+function migrateSchema() {
+  const columns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  if (!columns.some((c) => c.name === 'role')) {
+    db.exec("ALTER TABLE users ADD COLUMN role TEXT");
+  }
 }
 
 function seedIfEmpty() {
@@ -108,6 +116,7 @@ function mapUser(row: Record<string, unknown>): User {
     name: row.name as string,
     username: row.username as string | undefined,
     sectionId: row.section_id as number | undefined,
+    role: row.role as UserRole | undefined,
     createdAt: row.created_at as string,
   };
 }
@@ -199,6 +208,17 @@ export const dbService = {
   setUserSection(userId: number, sectionId: number | null): User | null {
     db.prepare('UPDATE users SET section_id = ? WHERE id = ?').run(sectionId, userId);
     return this.getUserById(userId);
+  },
+
+  setUserRole(userId: number, role: UserRole): User | null {
+    db.prepare('UPDATE users SET role = ? WHERE id = ?').run(role, userId);
+    return this.getUserById(userId);
+  },
+
+  setUserRoleByTelegramId(telegramId: string, role: UserRole): User | null {
+    const user = this.getUserByTelegramId(telegramId);
+    if (!user) return null;
+    return this.setUserRole(user.id, role);
   },
 
   listSections(): Section[] {

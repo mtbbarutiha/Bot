@@ -50,7 +50,23 @@ npm run infra:logs    # دنبال کردن لاگ همه سرویس‌ها
 npm run infra:down    # توقف و حذف کانتینرها (داده volumeها باقی می‌ماند)
 ```
 
-## ۵. اتصال API
+## ۵. API و ربات تلگرام
+
+```bash
+npm run dev:api    # http://localhost:3001
+npm run dev:bot    # نیاز به TELEGRAM_BOT_TOKEN در .env
+npm run dev        # وب :5173
+```
+
+ربات (`packages/bot`):
+
+1. `/start` — ثبت/بازگشت کاربر با `telegram_id`
+2. انتخاب نقش — inline keyboard
+3. ادامه در وب — لینک به پروفایل و explore
+
+سشن ربات در Redis با کلید `petdate:bot:session:{telegramId}`.
+
+## ۶. اتصال API
 
 تنظیمات زیرساخت در `packages/api/src/config/infra.ts` از `.env` خوانده می‌شود. تا زمانی که مهاجرت از SQLite انجام نشده، API همان فایل `petdate.db` را استفاده می‌کند.
 

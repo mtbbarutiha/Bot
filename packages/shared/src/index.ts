@@ -1,3 +1,7 @@
+export * from './petdate';
+
+import type { UserRole } from './petdate';
+
 export type GameType =
   | 'football'
   | 'volleyball'
@@ -15,6 +19,7 @@ export interface User {
   name: string;
   username?: string;
   sectionId?: number;
+  role?: UserRole;
   createdAt: string;
 }
 

@@ -1,97 +1,140 @@
 # Petdate Backend Architecture
 
-Petdate is a pet playmate matching platform. This document describes the target backend infrastructure stack, how services interact, and the phased rollout plan.
+Petdate is a pet playmate matching platform with **two equal client channels**: the **Web/PWA** and the **Telegram bot**. Both talk to the same API and share users via `telegram_id`.
 
 ## Stack Overview
 
 | Service | Technology | Role |
 |---------|------------|------|
-| Main database | PostgreSQL + PostGIS | Users, pets, matches, games, sections; geospatial queries for nearby pets |
-| Cache / realtime | Redis | Session cache, online presence, match queue, rate limiting |
-| Object storage | S3-compatible (MinIO locally) | Pet images and media backups |
-| Advanced search | Elasticsearch *(future)* | Full-text and faceted search across profiles and listings |
+| Web client | React + Vite PWA | Primary UI — profiles, explore, admin |
+| Telegram bot | grammY (`packages/bot`) | Onboarding, quick actions, deep links to web |
+| API | Express (`packages/api`) | Business logic, auth bridge, media URLs |
+| Main database | PostgreSQL + PostGIS | Users, pets, matches; geospatial queries |
+| Cache / sessions | Redis | Bot session state, presence, match queue |
+| Object storage | MinIO / S3 | Pet images and media |
+| Advanced search | Elasticsearch *(future)* | Full-text search |
 
-The API currently runs on **SQLite** for local development and Phase 1 UI work. PostgreSQL and the other services are provisioned via Docker Compose and will be adopted incrementally without removing SQLite until migration is complete.
+The API currently runs on **SQLite** for Phase 1. PostgreSQL schema is bootstrapped via Docker; migration is Phase 2.
+
+## Client Channels
+
+```mermaid
+flowchart TB
+  subgraph clients [Clients]
+    Web[Web / PWA]
+    TG[Telegram Bot]
+  end
+
+  subgraph backend [Backend]
+    API[petdate API]
+    BotWorker[packages/bot]
+  end
+
+  subgraph data [Data]
+    SQLite[(SQLite — current)]
+    PG[(PostgreSQL + PostGIS)]
+    Redis[(Redis)]
+    S3[(MinIO / S3)]
+  end
+
+  Web --> API
+  TG --> BotWorker
+  BotWorker --> API
+  BotWorker --> Redis
+  API --> SQLite
+  API -.-> PG
+  API --> Redis
+  API --> S3
+```
+
+### Web / PWA
+
+- Full onboarding wizards per role (pet owner, vet, pet seeker, …)
+- Explore, matches, admin panel
+- URL: `WEB_URL` (default `http://localhost:5173`)
+
+### Telegram Bot
+
+Package: `packages/bot` (grammY + ioredis)
+
+| Flow | Behavior |
+|------|----------|
+| `/start` | Upsert user via `POST /api/users/register` with `telegram_id` |
+| Role pick | Inline keyboard → `PATCH /api/users/telegram/:id/role` |
+| Session | Redis key `petdate:bot:session:{telegramId}` (7-day TTL) |
+| Heavy UI | Deep link to web (`/profile`, `/explore`, `/add-pet`) |
+
+**Dev:** long polling (leave `BOT_WEBHOOK_URL` empty).  
+**Prod:** set `BOT_WEBHOOK_URL` + `BOT_WEBHOOK_SECRET` for webhook mode.
+
+Commands: `/start`, `/explore`, `/help`
 
 ## Service Roles
 
 ### PostgreSQL + PostGIS
 
-- **Primary data store** for durable application state.
-- **PostGIS extension** on the same instance powers location-based features: nearby pets, distance sorting, geofenced sections.
-- Schema migrations and ORM access will target `DATABASE_URL` when the Postgres path is enabled.
+- Primary durable store (see `infra/postgres/init.sql`)
+- `users.telegram_id` links bot and web accounts
+- PostGIS on `pets.location` for nearby playmates
 
 ### Redis
 
-- **Low-latency layer** for data that changes often or must be shared across API instances.
-- Planned uses: online/offline status, match-making queues, short-lived caches, pub/sub for realtime notifications.
+- Bot session state (`packages/bot/src/session.ts`)
+- Future: online presence, match queues, rate limits
 
 ### MinIO / S3
 
-- **Image and file storage** for pet photos and uploads.
-- Local development uses MinIO (S3-compatible API on port 9000; console on 9001).
-- Production will point at AWS S3 or another S3-compatible provider using the same env vars.
+- Pet photos; API stores object keys in DB
+- Local: port 9000 (API), 9001 (console)
 
-### Elasticsearch *(future — optional `search` profile)*
+### Elasticsearch *(optional `search` profile)*
 
-- **Advanced search** when simple SQL/PostGIS filters are not enough.
-- Not required for Phase 1–2; enable with `docker compose --profile search up -d` when building search features.
+- Advanced search — Phase 5
 
-## Data Flow
+## Environment
 
-```mermaid
-flowchart LR
-  Client[Web / Telegram] --> API[petdate API]
-  API --> SQLite[(SQLite — current)]
-  API --> PG[(PostgreSQL + PostGIS — target)]
-  API --> Redis[(Redis)]
-  API --> S3[(MinIO / S3)]
-  API -.-> ES[(Elasticsearch — future)]
-```
+See `.env.example`. Key groups:
 
-1. **Client** (web app or Telegram bot) calls the Express API.
-2. **API** reads/writes core entities. Today: SQLite file (`DATABASE_PATH`). Target: PostgreSQL via `DATABASE_URL`.
-3. **Redis** is consulted for fast paths (presence, queues, cache) once wired in.
-4. **S3/MinIO** stores binary assets; the API stores object keys/URLs in the database.
-5. **Elasticsearch** *(later)* indexes searchable documents synced from Postgres for complex queries.
+- **App:** `WEB_URL`, `API_URL`
+- **Bot:** `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, `BOT_WEBHOOK_URL`
+- **DB:** `DATABASE_URL` (Postgres), `DATABASE_PATH` (SQLite fallback)
+- **Redis:** `REDIS_URL`
+- **S3:** `S3_*`
 
-## Environment Configuration
-
-Configuration is loaded from the repo root `.env` (see `.env.example`). Infrastructure-related variables are centralized in `packages/api/src/config/infra.ts`:
-
-- `DATABASE_URL` — PostgreSQL connection string
-- `REDIS_URL` — Redis connection string
-- `S3_*` — endpoint, credentials, bucket, region
-- `ELASTICSEARCH_URL` — optional, for the search profile
-
-SQLite continues to use `DATABASE_PATH` when `DATABASE_URL` is unset.
+Config loader: `packages/api/src/config/infra.ts`
 
 ## Phase Plan
 
-### Phase 1 — UI & SQLite API *(current)*
+### Phase 1 — UI + SQLite + Bot skeleton *(current)*
 
-- Web UI and Telegram flows against the existing SQLite-backed API.
-- Docker infra can be started locally to prepare for Phase 2 without changing runtime behavior.
+- Web UI complete; bot `/start` + role selection
+- Docker infra ready; SQLite still used by API
+- Redis sessions for bot
 
-### Phase 2 — PostgreSQL + PostGIS
+### Phase 2 — PostgreSQL + role onboarding
 
-- Migrate schema and data access from SQLite to PostgreSQL.
-- Enable PostGIS for location/nearby features.
-- Keep Redis and S3 integration minimal (health checks, image upload path).
+- Migrate API to Postgres; PostGIS for nearby pets
+- Web + bot share role/onboarding state
 
-### Phase 3 — Redis & realtime
+### Phase 3 — Redis realtime
 
-- Online presence, match queues, caching, and optional pub/sub.
+- Presence, match queues, notifications
 
-### Phase 4 — S3 production path
+### Phase 4 — S3 production
 
-- Harden uploads, CDN URLs, lifecycle policies; swap MinIO for cloud S3 in production.
+- Upload pipeline, CDN URLs
 
-### Phase 5 — Elasticsearch *(future)*
+### Phase 5 — Elasticsearch
 
-- Index profiles/listings; advanced search UI and APIs.
-- Run Elasticsearch only via Compose profile `search` until production search cluster is defined.
+- Advanced search
 
-## Local Infrastructure
+## Local Commands
 
-See [infra/local-setup.md](./infra/local-setup.md) for Persian quick-start: `npm run infra:up`, env copy, and optional search profile.
+```bash
+npm run infra:up      # Postgres, Redis, MinIO
+npm run dev:api       # API :3001
+npm run dev:bot       # Telegram bot (needs TELEGRAM_BOT_TOKEN)
+npm run dev           # Web :5173
+```
+
+See [infra/local-setup.md](./infra/local-setup.md).

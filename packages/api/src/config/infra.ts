@@ -24,6 +24,16 @@ export const infra = {
     region: optional('S3_REGION') ?? 'us-east-1',
     usePathStyle: process.env.S3_USE_PATH_STYLE !== 'false',
     publicUrl: optional('S3_PUBLIC_URL'),
+    useSsl: process.env.S3_USE_SSL === 'true',
+  },
+  telegram: {
+    botToken: optional('TELEGRAM_BOT_TOKEN'),
+    botUsername: optional('TELEGRAM_BOT_USERNAME'),
+    webhookUrl: optional('BOT_WEBHOOK_URL'),
+    webhookSecret: optional('BOT_WEBHOOK_SECRET'),
+  },
+  web: {
+    url: optional('WEB_URL') ?? 'http://localhost:5173',
   },
   elasticsearch: {
     url: optional('ELASTICSEARCH_URL'),
