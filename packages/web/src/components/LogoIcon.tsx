@@ -22,7 +22,7 @@ export function LogoIcon({ size = 32, className = '', variant = 'dark' }: LogoIc
   const gid = useId().replace(/:/g, '');
   const isDark = variant === 'dark';
   const pawFill = isDark ? '#ffffff' : '#0f172a';
-  const linkFill = isDark ? '#60a5fa' : '#2563eb';
+  const linkFill = isDark ? '#8ecfe9' : '#5ba8d2';
 
   return (
     <svg
