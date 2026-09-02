@@ -42,7 +42,10 @@ export const DEFAULT_IMAGES: Record<PetType, string> = {
   other: petLocal(OTHER_PHOTOS[0]),
 };
 
-/** Welcome screen — French bulldog hero from mockup */
+/**
+ * Welcome hero — Karsten Winegeart (Unsplash)
+ * Photo: brown short coated dog in orange hoodie — oU6KZTXhuvk
+ */
 export const WELCOME_HERO = petLocal('welcome-hero');
 
 export const EMPTY_STATE_PHOTO = petLocal(CAT_PHOTOS[7]);
