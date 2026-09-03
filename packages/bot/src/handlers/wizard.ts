@@ -17,20 +17,28 @@ import {
 import {
   BREED_PAGE_SIZE,
   COMMON_CITIES,
+  LOOKING_NO_LABEL,
+  LOOKING_YES_LABEL,
+  NEUTERED_NO_LABEL,
+  NEUTERED_YES_LABEL,
   NO_LABEL,
   PET_FEMALE_LABEL,
   PET_MALE_LABEL,
+  VACCINATED_NO_LABEL,
+  VACCINATED_YES_LABEL,
   WIZARD_NAV,
   YES_LABEL,
   breedReplyKeyboard,
   cityReplyKeyboard,
+  lookingReplyKeyboard,
   mainMenuKeyboard,
+  neuteredReplyKeyboard,
   petAgeReplyKeyboard,
   petGenderReplyKeyboard,
   petSizeReplyKeyboard,
   speciesReplyKeyboard,
   textStepKeyboard,
-  yesNoReplyKeyboard,
+  vaccinatedReplyKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 
@@ -171,16 +179,16 @@ async function askColor(ctx: Context): Promise<void> {
 }
 
 async function askVaccinated(ctx: Context): Promise<void> {
-  await ctx.reply(`💉 **${stepLabel(8)}**\n\nواکسن زده؟`, {
+  await ctx.reply(`💉 **${stepLabel(8)}**\n\nوضعیت واکسن رو انتخاب کن:`, {
     parse_mode: 'Markdown',
-    reply_markup: yesNoReplyKeyboard(),
+    reply_markup: vaccinatedReplyKeyboard(),
   });
 }
 
 async function askNeutered(ctx: Context): Promise<void> {
-  await ctx.reply(`✂️ **${stepLabel(9)}**\n\nعقیم‌سازی شده؟`, {
+  await ctx.reply(`✂️ **${stepLabel(9)}**\n\nوضعیت عقیم‌سازی رو انتخاب کن:`, {
     parse_mode: 'Markdown',
-    reply_markup: yesNoReplyKeyboard(),
+    reply_markup: neuteredReplyKeyboard(),
   });
 }
 
@@ -201,7 +209,7 @@ async function askCity(ctx: Context): Promise<void> {
 async function askLooking(ctx: Context): Promise<void> {
   await ctx.reply(`🤝 **${stepLabel(12)}**\n\nدنبال همبازی هست؟`, {
     parse_mode: 'Markdown',
-    reply_markup: yesNoReplyKeyboard(),
+    reply_markup: lookingReplyKeyboard(),
   });
 }
 
@@ -278,6 +286,27 @@ function parseYesNo(text: string): boolean | null {
   if (t === YES_LABEL || t === 'بله' || t === 'آره') return true;
   if (t === NO_LABEL || t === 'خیر' || t === 'نه') return false;
   return null;
+}
+
+function parseVaccinated(text: string): boolean | null {
+  const t = text.trim();
+  if (t === VACCINATED_YES_LABEL || t === 'واکسن زده') return true;
+  if (t === VACCINATED_NO_LABEL || t === 'واکسن نزده' || t === 'واکسن نخورده') return false;
+  return parseYesNo(t);
+}
+
+function parseNeutered(text: string): boolean | null {
+  const t = text.trim();
+  if (t === NEUTERED_YES_LABEL || t === 'عقیم شده') return true;
+  if (t === NEUTERED_NO_LABEL || t === 'عقیم نشده') return false;
+  return parseYesNo(t);
+}
+
+function parseLooking(text: string): boolean | null {
+  const t = text.trim();
+  if (t === LOOKING_YES_LABEL || t === 'دنبال همبازی') return true;
+  if (t === LOOKING_NO_LABEL || t === 'فعلاً نه') return false;
+  return parseYesNo(t);
 }
 
 function parsePetGender(text: string): PetGender | null {
@@ -459,9 +488,9 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
   }
 
   if (step === 'pet_vaccinated') {
-    const value = parseYesNo(text);
+    const value = parseVaccinated(text);
     if (value == null) {
-      await ctx.reply('بله یا خیر؟', { reply_markup: yesNoReplyKeyboard() });
+      await ctx.reply('از دکمه‌ها انتخاب کن:', { reply_markup: vaccinatedReplyKeyboard() });
       return true;
     }
     draft.vaccinated = value;
@@ -471,9 +500,9 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
   }
 
   if (step === 'pet_neutered') {
-    const value = parseYesNo(text);
+    const value = parseNeutered(text);
     if (value == null) {
-      await ctx.reply('بله یا خیر؟', { reply_markup: yesNoReplyKeyboard() });
+      await ctx.reply('از دکمه‌ها انتخاب کن:', { reply_markup: neuteredReplyKeyboard() });
       return true;
     }
     draft.neutered = value;
@@ -501,9 +530,9 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
   }
 
   if (step === 'pet_looking') {
-    const value = parseYesNo(text);
+    const value = parseLooking(text);
     if (value == null) {
-      await ctx.reply('بله یا خیر؟', { reply_markup: yesNoReplyKeyboard() });
+      await ctx.reply('از دکمه‌ها انتخاب کن:', { reply_markup: lookingReplyKeyboard() });
       return true;
     }
     draft.lookingForPlaymate = value;

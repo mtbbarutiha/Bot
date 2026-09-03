@@ -50,6 +50,12 @@ export const WIZARD_NAV = {
 
 export const YES_LABEL = '✅ بله';
 export const NO_LABEL = '❌ خیر';
+export const VACCINATED_YES_LABEL = '💉 واکسن زده';
+export const VACCINATED_NO_LABEL = '🚫 واکسن نزده';
+export const NEUTERED_YES_LABEL = '✂️ عقیم شده';
+export const NEUTERED_NO_LABEL = '➖ عقیم نشده';
+export const LOOKING_YES_LABEL = '🤝 دنبال همبازی';
+export const LOOKING_NO_LABEL = '⏸ فعلاً نه';
 export const USER_MALE_LABEL = `👨 ${USER_GENDER_LABELS.male}`;
 export const USER_FEMALE_LABEL = `👩 ${USER_GENDER_LABELS.female}`;
 export const PET_MALE_LABEL = `♂ ${PET_GENDER_LABELS.male}`;
@@ -209,6 +215,18 @@ export function yesNoReplyKeyboard(): Keyboard {
     .persistent();
 }
 
+export function vaccinatedReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([VACCINATED_YES_LABEL, VACCINATED_NO_LABEL]);
+}
+
+export function neuteredReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([NEUTERED_YES_LABEL, NEUTERED_NO_LABEL]);
+}
+
+export function lookingReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([LOOKING_YES_LABEL, LOOKING_NO_LABEL]);
+}
+
 export function roleReplyKeyboard(): Keyboard {
   const kb = new Keyboard();
   USER_ROLES.forEach((role, index) => {
@@ -238,19 +256,17 @@ export function petOwnerMenuKeyboard(): Keyboard {
     .text(m.myProfile)
     .text(m.myPets)
     .row()
-    .text(m.addPet)
-    .success()
     .text(m.coins)
-    .row()
     .text(m.medical)
+    .row()
     .text(m.invite)
     .success()
-    .row()
     .text(m.quickVet)
     .primary()
-    .text(m.shop)
     .row()
+    .text(m.shop)
     .text(m.services)
+    .row()
     .text(m.help)
     .resized()
     .persistent();
@@ -265,8 +281,6 @@ export function defaultMenuKeyboard(): Keyboard {
     .text(m.myPets)
     .text(m.profile)
     .row()
-    .text(m.addPet)
-    .primary()
     .text(m.help)
     .resized()
     .persistent();
