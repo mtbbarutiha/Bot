@@ -1,6 +1,8 @@
 import type { Bot, Context } from 'grammy';
 import type { PetGender, PetSize, UserGender, UserRole } from '@petdate/shared';
-import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, mainMenuKeyboard } from '../keyboards';
+import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
+import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, WIZARD_NAV, mainMenuKeyboard } from '../keyboards';
+import { getSession } from '../session';
 import { handleExplore, handleExploreBack, handleExplorePet } from './explore';
 import {
   handleAddPetCommand,
@@ -25,12 +27,12 @@ import {
 } from './playdates';
 import {
   handleProfile,
-  handleProfileActivate,
   handleProfileContact,
-  handleProfileDeactivate,
+  handleProfileDeactivateAsk,
   handleProfileDeactivateConfirm,
   handleProfileDeleteAsk,
   handleProfileDeleteConfirm,
+  handleProfileActivate,
   handleProfileGender,
   handleProfilePhoto,
   handleProfileSkip,
@@ -137,13 +139,13 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery('profile:skip_phone', (ctx) => handleProfileSkip(ctx, 'phone'));
   bot.callbackQuery('profile:skip_photo', (ctx) => handleProfileSkip(ctx, 'photo'));
   bot.callbackQuery('profile:skip_bio', (ctx) => handleProfileSkip(ctx, 'bio'));
+  bot.callbackQuery('profile:deactivate', (ctx) => handleProfileDeactivateAsk(ctx));
+  bot.callbackQuery('profile:activate', (ctx) => handleProfileActivate(ctx));
   bot.callbackQuery('profile:delete', (ctx) => handleProfileDeleteAsk(ctx));
-  bot.callbackQuery('profile:delete:yes', (ctx) => handleProfileDeleteConfirm(ctx, true));
-  bot.callbackQuery('profile:delete:no', (ctx) => handleProfileDeleteConfirm(ctx, false));
-  bot.callbackQuery('profile:deactivate', (ctx) => handleProfileDeactivate(ctx));
   bot.callbackQuery('profile:deactivate:yes', (ctx) => handleProfileDeactivateConfirm(ctx, true));
   bot.callbackQuery('profile:deactivate:no', (ctx) => handleProfileDeactivateConfirm(ctx, false));
-  bot.callbackQuery('profile:activate', (ctx) => handleProfileActivate(ctx));
+  bot.callbackQuery('profile:delete:yes', (ctx) => handleProfileDeleteConfirm(ctx, true));
+  bot.callbackQuery('profile:delete:no', (ctx) => handleProfileDeleteConfirm(ctx, false));
 
   bot.callbackQuery(/^medical:/, (ctx) => handleComingSoon(ctx, 'پزشکی'));
   bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));
@@ -165,6 +167,21 @@ export function registerHandlers(bot: Bot): void {
 async function handleTextMessage(ctx: Context): Promise<void> {
   const text = ctx.message?.text?.trim();
   if (!text || text.startsWith('/')) return;
+
+  // Global cancel from reply keyboard while in any flow
+  if (text === WIZARD_NAV.cancel) {
+    const from = ctx.from;
+    if (from) {
+      const session = await getSession(String(from.id));
+      if (session && session.step !== 'ready' && session.step !== 'start') {
+        await handleCancel(ctx);
+        return;
+      }
+    }
+  }
+
+  // Role selection via reply keyboard
+  if (await handleRoleReplyText(ctx, text)) return;
 
   if (await handleProfileWizardText(ctx, text)) return;
   if (await handleWizardText(ctx, text)) return;
@@ -209,4 +226,21 @@ async function handleTextMessage(ctx: Context): Promise<void> {
         });
       }
   }
+}
+
+async function handleRoleReplyText(ctx: Context, text: string): Promise<boolean> {
+  const from = ctx.from;
+  if (!from) return false;
+
+  const session = await getSession(String(from.id));
+  if (!session || session.step !== 'role_select') return false;
+
+  const role = USER_ROLES.find((r) => USER_ROLE_LABELS[r] === text);
+  if (!role) {
+    await ctx.reply('لطفاً نقش رو از دکمه‌های کیبورد انتخاب کن.');
+    return true;
+  }
+
+  await handleRoleSelect(ctx, role);
+  return true;
 }

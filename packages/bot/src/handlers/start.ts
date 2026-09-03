@@ -4,7 +4,7 @@ import { USER_ROLE_LABELS } from '@petdate/shared';
 import { getUserByTelegramId, registerTelegramUser, setUserOnboarding, setUserRole } from '../api-client';
 import { sendWelcomeLogo } from '../branding';
 import { roleWelcomeHint } from '../format';
-import { mainMenuKeyboard, roleKeyboard, webLinksKeyboard } from '../keyboards';
+import { mainMenuKeyboard, roleReplyKeyboard, webLinksKeyboard } from '../keyboards';
 import { upsertSession } from '../session';
 import { webLinkHint } from '../urls';
 
@@ -40,10 +40,10 @@ export async function handleStart(ctx: Context): Promise<void> {
 
   if (!user.role) {
     const caption =
-      `سلام ${name}! 👋\n\nبه **petdate** خوش اومدی — پیدا کردن همبازی پت، مشاوره دامپزشک و خدمات پت.\n\nاول **نقشت** رو انتخاب کن:`;
-    const sent = await sendWelcomeLogo(ctx, caption, { reply_markup: roleKeyboard() });
+      `سلام ${name}! 👋\n\nبه **petdate** خوش اومدی — پیدا کردن همبازی پت، مشاوره دامپزشک و خدمات پت.\n\nاول **نقشت** رو از منوی پایین انتخاب کن:`;
+    const sent = await sendWelcomeLogo(ctx, caption, { reply_markup: roleReplyKeyboard() });
     if (!sent) {
-      await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: roleKeyboard() });
+      await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: roleReplyKeyboard() });
     }
     return;
   }
@@ -87,18 +87,24 @@ export async function handleRoleSelect(ctx: Context, role: UserRole): Promise<vo
 
   await setUserOnboarding(telegramId, role === 'pet_owner' ? 'profile_incomplete' : 'profile_incomplete');
 
-  await ctx.answerCallbackQuery({ text: `نقش «${label}» ثبت شد` });
+  if (ctx.callbackQuery) {
+    await ctx.answerCallbackQuery({ text: `نقش «${label}» ثبت شد` });
+  }
 
   const text = `عالی! نقش تو **«${label}»** شد. 🎉\n\n${hint}${webLinkHint()}`;
   const webKb = webLinksKeyboard(telegramId);
 
-  try {
-    if (ctx.callbackQuery?.message && 'photo' in ctx.callbackQuery.message) {
-      await ctx.editMessageCaption({ caption: text, parse_mode: 'Markdown', reply_markup: webKb });
-    } else {
-      await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: webKb });
+  if (ctx.callbackQuery) {
+    try {
+      if (ctx.callbackQuery.message && 'photo' in ctx.callbackQuery.message) {
+        await ctx.editMessageCaption({ caption: text, parse_mode: 'Markdown', reply_markup: webKb });
+      } else {
+        await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: webKb });
+      }
+    } catch {
+      await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: webKb });
     }
-  } catch {
+  } else {
     await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: webKb });
   }
 
