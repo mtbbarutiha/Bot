@@ -238,6 +238,24 @@ export const PET_AGE_OPTIONS: ReadonlyArray<{ label: string; months: number }> =
 
 export const PET_AGE_CUSTOM_LABEL = '✏️ سن دقیق';
 
+/** رنگ‌های رایج پت برای انتخاب دکمه‌ای */
+export const PET_COLOR_OPTIONS = [
+  'مشکی',
+  'سفید',
+  'قهوه‌ای',
+  'طلایی',
+  'کرم',
+  'خاکستری',
+  'نارنجی',
+  'سه‌رنگ',
+  'دو‌رنگ',
+  'مشکی-سفید',
+  'مشکی-قهوه‌ای',
+  'قهوه‌ای-سفید',
+] as const;
+
+export const PET_COLOR_CUSTOM_LABEL = '✏️ رنگ دیگر';
+
 const FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
 
 export function toEnglishDigits(raw: string): string {

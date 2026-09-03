@@ -2,6 +2,8 @@ import type { Context } from 'grammy';
 import type { BotStep, PetDraft, PetGender, PetSize, PetSpecies } from '@petdate/shared';
 import {
   PET_AGE_CUSTOM_LABEL,
+  PET_COLOR_CUSTOM_LABEL,
+  PET_COLOR_OPTIONS,
   PET_GENDER_LABELS,
   PET_SIZE_LABELS,
   PET_SPECIES_LABELS,
@@ -34,6 +36,7 @@ import {
   mainMenuKeyboard,
   neuteredReplyKeyboard,
   petAgeReplyKeyboard,
+  petColorReplyKeyboard,
   petGenderReplyKeyboard,
   petSizeReplyKeyboard,
   speciesReplyKeyboard,
@@ -172,9 +175,9 @@ async function askSize(ctx: Context): Promise<void> {
 }
 
 async function askColor(ctx: Context): Promise<void> {
-  await ctx.reply(`🎨 **${stepLabel(7)}**\n\nرنگ پت رو بنویس (یا رد کن):`, {
+  await ctx.reply(`🎨 **${stepLabel(7)}**\n\nرنگ پت رو انتخاب کن:`, {
     parse_mode: 'Markdown',
-    reply_markup: textStepKeyboard({ skip: true }),
+    reply_markup: petColorReplyKeyboard(),
   });
 }
 
@@ -321,6 +324,15 @@ function parsePetSize(text: string): PetSize | null {
   if (t === PET_SIZE_LABELS.small || t === 'کوچک') return 'small';
   if (t === PET_SIZE_LABELS.medium || t === 'متوسط') return 'medium';
   if (t === PET_SIZE_LABELS.large || t === 'بزرگ') return 'large';
+  return null;
+}
+
+function parsePetColor(text: string): string | null {
+  const t = text.trim();
+  if (!t || t === PET_COLOR_CUSTOM_LABEL) return null;
+  if ((PET_COLOR_OPTIONS as readonly string[]).includes(t)) return t;
+  // رنگ دستی بعد از «رنگ دیگر»
+  if (t.length >= 1 && t.length <= 60) return t.slice(0, 60);
   return null;
 }
 
@@ -481,7 +493,18 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
   }
 
   if (step === 'pet_color') {
-    draft.color = text.trim().slice(0, 60);
+    if (text === PET_COLOR_CUSTOM_LABEL) {
+      await ctx.reply('رنگ پت رو بنویس:', { reply_markup: textStepKeyboard({ skip: true }) });
+      return true;
+    }
+    const color = parsePetColor(text);
+    if (!color) {
+      await ctx.reply('از دکمه‌ها انتخاب کن یا «رنگ دیگر» رو بزن:', {
+        reply_markup: petColorReplyKeyboard(),
+      });
+      return true;
+    }
+    draft.color = color;
     await upsertSession(telegramId, { step: 'pet_vaccinated', draftPet: draft });
     await askVaccinated(ctx);
     return true;

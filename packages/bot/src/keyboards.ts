@@ -3,6 +3,8 @@ import type { PetBreed, PetProfile, PetSpecies, UserRole } from '@petdate/shared
 import {
   PET_AGE_CUSTOM_LABEL,
   PET_AGE_OPTIONS,
+  PET_COLOR_CUSTOM_LABEL,
+  PET_COLOR_OPTIONS,
   PET_GENDER_LABELS,
   PET_SIZE_LABELS,
   PROFILE_INTEREST_OPTIONS,
@@ -205,6 +207,13 @@ export function petSizeReplyKeyboard(): Keyboard {
     PET_SIZE_LABELS.medium,
     PET_SIZE_LABELS.large,
   ]);
+}
+
+export function petColorReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([...PET_COLOR_OPTIONS, PET_COLOR_CUSTOM_LABEL], {
+    columns: 3,
+    skip: true,
+  });
 }
 
 export function yesNoReplyKeyboard(): Keyboard {
