@@ -1,5 +1,4 @@
 import type { Context } from 'grammy';
-import { InlineKeyboard } from 'grammy';
 import { createPlaydate, listPets, listPlaydates, updatePlaydateStatus } from '../api-client';
 import { formatPlaydate } from '../format';
 import { fromPetKeyboard, mainMenuKeyboard, playdateActionKeyboard } from '../keyboards';
@@ -83,12 +82,12 @@ export async function handlePlaydateAsk(ctx: Context, toPetId: number): Promise<
   const session = await import('../session').then((m) => m.getSession(String(ctx.from!.id)));
   const preferredId = session?.exploreForPetId;
   if (preferredId && myPets.some((p) => p.id === preferredId)) {
-    await startPlaydateMessage(ctx, preferredId, toPetId, user.id);
+    await sendPlaydateNow(ctx, preferredId, toPetId, user.id);
     return;
   }
 
   if (myPets.length === 1) {
-    await startPlaydateMessage(ctx, myPets[0]!.id, toPetId, user.id);
+    await sendPlaydateNow(ctx, myPets[0]!.id, toPetId, user.id);
     return;
   }
 
@@ -102,55 +101,51 @@ export async function handlePlaydateFrom(ctx: Context, fromPetId: number, toPetI
   if (!user?.id) return;
 
   await ctx.answerCallbackQuery();
-  await startPlaydateMessage(ctx, fromPetId, toPetId, user.id);
+  await sendPlaydateNow(ctx, fromPetId, toPetId, user.id);
 }
 
-async function startPlaydateMessage(
+/** ارسال مستقیم درخواست همبازی — بدون نوشتن پیام برای صاحب پت */
+async function sendPlaydateNow(
   ctx: Context,
   fromPetId: number,
   toPetId: number,
-  _userId: number
+  fromUserId: number
 ): Promise<void> {
-  const telegramId = String(ctx.from!.id);
-  await upsertSession(telegramId, {
-    step: 'playdate_message',
-    selectedPetId: fromPetId,
-    selectedToPetId: toPetId,
+  await createPlaydate({ fromPetId, toPetId, fromUserId });
+  await upsertSession(String(ctx.from!.id), {
+    step: 'ready',
+    selectedPetId: undefined,
+    selectedToPetId: undefined,
   });
 
+  const done = '✅ درخواست همبازی ارسال شد!';
   if (ctx.callbackQuery) {
-    await ctx.editMessageText('💬 پیام برای صاحب پت بنویس (یا «بدون پیام» بزن):', {
-      reply_markup: new InlineKeyboard()
-        .text('📭 بدون پیام', `playdate:send:${fromPetId}:${toPetId}`)
-        .primary(),
-    });
+    try {
+      await ctx.editMessageText(done);
+    } catch {
+      await ctx.reply(done);
+    }
   } else {
-    await ctx.reply('💬 پیام برای صاحب پت بنویس:', {
-      reply_markup: new InlineKeyboard()
-        .text('📭 بدون پیام', `playdate:send:${fromPetId}:${toPetId}`)
-        .primary(),
-    });
+    await ctx.reply(done);
   }
+
+  const u = await getCtxUser(ctx);
+  await ctx.reply('منتظر پاسخ بمون یا همبازی‌های دیگه رو ببین.', {
+    reply_markup: mainMenuKeyboard(u?.role),
+  });
 }
 
+/** @deprecated kept for old inline buttons — sends without message */
 export async function handlePlaydateSend(
   ctx: Context,
   fromPetId: number,
   toPetId: number,
-  message?: string
+  _message?: string
 ): Promise<void> {
   const user = await getCtxUser(ctx);
   if (!user?.id) return;
-
   await ctx.answerCallbackQuery();
-  await createPlaydate({ fromPetId, toPetId, fromUserId: user.id, message });
-  await upsertSession(String(ctx.from!.id), { step: 'ready', selectedPetId: undefined, selectedToPetId: undefined });
-
-  await ctx.editMessageText('✅ درخواست همبازی ارسال شد!');
-  const u = await getCtxUser(ctx);
-  await ctx.reply('منتظر پاسخ بمون یا درخواست‌های دیگه رو ببین.', {
-    reply_markup: mainMenuKeyboard(u?.role),
-  });
+  await sendPlaydateNow(ctx, fromPetId, toPetId, user.id);
 }
 
 export async function handlePlaydateAction(

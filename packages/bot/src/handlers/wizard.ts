@@ -298,7 +298,16 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
   const draft: PetDraft = { ...session.draftPet };
 
   if (step === 'playdate_message') {
-    return handlePlaydateMessage(ctx, telegramId, session.userId, text);
+    // پیام برای صاحب پت حذف شد — درخواست مستقیم ارسال می‌شود
+    await upsertSession(telegramId, {
+      step: 'ready',
+      selectedPetId: undefined,
+      selectedToPetId: undefined,
+    });
+    await ctx.reply('برای درخواست همبازی از دکمه «🤝 درخواست همبازی» استفاده کن.', {
+      reply_markup: mainMenuKeyboard((await getUserByTelegramId(telegramId))?.role),
+    });
+    return true;
   }
 
   if (text === WIZARD_NAV.cancel) {
@@ -581,46 +590,12 @@ async function handleSkipText(
 }
 
 async function handlePlaydateMessage(
-  ctx: Context,
-  telegramId: string,
-  userId: number,
-  text: string
+  _ctx: Context,
+  _telegramId: string,
+  _userId: number,
+  _text: string
 ): Promise<boolean> {
-  const session = await getSession(telegramId);
-  if (!session) return false;
-
-  if (text === WIZARD_NAV.cancel || text === WIZARD_NAV.back) {
-    const user = await getUserByTelegramId(telegramId);
-    await upsertSession(telegramId, {
-      step: 'ready',
-      selectedPetId: undefined,
-      selectedToPetId: undefined,
-    });
-    await ctx.reply('درخواست لغو شد.', { reply_markup: mainMenuKeyboard(user?.role) });
-    return true;
-  }
-
-  const toPetId = session.selectedToPetId;
-  const fromPetId = session.selectedPetId;
-  if (!toPetId || !fromPetId) {
-    await upsertSession(telegramId, { step: 'ready' });
-    return false;
-  }
-  const { createPlaydate } = await import('../api-client');
-  await createPlaydate({
-    fromPetId,
-    toPetId,
-    fromUserId: userId,
-    message: text.trim(),
-  });
-  await upsertSession(telegramId, {
-    step: 'ready',
-    selectedPetId: undefined,
-    selectedToPetId: undefined,
-  });
-  const user = await getUserByTelegramId(telegramId);
-  await ctx.reply('✅ درخواست همبازی ارسال شد!', { reply_markup: mainMenuKeyboard(user?.role) });
-  return true;
+  return false;
 }
 
 /** Legacy inline callbacks — keep working for old messages */
