@@ -21,6 +21,8 @@ import {
   COMMON_CITIES,
   LOOKING_NO_LABEL,
   LOOKING_YES_LABEL,
+  MENU_LABELS,
+  MY_PETS_SECTION,
   NEUTERED_NO_LABEL,
   NEUTERED_YES_LABEL,
   NO_LABEL,
@@ -34,6 +36,7 @@ import {
   cityReplyKeyboard,
   lookingReplyKeyboard,
   mainMenuKeyboard,
+  myPetsSectionKeyboard,
   neuteredReplyKeyboard,
   petAgeReplyKeyboard,
   petColorReplyKeyboard,
@@ -406,6 +409,15 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
 
   if (text === WIZARD_NAV.skip) {
     return handleSkipText(ctx, telegramId, userId, step, draft);
+  }
+
+  // دکمه‌های منوی اصلی/بخش پت‌ها را به‌عنوان دادهٔ ویزارد قبول نکن
+  if (MENU_LABELS.has(text) || Object.values(MY_PETS_SECTION).includes(text as never)) {
+    await ctx.reply('الان وسط ثبت پتی. از دکمه‌های همین مرحله استفاده کن یا «انصراف» بزن.', {
+      reply_markup: textStepKeyboard({ skip: String(step) !== 'pet_name' && String(step) !== 'pet_species' }),
+    });
+    await promptPetStep(ctx, step, draft, session.breedPage ?? 0);
+    return true;
   }
 
   if (step === 'pet_name') {
@@ -870,7 +882,9 @@ async function finishPetWizard(
   draft: PetDraft
 ): Promise<void> {
   if (!draft.name || !draft.species) {
-    await ctx.reply('اطلاعات ناقصه. دوباره از «ثبت پت جدید» شروع کن.');
+    await ctx.reply(
+      'اطلاعات ثبت ناقص موند (احتمالاً ربات وسط کار ری‌استارت شده).\nلطفاً دوباره «➕ ثبت پت جدید» رو بزن و مراحل رو کامل کن.'
+    );
     await upsertSession(telegramId, { step: 'ready', draftPet: undefined, breedPage: undefined });
     return;
   }
@@ -878,8 +892,9 @@ async function finishPetWizard(
   const health: Record<string, unknown> = {};
   if (draft.diseases) health.diseases = draft.diseases;
 
+  let pet;
   try {
-    const pet = await createPet({
+    pet = await createPet({
       ownerId: userId,
       name: draft.name,
       species: draft.species,
@@ -898,49 +913,60 @@ async function finishPetWizard(
       city: draft.city,
       neighborhood: draft.neighborhood,
     });
-
-    await upsertSession(telegramId, { step: 'ready', draftPet: undefined, breedPage: undefined });
-
-    const gender = pet.gender ? PET_GENDER_LABELS[pet.gender] : null;
-    const size = pet.size ? PET_SIZE_LABELS[pet.size] : null;
-    const speciesLabel = PET_SPECIES_LABELS[pet.species] ?? pet.species;
-    const lines = [
-      `🎉 **${pet.name}** با موفقیت ثبت شد!`,
-      '',
-      `نوع: ${speciesLabel}`,
-      pet.breed ? `نژاد: ${pet.breed}` : null,
-      gender ? `جنسیت: ${gender}` : null,
-      pet.ageMonths != null ? `سن: ${formatPetAge(pet.ageMonths)}` : null,
-      size ? `اندازه: ${size}` : null,
-      pet.color ? `رنگ: ${pet.color}` : null,
-      pet.city ? `📍 ${pet.city}` : null,
-      `واکسن: ${pet.vaccinated ? 'بله' : 'خیر'} · عقیم: ${pet.neutered ? 'بله' : 'خیر'}`,
-      pet.lookingForPlaymate ? '🤝 دنبال همبازی' : null,
-    ].filter(Boolean);
-
-    const caption = lines.join('\n');
-    if (pet.imageUrl) {
-      try {
-        await ctx.replyWithPhoto(pet.imageUrl, {
-          caption,
-          parse_mode: 'Markdown',
-          reply_markup: mainMenuKeyboard('pet_owner'),
-        });
-        return;
-      } catch {
-        /* fall through */
-      }
-    }
-
-    await ctx.reply(caption, {
-      parse_mode: 'Markdown',
-      reply_markup: mainMenuKeyboard('pet_owner'),
-    });
   } catch (err) {
     console.error('createPet failed:', err);
     await ctx.reply('ثبت پت با خطا مواجه شد. دوباره امتحان کن یا انصراف بزن.', {
       reply_markup: textStepKeyboard(),
     });
+    return;
+  }
+
+  await upsertSession(telegramId, { step: 'ready', draftPet: undefined, breedPage: undefined });
+
+  const gender = pet.gender ? PET_GENDER_LABELS[pet.gender] : null;
+  const size = pet.size ? PET_SIZE_LABELS[pet.size] : null;
+  const speciesLabel = PET_SPECIES_LABELS[pet.species] ?? pet.species;
+  const escape = (value: string) =>
+    value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const lines = [
+    `🎉 <b>${escape(pet.name)}</b> با موفقیت ثبت شد!`,
+    '',
+    `نوع: ${escape(speciesLabel)}`,
+    pet.breed ? `نژاد: ${escape(pet.breed)}` : null,
+    gender ? `جنسیت: ${gender}` : null,
+    pet.ageMonths != null ? `سن: ${formatPetAge(pet.ageMonths)}` : null,
+    size ? `اندازه: ${size}` : null,
+    pet.color ? `رنگ: ${escape(pet.color)}` : null,
+    pet.city ? `📍 ${escape(pet.city)}` : null,
+    `واکسن: ${pet.vaccinated ? 'بله' : 'خیر'} · عقیم: ${pet.neutered ? 'بله' : 'خیر'}`,
+    pet.lookingForPlaymate ? '🤝 دنبال همبازی' : null,
+  ].filter(Boolean);
+
+  const caption = lines.join('\n');
+  const kb = myPetsSectionKeyboard();
+
+  if (pet.imageUrl) {
+    try {
+      await ctx.replyWithPhoto(pet.imageUrl, {
+        caption,
+        parse_mode: 'HTML',
+        reply_markup: kb,
+      });
+      return;
+    } catch (err) {
+      console.warn('pet create photo reply failed:', (err as Error).message);
+    }
+  }
+
+  try {
+    await ctx.reply(caption, {
+      parse_mode: 'HTML',
+      reply_markup: kb,
+    });
+  } catch (err) {
+    console.warn('pet create text reply failed:', (err as Error).message);
+    await ctx.reply(`🎉 ${pet.name} ثبت شد!`, { reply_markup: kb });
   }
 }
 
