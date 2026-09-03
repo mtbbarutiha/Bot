@@ -2,6 +2,7 @@ import type { Context } from 'grammy';
 import type { User, UserRole } from '@petdate/shared';
 import { USER_ROLE_LABELS } from '@petdate/shared';
 import { getUserByTelegramId, registerTelegramUser, setUserOnboarding, setUserRole } from '../api-client';
+import { sendWelcomeLogo } from '../branding';
 import { roleWelcomeHint } from '../format';
 import { mainMenuKeyboard, roleKeyboard, webLinksKeyboard } from '../keyboards';
 import { upsertSession } from '../session';
@@ -38,10 +39,12 @@ export async function handleStart(ctx: Context): Promise<void> {
   });
 
   if (!user.role) {
-    await ctx.reply(
-      `سلام ${name}! 👋\n\nبه **petdate** خوش اومدی — پیدا کردن همبازی پت، مشاوره دامپزشک و خدمات پت.\n\nاول **نقشت** رو انتخاب کن:`,
-      { parse_mode: 'Markdown', reply_markup: roleKeyboard() }
-    );
+    const caption =
+      `سلام ${name}! 👋\n\nبه **petdate** خوش اومدی — پیدا کردن همبازی پت، مشاوره دامپزشک و خدمات پت.\n\nاول **نقشت** رو انتخاب کن:`;
+    const sent = await sendWelcomeLogo(ctx, caption, { reply_markup: roleKeyboard() });
+    if (!sent) {
+      await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: roleKeyboard() });
+    }
     return;
   }
 
@@ -55,10 +58,16 @@ export async function sendWelcomeBack(ctx: Context, user: User, name: string): P
     ? 'از منوی زیر می‌تونی همبازی پیدا کنی، پت‌هات رو مدیریت کنی و از خدمات استفاده کنی.'
     : 'از منوی زیر استفاده کن.';
 
-  await ctx.reply(
-    `سلام ${name}! 👋\n\nبه petdate خوش برگشتی.\nنقش: ${roleLabel}\n\n${intro}${webLinkHint()}`,
-    { reply_markup: mainMenuKeyboard(user.role) }
-  );
+  const caption =
+    `سلام ${name}! 👋\n\nبه **petdate** خوش برگشتی.\nنقش: ${roleLabel}\n\n${intro}${webLinkHint()}`;
+
+  const sent = await sendWelcomeLogo(ctx, caption, { reply_markup: mainMenuKeyboard(user.role) });
+  if (!sent) {
+    await ctx.reply(caption, {
+      parse_mode: 'Markdown',
+      reply_markup: mainMenuKeyboard(user.role),
+    });
+  }
 }
 
 export async function handleRoleSelect(ctx: Context, role: UserRole): Promise<void> {
@@ -82,10 +91,16 @@ export async function handleRoleSelect(ctx: Context, role: UserRole): Promise<vo
 
   const text = `عالی! نقش تو **«${label}»** شد. 🎉\n\n${hint}${webLinkHint()}`;
   const webKb = webLinksKeyboard(telegramId);
-  await ctx.editMessageText(text, {
-    parse_mode: 'Markdown',
-    reply_markup: webKb,
-  });
+
+  try {
+    if (ctx.callbackQuery?.message && 'photo' in ctx.callbackQuery.message) {
+      await ctx.editMessageCaption({ caption: text, parse_mode: 'Markdown', reply_markup: webKb });
+    } else {
+      await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: webKb });
+    }
+  } catch {
+    await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: webKb });
+  }
 
   if (role === 'pet_owner') {
     await ctx.reply(

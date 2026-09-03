@@ -1,4 +1,5 @@
 import { Bot } from 'grammy';
+import { applyBotBranding } from './branding';
 import { assertBotToken, config } from './config';
 import { registerHandlers } from './handlers';
 import { connectRedis, disconnectRedis } from './session';
@@ -10,6 +11,7 @@ async function main(): Promise<void> {
 
   const bot = new Bot(token);
   registerHandlers(bot);
+  await applyBotBranding(bot.api);
 
   bot.catch((err) => {
     console.error('Bot error:', err.error);
