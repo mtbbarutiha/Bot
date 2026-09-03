@@ -43,10 +43,13 @@ export const DEFAULT_IMAGES: Record<PetType, string> = {
 };
 
 /**
- * Welcome hero — Karsten Winegeart (Unsplash)
- * Photo: brown short coated dog in orange hoodie — oU6KZTXhuvk
+ * Welcome hero — neon PET DATE brand logo
  */
 export const WELCOME_HERO = petLocal('welcome-hero');
+
+export const BRAND_MARK = '/brand/petdate-mark.png';
+export const BRAND_CHANNEL = '/brand/petdate-channel.png';
+export const BRAND_BANNER = '/brand/petdate-banner.jpg';
 
 export const EMPTY_STATE_PHOTO = petLocal(CAT_PHOTOS[7]);
 

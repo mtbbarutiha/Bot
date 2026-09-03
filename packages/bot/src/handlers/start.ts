@@ -1,6 +1,6 @@
 import type { Context } from 'grammy';
 import type { User, UserRole } from '@petdate/shared';
-import { USER_ROLE_LABELS } from '@petdate/shared';
+import { BRAND, USER_ROLE_LABELS } from '@petdate/shared';
 import { getUserByTelegramId, registerTelegramUser, setUserOnboarding, setUserRole } from '../api-client';
 import { sendWelcomeLogo } from '../branding';
 import { roleWelcomeHint } from '../format';
@@ -10,7 +10,7 @@ import { webLinkHint } from '../urls';
 
 export function displayName(from: { first_name: string; last_name?: string; username?: string }): string {
   const full = [from.first_name, from.last_name].filter(Boolean).join(' ');
-  return full || from.username || 'کاربر petdate';
+  return full || from.username || `کاربر ${BRAND.name}`;
 }
 
 export async function getCtxUser(ctx: Context): Promise<User | null> {
@@ -39,8 +39,16 @@ export async function handleStart(ctx: Context): Promise<void> {
   });
 
   if (!user.role) {
-    const caption =
-      `سلام ${name}! 👋\n\nبه **petdate** خوش اومدی — پیدا کردن همبازی پت، مشاوره دامپزشک و خدمات پت.\n\nاول **نقشت** رو از منوی پایین انتخاب کن:`;
+    const caption = [
+      `سلام ${name}! 👋`,
+      '',
+      `${BRAND.welcomeFa}`,
+      `_${BRAND.taglineEn}_`,
+      '',
+      'پیدا کردن همبازی پت، مشاوره دامپزشک و خدمات پت.',
+      '',
+      'اول **نقشت** رو از منوی پایین انتخاب کن:',
+    ].join('\n');
     const sent = await sendWelcomeLogo(ctx, caption, { reply_markup: roleReplyKeyboard() });
     if (!sent) {
       await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: roleReplyKeyboard() });
@@ -58,8 +66,15 @@ export async function sendWelcomeBack(ctx: Context, user: User, name: string): P
     ? 'از منوی زیر می‌تونی همبازی پیدا کنی، پت‌هات رو مدیریت کنی و از خدمات استفاده کنی.'
     : 'از منوی زیر استفاده کن.';
 
-  const caption =
-    `سلام ${name}! 👋\n\nبه **petdate** خوش برگشتی.\nنقش: ${roleLabel}\n\n${intro}${webLinkHint()}`;
+  const caption = [
+    `سلام ${name}! 👋`,
+    '',
+    `به **${BRAND.name}** خوش برگشتی.`,
+    `_${BRAND.taglineEn}_`,
+    `نقش: ${roleLabel}`,
+    '',
+    `${intro}${webLinkHint()}`,
+  ].join('\n');
 
   const sent = await sendWelcomeLogo(ctx, caption, { reply_markup: mainMenuKeyboard(user.role) });
   if (!sent) {
@@ -124,7 +139,8 @@ export async function handleHelp(ctx: Context): Promise<void> {
 
   const lines = isOwner
     ? [
-        '🐾 **petdate** — راهنمای صاحب پت',
+        `🐾 **${BRAND.name}** — راهنمای صاحب پت`,
+        `_${BRAND.taglineEn}_`,
         '',
         '🔍 **پیدا کردن همبازی** — پت‌های نزدیک برای بازی',
         '👤 **پروفایل خودم** — اطلاعات حساب',
@@ -140,7 +156,8 @@ export async function handleHelp(ctx: Context): Promise<void> {
         '/cancel — لغو عملیات جاری',
       ]
     : [
-        '🐾 **petdate** — همبازی برای پت',
+        `🐾 **${BRAND.name}** — ${BRAND.taglineFa}`,
+        `_${BRAND.taglineEn}_`,
         '',
         '/start — شروع یا بازگشت',
         '/menu — نمایش منو',
@@ -174,5 +191,5 @@ export async function handleCancel(ctx: Context): Promise<void> {
 
 export async function handleMenu(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
-  await ctx.reply('منوی petdate 👇', { reply_markup: mainMenuKeyboard(user?.role) });
+  await ctx.reply(`منوی ${BRAND.name} 👇`, { reply_markup: mainMenuKeyboard(user?.role) });
 }

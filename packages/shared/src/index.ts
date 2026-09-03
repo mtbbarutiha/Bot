@@ -1,5 +1,6 @@
 export * from './petdate';
 export * from './catalog';
+export * from './brand';
 
 import type { OnboardingStatus, UserRole } from './petdate';
 import type { UserGender } from './petdate';

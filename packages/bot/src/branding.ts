@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import type { Api, Context } from 'grammy';
 import { InputFile } from 'grammy';
+import { BRAND } from '@petdate/shared';
 
 const ASSETS = path.join(__dirname, '..', 'assets');
 export const BOT_PROFILE_JPG = path.join(ASSETS, 'bot-profile.jpg');
@@ -11,8 +12,15 @@ export function logoExists(filePath: string): boolean {
   return fs.existsSync(filePath);
 }
 
-/** Set bot profile photo + descriptions on boot. */
+/** Set bot name, profile photo, and descriptions on boot. */
 export async function applyBotBranding(api: Api): Promise<void> {
+  try {
+    await api.setMyName(BRAND.botTitle);
+    console.log('   Branding: name set →', BRAND.botTitle);
+  } catch (err) {
+    console.warn('   Branding: name skipped —', (err as Error).message);
+  }
+
   if (logoExists(BOT_PROFILE_JPG)) {
     try {
       await api.setMyProfilePhoto({
@@ -26,10 +34,9 @@ export async function applyBotBranding(api: Api): Promise<void> {
   }
 
   try {
-    await api.setMyDescription(
-      '🐾 petdate — پیدا کردن همبازی برای پت، مشاوره دامپزشک و خدمات پت'
-    );
-    await api.setMyShortDescription('🐾 petdate — همبازی برای پت');
+    await api.setMyDescription(BRAND.descriptionFa);
+    await api.setMyShortDescription(BRAND.shortDescriptionFa);
+    console.log('   Branding: description set');
   } catch (err) {
     console.warn('   Branding: description skipped —', (err as Error).message);
   }

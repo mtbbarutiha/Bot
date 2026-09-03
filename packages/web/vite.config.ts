@@ -13,13 +13,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'logo.svg', 'logotype.svg', 'pets/**/*'],
+      includeAssets: ['favicon.png', 'favicon.svg', 'logo.svg', 'logotype.svg', 'brand/**/*', 'pets/**/*'],
       manifest: {
         name: 'petdate',
         short_name: 'petdate',
-        description: 'petdate — همبازی برای پت‌ات پیدا کن',
-        theme_color: '#5ba8d2',
-        background_color: '#5ba8d2',
+        description: 'petdate — همبازی برای پت‌ات پیدا کن | PLAY • MEET • FRIENDS',
+        theme_color: '#0c0a1c',
+        background_color: '#0c0a1c',
         display: 'standalone',
         orientation: 'portrait',
         lang: 'fa',

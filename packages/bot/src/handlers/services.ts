@@ -77,7 +77,7 @@ export async function handleInviteFriends(ctx: Context): Promise<void> {
       reply_markup: new InlineKeyboard()
         .url(
           '📤 اشتراک‌گذاری لینک',
-          `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('بیا تو petdate همبازی برای پتت پیدا کن! 🐾')}`
+          `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(`بیا تو petdate همبازی برای پتت پیدا کن! 🐾\nPLAY • MEET • FRIENDS`)}`
         )
         .success(),
     }

@@ -1,29 +1,28 @@
 import { useNavigate } from 'react-router-dom';
-import { BrandMark } from '../components/BrandMark';
+import { BRAND } from '@petdate/shared';
 import { WELCOME_HERO } from '../data/petImages';
 
 export function WelcomePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="welcome-page">
-      <img className="welcome-bg" src={WELCOME_HERO} alt="petdate" />
-      <div className="welcome-overlay" aria-hidden />
+    <div className="welcome-page welcome-page--neon">
+      <img
+        className="welcome-bg"
+        src={WELCOME_HERO}
+        alt={`${BRAND.displayName} — ${BRAND.taglineEn}`}
+      />
+      <div className="welcome-overlay welcome-overlay--neon" aria-hidden />
 
-      <div className="welcome-ui">
-        <header className="welcome-top">
-          <BrandMark
-            variant="light"
-            iconSize={40}
-            className="welcome-brand-mark"
-          />
-          <p className="welcome-tagline">همبازی برای پت‌ات</p>
-        </header>
+      <div className="welcome-ui welcome-ui--neon">
+        <header className="welcome-top welcome-top--spacer" aria-hidden />
 
-        <footer className="welcome-bottom">
+        <footer className="welcome-bottom welcome-bottom--neon">
+          <p className="welcome-tagline welcome-tagline--en">{BRAND.taglineEn}</p>
+          <p className="welcome-tagline">{BRAND.taglineFa}</p>
           <button
             type="button"
-            className="welcome-cta"
+            className="welcome-cta welcome-cta--neon"
             onClick={() => navigate('/onboarding/role')}
           >
             شروع کن

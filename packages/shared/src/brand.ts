@@ -1,0 +1,13 @@
+/** Shared petdate brand copy — bot, web, channel */
+
+export const BRAND = {
+  name: 'petdate',
+  displayName: 'PET DATE',
+  taglineEn: 'PLAY • MEET • FRIENDS',
+  taglineFa: 'همبازی برای پت‌ات',
+  shortDescriptionFa: '🐾 petdate — همبازی برای پت | PLAY • MEET • FRIENDS',
+  descriptionFa:
+    '🐾 petdate — پیدا کردن همبازی برای پت، مشاوره دامپزشک و خدمات پت\nPLAY • MEET • FRIENDS',
+  welcomeFa: 'به petdate خوش اومدی — همبازی برای پت‌ات',
+  botTitle: 'petdate',
+} as const;

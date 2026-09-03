@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { BrandMark } from '../../components/BrandMark';
 import type { UserRole } from '@petdate/shared';
-import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
+import { BRAND, USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
 import { useUserStore } from '../../hooks/useUserStore';
 
 const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
@@ -28,7 +28,9 @@ export function RoleSelectPage() {
       <header className="onboarding-header">
         <BrandMark iconSize={32} />
         <h1>نقش خودت رو انتخاب کن</h1>
-        <p>petdate برای همه نقش‌ها در دنیای پت طراحی شده</p>
+        <p>
+          {BRAND.taglineFa} · {BRAND.taglineEn}
+        </p>
       </header>
 
       <div className="role-grid">
