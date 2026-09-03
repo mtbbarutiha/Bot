@@ -14,6 +14,7 @@ import {
   mainMenuKeyboard,
   myPetProfileKeyboard,
   myPetsListKeyboard,
+  myPetsSectionKeyboard,
   playdateActionKeyboard,
 } from '../keyboards';
 import { upsertSession } from '../session';
@@ -31,7 +32,7 @@ export async function handleMyPets(ctx: Context): Promise<void> {
     await ctx.reply('هنوز پتی ثبت نکردی. از دکمه زیر پت جدید اضافه کن:', {
       reply_markup: myPetsListKeyboard([]),
     });
-    await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
+    await ctx.reply('بخش پت‌های من 👇', { reply_markup: myPetsSectionKeyboard() });
     return;
   }
 
@@ -39,7 +40,7 @@ export async function handleMyPets(ctx: Context): Promise<void> {
     parse_mode: 'Markdown',
     reply_markup: myPetsListKeyboard(pets),
   });
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
+  await ctx.reply('بخش پت‌های من 👇', { reply_markup: myPetsSectionKeyboard() });
 }
 
 export async function handleMyPetView(ctx: Context, petId: number): Promise<void> {
@@ -149,6 +150,7 @@ export async function handleMyPetDeleteConfirm(ctx: Context, petId: number): Pro
         parse_mode: 'Markdown',
         reply_markup: myPetsListKeyboard(pets),
       });
+      await ctx.reply('بخش پت‌های من 👇', { reply_markup: myPetsSectionKeyboard() });
       return;
     }
   } catch {
@@ -158,6 +160,7 @@ export async function handleMyPetDeleteConfirm(ctx: Context, petId: number): Pro
     parse_mode: 'Markdown',
     reply_markup: myPetsListKeyboard(pets),
   });
+  await ctx.reply('بخش پت‌های من 👇', { reply_markup: myPetsSectionKeyboard() });
 }
 
 export async function handleRequests(ctx: Context): Promise<void> {

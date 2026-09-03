@@ -35,6 +35,12 @@ export const DEFAULT_MENU = {
   help: '❓ راهنما',
 } as const;
 
+/** کیبورد مخصوص بخش پت‌های من (بدون پت‌های من / درخواست‌ها) */
+export const MY_PETS_SECTION = {
+  addPet: '➕ ثبت پت جدید',
+  backToMenu: '🔙 بازگشت به منو',
+} as const;
+
 /** دکمه‌های ناوبری ویزارد (reply keyboard) */
 export const WIZARD_NAV = {
   back: '↩️ بازگشت',
@@ -286,6 +292,18 @@ export function defaultMenuKeyboard(): Keyboard {
     .persistent();
 }
 
+/** ریپلای‌کیبورد داخل بخش پت‌های من — فقط ثبت و بازگشت */
+export function myPetsSectionKeyboard(): Keyboard {
+  const m = MY_PETS_SECTION;
+  return new Keyboard()
+    .text(m.addPet)
+    .success()
+    .row()
+    .text(m.backToMenu)
+    .resized()
+    .persistent();
+}
+
 /** منوی اصلی بر اساس نقش کاربر */
 export function mainMenuKeyboard(role?: UserRole | string | null): Keyboard {
   if (role === 'pet_owner') return petOwnerMenuKeyboard();
@@ -498,4 +516,5 @@ export function confirmPetDeleteKeyboard(petId: number): InlineKeyboard {
 export const MENU_LABELS = new Set<string>([
   ...Object.values(PET_OWNER_MENU),
   ...Object.values(DEFAULT_MENU),
+  ...Object.values(MY_PETS_SECTION),
 ]);

@@ -2,7 +2,7 @@ import type { Bot, Context } from 'grammy';
 import type { PetGender, PetSize, UserGender, UserRole } from '@petdate/shared';
 import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
 import { forceJoinMiddleware, missingChannels, safeAnswerCallback, sendForceJoinPrompt } from '../force-join';
-import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, WIZARD_NAV, mainMenuKeyboard } from '../keyboards';
+import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, MY_PETS_SECTION, WIZARD_NAV, mainMenuKeyboard } from '../keyboards';
 import { getSession } from '../session';
 import { handleExplore, handleExploreBack, handleExploreForPet, handleExplorePet, handleExplorePickPet, handleFindPlaymate } from './explore';
 import {
@@ -241,6 +241,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
 
   const m = PET_OWNER_MENU;
   const d = DEFAULT_MENU;
+  const petsSection = MY_PETS_SECTION;
 
   switch (text) {
     case m.findPlaymate:
@@ -254,7 +255,13 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       return handleMyPets(ctx);
     case m.addPet:
     case d.addPet:
+    case petsSection.addPet:
       return handleAddPetCommand(ctx);
+    case petsSection.backToMenu: {
+      const user = await getCtxUser(ctx);
+      await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
+      return;
+    }
     case m.coins:
       return handleCoins(ctx);
     case m.medical:
@@ -270,6 +277,16 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       return handlePetShop(ctx);
     case m.services:
       return handleServices(ctx);
+    case '📬 درخواست‌ها':
+    case 'درخواست‌ها':
+      // دکمه قدیمی حذف‌شده از منو — نادیده بگیر و منوی اصلی را تازه کن
+      {
+        const user = await getCtxUser(ctx);
+        await ctx.reply('این دکمه حذف شده. از منوی جدید استفاده کن 👇', {
+          reply_markup: mainMenuKeyboard(user?.role),
+        });
+      }
+      return;
     default:
       if (!MENU_LABELS.has(text)) {
         const user = await getCtxUser(ctx);
