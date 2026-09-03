@@ -1,7 +1,30 @@
 import { InlineKeyboard, Keyboard } from 'grammy';
-import type { PetProfile } from '@petdate/shared';
+import type { PetProfile, UserRole } from '@petdate/shared';
 import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
+
+/** Labels for pet_owner main menu */
+export const PET_OWNER_MENU = {
+  findPlaymate: '🔍 پیدا کردن همبازی',
+  myProfile: '👤 پروفایل خودم',
+  myPets: '🐾 پت‌های من',
+  coins: '🪙 سکه',
+  medical: '🩺 پزشکی',
+  invite: '🎁 معرفی به دوستان',
+  help: '❓ راهنما',
+  quickVet: '⚡ ارتباط سریع با پزشک',
+  shop: '🛒 پت شاپ',
+  services: '🛠 خدمات',
+} as const;
+
+export const DEFAULT_MENU = {
+  explore: '🔍 کشف همبازی',
+  myPets: '🐾 پت‌های من',
+  requests: '📬 درخواست‌ها',
+  profile: '👤 پروفایل',
+  addPet: '➕ ثبت پت',
+  help: '❓ راهنما',
+} as const;
 
 export function roleKeyboard(): InlineKeyboard {
   const kb = new InlineKeyboard();
@@ -12,17 +35,47 @@ export function roleKeyboard(): InlineKeyboard {
   return kb;
 }
 
-export function mainMenuKeyboard(): Keyboard {
+/** منوی اختصاصی صاحب پت */
+export function petOwnerMenuKeyboard(): Keyboard {
+  const m = PET_OWNER_MENU;
   return new Keyboard()
-    .text('🔍 کشف همبازی')
-    .text('🐾 پت‌های من')
+    .text(m.findPlaymate)
+    .text(m.myProfile)
     .row()
-    .text('📬 درخواست‌ها')
-    .text('👤 پروفایل')
+    .text(m.myPets)
+    .text(m.coins)
     .row()
-    .text('➕ ثبت پت')
-    .text('❓ راهنما')
-    .resized();
+    .text(m.medical)
+    .text(m.invite)
+    .row()
+    .text(m.help)
+    .text(m.quickVet)
+    .row()
+    .text(m.shop)
+    .text(m.services)
+    .resized()
+    .persistent();
+}
+
+export function defaultMenuKeyboard(): Keyboard {
+  const m = DEFAULT_MENU;
+  return new Keyboard()
+    .text(m.explore)
+    .text(m.myPets)
+    .row()
+    .text(m.requests)
+    .text(m.profile)
+    .row()
+    .text(m.addPet)
+    .text(m.help)
+    .resized()
+    .persistent();
+}
+
+/** منوی اصلی بر اساس نقش کاربر */
+export function mainMenuKeyboard(role?: UserRole | string | null): Keyboard {
+  if (role === 'pet_owner') return petOwnerMenuKeyboard();
+  return defaultMenuKeyboard();
 }
 
 export function speciesKeyboard(): InlineKeyboard {
@@ -83,11 +136,14 @@ export function webLinksKeyboard(telegramId: string): InlineKeyboard | undefined
   return new InlineKeyboard().url('🌐 باز کردن petdate', `${base}/profile?from=telegram&tg=${telegramId}`);
 }
 
-export const MENU_LABELS = new Set([
-  '🔍 کشف همبازی',
-  '🐾 پت‌های من',
-  '📬 درخواست‌ها',
-  '👤 پروفایل',
-  '➕ ثبت پت',
-  '❓ راهنما',
+export function myPetsActionKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('➕ ثبت پت جدید', 'pets:add')
+    .row()
+    .text('📬 درخواست‌های همبازی', 'pets:requests');
+}
+
+export const MENU_LABELS = new Set<string>([
+  ...Object.values(PET_OWNER_MENU),
+  ...Object.values(DEFAULT_MENU),
 ]);

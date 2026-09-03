@@ -6,7 +6,6 @@ import { roleWelcomeHint } from '../format';
 import { mainMenuKeyboard, roleKeyboard, webLinksKeyboard } from '../keyboards';
 import { upsertSession } from '../session';
 import { webLinkHint } from '../urls';
-import { startPetWizard } from './wizard';
 
 export function displayName(from: { first_name: string; last_name?: string; username?: string }): string {
   const full = [from.first_name, from.last_name].filter(Boolean).join(' ');
@@ -33,6 +32,7 @@ export async function handleStart(ctx: Context): Promise<void> {
 
   await upsertSession(telegramId, {
     userId: user.id,
+    role: user.role,
     step: user.role ? 'ready' : 'role_select',
     locale: 'fa',
   });
@@ -50,9 +50,14 @@ export async function handleStart(ctx: Context): Promise<void> {
 
 export async function sendWelcomeBack(ctx: Context, user: User, name: string): Promise<void> {
   const roleLabel = user.role ? USER_ROLE_LABELS[user.role as UserRole] : '';
+  const isOwner = user.role === 'pet_owner';
+  const intro = isOwner
+    ? 'از منوی زیر می‌تونی همبازی پیدا کنی، پت‌هات رو مدیریت کنی و از خدمات استفاده کنی.'
+    : 'از منوی زیر استفاده کن.';
+
   await ctx.reply(
-    `سلام ${name}! 👋\n\nبه petdate خوش برگشتی.\nنقش: ${roleLabel}${webLinkHint()}`,
-    { reply_markup: mainMenuKeyboard() }
+    `سلام ${name}! 👋\n\nبه petdate خوش برگشتی.\nنقش: ${roleLabel}\n\n${intro}${webLinkHint()}`,
+    { reply_markup: mainMenuKeyboard(user.role) }
   );
 }
 
@@ -68,18 +73,14 @@ export async function handleRoleSelect(ctx: Context, role: UserRole): Promise<vo
   await upsertSession(telegramId, {
     userId: user.id,
     role,
-    step: role === 'pet_owner' ? 'pet_name' : 'ready',
+    step: 'ready',
   });
 
-  if (role !== 'pet_owner') {
-    await setUserOnboarding(telegramId, 'profile_incomplete');
-  }
+  await setUserOnboarding(telegramId, role === 'pet_owner' ? 'profile_incomplete' : 'profile_incomplete');
 
   await ctx.answerCallbackQuery({ text: `نقش «${label}» ثبت شد` });
 
-  const text =
-    `عالی! نقش تو **«${label}»** شد. 🎉\n\n${hint}${webLinkHint()}`;
-
+  const text = `عالی! نقش تو **«${label}»** شد. 🎉\n\n${hint}${webLinkHint()}`;
   const webKb = webLinksKeyboard(telegramId);
   await ctx.editMessageText(text, {
     parse_mode: 'Markdown',
@@ -87,38 +88,68 @@ export async function handleRoleSelect(ctx: Context, role: UserRole): Promise<vo
   });
 
   if (role === 'pet_owner') {
-    await startPetWizard(ctx, telegramId);
+    await ctx.reply(
+      'منوی صاحب پت آماده است 👇\n\nاگر هنوز پت ثبت نکردی، از «🐾 پت‌های من» شروع کن.',
+      { reply_markup: mainMenuKeyboard('pet_owner') }
+    );
   } else {
-    await ctx.reply('از منوی زیر استفاده کن:', { reply_markup: mainMenuKeyboard() });
+    await ctx.reply('از منوی زیر استفاده کن:', { reply_markup: mainMenuKeyboard(role) });
   }
 }
 
 export async function handleHelp(ctx: Context): Promise<void> {
-  await ctx.reply(
-    [
-      '🐾 **petdate** — همبازی برای پت',
-      '',
-      '**دستورات:**',
-      '/start — شروع یا بازگشت',
-      '/menu — نمایش منو',
-      '/explore — کشف همبازی‌ها',
-      '/pets — پت‌های من',
-      '/requests — درخواست‌های همبازی',
-      '/profile — پروفایل',
-      '/addpet — ثبت پت جدید',
-      '/cancel — لغو عملیات جاری',
-      '/help — راهنما',
-      '',
-      'یا از دکمه‌های منو استفاده کن 👇',
-    ].join('\n'),
-    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
-  );
+  const user = await getCtxUser(ctx);
+  const isOwner = user?.role === 'pet_owner';
+
+  const lines = isOwner
+    ? [
+        '🐾 **petdate** — راهنمای صاحب پت',
+        '',
+        '🔍 **پیدا کردن همبازی** — پت‌های نزدیک برای بازی',
+        '👤 **پروفایل خودم** — اطلاعات حساب',
+        '🐾 **پت‌های من** — مدیریت و ثبت پت',
+        '🪙 **سکه** — موجودی و خرید سکه',
+        '🩺 **پزشکی** — سلامت و کلینیک',
+        '🎁 **معرفی به دوستان** — دعوت و پاداش',
+        '⚡ **ارتباط سریع با پزشک** — مشاوره فوری',
+        '🛒 **پت شاپ** — خرید لوازم',
+        '🛠 **خدمات** — مربی، نگهبان، grooming',
+        '',
+        '/start — بازگشت به منو',
+        '/cancel — لغو عملیات جاری',
+      ]
+    : [
+        '🐾 **petdate** — همبازی برای پت',
+        '',
+        '/start — شروع یا بازگشت',
+        '/menu — نمایش منو',
+        '/explore — کشف همبازی‌ها',
+        '/pets — پت‌های من',
+        '/profile — پروفایل',
+        '/help — راهنما',
+      ];
+
+  await ctx.reply(lines.join('\n'), {
+    parse_mode: 'Markdown',
+    reply_markup: mainMenuKeyboard(user?.role),
+  });
 }
 
 export async function handleCancel(ctx: Context): Promise<void> {
   const from = ctx.from;
   if (!from) return;
 
-  await upsertSession(String(from.id), { step: 'ready', draftPet: undefined, selectedPetId: undefined, selectedToPetId: undefined });
-  await ctx.reply('عملیات لغو شد.', { reply_markup: mainMenuKeyboard() });
+  const user = await getCtxUser(ctx);
+  await upsertSession(String(from.id), {
+    step: 'ready',
+    draftPet: undefined,
+    selectedPetId: undefined,
+    selectedToPetId: undefined,
+  });
+  await ctx.reply('عملیات لغو شد.', { reply_markup: mainMenuKeyboard(user?.role) });
+}
+
+export async function handleMenu(ctx: Context): Promise<void> {
+  const user = await getCtxUser(ctx);
+  await ctx.reply('منوی petdate 👇', { reply_markup: mainMenuKeyboard(user?.role) });
 }

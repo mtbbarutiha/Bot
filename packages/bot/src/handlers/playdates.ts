@@ -15,15 +15,21 @@ export async function handleMyPets(ctx: Context): Promise<void> {
 
   const pets = await listPets({ ownerId: user.id });
   if (pets.length === 0) {
-    await ctx.reply('هنوز پتی ثبت نکردی.\n/addpet یا «➕ ثبت پت» رو بزن.', { reply_markup: mainMenuKeyboard() });
+    const { myPetsActionKeyboard } = await import('../keyboards');
+    await ctx.reply('هنوز پتی ثبت نکردی. از دکمه زیر پت جدید اضافه کن:', {
+      reply_markup: myPetsActionKeyboard(),
+    });
+    await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
     return;
   }
 
   const lines = pets.map((p, i) => `${i + 1}. **${p.name}** — ${p.species}${p.city ? ` (${p.city})` : ''}`);
+  const { myPetsActionKeyboard } = await import('../keyboards');
   await ctx.reply(`🐾 **پت‌های من**\n\n${lines.join('\n')}`, {
     parse_mode: 'Markdown',
-    reply_markup: mainMenuKeyboard(),
+    reply_markup: myPetsActionKeyboard(),
   });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
 }
 
 export async function handleRequests(ctx: Context): Promise<void> {
@@ -35,7 +41,9 @@ export async function handleRequests(ctx: Context): Promise<void> {
 
   const requests = await listPlaydates({ userId: user.id });
   if (requests.length === 0) {
-    await ctx.reply('📬 درخواستی نداری.\nاز «🔍 کشف همبازی» شروع کن!', { reply_markup: mainMenuKeyboard() });
+    await ctx.reply('📬 درخواستی نداری.\nاز «🔍 پیدا کردن همبازی» شروع کن!', {
+      reply_markup: mainMenuKeyboard(user.role),
+    });
     return;
   }
 
@@ -121,7 +129,10 @@ export async function handlePlaydateSend(
   await upsertSession(String(ctx.from!.id), { step: 'ready', selectedPetId: undefined, selectedToPetId: undefined });
 
   await ctx.editMessageText('✅ درخواست همبازی ارسال شد!');
-  await ctx.reply('منتظر پاسخ بمون یا درخواست‌های دیگه رو ببین.', { reply_markup: mainMenuKeyboard() });
+  const u = await getCtxUser(ctx);
+  await ctx.reply('منتظر پاسخ بمون یا درخواست‌های دیگه رو ببین.', {
+    reply_markup: mainMenuKeyboard(u?.role),
+  });
 }
 
 export async function handlePlaydateAction(
@@ -143,5 +154,6 @@ export async function handlePlaydateCancel(ctx: Context): Promise<void> {
   await ctx.answerCallbackQuery();
   await upsertSession(String(ctx.from!.id), { step: 'ready', selectedPetId: undefined, selectedToPetId: undefined });
   await ctx.editMessageText('انصراف دادی.');
-  await ctx.reply('منوی اصلی:', { reply_markup: mainMenuKeyboard() });
+  const u = await getCtxUser(ctx);
+  await ctx.reply('منوی اصلی:', { reply_markup: mainMenuKeyboard(u?.role) });
 }

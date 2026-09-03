@@ -21,7 +21,7 @@ export async function handleExplore(ctx: Context, page = 0): Promise<void> {
 
   if (pets.length === 0) {
     await ctx.reply('فعلاً همبازی‌ای ثبت نشده. بعداً سر بزن یا اول پت ثبت کن!', {
-      reply_markup: mainMenuKeyboard(),
+      reply_markup: mainMenuKeyboard(user.role),
     });
     return;
   }

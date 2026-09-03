@@ -1,6 +1,6 @@
 import type { Bot, Context } from 'grammy';
 import type { UserRole } from '@petdate/shared';
-import { MENU_LABELS } from '../keyboards';
+import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, mainMenuKeyboard } from '../keyboards';
 import { handleExplore, handleExploreBack, handleExplorePet } from './explore';
 import {
   handleAddPetCommand,
@@ -18,14 +18,27 @@ import {
   handleRequests,
 } from './playdates';
 import { handleProfile } from './profile';
-import { handleCancel, handleHelp, handleRoleSelect, handleStart } from './start';
+import {
+  handleCancel,
+  handleHelp,
+  handleMenu,
+  handleRoleSelect,
+  handleStart,
+  getCtxUser,
+} from './start';
+import {
+  handleCoins,
+  handleComingSoon,
+  handleInviteFriends,
+  handleMedical,
+  handlePetShop,
+  handleQuickVet,
+  handleServices,
+} from './services';
 
 export function registerHandlers(bot: Bot): void {
   bot.command('start', handleStart);
-  bot.command('menu', async (ctx) => {
-    const { mainMenuKeyboard } = await import('../keyboards');
-    await ctx.reply('منوی petdate 👇', { reply_markup: mainMenuKeyboard() });
-  });
+  bot.command('menu', handleMenu);
   bot.command('help', handleHelp);
   bot.command('cancel', handleCancel);
   bot.command('explore', (ctx) => handleExplore(ctx));
@@ -70,6 +83,20 @@ export function registerHandlers(bot: Bot): void {
   );
   bot.callbackQuery('playdate:cancel', handlePlaydateCancel);
 
+  bot.callbackQuery('pets:add', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await handleAddPetCommand(ctx);
+  });
+  bot.callbackQuery('pets:requests', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await handleRequests(ctx);
+  });
+
+  bot.callbackQuery(/^medical:/, (ctx) => handleComingSoon(ctx, 'پزشکی'));
+  bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));
+  bot.callbackQuery(/^shop:/, (ctx) => handleComingSoon(ctx, 'پت شاپ'));
+  bot.callbackQuery(/^svc:/, (ctx) => handleComingSoon(ctx, 'خدمات'));
+
   bot.on('message:text', handleTextMessage);
 }
 
@@ -79,23 +106,43 @@ async function handleTextMessage(ctx: Context): Promise<void> {
 
   if (await handleWizardText(ctx, text)) return;
 
+  const m = PET_OWNER_MENU;
+  const d = DEFAULT_MENU;
+
   switch (text) {
-    case '🔍 کشف همبازی':
+    case m.findPlaymate:
+    case d.explore:
       return handleExplore(ctx);
-    case '🐾 پت‌های من':
-      return handleMyPets(ctx);
-    case '📬 درخواست‌ها':
-      return handleRequests(ctx);
-    case '👤 پروفایل':
+    case m.myProfile:
+    case d.profile:
       return handleProfile(ctx);
-    case '➕ ثبت پت':
-      return handleAddPetCommand(ctx);
-    case '❓ راهنما':
+    case m.myPets:
+    case d.myPets:
+      return handleMyPets(ctx);
+    case m.coins:
+      return handleCoins(ctx);
+    case m.medical:
+      return handleMedical(ctx);
+    case m.invite:
+      return handleInviteFriends(ctx);
+    case m.help:
+    case d.help:
       return handleHelp(ctx);
+    case m.quickVet:
+      return handleQuickVet(ctx);
+    case m.shop:
+      return handlePetShop(ctx);
+    case m.services:
+      return handleServices(ctx);
+    case d.requests:
+      return handleRequests(ctx);
+    case d.addPet:
+      return handleAddPetCommand(ctx);
     default:
       if (!MENU_LABELS.has(text)) {
+        const user = await getCtxUser(ctx);
         await ctx.reply('از منو یا /help استفاده کن.', {
-          reply_markup: (await import('../keyboards')).mainMenuKeyboard(),
+          reply_markup: mainMenuKeyboard(user?.role),
         });
       }
   }

@@ -17,7 +17,7 @@ export async function handleProfile(ctx: Context): Promise<void> {
   const onboardingLabel = user.onboarding ? ONBOARDING_STATUS_LABELS[user.onboarding] : '—';
 
   const lines = [
-    '👤 **پروفایل**',
+    '👤 **پروفایل خودم**',
     '',
     `نام: ${user.name}`,
     user.username ? `@${user.username}` : '',
@@ -26,5 +26,5 @@ export async function handleProfile(ctx: Context): Promise<void> {
     `پت‌ها: ${pets.length}`,
   ].filter(Boolean);
 
-  await ctx.reply(lines.join('\n'), { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() });
+  await ctx.reply(lines.join('\n'), { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user.role) });
 }

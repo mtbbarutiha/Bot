@@ -67,7 +67,8 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
       selectedPetId: undefined,
       selectedToPetId: undefined,
     });
-    await ctx.reply('✅ درخواست همبازی ارسال شد!', { reply_markup: mainMenuKeyboard() });
+    const user = await getUserByTelegramId(telegramId);
+    await ctx.reply('✅ درخواست همبازی ارسال شد!', { reply_markup: mainMenuKeyboard(user?.role) });
     return true;
   }
 
@@ -133,7 +134,7 @@ async function finishPetWizard(
   await upsertSession(telegramId, { step: 'ready', draftPet: undefined });
   await ctx.reply(
     `🎉 **${pet.name}** با موفقیت ثبت شد!\n\n${pet.city ? `📍 ${pet.city}\n` : ''}الان می‌تونی همبازی پیدا کنی.`,
-    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard() }
+    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard('pet_owner') }
   );
 }
 
