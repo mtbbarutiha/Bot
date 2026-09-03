@@ -1,4 +1,5 @@
 export * from './petdate';
+export * from './catalog';
 
 import type { OnboardingStatus, UserRole } from './petdate';
 import type { UserGender } from './petdate';
@@ -25,12 +26,22 @@ export type {
   BotStep,
   OnboardingStatus,
   PetDraft,
+  PetGender,
+  PetSize,
   PlaydateRequest,
   PlaydateStatus,
   PetProfile,
   ProfileDraft,
   UserGender,
 } from './petdate';
+export type { PetBreed, PetSpecies, PetSpeciesCode } from './catalog';
+export {
+  PET_BREEDS_SEED,
+  PET_GENDER_LABELS,
+  PET_SIZE_LABELS,
+  PET_SPECIES,
+  PET_SPECIES_LABELS,
+} from './catalog';
 
 export interface User {
   id: number;

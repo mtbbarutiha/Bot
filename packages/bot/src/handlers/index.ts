@@ -1,9 +1,15 @@
 import type { Bot, Context } from 'grammy';
-import type { UserGender, UserRole } from '@petdate/shared';
+import type { PetGender, PetSize, UserGender, UserRole } from '@petdate/shared';
 import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, mainMenuKeyboard } from '../keyboards';
 import { handleExplore, handleExploreBack, handleExplorePet } from './explore';
 import {
   handleAddPetCommand,
+  handleBreedCustom,
+  handleBreedSelect,
+  handlePetBoolSelect,
+  handlePetGenderSelect,
+  handlePetPhoto,
+  handlePetSizeSelect,
   handleSpeciesSelect,
   handleWizardSkip,
   handleWizardText,
@@ -65,8 +71,24 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.callbackQuery(/^species:(.+)$/, (ctx) => handleSpeciesSelect(ctx, ctx.match![1]!));
+  bot.callbackQuery(/^breed:(\d+)$/, (ctx) => handleBreedSelect(ctx, Number(ctx.match![1])));
+  bot.callbackQuery('breed:custom', (ctx) => handleBreedCustom(ctx));
+  bot.callbackQuery(/^pet:gender:(male|female)$/, (ctx) =>
+    handlePetGenderSelect(ctx, ctx.match![1] as PetGender)
+  );
+  bot.callbackQuery(/^pet:size:(small|medium|large)$/, (ctx) =>
+    handlePetSizeSelect(ctx, ctx.match![1] as PetSize)
+  );
+  bot.callbackQuery(/^pet:bool:(vaccinated|neutered|looking):(0|1)$/, (ctx) =>
+    handlePetBoolSelect(ctx, ctx.match![1] as 'vaccinated' | 'neutered' | 'looking', ctx.match![2] === '1')
+  );
+
   bot.callbackQuery('wizard:skip_breed', (ctx) => handleWizardSkip(ctx, 'breed'));
+  bot.callbackQuery('wizard:skip_color', (ctx) => handleWizardSkip(ctx, 'color'));
+  bot.callbackQuery('wizard:skip_diseases', (ctx) => handleWizardSkip(ctx, 'diseases'));
   bot.callbackQuery('wizard:skip_city', (ctx) => handleWizardSkip(ctx, 'city'));
+  bot.callbackQuery('wizard:skip_bio', (ctx) => handleWizardSkip(ctx, 'bio'));
+  bot.callbackQuery('wizard:skip_photo', (ctx) => handleWizardSkip(ctx, 'photo'));
   bot.callbackQuery('noop', (ctx) => ctx.answerCallbackQuery());
 
   bot.callbackQuery(/^explore:page:(\d+)$/, async (ctx) => {
@@ -121,6 +143,7 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:photo', async (ctx) => {
+    if (await handlePetPhoto(ctx)) return;
     await handleProfilePhoto(ctx);
   });
 

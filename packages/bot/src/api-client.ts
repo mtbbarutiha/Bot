@@ -1,4 +1,15 @@
-import type { OnboardingStatus, PetProfile, PlaydateRequest, PlaydateStatus, User, UserRole } from '@petdate/shared';
+import type {
+  OnboardingStatus,
+  PetBreed,
+  PetGender,
+  PetProfile,
+  PetSize,
+  PetSpecies,
+  PlaydateRequest,
+  PlaydateStatus,
+  User,
+  UserRole,
+} from '@petdate/shared';
 import { config } from './config';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -65,6 +76,15 @@ export async function updateUserProfile(
   });
 }
 
+export async function listSpecies(): Promise<PetSpecies[]> {
+  return request<PetSpecies[]>('/api/catalog/species');
+}
+
+export async function listBreeds(species?: string): Promise<PetBreed[]> {
+  const qs = species ? `?species=${encodeURIComponent(species)}` : '';
+  return request<PetBreed[]>(`/api/catalog/breeds${qs}`);
+}
+
 export async function listPets(filters?: { ownerId?: number; lookingForPlaymate?: boolean }): Promise<PetProfile[]> {
   const params = new URLSearchParams();
   if (filters?.ownerId) params.set('ownerId', String(filters.ownerId));
@@ -88,16 +108,27 @@ export async function createPet(data: {
   name: string;
   species: string;
   breed?: string;
-  city?: string;
+  gender?: PetGender;
+  ageMonths?: number;
+  size?: PetSize;
+  color?: string;
+  bio?: string;
+  vaccinated?: boolean;
+  neutered?: boolean;
   lookingForPlaymate?: boolean;
+  health?: Record<string, unknown>;
+  diseases?: string;
+  imageUrl?: string;
+  city?: string;
+  neighborhood?: string;
 }): Promise<PetProfile> {
   return request<PetProfile>('/api/pets', {
     method: 'POST',
     body: JSON.stringify({
-      ...data,
-      vaccinated: true,
+      lookingForPlaymate: true,
+      vaccinated: false,
       neutered: false,
-      lookingForPlaymate: data.lookingForPlaymate ?? true,
+      ...data,
     }),
   });
 }

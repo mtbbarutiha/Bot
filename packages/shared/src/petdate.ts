@@ -45,13 +45,19 @@ export interface ProfileDraft {
   bio?: string;
 }
 
+export type PetGender = 'male' | 'female';
+export type PetSize = 'small' | 'medium' | 'large';
+
 export interface PetProfile {
   id: number;
   ownerId: number;
   name: string;
   species: string;
   breed?: string;
+  gender?: PetGender;
   ageMonths?: number;
+  size?: PetSize;
+  color?: string;
   bio?: string;
   vaccinated: boolean;
   neutered: boolean;
@@ -110,7 +116,17 @@ export type BotStep =
   | 'pet_name'
   | 'pet_species'
   | 'pet_breed'
+  | 'pet_gender'
+  | 'pet_age'
+  | 'pet_size'
+  | 'pet_color'
+  | 'pet_vaccinated'
+  | 'pet_neutered'
+  | 'pet_diseases'
   | 'pet_city'
+  | 'pet_looking'
+  | 'pet_bio'
+  | 'pet_photo'
   | 'playdate_message'
   | 'ready';
 
@@ -118,7 +134,18 @@ export interface PetDraft {
   name?: string;
   species?: string;
   breed?: string;
+  gender?: PetGender;
+  ageMonths?: number;
+  size?: PetSize;
+  color?: string;
+  vaccinated?: boolean;
+  neutered?: boolean;
+  diseases?: string;
+  lookingForPlaymate?: boolean;
   city?: string;
+  neighborhood?: string;
+  bio?: string;
+  imageUrl?: string;
 }
 
 export const PLAYDATE_STATUS_LABELS: Record<PlaydateStatus, string> = {

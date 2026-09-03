@@ -23,7 +23,14 @@ export async function handleMyPets(ctx: Context): Promise<void> {
     return;
   }
 
-  const lines = pets.map((p, i) => `${i + 1}. **${p.name}** — ${p.species}${p.city ? ` (${p.city})` : ''}`);
+  const lines = pets.map((p, i) => {
+    const bits = [
+      p.breed,
+      p.gender === 'male' ? 'نر' : p.gender === 'female' ? 'ماده' : null,
+      p.city,
+    ].filter(Boolean);
+    return `${i + 1}. **${p.name}** — ${p.species}${bits.length ? ` · ${bits.join(' · ')}` : ''}`;
+  });
   const { myPetsActionKeyboard } = await import('../keyboards');
   await ctx.reply(`🐾 **پت‌های من**\n\n${lines.join('\n')}`, {
     parse_mode: 'Markdown',

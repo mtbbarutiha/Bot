@@ -1,6 +1,6 @@
 import { InlineKeyboard, Keyboard } from 'grammy';
-import type { PetProfile, UserRole } from '@petdate/shared';
-import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
+import type { PetBreed, PetProfile, PetSpecies, UserRole } from '@petdate/shared';
+import { PET_GENDER_LABELS, PET_SIZE_LABELS, USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
 /** Labels for pet_owner main menu */
@@ -84,6 +84,46 @@ export function speciesKeyboard(): InlineKeyboard {
     .text('🐈 گربه', 'species:cat')
     .row()
     .text('🐾 سایر', 'species:other');
+}
+
+export function speciesKeyboardFromCatalog(species: PetSpecies[]): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  species.forEach((s, i) => {
+    kb.text(`${s.emoji} ${s.labelFa}`, `species:${s.code}`);
+    if (i % 2 === 1) kb.row();
+  });
+  if (species.length % 2 === 1) kb.row();
+  return kb;
+}
+
+export function breedKeyboard(breeds: PetBreed[]): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  breeds.forEach((b) => {
+    kb.text(b.nameFa, `breed:${b.id}`).row();
+  });
+  kb.text('✏️ نوشتن دستی', 'breed:custom').row();
+  kb.text('⏭ رد کردن', 'wizard:skip_breed');
+  return kb;
+}
+
+export function petGenderKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .text(`♂ ${PET_GENDER_LABELS.male}`, 'pet:gender:male')
+    .text(`♀ ${PET_GENDER_LABELS.female}`, 'pet:gender:female');
+}
+
+export function petSizeKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .text(PET_SIZE_LABELS.small, 'pet:size:small')
+    .text(PET_SIZE_LABELS.medium, 'pet:size:medium')
+    .row()
+    .text(PET_SIZE_LABELS.large, 'pet:size:large');
+}
+
+export function petBoolKeyboard(field: 'vaccinated' | 'neutered' | 'looking'): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('✅ بله', `pet:bool:${field}:1`)
+    .text('❌ خیر', `pet:bool:${field}:0`);
 }
 
 export function skipKeyboard(callback: string): InlineKeyboard {

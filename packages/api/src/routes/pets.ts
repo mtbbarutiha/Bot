@@ -31,13 +31,17 @@ petsRouter.post('/', (req, res) => {
     name,
     species,
     breed,
+    gender,
     ageMonths,
+    size,
+    color,
     bio,
     vaccinated,
     neutered,
     lookingForPlaymate,
     personality,
     health,
+    diseases,
     imageUrl,
     city,
     neighborhood,
@@ -54,18 +58,29 @@ petsRouter.post('/', (req, res) => {
     return;
   }
 
+  const healthPayload =
+    health && typeof health === 'object'
+      ? { ...health }
+      : {};
+  if (typeof diseases === 'string' && diseases.trim()) {
+    healthPayload.diseases = diseases.trim();
+  }
+
   const pet = dbService.createPet({
     ownerId: Number(ownerId),
     name,
     species,
     breed,
+    gender,
     ageMonths,
+    size,
+    color,
     bio,
     vaccinated,
     neutered,
     lookingForPlaymate,
     personality,
-    health,
+    health: healthPayload,
     imageUrl,
     city,
     neighborhood,
@@ -76,7 +91,22 @@ petsRouter.post('/', (req, res) => {
 });
 
 petsRouter.patch('/:id', (req, res) => {
-  const pet = dbService.updatePet(Number(req.params.id), req.body);
+  const body = { ...req.body };
+  if (typeof body.diseases === 'string') {
+    const existing = dbService.getPet(Number(req.params.id));
+    if (!existing) {
+      res.status(404).json({ error: 'پت پیدا نشد' });
+      return;
+    }
+    body.health = {
+      ...existing.health,
+      ...(body.health && typeof body.health === 'object' ? body.health : {}),
+      diseases: body.diseases.trim() || undefined,
+    };
+    delete body.diseases;
+  }
+
+  const pet = dbService.updatePet(Number(req.params.id), body);
   if (!pet) {
     res.status(404).json({ error: 'پت پیدا نشد' });
     return;

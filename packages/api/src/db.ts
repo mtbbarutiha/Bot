@@ -1,6 +1,24 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import type { Game, GamePlayer, GameStatus, GameType, OnboardingStatus, PetProfile, PlaydateRequest, PlaydateStatus, Section, User, UserGender, UserRole } from '@petdate/shared';
+import type {
+  Game,
+  GamePlayer,
+  GameStatus,
+  GameType,
+  OnboardingStatus,
+  PetBreed,
+  PetGender,
+  PetProfile,
+  PetSize,
+  PetSpecies,
+  PlaydateRequest,
+  PlaydateStatus,
+  Section,
+  User,
+  UserGender,
+  UserRole,
+} from '@petdate/shared';
+import { PET_BREEDS_SEED, PET_SPECIES } from '@petdate/shared';
 
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'petdate.db');
 
@@ -95,13 +113,29 @@ function initSchema() {
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS pet_species (
+      code TEXT PRIMARY KEY,
+      label_fa TEXT NOT NULL,
+      emoji TEXT NOT NULL DEFAULT '🐾',
+      sort_order INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS pet_breeds (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      species_code TEXT NOT NULL REFERENCES pet_species(code),
+      name_fa TEXT NOT NULL,
+      name_en TEXT,
+      UNIQUE(species_code, name_fa)
+    );
   `);
   migrateSchema();
+  seedSpeciesCatalog();
 }
 
 function migrateSchema() {
-  const columns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
-  const names = new Set(columns.map((c) => c.name));
+  const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
+  const names = new Set(userCols.map((c) => c.name));
   if (!names.has('role')) db.exec('ALTER TABLE users ADD COLUMN role TEXT');
   if (!names.has('onboarding')) {
     db.exec("ALTER TABLE users ADD COLUMN onboarding TEXT NOT NULL DEFAULT 'role_selected'");
@@ -112,6 +146,26 @@ function migrateSchema() {
   if (!names.has('phone')) db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
   if (!names.has('bio')) db.exec('ALTER TABLE users ADD COLUMN bio TEXT');
   if (!names.has('avatar_url')) db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
+
+  const petCols = db.prepare("PRAGMA table_info(pets)").all() as { name: string }[];
+  const petNames = new Set(petCols.map((c) => c.name));
+  if (!petNames.has('gender')) db.exec('ALTER TABLE pets ADD COLUMN gender TEXT');
+  if (!petNames.has('size')) db.exec('ALTER TABLE pets ADD COLUMN size TEXT');
+  if (!petNames.has('color')) db.exec('ALTER TABLE pets ADD COLUMN color TEXT');
+}
+
+function seedSpeciesCatalog() {
+  const insertSpecies = db.prepare(
+    `INSERT OR IGNORE INTO pet_species (code, label_fa, emoji, sort_order) VALUES (?, ?, ?, ?)`
+  );
+  PET_SPECIES.forEach((s, i) => insertSpecies.run(s.code, s.labelFa, s.emoji, i));
+
+  const insertBreed = db.prepare(
+    `INSERT OR IGNORE INTO pet_breeds (species_code, name_fa, name_en) VALUES (?, ?, ?)`
+  );
+  for (const b of PET_BREEDS_SEED) {
+    insertBreed.run(b.speciesCode, b.nameFa, b.nameEn ?? null);
+  }
 }
 
 function seedIfEmpty() {
@@ -205,7 +259,10 @@ function mapPet(row: Record<string, unknown>): PetProfile {
     name: row.name as string,
     species: row.species as string,
     breed: row.breed as string | undefined,
+    gender: row.gender as PetGender | undefined,
     ageMonths: row.age_months as number | undefined,
+    size: row.size as PetSize | undefined,
+    color: row.color as string | undefined,
     bio: row.bio as string | undefined,
     vaccinated: Boolean(row.vaccinated),
     neutered: Boolean(row.neutered),
@@ -534,12 +591,43 @@ export const dbService = {
     return row ? mapPet(row) : null;
   },
 
+  listSpecies(): PetSpecies[] {
+    const rows = db
+      .prepare('SELECT code, label_fa, emoji FROM pet_species ORDER BY sort_order, code')
+      .all() as Record<string, unknown>[];
+    return rows.map((row) => ({
+      code: row.code as PetSpecies['code'],
+      labelFa: row.label_fa as string,
+      emoji: (row.emoji as string) || '🐾',
+    }));
+  },
+
+  listBreeds(speciesCode?: string): PetBreed[] {
+    let sql = 'SELECT id, species_code, name_fa, name_en FROM pet_breeds';
+    const params: unknown[] = [];
+    if (speciesCode) {
+      sql += ' WHERE species_code = ?';
+      params.push(speciesCode);
+    }
+    sql += ' ORDER BY name_fa';
+    const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
+    return rows.map((row) => ({
+      id: row.id as number,
+      speciesCode: row.species_code as PetBreed['speciesCode'],
+      nameFa: row.name_fa as string,
+      nameEn: (row.name_en as string | null) ?? undefined,
+    }));
+  },
+
   createPet(data: {
     ownerId: number;
     name: string;
     species: string;
     breed?: string;
+    gender?: PetGender;
     ageMonths?: number;
+    size?: PetSize;
+    color?: string;
     bio?: string;
     vaccinated?: boolean;
     neutered?: boolean;
@@ -553,17 +641,20 @@ export const dbService = {
     const result = db
       .prepare(
         `INSERT INTO pets (
-          owner_id, name, species, breed, age_months, bio,
+          owner_id, name, species, breed, gender, age_months, size, color, bio,
           vaccinated, neutered, looking_for_playmate, personality, health,
           image_url, city, neighborhood
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         data.ownerId,
         data.name,
         data.species,
         data.breed ?? null,
+        data.gender ?? null,
         data.ageMonths ?? null,
+        data.size ?? null,
+        data.color ?? null,
         data.bio ?? null,
         data.vaccinated ? 1 : 0,
         data.neutered ? 1 : 0,
@@ -581,7 +672,10 @@ export const dbService = {
     name: string;
     species: string;
     breed: string;
+    gender: PetGender;
     ageMonths: number;
+    size: PetSize;
+    color: string;
     bio: string;
     vaccinated: boolean;
     neutered: boolean;
@@ -601,7 +695,10 @@ export const dbService = {
     if (patch.name !== undefined) { fields.push('name = ?'); values.push(patch.name); }
     if (patch.species !== undefined) { fields.push('species = ?'); values.push(patch.species); }
     if (patch.breed !== undefined) { fields.push('breed = ?'); values.push(patch.breed); }
+    if (patch.gender !== undefined) { fields.push('gender = ?'); values.push(patch.gender); }
     if (patch.ageMonths !== undefined) { fields.push('age_months = ?'); values.push(patch.ageMonths); }
+    if (patch.size !== undefined) { fields.push('size = ?'); values.push(patch.size); }
+    if (patch.color !== undefined) { fields.push('color = ?'); values.push(patch.color); }
     if (patch.bio !== undefined) { fields.push('bio = ?'); values.push(patch.bio); }
     if (patch.vaccinated !== undefined) { fields.push('vaccinated = ?'); values.push(patch.vaccinated ? 1 : 0); }
     if (patch.neutered !== undefined) { fields.push('neutered = ?'); values.push(patch.neutered ? 1 : 0); }
