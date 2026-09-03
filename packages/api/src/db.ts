@@ -159,6 +159,12 @@ function migrateSchema() {
   if (!petNames.has('gender')) db.exec('ALTER TABLE pets ADD COLUMN gender TEXT');
   if (!petNames.has('size')) db.exec('ALTER TABLE pets ADD COLUMN size TEXT');
   if (!petNames.has('color')) db.exec('ALTER TABLE pets ADD COLUMN color TEXT');
+
+  const breedCols = db.prepare('PRAGMA table_info(pet_breeds)').all() as { name: string }[];
+  const breedNames = new Set(breedCols.map((c) => c.name));
+  if (!breedNames.has('sort_order')) {
+    db.exec('ALTER TABLE pet_breeds ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 100');
+  }
 }
 
 function seedSpeciesCatalog() {
@@ -167,11 +173,29 @@ function seedSpeciesCatalog() {
   );
   PET_SPECIES.forEach((s, i) => insertSpecies.run(s.code, s.labelFa, s.emoji, i));
 
-  const insertBreed = db.prepare(
-    `INSERT OR IGNORE INTO pet_breeds (species_code, name_fa, name_en) VALUES (?, ?, ?)`
-  );
+  const upsertBreed = db.prepare(`
+    INSERT INTO pet_breeds (species_code, name_fa, name_en, sort_order)
+    VALUES (?, ?, ?, ?)
+    ON CONFLICT(species_code, name_fa) DO UPDATE SET
+      name_en = excluded.name_en,
+      sort_order = excluded.sort_order
+  `);
+
+  const keepKeys = new Set<string>();
   for (const b of PET_BREEDS_SEED) {
-    insertBreed.run(b.speciesCode, b.nameFa, b.nameEn ?? null);
+    upsertBreed.run(b.speciesCode, b.nameFa, b.nameEn ?? null, b.sortOrder);
+    keepKeys.add(`${b.speciesCode}::${b.nameFa}`);
+  }
+
+  // حذف نژادهای قدیمی که دیگر در کاتالوگ نیستند
+  const existing = db
+    .prepare('SELECT id, species_code, name_fa FROM pet_breeds')
+    .all() as Array<{ id: number; species_code: string; name_fa: string }>;
+  const del = db.prepare('DELETE FROM pet_breeds WHERE id = ?');
+  for (const row of existing) {
+    if (!keepKeys.has(`${row.species_code}::${row.name_fa}`)) {
+      del.run(row.id);
+    }
   }
 }
 
@@ -973,19 +997,20 @@ export const dbService = {
   },
 
   listBreeds(speciesCode?: string): PetBreed[] {
-    let sql = 'SELECT id, species_code, name_fa, name_en FROM pet_breeds';
+    let sql = 'SELECT id, species_code, name_fa, name_en, sort_order FROM pet_breeds';
     const params: unknown[] = [];
     if (speciesCode) {
       sql += ' WHERE species_code = ?';
       params.push(speciesCode);
     }
-    sql += ' ORDER BY name_fa';
+    sql += ' ORDER BY sort_order ASC, name_fa ASC';
     const rows = db.prepare(sql).all(...params) as Record<string, unknown>[];
     return rows.map((row) => ({
       id: row.id as number,
       speciesCode: row.species_code as PetBreed['speciesCode'],
       nameFa: row.name_fa as string,
       nameEn: (row.name_en as string | null) ?? undefined,
+      sortOrder: row.sort_order != null ? Number(row.sort_order) : undefined,
     }));
   },
 
