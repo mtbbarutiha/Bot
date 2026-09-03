@@ -1,9 +1,31 @@
 import { Bot } from 'grammy';
 import { applyBotBranding } from './branding';
 import { assertBotToken, config } from './config';
+import { requiredChannels } from './force-join';
 import { registerHandlers } from './handlers';
 import { connectRedis, disconnectRedis } from './session';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
+
+async function warnForceJoinAdminRights(bot: Bot): Promise<void> {
+  const me = await bot.api.getMe();
+  for (const ch of requiredChannels()) {
+    const chatId = `@${ch.username}`;
+    try {
+      const member = await bot.api.getChatMember(chatId, me.id);
+      if (member.status !== 'administrator' && member.status !== 'creator') {
+        console.warn(
+          `   Force-join: bot is "${member.status}" in ${chatId} — must be admin to verify membership`
+        );
+      } else {
+        console.log(`   Force-join: OK admin in ${chatId}`);
+      }
+    } catch (err) {
+      console.warn(
+        `   Force-join: cannot access ${chatId} — add @${me.username} as channel admin. (${(err as Error).message})`
+      );
+    }
+  }
+}
 
 async function main(): Promise<void> {
   const token = assertBotToken();
@@ -12,6 +34,7 @@ async function main(): Promise<void> {
   const bot = new Bot(token);
   registerHandlers(bot);
   await applyBotBranding(bot.api);
+  await warnForceJoinAdminRights(bot);
 
   bot.catch((err) => {
     console.error('Bot error:', err.error);

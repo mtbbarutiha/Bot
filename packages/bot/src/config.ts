@@ -26,6 +26,10 @@ export const config = {
   webhookUrl: optional('BOT_WEBHOOK_URL'),
   webhookSecret: optional('BOT_WEBHOOK_SECRET'),
   port: Number(process.env.BOT_PORT ?? process.env.PORT ?? 3002),
+  /** کانال اجباری petdate (بدون @) */
+  forceJoinPetdateChannel: optional('FORCE_JOIN_PETDATE_CHANNEL', 'petdating'),
+  /** کانال اجباری دوردوریا (بدون @) */
+  forceJoinDordoriaChannel: optional('FORCE_JOIN_DORDORIA_CHANNEL', 'dordoriabot'),
 } as const;
 
 export function assertBotToken(): string {

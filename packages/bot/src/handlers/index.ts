@@ -1,6 +1,7 @@
 import type { Bot, Context } from 'grammy';
 import type { PetGender, PetSize, UserGender, UserRole } from '@petdate/shared';
 import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
+import { forceJoinMiddleware, missingChannels, sendForceJoinPrompt } from '../force-join';
 import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, WIZARD_NAV, mainMenuKeyboard } from '../keyboards';
 import { getSession } from '../session';
 import { handleExplore, handleExploreBack, handleExploreForPet, handleExplorePet, handleExplorePickPet, handleFindPlaymate } from './explore';
@@ -58,6 +59,28 @@ import {
 } from './services';
 
 export function registerHandlers(bot: Bot): void {
+  // عضویت اجباری در کانال‌ها — قبل از همهٔ دستورات
+  bot.use(forceJoinMiddleware);
+
+  bot.callbackQuery('join:check', async (ctx) => {
+    const { missing, errors } = await missingChannels(ctx);
+    if (missing.length === 0 && errors.length === 0) {
+      await ctx.answerCallbackQuery({ text: 'عضویت تأیید شد ✅' });
+      try {
+        await ctx.editMessageText('✅ عضویت در هر دو کانال تأیید شد.\nحالا /start رو بزن.');
+      } catch {
+        await ctx.reply('✅ عضویت در هر دو کانال تأیید شد.\nحالا /start رو بزن.');
+      }
+      await handleStart(ctx);
+      return;
+    }
+    await ctx.answerCallbackQuery({
+      text: missing.length ? 'هنوز عضو همه کانال‌ها نشدی' : 'خطا در بررسی — ربات باید ادمین کانال باشد',
+      show_alert: true,
+    });
+    await sendForceJoinPrompt(ctx, missing, errors);
+  });
+
   bot.command('start', handleStart);
   bot.command('menu', handleMenu);
   bot.command('help', handleHelp);
