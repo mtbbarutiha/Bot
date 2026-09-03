@@ -438,12 +438,7 @@ export function skipProfileKeyboard(callback: string): InlineKeyboard {
 }
 
 export function myPetsActionKeyboard(): InlineKeyboard {
-  return new InlineKeyboard()
-    .text('➕ ثبت پت جدید', 'pets:add')
-    .success()
-    .row()
-    .text('📬 درخواست‌های همبازی', 'pets:requests')
-    .primary();
+  return new InlineKeyboard().text('➕ ثبت پت جدید', 'pets:add').success();
 }
 
 export const MENU_LABELS = new Set<string>([

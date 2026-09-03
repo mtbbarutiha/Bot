@@ -124,10 +124,6 @@ export function registerHandlers(bot: Bot): void {
     await ctx.answerCallbackQuery();
     await handleAddPetCommand(ctx);
   });
-  bot.callbackQuery('pets:requests', async (ctx) => {
-    await ctx.answerCallbackQuery();
-    await handleRequests(ctx);
-  });
 
   bot.callbackQuery('profile:edit', async (ctx) => {
     await ctx.answerCallbackQuery();
