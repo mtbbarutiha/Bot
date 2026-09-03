@@ -83,7 +83,7 @@ export const COMMON_CITIES = [
   'قم',
 ] as const;
 
-export const BREED_PAGE_SIZE = 6;
+export const BREED_PAGE_SIZE = 12;
 
 export const WIZARD_NAV_LABELS = new Set<string>(Object.values(WIZARD_NAV));
 
@@ -187,14 +187,20 @@ export function breedReplyKeyboard(breeds: PetBreed[], page: number): Keyboard {
   });
   if (slice.length % 2 !== 0) kb.row();
 
-  kb.text(WIZARD_NAV.custom);
   if (totalPages > 1) {
     kb.row();
     if (safePage > 0) kb.text(WIZARD_NAV.prevPage);
     kb.text(`${safePage + 1}/${totalPages}`);
     if (safePage < totalPages - 1) kb.text(WIZARD_NAV.nextPage);
   }
-  return withWizardNav(kb, { skip: true });
+
+  // بازگشت و نوشتن دستی کنار هم — بدون رد کردن تا جا برای نژاد بیشتر باشد
+  kb.row();
+  kb.text(WIZARD_NAV.back);
+  kb.text(WIZARD_NAV.custom);
+  kb.row();
+  kb.text(WIZARD_NAV.cancel).danger();
+  return kb.resized().persistent();
 }
 
 export function petGenderReplyKeyboard(): Keyboard {
@@ -344,8 +350,7 @@ export function breedKeyboard(breeds: PetBreed[]): InlineKeyboard {
   breeds.forEach((b) => {
     kb.text(b.nameFa, `breed:${b.id}`).primary().row();
   });
-  kb.text('✏️ نوشتن دستی', 'breed:custom').row();
-  kb.text('⏭ رد کردن', 'wizard:skip_breed');
+  kb.text('✏️ نوشتن دستی', 'breed:custom');
   return kb;
 }
 

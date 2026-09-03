@@ -133,9 +133,9 @@ async function askSpecies(ctx: Context): Promise<void> {
 async function askBreed(ctx: Context, speciesCode: string, page = 0): Promise<void> {
   const breeds = await listBreeds(speciesCode);
   if (breeds.length === 0) {
-    await ctx.reply(`🧬 **${stepLabel(3)}**\n\nنژاد پت رو بنویس (یا رد کن):`, {
+    await ctx.reply(`🧬 **${stepLabel(3)}**\n\nنژاد پت رو بنویس:`, {
       parse_mode: 'Markdown',
-      reply_markup: textStepKeyboard({ skip: true }),
+      reply_markup: textStepKeyboard(),
     });
     return;
   }
@@ -657,8 +657,9 @@ async function handleSkipText(
   draft: PetDraft
 ): Promise<boolean> {
   if (step === 'pet_breed') {
-    await upsertSession(telegramId, { step: 'pet_gender', draftPet: draft });
-    await askGender(ctx);
+    await ctx.reply('نژاد رو از لیست انتخاب کن یا «نوشتن دستی» رو بزن.', {
+      reply_markup: breedReplyKeyboard(await listBreeds(draft.species ?? 'other'), 0),
+    });
     return true;
   }
   if (step === 'pet_color') {
