@@ -1,7 +1,7 @@
 import type { Bot, Context } from 'grammy';
 import type { PetGender, PetSize, UserGender, UserRole } from '@petdate/shared';
 import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
-import { forceJoinMiddleware, missingChannels, sendForceJoinPrompt } from '../force-join';
+import { forceJoinMiddleware, missingChannels, safeAnswerCallback, sendForceJoinPrompt } from '../force-join';
 import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, WIZARD_NAV, mainMenuKeyboard } from '../keyboards';
 import { getSession } from '../session';
 import { handleExplore, handleExploreBack, handleExploreForPet, handleExplorePet, handleExplorePickPet, handleFindPlaymate } from './explore';
@@ -63,22 +63,27 @@ export function registerHandlers(bot: Bot): void {
   bot.use(forceJoinMiddleware);
 
   bot.callbackQuery('join:check', async (ctx) => {
-    const { missing, errors } = await missingChannels(ctx);
-    if (missing.length === 0 && errors.length === 0) {
-      await ctx.answerCallbackQuery({ text: 'عضویت تأیید شد ✅' });
-      try {
-        await ctx.editMessageText('✅ عضویت تأیید شد.\nحالا /start رو بزن.');
-      } catch {
-        await ctx.reply('✅ عضویت تأیید شد.\nحالا /start رو بزن.');
+    try {
+      const { missing } = await missingChannels(ctx);
+      if (missing.length === 0) {
+        await safeAnswerCallback(ctx, { text: 'عضویت تأیید شد ✅' });
+        try {
+          await ctx.editMessageText('✅ عضویت تأیید شد. خوش اومدی!');
+        } catch {
+          /* ignore */
+        }
+        await handleStart(ctx);
+        return;
       }
-      await handleStart(ctx);
-      return;
+      await safeAnswerCallback(ctx, {
+        text: 'هنوز عضو کانال نشدی',
+        show_alert: true,
+      });
+      await sendForceJoinPrompt(ctx, missing);
+    } catch (err) {
+      console.error('join:check failed:', err);
+      await safeAnswerCallback(ctx, { text: 'خطا — دوباره /start بزن', show_alert: true });
     }
-    await ctx.answerCallbackQuery({
-      text: missing.length ? 'هنوز عضو همه کانال‌ها نشدی' : 'خطا در بررسی — ربات باید ادمین کانال باشد',
-      show_alert: true,
-    });
-    await sendForceJoinPrompt(ctx, missing, errors);
   });
 
   bot.command('start', handleStart);

@@ -14,28 +14,10 @@ export function logoExists(filePath: string): boolean {
 
 /** Set bot name, profile photo, and descriptions on boot. */
 export async function applyBotBranding(api: Api): Promise<void> {
+  // نام را هر بار ست نکن — محدودیت 429 تلگرام
   try {
-    await api.setMyName(BRAND.botTitle);
-    console.log('   Branding: name set →', BRAND.botTitle);
-  } catch (err) {
-    console.warn('   Branding: name skipped —', (err as Error).message);
-  }
-
-  if (logoExists(BOT_PROFILE_JPG)) {
-    try {
-      await api.setMyProfilePhoto({
-        type: 'static',
-        photo: new InputFile(BOT_PROFILE_JPG),
-      });
-      console.log('   Branding: profile photo set');
-    } catch (err) {
-      console.warn('   Branding: profile photo skipped —', (err as Error).message);
-    }
-  }
-
-  try {
-    await api.setMyDescription(BRAND.descriptionFa);
-    await api.setMyShortDescription(BRAND.shortDescriptionFa);
+    await api.setMyDescription(BRAND?.descriptionFa ?? '🐾 petdate — همبازی برای پت');
+    await api.setMyShortDescription(BRAND?.shortDescriptionFa ?? '🐾 petdate — همبازی برای پت');
     console.log('   Branding: description set');
   } catch (err) {
     console.warn('   Branding: description skipped —', (err as Error).message);
@@ -49,10 +31,24 @@ export async function sendWelcomeLogo(
   extra?: Record<string, unknown>
 ): Promise<boolean> {
   if (!logoExists(WELCOME_LOGO_JPG)) return false;
-  await ctx.replyWithPhoto(new InputFile(WELCOME_LOGO_JPG), {
-    caption,
-    parse_mode: 'Markdown',
-    ...extra,
-  });
-  return true;
+  try {
+    await ctx.replyWithPhoto(new InputFile(WELCOME_LOGO_JPG), {
+      caption,
+      parse_mode: 'Markdown',
+      ...extra,
+    });
+    return true;
+  } catch (err) {
+    console.warn('welcome logo markdown failed, retry plain:', (err as Error).message);
+    try {
+      await ctx.replyWithPhoto(new InputFile(WELCOME_LOGO_JPG), {
+        caption: caption.replace(/\*/g, '').replace(/_/g, ''),
+        ...extra,
+      });
+      return true;
+    } catch (err2) {
+      console.warn('welcome logo failed:', (err2 as Error).message);
+      return false;
+    }
+  }
 }

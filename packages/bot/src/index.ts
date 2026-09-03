@@ -46,12 +46,14 @@ async function main(): Promise<void> {
     console.log(`🤖 petdate bot webhook → ${config.webhookUrl}`);
     console.log('   (برای dev از polling استفاده کن — BOT_WEBHOOK_URL را خالی بگذار)');
   } else {
+    await bot.api.deleteWebhook({ drop_pending_updates: true }).catch(() => undefined);
     console.log('🤖 petdate bot (polling) — Ctrl+C برای توقف');
     const webUrl = effectiveWebUrl();
     if (!isTelegramInlineUrl(webUrl)) {
       console.warn(`   Web links disabled in chat (set PUBLIC_WEB_URL for HTTPS tunnel): ${webUrl}`);
     }
     await bot.start({
+      drop_pending_updates: true,
       onStart: () => console.log(`   API: ${config.apiUrl} | Web: ${config.webUrl}`),
     });
   }
