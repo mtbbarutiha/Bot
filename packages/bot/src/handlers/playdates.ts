@@ -14,11 +14,9 @@ export async function handleMyPets(ctx: Context): Promise<void> {
 
   const pets = await listPets({ ownerId: user.id });
   if (pets.length === 0) {
-    const { myPetsActionKeyboard } = await import('../keyboards');
-    await ctx.reply('هنوز پتی ثبت نکردی. از دکمه زیر پت جدید اضافه کن:', {
-      reply_markup: myPetsActionKeyboard(),
+    await ctx.reply('هنوز پتی ثبت نکردی.\nاز منو «➕ ثبت پت» رو بزن.', {
+      reply_markup: mainMenuKeyboard(user.role),
     });
-    await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
     return;
   }
 
@@ -30,12 +28,10 @@ export async function handleMyPets(ctx: Context): Promise<void> {
     ].filter(Boolean);
     return `${i + 1}. **${p.name}** — ${p.species}${bits.length ? ` · ${bits.join(' · ')}` : ''}`;
   });
-  const { myPetsActionKeyboard } = await import('../keyboards');
   await ctx.reply(`🐾 **پت‌های من**\n\n${lines.join('\n')}`, {
     parse_mode: 'Markdown',
-    reply_markup: myPetsActionKeyboard(),
+    reply_markup: mainMenuKeyboard(user.role),
   });
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
 }
 
 export async function handleRequests(ctx: Context): Promise<void> {
