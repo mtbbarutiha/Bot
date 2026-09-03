@@ -50,6 +50,14 @@ playdatesRouter.post('/', (req, res) => {
     return;
   }
 
+  if (dbService.hasPendingPlaydate(Number(fromPetId), Number(toPetId))) {
+    const existing = dbService
+      .listPlaydateRequests({ userId: Number(fromUserId), status: 'pending' })
+      .find((r) => r.fromPetId === Number(fromPetId) && r.toPetId === Number(toPetId));
+    res.status(200).json(enrichPlaydate(existing ?? null));
+    return;
+  }
+
   const request = dbService.createPlaydateRequest({
     fromPetId: Number(fromPetId),
     toPetId: Number(toPetId),

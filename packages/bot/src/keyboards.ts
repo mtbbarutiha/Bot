@@ -29,7 +29,6 @@ export const PET_OWNER_MENU = {
 export const DEFAULT_MENU = {
   explore: '🔍 کشف همبازی',
   myPets: '🐾 پت‌های من',
-  requests: '📬 درخواست‌ها',
   profile: '👤 پروفایل',
   addPet: '➕ ثبت پت',
   help: '❓ راهنما',
@@ -261,13 +260,10 @@ export function defaultMenuKeyboard(): Keyboard {
     .primary()
     .row()
     .text(m.myPets)
-    .text(m.requests)
-    .success()
-    .row()
     .text(m.profile)
+    .row()
     .text(m.addPet)
     .primary()
-    .row()
     .text(m.help)
     .resized()
     .persistent();
@@ -360,24 +356,23 @@ export function exploreListKeyboard(pets: PetProfile[], page: number, pageSize: 
   return kb;
 }
 
-/** انتخاب پت مبدأ برای پیدا کردن همبازی */
+/** انتخاب پت مبدأ برای پیدا کردن همبازی — فقط پت‌های خود کاربر */
 export function explorePickMyPetKeyboard(pets: PetProfile[]): InlineKeyboard {
   const kb = new InlineKeyboard();
-  kb.text('🌟 همه', 'explore:for:all').success().row();
   pets.forEach((pet) => {
     const bits = [pet.breed, pet.city].filter(Boolean).join(' · ');
     const label = bits ? `${pet.name} (${bits})` : pet.name;
-    kb.text(label, `explore:for:${pet.id}`).primary().row();
+    kb.text(`🐾 ${label}`, `explore:for:${pet.id}`).primary().row();
   });
   return kb;
 }
 
 export function petDetailKeyboard(petId: number, canRequest: boolean): InlineKeyboard {
   const kb = new InlineKeyboard();
-  if (canRequest) {
-    kb.text('🤝 درخواست همبازی', `playdate:ask:${petId}`).success().row();
-  }
-  kb.text('🔙 بازگشت به لیست', 'explore:back');
+  // درخواست دستی حذف شد — پیدا کردن همبازی خودکار ارسال می‌کند
+  void petId;
+  void canRequest;
+  kb.text('🔙 بازگشت', 'explore:pick');
   return kb;
 }
 

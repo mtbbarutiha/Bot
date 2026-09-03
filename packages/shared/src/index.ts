@@ -27,9 +27,11 @@ export {
   USER_ROLES,
   formatPetAge,
   parsePetAgeInput,
+  rankPlaymateMatches,
   toEnglishDigits,
   toPersianDigits,
 } from './petdate';
+export type { PlaymateMatchScore } from './petdate';
 export type {
   BotStep,
   OnboardingStatus,

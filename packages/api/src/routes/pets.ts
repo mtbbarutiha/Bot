@@ -5,6 +5,7 @@ export const petsRouter = Router();
 
 petsRouter.get('/', (req, res) => {
   const ownerId = req.query.ownerId ? Number(req.query.ownerId) : undefined;
+  const species = typeof req.query.species === 'string' ? req.query.species : undefined;
   const lookingForPlaymate =
     req.query.lookingForPlaymate === 'true'
       ? true
@@ -12,7 +13,7 @@ petsRouter.get('/', (req, res) => {
         ? false
         : undefined;
 
-  const pets = dbService.listPets({ ownerId, lookingForPlaymate });
+  const pets = dbService.listPets({ ownerId, lookingForPlaymate, species });
   res.json(pets);
 });
 

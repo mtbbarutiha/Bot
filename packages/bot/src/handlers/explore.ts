@@ -1,20 +1,23 @@
 import type { Context } from 'grammy';
-import type { PetProfile } from '@petdate/shared';
-import { getPet, listPets } from '../api-client';
-import { formatPet } from '../format';
+import { rankPlaymateMatches, PET_SPECIES_LABELS } from '@petdate/shared';
 import {
-  exploreListKeyboard,
+  createPlaydate,
+  getPet,
+  getUserById,
+  listPets,
+} from '../api-client';
+import {
   explorePickMyPetKeyboard,
   mainMenuKeyboard,
   myPetsActionKeyboard,
-  petDetailKeyboard,
+  playdateActionKeyboard,
 } from '../keyboards';
-import { getSession, upsertSession } from '../session';
+import { upsertSession } from '../session';
 import { getCtxUser } from './start';
 
-const PAGE_SIZE = 5;
+const MAX_AUTO_REQUESTS = 30;
 
-/** ورود از منو: اول پت خود کاربر را انتخاب کن */
+/** ورود از منو: فقط لیست پت‌های خود کاربر */
 export async function handleFindPlaymate(ctx: Context): Promise<void> {
   await handleExplorePickPet(ctx);
 }
@@ -45,9 +48,10 @@ export async function handleExplorePickPet(ctx: Context): Promise<void> {
   const text = [
     '🔍 **پیدا کردن همبازی**',
     '',
-    'برای **کدوم پتت** همبازی می‌خوای؟',
+    'کدوم پتت رو انتخاب می‌کنی؟',
     '',
-    'می‌تونی یکی رو انتخاب کنی یا «همه» رو بزنی.',
+    'با انتخاب پت، درخواست همبازی به‌صورت خودکار برای هم‌گروه‌ها ارسال می‌شه',
+    '(اولویت: هم‌کشور ← هم‌استان ← هم‌دسته ← هم‌نژاد ← سن ← جنسیت متفاوت).',
   ].join('\n');
   const kb = explorePickMyPetKeyboard(myPets);
 
@@ -63,117 +67,136 @@ export async function handleExplorePickPet(ctx: Context): Promise<void> {
   await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: kb });
 }
 
+/** انتخاب پت → مچ اولویت‌دار → ارسال درخواست به همه هم‌گروه‌ها */
 export async function handleExploreForPet(ctx: Context, petId: number | 'all'): Promise<void> {
   const user = await getCtxUser(ctx);
   if (!user?.id) return;
 
-  if (petId !== 'all') {
-    const myPets = await listPets({ ownerId: user.id });
-    if (!myPets.some((p) => p.id === petId)) {
-      await ctx.answerCallbackQuery({ text: 'این پت مال تو نیست', show_alert: true });
-      return;
-    }
-  }
-
-  await upsertSession(String(ctx.from!.id), {
-    exploreForPicked: true,
-    exploreForPetId: petId === 'all' ? undefined : petId,
-    explorePage: 0,
-  });
-
-  await ctx.answerCallbackQuery({
-    text: petId === 'all' ? 'همه پت‌ها' : 'پت انتخاب شد',
-  });
-  await handleExplore(ctx, 0);
-}
-
-export async function handleExplore(ctx: Context, page = 0): Promise<void> {
-  const user = await getCtxUser(ctx);
-  if (!user) {
-    await ctx.reply('اول /start بزن.');
-    return;
-  }
-
-  const telegramId = String(ctx.from!.id);
-  const session = await getSession(telegramId);
-
-  if (!session?.exploreForPicked) {
+  if (petId === 'all') {
+    await ctx.answerCallbackQuery({ text: 'یک پت مشخص انتخاب کن', show_alert: true });
     await handleExplorePickPet(ctx);
     return;
   }
 
-  const allPets = await listPets({ lookingForPlaymate: true });
-  const myPets = user.id ? await listPets({ ownerId: user.id }) : [];
-  const myPetIds = myPets.map((p) => p.id);
-  const pets = allPets.filter((p) => !myPetIds.includes(p.id));
-
-  if (pets.length === 0) {
-    const empty =
-      'فعلاً همبازی‌ای ثبت نشده. بعداً سر بزن یا پت‌های بیشتری ثبت کن!';
-    if (ctx.callbackQuery) {
-      try {
-        await ctx.editMessageText(empty, { reply_markup: explorePickMyPetKeyboard(myPets) });
-        return;
-      } catch {
-        /* fall through */
-      }
-    }
-    await ctx.reply(empty, { reply_markup: mainMenuKeyboard(user.role) });
+  const myPets = await listPets({ ownerId: user.id });
+  const source = myPets.find((p) => p.id === petId);
+  if (!source) {
+    await ctx.answerCallbackQuery({ text: 'این پت مال تو نیست', show_alert: true });
     return;
   }
 
-  await upsertSession(telegramId, { explorePage: page, step: 'ready' });
-
-  const forLabel = await exploreForLabel(session.exploreForPetId, myPets);
-  const text = [
-    `🔍 **همبازی‌های موجود** (${pets.length} پت)`,
-    `برای: **${forLabel}**`,
-    '',
-    'یکی رو انتخاب کن:',
-  ].join('\n');
-  const kb = exploreListKeyboard(pets, page, PAGE_SIZE);
-
-  if (ctx.callbackQuery) {
-    try {
-      await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: kb });
-      return;
-    } catch {
-      /* fall through */
-    }
-  }
-  await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: kb });
-}
-
-async function exploreForLabel(
-  exploreForPetId: number | undefined,
-  myPets: PetProfile[]
-): Promise<string> {
-  if (!exploreForPetId) return 'همه پت‌ها';
-  const pet = myPets.find((p) => p.id === exploreForPetId);
-  return pet?.name ?? `پت #${exploreForPetId}`;
-}
-
-export async function handleExplorePet(ctx: Context, petId: number): Promise<void> {
-  const user = await getCtxUser(ctx);
-  const pet = await getPet(petId);
-  if (!pet) {
-    await ctx.answerCallbackQuery({ text: 'پت پیدا نشد', show_alert: true });
-    return;
-  }
-
-  const myPets = user?.id ? await listPets({ ownerId: user.id }) : [];
-  const canRequest = myPets.length > 0 && pet.ownerId !== user?.id;
-
-  await ctx.answerCallbackQuery();
-  await ctx.editMessageText(formatPet(pet, true), {
-    parse_mode: 'Markdown',
-    reply_markup: petDetailKeyboard(petId, canRequest),
+  await ctx.answerCallbackQuery({ text: 'در حال پیدا کردن همبازی…' });
+  await upsertSession(String(ctx.from!.id), {
+    exploreForPicked: true,
+    exploreForPetId: petId,
+    explorePage: 0,
   });
+
+  const peers = await listPets({ lookingForPlaymate: true, species: source.species });
+  const matches = rankPlaymateMatches(source, peers, { max: MAX_AUTO_REQUESTS });
+
+  const speciesLabel = PET_SPECIES_LABELS[source.species] ?? source.species;
+
+  if (matches.length === 0) {
+    const empty = [
+      `برای **${source.name}** فعلاً همبازی هم‌گروه (${speciesLabel}) پیدا نشد.`,
+      '',
+      'بعداً دوباره امتحان کن.',
+    ].join('\n');
+    try {
+      await ctx.editMessageText(empty, {
+        parse_mode: 'Markdown',
+        reply_markup: explorePickMyPetKeyboard(myPets),
+      });
+    } catch {
+      await ctx.reply(empty, {
+        parse_mode: 'Markdown',
+        reply_markup: explorePickMyPetKeyboard(myPets),
+      });
+    }
+    return;
+  }
+
+  let sent = 0;
+  let skipped = 0;
+  const preview: string[] = [];
+
+  for (const match of matches) {
+    try {
+      const req = await createPlaydate({
+        fromPetId: source.id,
+        toPetId: match.pet.id,
+        fromUserId: user.id,
+      });
+      sent += 1;
+      if (preview.length < 8) {
+        const why = match.reasons.slice(0, 3).join(' · ');
+        preview.push(`• **${match.pet.name}**${why ? ` — ${why}` : ''}`);
+      }
+
+      // اطلاع به صاحب پت مقصد
+      if (req.toUserId) {
+        const owner = await getUserById(req.toUserId);
+        if (owner?.telegramId) {
+          try {
+            await ctx.api.sendMessage(
+              owner.telegramId,
+              [
+                '📬 **درخواست همبازی جدید**',
+                '',
+                `از طرف **${source.name}** برای **${match.pet.name}**`,
+                `دسته: ${speciesLabel}`,
+              ].join('\n'),
+              {
+                parse_mode: 'Markdown',
+                reply_markup: playdateActionKeyboard(req.id),
+              }
+            );
+          } catch {
+            /* کاربر بلاک کرده یا در دسترس نیست */
+          }
+        }
+      }
+    } catch {
+      skipped += 1;
+    }
+  }
+
+  const summary = [
+    `✅ برای **${source.name}** درخواست همبازی ارسال شد.`,
+    '',
+    `هم‌گروه: ${speciesLabel}`,
+    `ارسال‌شده: **${sent}** درخواست`,
+    skipped ? `رد شده/تکراری: ${skipped}` : null,
+    '',
+    'اولویت مچ: هم‌کشور · هم‌استان · هم‌دسته · هم‌نژاد · سن · جنسیت متفاوت',
+    '',
+    preview.length ? 'نمونه‌ها:' : null,
+    ...preview,
+  ]
+    .filter(Boolean)
+    .join('\n');
+
+  try {
+    await ctx.editMessageText(summary, { parse_mode: 'Markdown' });
+  } catch {
+    await ctx.reply(summary, { parse_mode: 'Markdown' });
+  }
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
+}
+
+/** سازگاری با callbackهای قدیمی صفحه‌بندی — برمی‌گرداند به انتخاب پت */
+export async function handleExplore(ctx: Context, _page = 0): Promise<void> {
+  await handleExplorePickPet(ctx);
+}
+
+export async function handleExplorePet(ctx: Context, _petId: number): Promise<void> {
+  await ctx.answerCallbackQuery({ text: 'از لیست پت خودت یکی انتخاب کن' });
+  await handleExplorePickPet(ctx);
 }
 
 export async function handleExploreBack(ctx: Context): Promise<void> {
-  const session = await getSession(String(ctx.from!.id));
-  await handleExplore(ctx, session?.explorePage ?? 0);
+  await handleExplorePickPet(ctx);
 }
 
-export { PAGE_SIZE };
+export { getPet };

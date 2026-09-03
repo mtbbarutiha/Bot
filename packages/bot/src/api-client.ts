@@ -43,6 +43,14 @@ export async function getUserByTelegramId(telegramId: string): Promise<User | nu
   }
 }
 
+export async function getUserById(id: number): Promise<User | null> {
+  try {
+    return await request<User>(`/api/users/id/${id}`);
+  } catch {
+    return null;
+  }
+}
+
 export async function setUserRole(telegramId: string, role: UserRole): Promise<User> {
   return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/role`, {
     method: 'PATCH',
@@ -102,9 +110,14 @@ export async function listBreeds(species?: string): Promise<PetBreed[]> {
   return request<PetBreed[]>(`/api/catalog/breeds${qs}`);
 }
 
-export async function listPets(filters?: { ownerId?: number; lookingForPlaymate?: boolean }): Promise<PetProfile[]> {
+export async function listPets(filters?: {
+  ownerId?: number;
+  lookingForPlaymate?: boolean;
+  species?: string;
+}): Promise<PetProfile[]> {
   const params = new URLSearchParams();
   if (filters?.ownerId) params.set('ownerId', String(filters.ownerId));
+  if (filters?.species) params.set('species', filters.species);
   if (filters?.lookingForPlaymate !== undefined) {
     params.set('lookingForPlaymate', String(filters.lookingForPlaymate));
   }

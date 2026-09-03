@@ -87,6 +87,9 @@ export interface PetProfile {
   imageUrl?: string;
   city?: string;
   neighborhood?: string;
+  /** از پروفایل صاحب پت (برای مچ همبازی) */
+  ownerProvince?: string;
+  ownerCity?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -305,4 +308,93 @@ export function parsePetAgeInput(raw: string): number | null {
   if (/^\d+$/.test(text)) return null;
 
   return null;
+}
+
+function normPlace(value?: string | null): string {
+  return (value ?? '')
+    .trim()
+    .replace(/ي/g, 'ی')
+    .replace(/ك/g, 'ک')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+}
+
+export interface PlaymateMatchScore {
+  pet: PetProfile;
+  score: number;
+  reasons: string[];
+}
+
+/**
+ * امتیاز همبازی با اولویت:
+ * هم‌کشور (ایران) → هم‌استان → هم‌دسته → هم‌نژاد → سن نزدیک → جنسیت متفاوت
+ * فقط هم‌گونه (species) واجد شرایط‌اند.
+ */
+export function rankPlaymateMatches(
+  source: PetProfile,
+  candidates: PetProfile[],
+  opts?: { max?: number }
+): PlaymateMatchScore[] {
+  const max = opts?.max ?? 40;
+  const sourceId = source.id;
+  const sourceOwner = source.ownerId;
+  const sourceSpecies = (source.species || '').toLowerCase();
+
+  const scored: PlaymateMatchScore[] = [];
+
+  for (const pet of candidates) {
+    if (pet.id === sourceId || pet.ownerId === sourceOwner) continue;
+    if (!pet.lookingForPlaymate) continue;
+    if ((pet.species || '').toLowerCase() !== sourceSpecies) continue;
+
+    let score = 0;
+    const reasons: string[] = [];
+
+    // هم‌کشور — فعلاً همه داخل ایران فرض می‌شوند
+    score += 50;
+    reasons.push('هم‌کشور');
+
+    const srcProv = normPlace(source.ownerProvince);
+    const candProv = normPlace(pet.ownerProvince);
+    if (srcProv && candProv && srcProv === candProv) {
+      score += 1000;
+      reasons.push('هم‌استان');
+    }
+
+    const srcCity = normPlace(source.city || source.ownerCity);
+    const candCity = normPlace(pet.city || pet.ownerCity);
+    if (srcCity && candCity && srcCity === candCity) {
+      score += 500;
+      reasons.push('هم‌شهر');
+    }
+
+    // هم‌دسته (گونه) — شرط ورود؛ امتیاز پایه
+    score += 300;
+    reasons.push('هم‌دسته');
+
+    const srcBreed = normPlace(source.breed);
+    const candBreed = normPlace(pet.breed);
+    if (srcBreed && candBreed && srcBreed === candBreed) {
+      score += 200;
+      reasons.push('هم‌نژاد');
+    }
+
+    if (source.ageMonths != null && pet.ageMonths != null) {
+      const diff = Math.abs(source.ageMonths - pet.ageMonths);
+      const ageScore = Math.max(0, 120 - diff);
+      score += ageScore;
+      if (diff <= 6) reasons.push('سن نزدیک');
+      else if (diff <= 18) reasons.push('سن نسبتاً نزدیک');
+    }
+
+    if (source.gender && pet.gender && source.gender !== pet.gender) {
+      score += 80;
+      reasons.push('جنسیت متفاوت');
+    }
+
+    scored.push({ pet, score, reasons });
+  }
+
+  scored.sort((a, b) => b.score - a.score || a.pet.name.localeCompare(b.pet.name, 'fa'));
+  return scored.slice(0, max);
 }

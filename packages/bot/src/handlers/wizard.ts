@@ -304,7 +304,7 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
       selectedPetId: undefined,
       selectedToPetId: undefined,
     });
-    await ctx.reply('برای درخواست همبازی از دکمه «🤝 درخواست همبازی» استفاده کن.', {
+    await ctx.reply('برای پیدا کردن همبازی از منو «🔍 پیدا کردن همبازی» رو بزن.', {
       reply_markup: mainMenuKeyboard((await getUserByTelegramId(telegramId))?.role),
     });
     return true;

@@ -215,8 +215,6 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       return handlePetShop(ctx);
     case m.services:
       return handleServices(ctx);
-    case d.requests:
-      return handleRequests(ctx);
     case d.addPet:
       return handleAddPetCommand(ctx);
     default:

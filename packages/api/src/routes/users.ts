@@ -28,6 +28,15 @@ usersRouter.get('/telegram/:telegramId', (req, res) => {
   res.json(user);
 });
 
+usersRouter.get('/id/:id', (req, res) => {
+  const user = dbService.getUserById(Number(req.params.id));
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(user);
+});
+
 function isOnboardingStatus(value: unknown): value is OnboardingStatus {
   return typeof value === 'string' && value in ONBOARDING_STATUS_LABELS;
 }

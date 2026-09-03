@@ -300,6 +300,8 @@ function mapPet(row: Record<string, unknown>): PetProfile {
     imageUrl: row.image_url as string | undefined,
     city: row.city as string | undefined,
     neighborhood: row.neighborhood as string | undefined,
+    ownerProvince: (row.owner_province as string | undefined) ?? undefined,
+    ownerCity: (row.owner_city as string | undefined) ?? undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -639,24 +641,54 @@ export const dbService = {
     }));
   },
 
-  listPets(filters?: { ownerId?: number; lookingForPlaymate?: boolean }): PetProfile[] {
-    let sql = 'SELECT * FROM pets WHERE 1=1';
+  listPets(filters?: { ownerId?: number; lookingForPlaymate?: boolean; species?: string }): PetProfile[] {
+    let sql = `
+      SELECT pets.*,
+             users.province AS owner_province,
+             users.city AS owner_city
+      FROM pets
+      LEFT JOIN users ON users.id = pets.owner_id
+      WHERE 1=1`;
     const params: unknown[] = [];
     if (filters?.ownerId) {
-      sql += ' AND owner_id = ?';
+      sql += ' AND pets.owner_id = ?';
       params.push(filters.ownerId);
     }
     if (filters?.lookingForPlaymate !== undefined) {
-      sql += ' AND looking_for_playmate = ?';
+      sql += ' AND pets.looking_for_playmate = ?';
       params.push(filters.lookingForPlaymate ? 1 : 0);
     }
-    sql += ' ORDER BY updated_at DESC';
+    if (filters?.species) {
+      sql += ' AND pets.species = ?';
+      params.push(filters.species);
+    }
+    sql += ' ORDER BY pets.updated_at DESC';
     return (db.prepare(sql).all(...params) as Record<string, unknown>[]).map(mapPet);
   },
 
   getPet(id: number): PetProfile | null {
-    const row = db.prepare('SELECT * FROM pets WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    const row = db
+      .prepare(
+        `SELECT pets.*,
+                users.province AS owner_province,
+                users.city AS owner_city
+         FROM pets
+         LEFT JOIN users ON users.id = pets.owner_id
+         WHERE pets.id = ?`
+      )
+      .get(id) as Record<string, unknown> | undefined;
     return row ? mapPet(row) : null;
+  },
+
+  hasPendingPlaydate(fromPetId: number, toPetId: number): boolean {
+    const row = db
+      .prepare(
+        `SELECT id FROM playdate_requests
+         WHERE from_pet_id = ? AND to_pet_id = ? AND status = 'pending'
+         LIMIT 1`
+      )
+      .get(fromPetId, toPetId) as Record<string, unknown> | undefined;
+    return Boolean(row);
   },
 
   listSpecies(): PetSpecies[] {
