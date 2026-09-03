@@ -36,8 +36,22 @@ async function main(): Promise<void> {
   await applyBotBranding(bot.api);
   await warnForceJoinAdminRights(bot);
 
-  bot.catch((err) => {
+  bot.catch(async (err) => {
     console.error('Bot error:', err.error);
+    try {
+      const message = String(err.error);
+      if (
+        message.includes('fetch failed') ||
+        message.includes('ECONNREFUSED') ||
+        message.includes('API ')
+      ) {
+        await err.ctx.reply(
+          'فعلاً سرور همبازی در دسترس نیست. چند لحظه بعد دوباره امتحان کن.'
+        );
+      }
+    } catch {
+      /* ignore reply failures */
+    }
   });
 
   if (config.webhookUrl) {

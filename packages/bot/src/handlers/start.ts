@@ -25,38 +25,45 @@ export async function handleStart(ctx: Context): Promise<void> {
   const telegramId = String(from.id);
   const name = displayName(from);
 
-  const user = await registerTelegramUser({
-    telegramId,
-    name,
-    username: from.username,
-  });
+  try {
+    const user = await registerTelegramUser({
+      telegramId,
+      name,
+      username: from.username,
+    });
 
-  await upsertSession(telegramId, {
-    userId: user.id,
-    role: user.role,
-    step: user.role ? 'ready' : 'role_select',
-    locale: 'fa',
-  });
+    await upsertSession(telegramId, {
+      userId: user.id,
+      role: user.role,
+      step: user.role ? 'ready' : 'role_select',
+      locale: 'fa',
+    });
 
-  if (!user.role) {
-    const caption = [
-      `سلام ${name}! 👋`,
-      '',
-      `${BRAND.welcomeFa}`,
-      `_${BRAND.taglineEn}_`,
-      '',
-      'پیدا کردن همبازی پت، مشاوره دامپزشک و خدمات پت.',
-      '',
-      'اول **نقشت** رو از منوی پایین انتخاب کن:',
-    ].join('\n');
-    const sent = await sendWelcomeLogo(ctx, caption, { reply_markup: roleReplyKeyboard() });
-    if (!sent) {
-      await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: roleReplyKeyboard() });
+    if (!user.role) {
+      const caption = [
+        `سلام ${name}! 👋`,
+        '',
+        `${BRAND.welcomeFa}`,
+        `_${BRAND.taglineEn}_`,
+        '',
+        'پیدا کردن همبازی پت، مشاوره دامپزشک و خدمات پت.',
+        '',
+        'اول **نقشت** رو از منوی پایین انتخاب کن:',
+      ].join('\n');
+      const sent = await sendWelcomeLogo(ctx, caption, { reply_markup: roleReplyKeyboard() });
+      if (!sent) {
+        await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: roleReplyKeyboard() });
+      }
+      return;
     }
-    return;
-  }
 
-  await sendWelcomeBack(ctx, user, name);
+    await sendWelcomeBack(ctx, user, name);
+  } catch (error) {
+    console.error('start failed:', error);
+    await ctx.reply(
+      'فعلاً سرور همبازی در دسترس نیست. چند لحظه بعد دوباره /start بزن.'
+    );
+  }
 }
 
 export async function sendWelcomeBack(ctx: Context, user: User, name: string): Promise<void> {
