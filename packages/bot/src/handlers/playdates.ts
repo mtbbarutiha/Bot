@@ -113,11 +113,15 @@ async function startPlaydateMessage(
 
   if (ctx.callbackQuery) {
     await ctx.editMessageText('💬 پیام برای صاحب پت بنویس (یا «بدون پیام» بزن):', {
-      reply_markup: new InlineKeyboard().text('📭 بدون پیام', `playdate:send:${fromPetId}:${toPetId}`),
+      reply_markup: new InlineKeyboard()
+        .text('📭 بدون پیام', `playdate:send:${fromPetId}:${toPetId}`)
+        .primary(),
     });
   } else {
     await ctx.reply('💬 پیام برای صاحب پت بنویس:', {
-      reply_markup: new InlineKeyboard().text('📭 بدون پیام', `playdate:send:${fromPetId}:${toPetId}`),
+      reply_markup: new InlineKeyboard()
+        .text('📭 بدون پیام', `playdate:send:${fromPetId}:${toPetId}`)
+        .primary(),
     });
   }
 }

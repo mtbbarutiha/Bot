@@ -41,12 +41,16 @@ export async function handleMedical(ctx: Context): Promise<void> {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
         .text('📋 پرونده سلامت', 'medical:record')
+        .primary()
         .row()
         .text('💉 یادآور واکسن', 'medical:vaccine')
+        .primary()
         .row()
         .text('🏥 کلینیک‌های نزدیک', 'medical:clinics')
+        .primary()
         .row()
-        .text('💬 مشاوره آنلاین', 'medical:consult'),
+        .text('💬 مشاوره آنلاین', 'medical:consult')
+        .success(),
     }
   );
   await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
@@ -70,7 +74,12 @@ export async function handleInviteFriends(ctx: Context): Promise<void> {
     ].join('\n'),
     {
       parse_mode: 'Markdown',
-      reply_markup: new InlineKeyboard().url('📤 اشتراک‌گذاری لینک', `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('بیا تو petdate همبازی برای پتت پیدا کن! 🐾')}`),
+      reply_markup: new InlineKeyboard()
+        .url(
+          '📤 اشتراک‌گذاری لینک',
+          `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('بیا تو petdate همبازی برای پتت پیدا کن! 🐾')}`
+        )
+        .success(),
     }
   );
   await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
@@ -90,10 +99,13 @@ export async function handleQuickVet(ctx: Context): Promise<void> {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
         .text('💬 چت متنی', 'vet:chat')
+        .primary()
         .row()
         .text('📞 تماس صوتی', 'vet:call')
+        .primary()
         .row()
-        .text('📹 ویدیو کال', 'vet:video'),
+        .text('📹 ویدیو کال', 'vet:video')
+        .success(),
     }
   );
   await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
@@ -117,10 +129,14 @@ export async function handlePetShop(ctx: Context): Promise<void> {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
         .text('🍖 غذا', 'shop:food')
+        .primary()
         .text('🧸 اسباب‌بازی', 'shop:toys')
+        .primary()
         .row()
         .text('🧴 بهداشتی', 'shop:hygiene')
-        .text('🛏️ لوازم', 'shop:supplies'),
+        .primary()
+        .text('🛏️ لوازم', 'shop:supplies')
+        .primary(),
     }
   );
   await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
@@ -144,10 +160,14 @@ export async function handleServices(ctx: Context): Promise<void> {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
         .text('🎓 مربی', 'svc:trainer')
+        .primary()
         .text('🏡 نگهبان', 'svc:sitter')
+        .primary()
         .row()
         .text('✂️ آرایش', 'svc:groom')
-        .text('🚗 حمل', 'svc:transport'),
+        .primary()
+        .text('🚗 حمل', 'svc:transport')
+        .primary(),
     }
   );
   await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });

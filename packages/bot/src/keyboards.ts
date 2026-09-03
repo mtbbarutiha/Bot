@@ -83,7 +83,7 @@ export function withWizardNav(
   }
   kb.row();
   if (!opts?.noBack) kb.text(WIZARD_NAV.back);
-  kb.text(WIZARD_NAV.cancel);
+  kb.text(WIZARD_NAV.cancel).danger();
   return kb.resized().persistent();
 }
 
@@ -124,11 +124,13 @@ export function cityReplyKeyboard(opts?: { skip?: boolean }): Keyboard {
 export function phoneWizardKeyboard(): Keyboard {
   return new Keyboard()
     .requestContact(WIZARD_NAV.sharePhone)
+    .primary()
     .row()
     .text(WIZARD_NAV.skip)
     .row()
     .text(WIZARD_NAV.back)
     .text(WIZARD_NAV.cancel)
+    .danger()
     .resized()
     .persistent();
 }
@@ -137,11 +139,12 @@ export function interestsReplyKeyboard(selected: string[] = []): Keyboard {
   const kb = new Keyboard();
   PROFILE_INTEREST_OPTIONS.forEach((opt, i) => {
     const label = selected.includes(opt) ? `✓ ${opt}` : opt;
-    kb.text(label);
+    if (selected.includes(opt)) kb.text(label).success();
+    else kb.text(label);
     if ((i + 1) % 2 === 0) kb.row();
   });
   if (PROFILE_INTEREST_OPTIONS.length % 2 !== 0) kb.row();
-  kb.text(WIZARD_NAV.interestsDone);
+  kb.text(WIZARD_NAV.interestsDone).success();
   return withWizardNav(kb, { skip: true });
 }
 
@@ -184,13 +187,23 @@ export function petSizeReplyKeyboard(): Keyboard {
 }
 
 export function yesNoReplyKeyboard(): Keyboard {
-  return choiceReplyKeyboard([YES_LABEL, NO_LABEL]);
+  return new Keyboard()
+    .text(YES_LABEL)
+    .success()
+    .text(NO_LABEL)
+    .danger()
+    .row()
+    .text(WIZARD_NAV.back)
+    .text(WIZARD_NAV.cancel)
+    .danger()
+    .resized()
+    .persistent();
 }
 
 export function roleReplyKeyboard(): Keyboard {
   const kb = new Keyboard();
   USER_ROLES.forEach((role, index) => {
-    kb.text(USER_ROLE_LABELS[role]);
+    kb.text(USER_ROLE_LABELS[role]).primary();
     if (index % 2 === 1) kb.row();
   });
   if (USER_ROLES.length % 2 === 1) kb.row();
@@ -200,7 +213,7 @@ export function roleReplyKeyboard(): Keyboard {
 export function roleKeyboard(): InlineKeyboard {
   const kb = new InlineKeyboard();
   USER_ROLES.forEach((role, index) => {
-    kb.text(USER_ROLE_LABELS[role], `role:${role}`);
+    kb.text(USER_ROLE_LABELS[role], `role:${role}`).primary();
     if (index % 2 === 1) kb.row();
   });
   return kb;
@@ -211,6 +224,7 @@ export function petOwnerMenuKeyboard(): Keyboard {
   const m = PET_OWNER_MENU;
   return new Keyboard()
     .text(m.findPlaymate)
+    .primary()
     .text(m.myProfile)
     .row()
     .text(m.myPets)
@@ -218,9 +232,11 @@ export function petOwnerMenuKeyboard(): Keyboard {
     .row()
     .text(m.medical)
     .text(m.invite)
+    .success()
     .row()
     .text(m.help)
     .text(m.quickVet)
+    .primary()
     .row()
     .text(m.shop)
     .text(m.services)
@@ -232,12 +248,15 @@ export function defaultMenuKeyboard(): Keyboard {
   const m = DEFAULT_MENU;
   return new Keyboard()
     .text(m.explore)
+    .primary()
     .text(m.myPets)
     .row()
     .text(m.requests)
+    .success()
     .text(m.profile)
     .row()
     .text(m.addPet)
+    .primary()
     .text(m.help)
     .resized()
     .persistent();
@@ -252,7 +271,9 @@ export function mainMenuKeyboard(role?: UserRole | string | null): Keyboard {
 export function speciesKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text('🐕 سگ', 'species:dog')
+    .primary()
     .text('🐈 گربه', 'species:cat')
+    .primary()
     .row()
     .text('🐾 سایر', 'species:other');
 }
@@ -260,7 +281,7 @@ export function speciesKeyboard(): InlineKeyboard {
 export function speciesKeyboardFromCatalog(species: PetSpecies[]): InlineKeyboard {
   const kb = new InlineKeyboard();
   species.forEach((s, i) => {
-    kb.text(`${s.emoji} ${s.labelFa}`, `species:${s.code}`);
+    kb.text(`${s.emoji} ${s.labelFa}`, `species:${s.code}`).primary();
     if (i % 2 === 1) kb.row();
   });
   if (species.length % 2 === 1) kb.row();
@@ -270,7 +291,7 @@ export function speciesKeyboardFromCatalog(species: PetSpecies[]): InlineKeyboar
 export function breedKeyboard(breeds: PetBreed[]): InlineKeyboard {
   const kb = new InlineKeyboard();
   breeds.forEach((b) => {
-    kb.text(b.nameFa, `breed:${b.id}`).row();
+    kb.text(b.nameFa, `breed:${b.id}`).primary().row();
   });
   kb.text('✏️ نوشتن دستی', 'breed:custom').row();
   kb.text('⏭ رد کردن', 'wizard:skip_breed');
@@ -280,21 +301,28 @@ export function breedKeyboard(breeds: PetBreed[]): InlineKeyboard {
 export function petGenderKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text(`♂ ${PET_GENDER_LABELS.male}`, 'pet:gender:male')
-    .text(`♀ ${PET_GENDER_LABELS.female}`, 'pet:gender:female');
+    .primary()
+    .text(`♀ ${PET_GENDER_LABELS.female}`, 'pet:gender:female')
+    .primary();
 }
 
 export function petSizeKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text(PET_SIZE_LABELS.small, 'pet:size:small')
+    .primary()
     .text(PET_SIZE_LABELS.medium, 'pet:size:medium')
+    .primary()
     .row()
-    .text(PET_SIZE_LABELS.large, 'pet:size:large');
+    .text(PET_SIZE_LABELS.large, 'pet:size:large')
+    .primary();
 }
 
 export function petBoolKeyboard(field: 'vaccinated' | 'neutered' | 'looking'): InlineKeyboard {
   return new InlineKeyboard()
     .text('✅ بله', `pet:bool:${field}:1`)
-    .text('❌ خیر', `pet:bool:${field}:0`);
+    .success()
+    .text('❌ خیر', `pet:bool:${field}:0`)
+    .danger();
 }
 
 export function skipKeyboard(callback: string): InlineKeyboard {
@@ -307,7 +335,7 @@ export function exploreListKeyboard(pets: PetProfile[], page: number, pageSize: 
   const slice = pets.slice(start, start + pageSize);
 
   slice.forEach((pet) => {
-    kb.text(`${pet.name} (${pet.city ?? '—'})`, `explore:pet:${pet.id}`).row();
+    kb.text(`${pet.name} (${pet.city ?? '—'})`, `explore:pet:${pet.id}`).primary().row();
   });
 
   const totalPages = Math.ceil(pets.length / pageSize);
@@ -321,7 +349,9 @@ export function exploreListKeyboard(pets: PetProfile[], page: number, pageSize: 
 
 export function petDetailKeyboard(petId: number, canRequest: boolean): InlineKeyboard {
   const kb = new InlineKeyboard();
-  if (canRequest) kb.text('🤝 درخواست همبازی', `playdate:ask:${petId}`).row();
+  if (canRequest) {
+    kb.text('🤝 درخواست همبازی', `playdate:ask:${petId}`).success().row();
+  }
   kb.text('🔙 بازگشت به لیست', 'explore:back');
   return kb;
 }
@@ -329,28 +359,34 @@ export function petDetailKeyboard(petId: number, canRequest: boolean): InlineKey
 export function fromPetKeyboard(pets: PetProfile[], toPetId: number): InlineKeyboard {
   const kb = new InlineKeyboard();
   pets.forEach((pet) => {
-    kb.text(pet.name, `playdate:from:${pet.id}:${toPetId}`).row();
+    kb.text(pet.name, `playdate:from:${pet.id}:${toPetId}`).primary().row();
   });
-  kb.text('❌ انصراف', 'playdate:cancel');
+  kb.text('❌ انصراف', 'playdate:cancel').danger();
   return kb;
 }
 
 export function playdateActionKeyboard(requestId: number): InlineKeyboard {
   return new InlineKeyboard()
     .text('✅ قبول', `playdate:accept:${requestId}`)
-    .text('❌ رد', `playdate:reject:${requestId}`);
+    .success()
+    .text('❌ رد', `playdate:reject:${requestId}`)
+    .danger();
 }
 
 export function webLinksKeyboard(telegramId: string): InlineKeyboard | undefined {
   const base = effectiveWebUrl();
   if (!isTelegramInlineUrl(base)) return undefined;
-  return new InlineKeyboard().url('🌐 باز کردن petdate', `${base}/profile?from=telegram&tg=${telegramId}`);
+  return new InlineKeyboard()
+    .url('🌐 باز کردن petdate', `${base}/profile?from=telegram&tg=${telegramId}`)
+    .primary();
 }
 
 export function genderKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text('👨 آقا', 'profile:gender:male')
-    .text('👩 خانم', 'profile:gender:female');
+    .primary()
+    .text('👩 خانم', 'profile:gender:female')
+    .primary();
 }
 
 export function phoneKeyboard(): Keyboard {
@@ -360,21 +396,25 @@ export function phoneKeyboard(): Keyboard {
 export function profileActionsKeyboard(complete: boolean, isActive = true): InlineKeyboard {
   const kb = new InlineKeyboard();
   if (complete) {
-    kb.text('✏️ ویرایش پروفایل', 'profile:edit').row();
+    kb.text('✏️ ویرایش پروفایل', 'profile:edit').primary().row();
   } else {
-    kb.text('✨ تکمیل پروفایل', 'profile:edit').row();
+    kb.text('✨ تکمیل پروفایل', 'profile:edit').success().row();
   }
-  kb.text('🗑 حذف', 'profile:delete').text(
-    isActive ? '⏸ غیرفعال‌سازی' : '▶️ فعال‌سازی',
-    isActive ? 'profile:deactivate' : 'profile:activate'
-  );
+  kb.text('🗑 حذف', 'profile:delete').danger();
+  if (isActive) {
+    kb.text('⏸ غیرفعال‌سازی', 'profile:deactivate').danger();
+  } else {
+    kb.text('▶️ فعال‌سازی', 'profile:activate').success();
+  }
   return kb;
 }
 
 export function profileConfirmKeyboard(action: 'deactivate' | 'delete'): InlineKeyboard {
   return new InlineKeyboard()
     .text('✅ بله، مطمئنم', `profile:${action}:yes`)
-    .text('↩️ نه', `profile:${action}:no`);
+    .danger()
+    .text('↩️ نه', `profile:${action}:no`)
+    .primary();
 }
 
 /** @deprecated alias — use profileConfirmKeyboard('delete') */
@@ -389,8 +429,10 @@ export function skipProfileKeyboard(callback: string): InlineKeyboard {
 export function myPetsActionKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text('➕ ثبت پت جدید', 'pets:add')
+    .success()
     .row()
-    .text('📬 درخواست‌های همبازی', 'pets:requests');
+    .text('📬 درخواست‌های همبازی', 'pets:requests')
+    .primary();
 }
 
 export const MENU_LABELS = new Set<string>([
