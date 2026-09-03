@@ -13,23 +13,32 @@ export function speciesLabel(species: string): string {
 
 export function formatPet(pet: PetProfile, detailed = false): string {
   const lines = [
-    `🐾 **${pet.name}**`,
-    `${speciesLabel(pet.species)}${pet.breed ? ` · ${pet.breed}` : ''}`,
-    pet.city ? `📍 ${pet.city}${pet.neighborhood ? ` — ${pet.neighborhood}` : ''}` : '',
+    `🐾 <b>${escapeHtml(pet.name)}</b>`,
+    `${speciesLabel(pet.species)}${pet.breed ? ` · ${escapeHtml(pet.breed)}` : ''}`,
+    pet.city
+      ? `📍 ${escapeHtml(pet.city)}${pet.neighborhood ? ` — ${escapeHtml(pet.neighborhood)}` : ''}`
+      : '',
   ];
   if (detailed) {
     if (pet.gender) lines.push(`⚧ ${PET_GENDER_LABELS[pet.gender] ?? pet.gender}`);
     if (pet.ageMonths) lines.push(`🎂 ${formatPetAge(pet.ageMonths)}`);
     if (pet.size) lines.push(`📏 ${PET_SIZE_LABELS[pet.size] ?? pet.size}`);
-    if (pet.color) lines.push(`🎨 ${pet.color}`);
+    if (pet.color) lines.push(`🎨 ${escapeHtml(pet.color)}`);
     lines.push(pet.vaccinated ? '💉 واکسن زده' : '🚫 واکسن نزده');
     lines.push(pet.neutered ? '✂️ عقیم شده' : '➖ عقیم نشده');
     const diseases = typeof pet.health?.diseases === 'string' ? pet.health.diseases : null;
-    if (diseases) lines.push(`🏥 ${diseases}`);
-    if (pet.bio) lines.push(`💬 ${pet.bio}`);
+    if (diseases) lines.push(`🏥 ${escapeHtml(diseases)}`);
+    if (pet.bio) lines.push(`💬 ${escapeHtml(pet.bio)}`);
     lines.push(pet.lookingForPlaymate ? '🔍 دنبال همبازی' : '⏸️ فعلاً همبازی نمی‌خواد');
   }
   return lines.filter(Boolean).join('\n');
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 export function formatPlaydate(req: PlaydateRequest): string {

@@ -56,14 +56,14 @@ export async function handleMyPetView(ctx: Context, petId: number): Promise<void
   }
 
   await ctx.answerCallbackQuery();
-  const text = `🐾 **پروفایل پت**\n\n${formatPet(pet, true)}`;
+  const text = `🐾 <b>پروفایل پت</b>\n\n${formatPet(pet, true)}`;
   const kb = myPetProfileKeyboard(pet.id);
   const photo = pet.imageUrl || defaultPetPhoto(pet);
 
   try {
     await ctx.replyWithPhoto(photo, {
       caption: text,
-      parse_mode: 'Markdown',
+      parse_mode: 'HTML',
       reply_markup: kb,
     });
     return;
@@ -71,7 +71,7 @@ export async function handleMyPetView(ctx: Context, petId: number): Promise<void
     console.warn('pet profile photo failed:', (err as Error).message);
   }
 
-  await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: kb });
+  await ctx.reply(text, { parse_mode: 'HTML', reply_markup: kb });
 }
 
 function defaultPetPhoto(pet: { species?: string; id: number }): string {
