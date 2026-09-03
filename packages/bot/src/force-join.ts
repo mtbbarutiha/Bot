@@ -75,12 +75,12 @@ export async function sendForceJoinPrompt(
   const lines = [
     '🔒 **عضویت اجباری**',
     '',
-    'برای استفاده از petdate باید عضو **هر دو کانال** بشی:',
+    'برای استفاده از petdate باید عضو کانال بشی:',
     '',
-    ...requiredChannels().map((c, i) => `${i + 1}. [${c.title}](${c.url})`),
+    ...requiredChannels().map((c) => `📢 [${c.title}](${c.url})`),
     '',
     missing.length
-      ? `هنوز عضو این‌ها نیستی:\n${missing.map((c) => `• ${c.title}`).join('\n')}`
+      ? `هنوز عضو نیستی:\n${missing.map((c) => `• ${c.title}`).join('\n')}`
       : null,
     errors.length
       ? '\n_اگر بعد از عضویت باز هم خطا دیدی، ادمین باید ربات را در کانال ادمین کند._'
@@ -110,7 +110,7 @@ export async function sendForceJoinPrompt(
   });
 }
 
-/** true = کاربر عضو هر دو کانال است و می‌تواند ادامه دهد */
+/** true = کاربر عضو کانال‌های اجباری است و می‌تواند ادامه دهد */
 export async function ensureForceJoined(ctx: Context): Promise<boolean> {
   if (!ctx.from) return false;
   const { missing, errors } = await missingChannels(ctx);

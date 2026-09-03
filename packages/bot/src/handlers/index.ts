@@ -67,9 +67,9 @@ export function registerHandlers(bot: Bot): void {
     if (missing.length === 0 && errors.length === 0) {
       await ctx.answerCallbackQuery({ text: 'عضویت تأیید شد ✅' });
       try {
-        await ctx.editMessageText('✅ عضویت در هر دو کانال تأیید شد.\nحالا /start رو بزن.');
+        await ctx.editMessageText('✅ عضویت تأیید شد.\nحالا /start رو بزن.');
       } catch {
-        await ctx.reply('✅ عضویت در هر دو کانال تأیید شد.\nحالا /start رو بزن.');
+        await ctx.reply('✅ عضویت تأیید شد.\nحالا /start رو بزن.');
       }
       await handleStart(ctx);
       return;
