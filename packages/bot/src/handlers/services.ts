@@ -19,7 +19,7 @@ export async function handleCoins(ctx: Context): Promise<void> {
       '',
       '_خرید سکه به‌زودی فعال می‌شه._',
     ].join('\n'),
-    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user?.role) }
+    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user?.role, user?.roles) }
   );
 }
 
@@ -53,7 +53,7 @@ export async function handleMedical(ctx: Context): Promise<void> {
         .success(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
 }
 
 export async function handleInviteFriends(ctx: Context): Promise<void> {
@@ -82,7 +82,7 @@ export async function handleInviteFriends(ctx: Context): Promise<void> {
         .success(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
 }
 
 export async function handleQuickVet(ctx: Context): Promise<void> {
@@ -108,7 +108,7 @@ export async function handleQuickVet(ctx: Context): Promise<void> {
         .success(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
 }
 
 export async function handlePetShop(ctx: Context): Promise<void> {
@@ -139,7 +139,7 @@ export async function handlePetShop(ctx: Context): Promise<void> {
         .primary(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
 }
 
 export async function handleServices(ctx: Context): Promise<void> {
@@ -170,7 +170,7 @@ export async function handleServices(ctx: Context): Promise<void> {
         .primary(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
 }
 
 export async function handleComingSoon(ctx: Context, feature: string): Promise<void> {

@@ -24,6 +24,8 @@ export interface PetdateUser {
   name: string;
   username?: string;
   role?: UserRole;
+  /** چند نقش همزمان — role برای سازگاری همان نقش اصلی است */
+  roles?: UserRole[];
   onboarding: OnboardingStatus;
   locale: string;
   avatarUrl?: string;
@@ -118,6 +120,8 @@ export interface BotSession {
   telegramId: string;
   userId?: number;
   role?: UserRole;
+  /** نقش‌های در حال انتخاب در مرحله role_select */
+  draftRoles?: UserRole[];
   step: BotStep;
   locale: string;
   draftPet?: PetDraft;
@@ -208,6 +212,34 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   trainer: '🎓 مربی',
   pet_sitter: '🏡 نگهبان پت',
 };
+
+export const ROLE_CONFIRM_LABEL = '✅ ثبت نقش‌ها';
+
+/** نقش اصلی برای سازگاری با کد قدیمی — صاحب پت اولویت دارد */
+export function primaryRole(roles: UserRole[] | undefined | null, fallback?: UserRole | null): UserRole | undefined {
+  const list = roles?.length ? roles : fallback ? [fallback] : [];
+  if (list.includes('pet_owner')) return 'pet_owner';
+  return list[0];
+}
+
+export function normalizeRoles(
+  roles?: UserRole[] | null,
+  fallback?: UserRole | null
+): UserRole[] {
+  const fromList = (roles ?? []).filter((r): r is UserRole => USER_ROLES.includes(r));
+  if (fromList.length) return [...new Set(fromList)];
+  if (fallback && USER_ROLES.includes(fallback)) return [fallback];
+  return [];
+}
+
+export function userHasRole(
+  user: { role?: UserRole | null; roles?: UserRole[] | null } | null | undefined,
+  role: UserRole
+): boolean {
+  if (!user) return false;
+  const roles = normalizeRoles(user.roles, user.role);
+  return roles.includes(role);
+}
 
 export const USER_GENDER_LABELS: Record<UserGender, string> = {
   male: 'آقا',

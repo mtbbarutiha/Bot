@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Check, Clock, Mail, MapPin, MessageCircle } from 'lucide-react';
+import { userHasRole } from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatTimeAgo } from '../data/mock';
@@ -13,7 +14,7 @@ export function MatchesPage() {
   const { user } = useUserStore();
   const [tab, setTab] = useState<'pending' | 'accepted'>('pending');
 
-  const isPetOwner = !user.role || user.role === 'pet_owner';
+  const isPetOwner = !user.role || userHasRole(user, 'pet_owner');
 
   if (!isPetOwner) {
     return (

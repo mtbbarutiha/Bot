@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { userHasRole } from '@petdate/shared';
 import { useUserStore } from '../hooks/useUserStore';
 
 const PUBLIC_PATHS = ['/welcome', '/onboarding'];
@@ -15,12 +16,12 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (!user.role) {
+  if (!user.role && !(user.roles && user.roles.length)) {
     return <Navigate to="/onboarding/role" replace />;
   }
 
   if (
-    user.role === 'pet_owner' &&
+    userHasRole(user, 'pet_owner') &&
     user.onboarding === 'profile_incomplete' &&
     !location.pathname.startsWith('/onboarding') &&
     !location.pathname.startsWith('/add-pet') &&

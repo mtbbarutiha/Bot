@@ -10,6 +10,7 @@ import {
   PROFILE_COUNTRIES,
   PROFILE_INTEREST_OPTIONS,
   IRAN_PROVINCES,
+  ROLE_CONFIRM_LABEL,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   USER_ROLES,
@@ -262,26 +263,46 @@ export function lookingReplyKeyboard(): Keyboard {
   return choiceReplyKeyboard([LOOKING_YES_LABEL, LOOKING_NO_LABEL]);
 }
 
-export function roleReplyKeyboard(): Keyboard {
+export function roleReplyKeyboard(selected: UserRole[] = []): Keyboard {
   const kb = new Keyboard();
   USER_ROLES.forEach((role, index) => {
-    kb.text(USER_ROLE_LABELS[role]).primary();
-    if (index % 2 === 1) kb.row();
+    const label = selected.includes(role)
+      ? `✓ ${USER_ROLE_LABELS[role]}`
+      : USER_ROLE_LABELS[role];
+    if (selected.includes(role)) kb.text(label).success();
+    else kb.text(label).primary();
+    if ((index + 1) % 2 === 0) kb.row();
   });
-  if (USER_ROLES.length % 2 === 1) kb.row();
+  if (USER_ROLES.length % 2 !== 0) kb.row();
+  kb.text(ROLE_CONFIRM_LABEL).success();
   return kb.resized().persistent();
 }
 
-export function roleKeyboard(): InlineKeyboard {
+export function roleKeyboard(selected: UserRole[] = []): InlineKeyboard {
   const kb = new InlineKeyboard();
   USER_ROLES.forEach((role, index) => {
-    kb.text(USER_ROLE_LABELS[role], `role:${role}`).primary();
+    const label = selected.includes(role)
+      ? `✓ ${USER_ROLE_LABELS[role]}`
+      : USER_ROLE_LABELS[role];
+    kb.text(label, `role:${role}`);
+    if (selected.includes(role)) kb.success();
+    else kb.primary();
     if (index % 2 === 1) kb.row();
   });
+  if (USER_ROLES.length % 2 === 1) kb.row();
+  kb.text(ROLE_CONFIRM_LABEL, 'role:confirm').success();
   return kb;
 }
 
-/** منوی اختصاصی صاحب پت */
+/** منوی اصلی بر اساس نقش(های) کاربر */
+export function mainMenuKeyboard(
+  role?: UserRole | string | null,
+  roles?: UserRole[] | null
+): Keyboard {
+  const list = roles?.length ? roles : role ? [role as UserRole] : [];
+  if (list.includes('pet_owner') || role === 'pet_owner') return petOwnerMenuKeyboard();
+  return defaultMenuKeyboard();
+}
 export function petOwnerMenuKeyboard(): Keyboard {
   const m = PET_OWNER_MENU;
   return new Keyboard()
@@ -331,12 +352,6 @@ export function myPetsSectionKeyboard(): Keyboard {
     .text(m.backToMenu)
     .resized()
     .persistent();
-}
-
-/** منوی اصلی بر اساس نقش کاربر */
-export function mainMenuKeyboard(role?: UserRole | string | null): Keyboard {
-  if (role === 'pet_owner') return petOwnerMenuKeyboard();
-  return defaultMenuKeyboard();
 }
 
 export function speciesKeyboard(): InlineKeyboard {

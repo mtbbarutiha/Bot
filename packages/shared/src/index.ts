@@ -24,14 +24,18 @@ export {
   PET_COLOR_OPTIONS,
   PLAYDATE_STATUS_LABELS,
   PROFILE_INTEREST_OPTIONS,
+  ROLE_CONFIRM_LABEL,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   USER_ROLES,
   formatPetAge,
+  normalizeRoles,
   parsePetAgeInput,
+  primaryRole,
   rankPlaymateMatches,
   toEnglishDigits,
   toPersianDigits,
+  userHasRole,
 } from './petdate';
 export type { PlaymateMatchScore } from './petdate';
 export type {
@@ -69,6 +73,7 @@ export interface User {
   username?: string;
   sectionId?: number;
   role?: UserRole;
+  roles?: UserRole[];
   onboarding?: OnboardingStatus;
   age?: number;
   gender?: UserGender;

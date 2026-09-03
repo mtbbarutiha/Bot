@@ -7,6 +7,7 @@ import {
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   citiesForProvince,
+  normalizeRoles,
 } from '@petdate/shared';
 import {
   deleteUserAccount,
@@ -80,7 +81,8 @@ function escapeHtml(value: string): string {
 /** کارت کامل پروفایل کاربر */
 function formatProfileCard(user: User, petCount: number, petNames: string[] = []): string {
   const gender = user.gender ? USER_GENDER_LABELS[user.gender] : '—';
-  const role = user.role ? USER_ROLE_LABELS[user.role] : '—';
+  const roles = normalizeRoles(user.roles, user.role);
+  const role = roles.length ? roles.map((r) => USER_ROLE_LABELS[r]).join(' · ') : '—';
   const interests =
     user.interests && user.interests.length > 0
       ? user.interests.map(escapeHtml).join(' · ')
@@ -154,7 +156,7 @@ async function cancelWizard(ctx: Context, telegramId: string): Promise<void> {
     breedPage: undefined,
   });
   await ctx.reply('انصراف دادی. هر وقت خواستی از منو دوباره شروع کن.', {
-    reply_markup: mainMenuKeyboard(user?.role),
+    reply_markup: mainMenuKeyboard(user?.role, user?.roles),
   });
 }
 
@@ -189,7 +191,7 @@ export async function handleProfile(ctx: Context): Promise<void> {
   }
 
   await sendOwnProfileCard(ctx, user, pets.length, card);
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
 }
 
 export async function startProfileWizard(ctx: Context): Promise<void> {
@@ -667,15 +669,17 @@ export async function handleProfileDeactivateConfirm(ctx: Context, yes: boolean)
   if (!from) return;
   await ctx.answerCallbackQuery();
   if (!yes) {
+    const user = await getCtxUser(ctx);
     await ctx.reply('باشه، حسابت همون‌طور موند.', {
-      reply_markup: mainMenuKeyboard((await getCtxUser(ctx))?.role),
+      reply_markup: mainMenuKeyboard(user?.role, user?.roles),
     });
     return;
   }
   await setUserActive(String(from.id), false);
+  const user = await getCtxUser(ctx);
   await ctx.reply(
     '⏸ حسابت غیرفعال شد.\nبرای فعال‌سازی دوباره از پروفایل «فعال‌سازی» رو بزن.',
-    { reply_markup: mainMenuKeyboard((await getCtxUser(ctx))?.role) }
+    { reply_markup: mainMenuKeyboard(user?.role, user?.roles) }
   );
 }
 
@@ -692,8 +696,9 @@ export async function handleProfileDeleteConfirm(ctx: Context, yes: boolean): Pr
   if (!from) return;
   await ctx.answerCallbackQuery();
   if (!yes) {
+    const user = await getCtxUser(ctx);
     await ctx.reply('حذف لغو شد.', {
-      reply_markup: mainMenuKeyboard((await getCtxUser(ctx))?.role),
+      reply_markup: mainMenuKeyboard(user?.role, user?.roles),
     });
     return;
   }
@@ -743,5 +748,5 @@ async function finishProfileWizard(
     pets.map((p) => p.name)
   )}`;
   await sendOwnProfileCard(ctx, user, pets.length, text);
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
 }

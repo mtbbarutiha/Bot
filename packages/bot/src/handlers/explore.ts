@@ -34,7 +34,7 @@ export async function handleExplorePickPet(ctx: Context): Promise<void> {
     await ctx.reply('اول باید حداقل یک پت ثبت کنی تا برات همبازی پیدا کنیم.', {
       reply_markup: myPetsActionKeyboard(),
     });
-    await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
+    await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
     return;
   }
 
@@ -182,7 +182,7 @@ export async function handleExploreForPet(ctx: Context, petId: number | 'all'): 
   } catch {
     await ctx.reply(summary, { parse_mode: 'Markdown' });
   }
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
 }
 
 /** سازگاری با callbackهای قدیمی صفحه‌بندی — برمی‌گرداند به انتخاب پت */

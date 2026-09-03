@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, Globe, MapPin, Send, Shield, Smartphone } from 'lucide-react';
 import type { UserRole } from '@petdate/shared';
-import { ONBOARDING_STATUS_LABELS, USER_ROLE_LABELS } from '@petdate/shared';
+import {
+  ONBOARDING_STATUS_LABELS,
+  USER_ROLE_LABELS,
+  normalizeRoles,
+  primaryRole,
+  userHasRole,
+} from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
@@ -30,8 +36,14 @@ export function ProfilePage() {
       ? 'شروع نشده'
       : ONBOARDING_STATUS_LABELS[user.onboarding as keyof typeof ONBOARDING_STATUS_LABELS] ?? user.onboarding;
 
-  const wizardLink = user.role ? WIZARD_LINKS[user.role] : '/onboarding/role';
+  const roles = normalizeRoles(user.roles, user.role);
+  const mainRole = primaryRole(roles, user.role);
+  const wizardLink = mainRole ? WIZARD_LINKS[mainRole] : '/onboarding/role';
   const needsWizard = user.onboarding !== 'profile_complete';
+  const isPetOwner = userHasRole(user, 'pet_owner');
+  const roleLabel = roles.length
+    ? roles.map((r) => USER_ROLE_LABELS[r]).join(' · ')
+    : 'انتخاب نشده';
 
   return (
     <>
@@ -51,9 +63,7 @@ export function ProfilePage() {
         <div className="profile-status-card">
           <div className="profile-status-row">
             <span className="profile-status-label">نقش</span>
-            <span className="profile-status-value">
-              {user.role ? USER_ROLE_LABELS[user.role] : 'انتخاب نشده'}
-            </span>
+            <span className="profile-status-value">{roleLabel}</span>
           </div>
           <div className="profile-status-row">
             <span className="profile-status-label">وضعیت پروفایل</span>
@@ -75,7 +85,7 @@ export function ProfilePage() {
           )}
         </div>
 
-        {user.role === 'pet_owner' && (
+        {isPetOwner && (
           <>
             <div className="section-row section-row--flush">
               <h2>پت‌های من</h2>
@@ -98,7 +108,7 @@ export function ProfilePage() {
             <Link to="/clinics" className="service-link-card">🩺 کلینیک‌های نزدیک</Link>
             <Link to="/shop" className="service-link-card">🛒 فروشگاه پت</Link>
             <Link to="/vet-consult" className="service-link-card">💬 مشاوره دامپزشک</Link>
-            {user.role === 'pet_owner' && (
+            {isPetOwner && (
               <Link to="/explore" className="service-link-card">🐾 کشف همبازی</Link>
             )}
           </div>
@@ -118,6 +128,7 @@ export function ProfilePage() {
             <small>@Petdatebot — هم‌تراز با وب</small>
           </div>
         </div>
+
         <div className="menu-item">
           <div className="menu-icon"><Globe size={18} strokeWidth={2} /></div>
           <div className="menu-text"><strong>وب</strong><small>فعال</small></div>

@@ -9,6 +9,7 @@ import {
   PET_SPECIES_LABELS,
   formatPetAge,
   parsePetAgeInput,
+  userHasRole,
 } from '@petdate/shared';
 import {
   createPet,
@@ -75,7 +76,7 @@ async function cancelWizard(ctx: Context, telegramId: string): Promise<void> {
     draftPet: undefined,
     breedPage: undefined,
   });
-  await ctx.reply('ثبت پت لغو شد.', { reply_markup: mainMenuKeyboard(user?.role) });
+  await ctx.reply('ثبت پت لغو شد.', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
 }
 
 export async function startPetWizard(ctx: Context, telegramId: string): Promise<void> {
@@ -371,8 +372,9 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
       selectedPetId: undefined,
       selectedToPetId: undefined,
     });
+    const u = await getUserByTelegramId(telegramId);
     await ctx.reply('برای پیدا کردن همبازی از منو «🔍 پیدا کردن همبازی» رو بزن.', {
-      reply_markup: mainMenuKeyboard((await getUserByTelegramId(telegramId))?.role),
+      reply_markup: mainMenuKeyboard(u?.role, u?.roles),
     });
     return true;
   }
@@ -955,7 +957,7 @@ export async function handleAddPetCommand(ctx: Context): Promise<void> {
       await ctx.reply('اول /start بزن.');
       return;
     }
-    if (user.role !== 'pet_owner') {
+    if (!userHasRole(user, 'pet_owner')) {
       await ctx.reply('ثبت پت فقط برای **صاحب پت** فعاله. نقشت رو در /start عوض کن.', {
         parse_mode: 'Markdown',
       });

@@ -139,6 +139,7 @@ function migrateSchema() {
   const userCols = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
   const names = new Set(userCols.map((c) => c.name));
   if (!names.has('role')) db.exec('ALTER TABLE users ADD COLUMN role TEXT');
+  if (!names.has('roles')) db.exec("ALTER TABLE users ADD COLUMN roles TEXT NOT NULL DEFAULT '[]'");
   if (!names.has('onboarding')) {
     db.exec("ALTER TABLE users ADD COLUMN onboarding TEXT NOT NULL DEFAULT 'role_selected'");
   }
@@ -166,6 +167,27 @@ function migrateSchema() {
   const breedNames = new Set(breedCols.map((c) => c.name));
   if (!breedNames.has('sort_order')) {
     db.exec('ALTER TABLE pet_breeds ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 100');
+  }
+
+  // Backfill roles JSON from legacy single role column
+  const roleRows = db
+    .prepare(`SELECT id, role, roles FROM users WHERE role IS NOT NULL AND role != ''`)
+    .all() as { id: number; role: string; roles: string }[];
+  const updateRoles = db.prepare('UPDATE users SET roles = ? WHERE id = ?');
+  for (const row of roleRows) {
+    const parsed = parseRoles(row.roles, row.role);
+    if (!parsed.length) continue;
+    const current = (() => {
+      try {
+        const p = JSON.parse(row.roles || '[]');
+        return Array.isArray(p) ? p : [];
+      } catch {
+        return [];
+      }
+    })();
+    if (current.length === 0) {
+      updateRoles.run(JSON.stringify(parsed), row.id);
+    }
   }
 }
 
@@ -540,14 +562,47 @@ function parseInterests(value: unknown): string[] {
   return [];
 }
 
+function parseRoles(value: unknown, fallbackRole?: unknown): UserRole[] {
+  const fromJson = (() => {
+    if (Array.isArray(value)) return value.map(String);
+    if (typeof value === 'string' && value.trim()) {
+      try {
+        const parsed = JSON.parse(value) as unknown;
+        return Array.isArray(parsed) ? parsed.map(String) : [];
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  })();
+  const roles = fromJson.filter((r): r is UserRole =>
+    ['pet_owner', 'vet', 'no_pet', 'pet_seeker', 'community_seeker', 'trainer', 'pet_sitter'].includes(r)
+  );
+  if (roles.length) return [...new Set(roles)];
+  if (
+    typeof fallbackRole === 'string' &&
+    ['pet_owner', 'vet', 'no_pet', 'pet_seeker', 'community_seeker', 'trainer', 'pet_sitter'].includes(
+      fallbackRole
+    )
+  ) {
+    return [fallbackRole as UserRole];
+  }
+  return [];
+}
+
 function mapUser(row: Record<string, unknown>): User {
+  const roles = parseRoles(row.roles, row.role);
+  const role =
+    (row.role as UserRole | undefined) ??
+    (roles.includes('pet_owner') ? 'pet_owner' : roles[0]);
   return {
     id: row.id as number,
     telegramId: row.telegram_id as string | undefined,
     name: row.name as string,
     username: row.username as string | undefined,
     sectionId: row.section_id as number | undefined,
-    role: row.role as UserRole | undefined,
+    role,
+    roles,
     onboarding: (row.onboarding as OnboardingStatus | undefined) ?? undefined,
     age: row.age != null ? Number(row.age) : undefined,
     gender: row.gender as UserGender | undefined,
@@ -710,7 +765,16 @@ export const dbService = {
   },
 
   setUserRole(userId: number, role: UserRole): User | null {
-    db.prepare("UPDATE users SET role = ?, onboarding = 'role_selected' WHERE id = ?").run(role, userId);
+    return this.setUserRoles(userId, [role]);
+  },
+
+  setUserRoles(userId: number, roles: UserRole[]): User | null {
+    const normalized = [...new Set(roles.filter(Boolean))];
+    if (normalized.length === 0) return null;
+    const primary = normalized.includes('pet_owner') ? 'pet_owner' : normalized[0]!;
+    db.prepare(
+      "UPDATE users SET role = ?, roles = ?, onboarding = 'role_selected' WHERE id = ?"
+    ).run(primary, JSON.stringify(normalized), userId);
     return this.getUserById(userId);
   },
 
@@ -728,7 +792,13 @@ export const dbService = {
   setUserRoleByTelegramId(telegramId: string, role: UserRole): User | null {
     const user = this.getUserByTelegramId(telegramId);
     if (!user) return null;
-    return this.setUserRole(user.id, role);
+    return this.setUserRoles(user.id, [role]);
+  },
+
+  setUserRolesByTelegramId(telegramId: string, roles: UserRole[]): User | null {
+    const user = this.getUserByTelegramId(telegramId);
+    if (!user) return null;
+    return this.setUserRoles(user.id, roles);
   },
 
   updateUserProfile(

@@ -1,6 +1,6 @@
 import type { Bot, Context } from 'grammy';
 import type { PetGender, PetSize, UserGender, UserRole } from '@petdate/shared';
-import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
+import { ROLE_CONFIRM_LABEL, USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
 import { forceJoinMiddleware, missingChannels, safeAnswerCallback, sendForceJoinPrompt } from '../force-join';
 import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, MY_PETS_SECTION, WIZARD_NAV, mainMenuKeyboard } from '../keyboards';
 import { getSession } from '../session';
@@ -47,6 +47,7 @@ import {
   handleCancel,
   handleHelp,
   handleMenu,
+  handleRoleConfirm,
   handleRoleSelect,
   handleStart,
   getCtxUser,
@@ -99,9 +100,23 @@ export function registerHandlers(bot: Bot): void {
   bot.command('profile', handleProfile);
   bot.command('addpet', handleAddPetCommand);
 
+  bot.callbackQuery('role:confirm', async (ctx) => {
+    try {
+      await handleRoleConfirm(ctx);
+    } catch (err) {
+      console.error('Role confirm failed:', err);
+      await ctx.answerCallbackQuery({ text: 'خطا. دوباره /start بزن.', show_alert: true });
+    }
+  });
+
   bot.callbackQuery(/^role:(.+)$/, async (ctx) => {
     try {
-      await handleRoleSelect(ctx, ctx.match![1] as UserRole);
+      const role = ctx.match![1] as UserRole;
+      if (!USER_ROLES.includes(role)) {
+        await ctx.answerCallbackQuery({ text: 'نقش نامعتبر', show_alert: true });
+        return;
+      }
+      await handleRoleSelect(ctx, role);
     } catch (err) {
       console.error('Role selection failed:', err);
       await ctx.answerCallbackQuery({ text: 'خطا. دوباره /start بزن.', show_alert: true });
@@ -258,7 +273,9 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       return handleAddPetCommand(ctx);
     case petsSection.backToMenu: {
       const user = await getCtxUser(ctx);
-      await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role) });
+      await ctx.reply('منوی اصلی 👇', {
+        reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+      });
       return;
     }
     case m.coins:
@@ -282,7 +299,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       {
         const user = await getCtxUser(ctx);
         await ctx.reply('این دکمه حذف شده. از منوی جدید استفاده کن 👇', {
-          reply_markup: mainMenuKeyboard(user?.role),
+          reply_markup: mainMenuKeyboard(user?.role, user?.roles),
         });
       }
       return;
@@ -290,7 +307,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       if (!MENU_LABELS.has(text)) {
         const user = await getCtxUser(ctx);
         await ctx.reply('از منو یا /help استفاده کن.', {
-          reply_markup: mainMenuKeyboard(user?.role),
+          reply_markup: mainMenuKeyboard(user?.role, user?.roles),
         });
       }
   }
@@ -303,9 +320,19 @@ async function handleRoleReplyText(ctx: Context, text: string): Promise<boolean>
   const session = await getSession(String(from.id));
   if (!session || session.step !== 'role_select') return false;
 
-  const role = USER_ROLES.find((r) => USER_ROLE_LABELS[r] === text);
+  if (text === ROLE_CONFIRM_LABEL) {
+    await handleRoleConfirm(ctx);
+    return true;
+  }
+
+  const normalized = text.replace(/^✓\s*/, '').trim();
+  const role = USER_ROLES.find(
+    (r) => USER_ROLE_LABELS[r] === text || USER_ROLE_LABELS[r] === normalized
+  );
   if (!role) {
-    await ctx.reply('لطفاً نقش رو از دکمه‌های کیبورد انتخاب کن.');
+    await ctx.reply(
+      `لطفاً نقش رو از دکمه‌ها انتخاب کن، بعد «${ROLE_CONFIRM_LABEL}» رو بزن.`
+    );
     return true;
   }
 

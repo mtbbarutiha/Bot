@@ -40,10 +40,24 @@ export async function setUserRole(telegramId: string, role: UserRole): Promise<U
   });
 }
 
+export async function setUserRoles(telegramId: string, roles: UserRole[]): Promise<User> {
+  return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ roles }),
+  });
+}
+
 export async function setUserRoleById(userId: number, role: UserRole): Promise<User> {
   return request<User>(`/api/users/${userId}/role`, {
     method: 'PATCH',
     body: JSON.stringify({ role }),
+  });
+}
+
+export async function setUserRolesById(userId: number, roles: UserRole[]): Promise<User> {
+  return request<User>(`/api/users/${userId}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ roles }),
   });
 }
 

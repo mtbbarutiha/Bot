@@ -58,6 +58,13 @@ export async function setUserRole(telegramId: string, role: UserRole): Promise<U
   });
 }
 
+export async function setUserRoles(telegramId: string, roles: UserRole[]): Promise<User> {
+  return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ roles }),
+  });
+}
+
 export async function setUserOnboarding(telegramId: string, onboarding: OnboardingStatus): Promise<User> {
   return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/onboarding`, {
     method: 'PATCH',

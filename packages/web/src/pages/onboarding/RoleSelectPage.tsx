@@ -1,7 +1,14 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BrandMark } from '../../components/BrandMark';
 import type { UserRole } from '@petdate/shared';
-import { BRAND, USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
+import {
+  BRAND,
+  ROLE_CONFIRM_LABEL,
+  USER_ROLE_LABELS,
+  USER_ROLES,
+  primaryRole,
+} from '@petdate/shared';
 import { useUserStore } from '../../hooks/useUserStore';
 
 const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
@@ -16,36 +23,77 @@ const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
 
 export function RoleSelectPage() {
   const navigate = useNavigate();
-  const { saveRoleToApi } = useUserStore();
+  const { saveRolesToApi } = useUserStore();
+  const [selected, setSelected] = useState<UserRole[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSelect = async (role: UserRole) => {
-    await saveRoleToApi(role);
-    navigate(`/onboarding/wizard/${role}`);
+  const toggleRole = (role: UserRole) => {
+    setSelected((prev) =>
+      prev.includes(role) ? prev.filter((r) => r !== role) : [...prev, role]
+    );
+    setError(null);
+  };
+
+  const handleConfirm = async () => {
+    if (!selected.length) {
+      setError('حداقل یک نقش انتخاب کن');
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await saveRolesToApi(selected);
+      const next = primaryRole(selected) ?? selected[0]!;
+      navigate(`/onboarding/wizard/${next}`);
+    } catch {
+      setError('ثبت نقش‌ها ناموفق بود. دوباره امتحان کن.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div className="onboarding-page">
       <header className="onboarding-header">
         <BrandMark iconSize={32} />
-        <h1>نقش خودت رو انتخاب کن</h1>
+        <h1>نقش‌هات رو انتخاب کن</h1>
         <p>
-          {BRAND.taglineFa} · {BRAND.taglineEn}
+          می‌تونی چند نقش داشته باشی · {BRAND.taglineFa}
         </p>
       </header>
 
       <div className="role-grid">
-        {USER_ROLES.map((role) => (
-          <button
-            key={role}
-            type="button"
-            className="role-card"
-            onClick={() => handleSelect(role)}
-          >
-            <span className="role-card-label">{USER_ROLE_LABELS[role]}</span>
-            <span className="role-card-desc">{ROLE_DESCRIPTIONS[role]}</span>
-          </button>
-        ))}
+        {USER_ROLES.map((role) => {
+          const active = selected.includes(role);
+          return (
+            <button
+              key={role}
+              type="button"
+              className={`role-card${active ? ' role-card--selected' : ''}`}
+              onClick={() => toggleRole(role)}
+              aria-pressed={active}
+            >
+              <span className="role-card-label">
+                {active ? '✓ ' : ''}
+                {USER_ROLE_LABELS[role]}
+              </span>
+              <span className="role-card-desc">{ROLE_DESCRIPTIONS[role]}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {error && <p className="role-select-error">{error}</p>}
+
+      <button
+        type="button"
+        className="cta-btn cta-btn--spaced"
+        onClick={handleConfirm}
+        disabled={saving || selected.length === 0}
+      >
+        {saving ? 'در حال ثبت…' : ROLE_CONFIRM_LABEL}
+      </button>
     </div>
   );
 }

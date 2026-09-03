@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, SlidersHorizontal } from 'lucide-react';
+import { primaryRole, userHasRole } from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
@@ -56,8 +57,9 @@ export function ExplorePage() {
   const [activeCategory, setActiveCategory] = useState<PetType | typeof ALL>(ALL);
   const [search, setSearch] = useState('');
 
-  const isPetOwner = !user.role || user.role === 'pet_owner';
-  const roleEmpty = user.role && !isPetOwner ? ROLE_EMPTY_MESSAGES[user.role] : null;
+  const isPetOwner = !user.role || userHasRole(user, 'pet_owner');
+  const emptyRole = !isPetOwner ? primaryRole(user.roles, user.role) : undefined;
+  const roleEmpty = emptyRole ? ROLE_EMPTY_MESSAGES[emptyRole] : null;
 
   const filtered = pets
     .filter((p) => {

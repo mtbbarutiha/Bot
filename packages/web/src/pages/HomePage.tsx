@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Bell, ChevronDown, Mail, MapPin, Search } from 'lucide-react';
+import { userHasRole } from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
@@ -44,7 +45,7 @@ export function HomePage() {
     setTimeout(() => setShowToast(false), 2500);
   };
 
-  const isPetOwner = !user.role || user.role === 'pet_owner';
+  const isPetOwner = !user.role || userHasRole(user, 'pet_owner');
 
   return (
     <div className="home-page">

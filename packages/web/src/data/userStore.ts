@@ -1,5 +1,12 @@
 import type { OnboardingStatus, UserRole } from '@petdate/shared';
-import { getUserByTelegramId, registerUser, setUserOnboarding, setUserRole, setUserRoleById } from '../lib/api';
+import { normalizeRoles, primaryRole } from '@petdate/shared';
+import {
+  getUserByTelegramId,
+  registerUser,
+  setUserOnboarding,
+  setUserRoles,
+  setUserRolesById,
+} from '../lib/api';
 
 const STORAGE_KEY = 'petdate_user_v1';
 
@@ -8,6 +15,7 @@ export interface LocalUser {
   telegramId?: string;
   name: string;
   role?: UserRole;
+  roles?: UserRole[];
   onboarding: OnboardingStatus | 'none';
 }
 
@@ -40,7 +48,15 @@ class UserStore {
   private load(): LocalUser {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) return JSON.parse(raw) as LocalUser;
+      if (raw) {
+        const parsed = JSON.parse(raw) as LocalUser;
+        const roles = normalizeRoles(parsed.roles, parsed.role);
+        return {
+          ...parsed,
+          roles,
+          role: primaryRole(roles, parsed.role) ?? parsed.role,
+        };
+      }
     } catch {
       /* use default */
     }
@@ -53,7 +69,7 @@ class UserStore {
   }
 
   get hasRole(): boolean {
-    return Boolean(this.data.role);
+    return normalizeRoles(this.data.roles, this.data.role).length > 0;
   }
 
   get isOnboarded(): boolean {
@@ -66,7 +82,17 @@ class UserStore {
   }
 
   setRole(role: UserRole) {
-    this.data = { ...this.data, role, onboarding: 'role_selected' };
+    this.setRoles([role]);
+  }
+
+  setRoles(roles: UserRole[]) {
+    const normalized = normalizeRoles(roles);
+    this.data = {
+      ...this.data,
+      roles: normalized,
+      role: primaryRole(normalized),
+      onboarding: 'role_selected',
+    };
     this.persist();
   }
 
@@ -75,13 +101,24 @@ class UserStore {
     this.persist();
   }
 
-  linkApiUser(user: { id: number; telegramId?: string; role?: UserRole; onboarding?: OnboardingStatus; name: string }) {
+  linkApiUser(user: {
+    id: number;
+    telegramId?: string;
+    role?: UserRole;
+    roles?: UserRole[];
+    onboarding?: OnboardingStatus;
+    name: string;
+  }) {
+    const roles = normalizeRoles(user.roles, user.role ?? this.data.role);
     this.data = {
       id: user.id,
       telegramId: user.telegramId ?? this.data.telegramId,
       name: user.name,
-      role: user.role ?? this.data.role,
-      onboarding: user.onboarding ?? (this.data.onboarding === 'none' ? 'role_selected' : this.data.onboarding),
+      role: primaryRole(roles, user.role) ?? this.data.role,
+      roles,
+      onboarding:
+        user.onboarding ??
+        (this.data.onboarding === 'none' ? 'role_selected' : this.data.onboarding),
     };
     this.persist();
   }
@@ -96,14 +133,19 @@ class UserStore {
       telegramId: user.telegramId,
       name: user.name,
       role: user.role,
+      roles: user.roles,
       onboarding: user.onboarding,
     });
   }
 
   async saveRoleToApi(role: UserRole): Promise<void> {
-    this.setRole(role);
+    return this.saveRolesToApi([role]);
+  }
+
+  async saveRolesToApi(roles: UserRole[]): Promise<void> {
+    this.setRoles(roles);
     if (this.data.telegramId) {
-      const user = await setUserRole(this.data.telegramId, role);
+      const user = await setUserRoles(this.data.telegramId, roles);
       this.linkApiUser(user);
       return;
     }
@@ -112,7 +154,7 @@ class UserStore {
       this.linkApiUser(user);
     }
     if (this.data.id) {
-      const user = await setUserRoleById(this.data.id, role);
+      const user = await setUserRolesById(this.data.id, roles);
       this.linkApiUser(user);
     }
   }
