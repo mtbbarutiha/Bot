@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="surface" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" rx="13" fill="url(#surface)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+  <circle cx="24" cy="24" r="9" fill="#60a5fa" opacity="0.14"/>
+  <g fill="#fff" transform="translate(15 28) rotate(-22)">
+    <circle cx="-5.4" cy="-6.2" r="2.35"/>
+    <circle cx="-1.7" cy="-8.6" r="2.55"/>
+    <circle cx="1.7" cy="-8.6" r="2.55"/>
+    <circle cx="5.4" cy="-6.2" r="2.35"/>
+    <ellipse cx="0" cy="1.8" rx="7" ry="6"/>
+  </g>
+  <g fill="#fff" transform="translate(33 28) rotate(22) scale(-1 1)">
+    <circle cx="-5.4" cy="-6.2" r="2.35"/>
+    <circle cx="-1.7" cy="-8.6" r="2.55"/>
+    <circle cx="1.7" cy="-8.6" r="2.55"/>
+    <circle cx="5.4" cy="-6.2" r="2.35"/>
+    <ellipse cx="0" cy="1.8" rx="7" ry="6"/>
+  </g>
+  <circle cx="24" cy="23.5" r="2.6" fill="#60a5fa"/>
+  <circle cx="24" cy="23.5" r="1" fill="#0f172a" opacity="0.35"/>
+</svg>
