@@ -13,7 +13,7 @@ import {
   playdateActionKeyboard,
 } from '../keyboards';
 import { upsertSession } from '../session';
-import { getCtxUser } from './start';
+import { getCtxUser } from './helpers';
 
 const MAX_AUTO_REQUESTS = 30;
 

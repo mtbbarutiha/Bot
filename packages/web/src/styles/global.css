@@ -985,6 +985,18 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .cta-btn:active { transform: scale(0.98); }
 .cta-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.cta-btn--ghost {
+  margin-top: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+  border: 1px solid var(--border);
+}
+.cta-btn--ghost:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
 .cta-btn--spaced { margin-bottom: 24px; }
 
 /* ── Welcome splash ── */

@@ -52,12 +52,15 @@ export const WIZARD_NAV = {
   back: '↩️ بازگشت',
   cancel: '❌ انصراف',
   skip: '⏭ رد کردن',
+  /** رد کردن کل ویزارد پروفایل و رفتن به منو */
+  skipLater: '⏭ فعلاً رد کن',
   nextPage: 'بعدی ▶️',
   prevPage: '◀️ قبلی',
   custom: '✏️ نوشتن دستی',
   otherCity: '✏️ شهر دیگر',
   sharePhone: '📱 ارسال شماره تماس',
   interestsDone: '✅ ثبت علایق',
+  keepName: '✓ همین نام',
 } as const;
 
 export const YES_LABEL = '✅ بله';
@@ -97,10 +100,13 @@ export function isWizardNav(text: string): boolean {
 
 export function withWizardNav(
   kb: Keyboard,
-  opts?: { skip?: boolean; noBack?: boolean }
+  opts?: { skip?: boolean; noBack?: boolean; skipLater?: boolean }
 ): Keyboard {
   if (opts?.skip) {
     kb.row().text(WIZARD_NAV.skip);
+  }
+  if (opts?.skipLater) {
+    kb.row().text(WIZARD_NAV.skipLater);
   }
   kb.row();
   if (!opts?.noBack) kb.text(WIZARD_NAV.back);
@@ -111,7 +117,7 @@ export function withWizardNav(
 /** کیبورد انتخابی منویی برای مراحل ویزارد */
 export function choiceReplyKeyboard(
   labels: string[],
-  opts?: { columns?: number; skip?: boolean; noBack?: boolean }
+  opts?: { columns?: number; skip?: boolean; noBack?: boolean; skipLater?: boolean }
 ): Keyboard {
   const cols = opts?.columns ?? 2;
   const kb = new Keyboard();
@@ -123,16 +129,30 @@ export function choiceReplyKeyboard(
   return withWizardNav(kb, opts);
 }
 
-export function textStepKeyboard(opts?: { skip?: boolean; noBack?: boolean }): Keyboard {
-  return withWizardNav(new Keyboard(), opts);
+export function textStepKeyboard(
+  opts?: { skip?: boolean; noBack?: boolean; skipLater?: boolean; keepName?: string }
+): Keyboard {
+  const kb = new Keyboard();
+  if (opts?.keepName) {
+    kb.text(WIZARD_NAV.keepName).success().row();
+  }
+  return withWizardNav(kb, opts);
+}
+
+/** ناوبری مشترک مراحل تکمیل پروفایل */
+export function profileNavOpts(extra?: {
+  skip?: boolean;
+  noBack?: boolean;
+}): { skip?: boolean; noBack?: boolean; skipLater: true } {
+  return { skipLater: true, ...extra };
 }
 
 export function genderReplyKeyboard(): Keyboard {
-  return choiceReplyKeyboard([USER_MALE_LABEL, USER_FEMALE_LABEL]);
+  return choiceReplyKeyboard([USER_MALE_LABEL, USER_FEMALE_LABEL], profileNavOpts());
 }
 
 export function ageChipKeyboard(chips: string[], opts?: { noBack?: boolean }): Keyboard {
-  return choiceReplyKeyboard(chips, { columns: 4, noBack: opts?.noBack });
+  return choiceReplyKeyboard(chips, { columns: 4, ...profileNavOpts({ noBack: opts?.noBack }) });
 }
 
 /** کیبورد سن پت با برچسب‌های خوانا (ماه‌ای / سالی) */
@@ -141,22 +161,23 @@ export function petAgeReplyKeyboard(): Keyboard {
   return choiceReplyKeyboard(labels, { columns: 3 });
 }
 
-export function cityReplyKeyboard(opts?: { skip?: boolean; province?: string }): Keyboard {
+export function cityReplyKeyboard(opts?: { skip?: boolean; province?: string; skipLater?: boolean }): Keyboard {
   const cities = opts?.province
     ? [...citiesForProvince(opts.province), WIZARD_NAV.otherCity]
     : [...COMMON_CITIES, WIZARD_NAV.otherCity];
   return choiceReplyKeyboard(cities, {
     columns: 2,
     skip: opts?.skip,
+    skipLater: opts?.skipLater,
   });
 }
 
 export function countryReplyKeyboard(): Keyboard {
-  return choiceReplyKeyboard([...PROFILE_COUNTRIES], { columns: 1 });
+  return choiceReplyKeyboard([...PROFILE_COUNTRIES], { columns: 1, ...profileNavOpts() });
 }
 
 export function provinceReplyKeyboard(): Keyboard {
-  return choiceReplyKeyboard([...IRAN_PROVINCES], { columns: 2 });
+  return choiceReplyKeyboard([...IRAN_PROVINCES], { columns: 2, ...profileNavOpts() });
 }
 
 export function phoneWizardKeyboard(): Keyboard {
@@ -165,6 +186,8 @@ export function phoneWizardKeyboard(): Keyboard {
     .primary()
     .row()
     .text(WIZARD_NAV.skip)
+    .row()
+    .text(WIZARD_NAV.skipLater)
     .row()
     .text(WIZARD_NAV.back)
     .text(WIZARD_NAV.cancel)
@@ -183,7 +206,7 @@ export function interestsReplyKeyboard(selected: string[] = []): Keyboard {
   });
   if (PROFILE_INTEREST_OPTIONS.length % 2 !== 0) kb.row();
   kb.text(WIZARD_NAV.interestsDone).success();
-  return withWizardNav(kb, { skip: true });
+  return withWizardNav(kb, profileNavOpts({ skip: true }));
 }
 
 export function speciesReplyKeyboard(species: PetSpecies[]): Keyboard {

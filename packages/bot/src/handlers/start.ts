@@ -9,26 +9,19 @@ import {
   userHasRole,
 } from '@petdate/shared';
 import {
-  getUserByTelegramId,
   registerTelegramUser,
   setUserOnboarding,
   setUserRoles,
 } from '../api-client';
 import { sendWelcomeLogo } from '../branding';
 import { roleWelcomeHint } from '../format';
-import { mainMenuKeyboard, roleKeyboard, roleReplyKeyboard, webLinksKeyboard } from '../keyboards';
+import { mainMenuKeyboard, roleKeyboard, roleReplyKeyboard } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { webLinkHint } from '../urls';
+import { displayName, getCtxUser } from './helpers';
+import { startProfileWizard } from './profile';
 
-export function displayName(from: { first_name: string; last_name?: string; username?: string }): string {
-  const full = [from.first_name, from.last_name].filter(Boolean).join(' ');
-  return full || from.username || `کاربر ${BRAND.name}`;
-}
-
-export async function getCtxUser(ctx: Context): Promise<User | null> {
-  if (!ctx.from) return null;
-  return getUserByTelegramId(String(ctx.from.id));
-}
+export { displayName, getCtxUser } from './helpers';
 
 function roleLabels(user: User): string {
   const roles = normalizeRoles(user.roles, user.role);
@@ -89,26 +82,41 @@ export async function handleStart(ctx: Context): Promise<void> {
 
 export async function sendWelcomeBack(ctx: Context, user: User, name: string): Promise<void> {
   const isOwner = userHasRole(user, 'pet_owner');
-  const intro = isOwner
-    ? 'از منوی زیر می‌تونی همبازی پیدا کنی، پت‌هات رو مدیریت کنی و از خدمات استفاده کنی.'
-    : 'از منوی زیر استفاده کن.';
+  const profileDone = Boolean(
+    user.name &&
+      user.age &&
+      user.gender &&
+      user.country &&
+      user.city &&
+      (user.country !== 'ایران' || user.province)
+  );
+  const intro = !profileDone
+    ? 'پروفایلت هنوز کامل نیست — الان می‌تونی تکمیل کنی یا «⏭ فعلاً رد کن» بزنی.'
+    : isOwner
+      ? 'از منوی زیر می‌تونی همبازی پیدا کنی، پت‌هات رو مدیریت کنی و از خدمات استفاده کنی.'
+      : 'از منوی زیر استفاده کن.';
 
   const caption = [
     `سلام ${name}! 👋`,
     '',
-    `به **${BRAND.name}** خوش برگشتی.`,
-    `_${BRAND.taglineEn}_`,
+    `به ${BRAND.name} خوش برگشتی.`,
+    BRAND.taglineEn,
     `نقش‌ها: ${roleLabels(user)}`,
     '',
     `${intro}${webLinkHint()}`,
   ].join('\n');
+
+  if (!profileDone) {
+    await ctx.reply(caption);
+    await startProfileWizard(ctx);
+    return;
+  }
 
   const sent = await sendWelcomeLogo(ctx, caption, {
     reply_markup: mainMenuKeyboard(user.role, user.roles),
   });
   if (!sent) {
     await ctx.reply(caption, {
-      parse_mode: 'Markdown',
       reply_markup: mainMenuKeyboard(user.role, user.roles),
     });
   }
@@ -203,33 +211,41 @@ export async function handleRolesSelect(ctx: Context, roles: UserRole[]): Promis
     await ctx.answerCallbackQuery({ text: 'نقش‌ها ثبت شد' });
   }
 
-  const text = `عالی! نقش‌هات ثبت شد 🎉\n\n**${labels}**\n\n${hint}${webLinkHint()}`;
-  const webKb = webLinksKeyboard(telegramId);
+  const text = [
+    `عالی! نقش‌هات ثبت شد 🎉`,
+    '',
+    `<b>${escapeHtml(labels)}</b>`,
+    '',
+    escapeHtml(hint) + escapeHtml(webLinkHint()),
+    '',
+    'حالا پروفایلت رو کامل کنیم — اگر الان وقت نداری «⏭ فعلاً رد کن» رو بزن.',
+  ].join('\n');
 
-  if (ctx.callbackQuery) {
-    try {
-      if (ctx.callbackQuery.message && 'photo' in ctx.callbackQuery.message) {
-        await ctx.editMessageCaption({ caption: text, parse_mode: 'Markdown', reply_markup: webKb });
-      } else {
-        await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: webKb });
+  try {
+    if (ctx.callbackQuery) {
+      try {
+        if (ctx.callbackQuery.message && 'photo' in ctx.callbackQuery.message) {
+          await ctx.editMessageCaption({ caption: text, parse_mode: 'HTML' });
+        } else {
+          await ctx.editMessageText(text, { parse_mode: 'HTML' });
+        }
+      } catch {
+        await ctx.reply(text, { parse_mode: 'HTML' });
       }
-    } catch {
-      await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: webKb });
+    } else {
+      await ctx.reply(text, { parse_mode: 'HTML' });
     }
-  } else {
-    await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: webKb });
+  } catch (err) {
+    console.warn('role confirm reply failed:', (err as Error).message);
+    await ctx.reply(`عالی! نقش‌هات ثبت شد: ${labels}`);
   }
 
-  if (userHasRole(user, 'pet_owner')) {
-    await ctx.reply(
-      'منوی صاحب پت آماده است 👇\n\nاول «👤 پروفایل خودم» رو تکمیل کن، بعد پت ثبت کن.',
-      { reply_markup: mainMenuKeyboard(user.role, user.roles) }
-    );
-  } else {
-    await ctx.reply('از منوی زیر استفاده کن:', {
-      reply_markup: mainMenuKeyboard(user.role, user.roles),
-    });
-  }
+  // ویزارد تکمیل پروفایل بلافاصله بعد از انتخاب نقش
+  await startProfileWizard(ctx);
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 /** سازگاری با انتخاب تکی قدیمی — الان تاگل می‌کند */

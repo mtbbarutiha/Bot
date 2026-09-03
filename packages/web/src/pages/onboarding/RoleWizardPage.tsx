@@ -79,6 +79,7 @@ export function RoleWizardPage() {
   const navigate = useNavigate();
   const { saveOnboardingToApi } = useUserStore();
   const [values, setValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
   if (!role || !WIZARD_STEPS[role]) {
     navigate('/onboarding/role', { replace: true });
@@ -89,13 +90,28 @@ export function RoleWizardPage() {
   const step = steps[0];
 
   const handleComplete = async () => {
-    if (role === 'pet_owner') {
-      await saveOnboardingToApi('profile_incomplete');
-      navigate('/onboarding/pet', { replace: true });
-      return;
+    setSaving(true);
+    try {
+      if (role === 'pet_owner') {
+        await saveOnboardingToApi('profile_incomplete');
+        navigate('/onboarding/pet', { replace: true });
+        return;
+      }
+      await saveOnboardingToApi('profile_complete');
+      navigate('/', { replace: true });
+    } finally {
+      setSaving(false);
     }
-    await saveOnboardingToApi('profile_complete');
-    navigate('/', { replace: true });
+  };
+
+  const handleSkip = async () => {
+    setSaving(true);
+    try {
+      await saveOnboardingToApi('profile_incomplete');
+      navigate('/', { replace: true });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -112,14 +128,14 @@ export function RoleWizardPage() {
       <header className="onboarding-header">
         <span className="role-badge">{USER_ROLE_LABELS[role]}</span>
         <h1>{step.title}</h1>
-        <p>اطلاعات پایه رو وارد کن — بعداً می‌تونی کامل‌تر کنی</p>
+        <p>اطلاعات پایه رو وارد کن — می‌تونی فعلاً رد کنی و بعداً تکمیل کنی</p>
       </header>
 
       <form
         className="wizard-form"
         onSubmit={(e) => {
           e.preventDefault();
-          handleComplete();
+          void handleComplete();
         }}
       >
         {step.fields.map((field) => (
@@ -134,8 +150,16 @@ export function RoleWizardPage() {
           </div>
         ))}
 
-        <button type="submit" className="cta-btn">
+        <button type="submit" className="cta-btn" disabled={saving}>
           {role === 'pet_owner' ? 'مرحله بعد — ثبت پت' : 'شروع استفاده از petdate'}
+        </button>
+        <button
+          type="button"
+          className="cta-btn cta-btn--ghost"
+          onClick={() => void handleSkip()}
+          disabled={saving}
+        >
+          فعلاً رد کن
         </button>
       </form>
     </div>

@@ -6,7 +6,6 @@ import {
   PROFILE_INTEREST_OPTIONS,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
-  citiesForProvince,
   normalizeRoles,
 } from '@petdate/shared';
 import {
@@ -29,11 +28,12 @@ import {
   phoneWizardKeyboard,
   profileActionsKeyboard,
   profileConfirmKeyboard,
+  profileNavOpts,
   provinceReplyKeyboard,
   textStepKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
-import { getCtxUser } from './start';
+import { getCtxUser } from './helpers';
 
 const PROFILE_TOTAL = 10;
 
@@ -155,9 +155,23 @@ async function cancelWizard(ctx: Context, telegramId: string): Promise<void> {
     draftProfile: undefined,
     breedPage: undefined,
   });
-  await ctx.reply('انصراف دادی. هر وقت خواستی از منو دوباره شروع کن.', {
+  await ctx.reply('انصراف دادی. هر وقت خواستی از منو «پروفایل خودم» دوباره شروع کن.', {
     reply_markup: mainMenuKeyboard(user?.role, user?.roles),
   });
+}
+
+/** رد کردن کل ویزارد — پروفایل ناقص می‌ماند */
+async function skipProfileWizardLater(ctx: Context, telegramId: string): Promise<void> {
+  const user = await getCtxUser(ctx);
+  await upsertSession(telegramId, {
+    step: 'ready',
+    draftProfile: undefined,
+    breedPage: undefined,
+  });
+  await ctx.reply(
+    'باشه، پروفایل رو فعلاً رد کردی.\nهر وقت خواستی از منو «👤 پروفایل خودم» تکمیلش کن.',
+    { reply_markup: mainMenuKeyboard(user?.role, user?.roles) }
+  );
 }
 
 export async function handleProfile(ctx: Context): Promise<void> {
@@ -206,6 +220,8 @@ export async function startProfileWizard(ctx: Context): Promise<void> {
   }
 
   await upsertSession(telegramId, {
+    userId: user.id,
+    role: user.role,
     step: 'profile_name',
     draftProfile: {
       name: user.name,
@@ -225,80 +241,87 @@ export async function startProfileWizard(ctx: Context): Promise<void> {
 }
 
 async function askProfileName(ctx: Context, currentName?: string): Promise<void> {
-  await ctx.reply(
-    [
-      `✨ **تکمیل پروفایل** (${stepTitle(1)})`,
-      '',
-      'نام نمایشی‌ات رو بنویس:',
-      currentName ? `_(الان: ${currentName})_` : null,
-    ]
-      .filter(Boolean)
-      .join('\n'),
-    { parse_mode: 'Markdown', reply_markup: textStepKeyboard({ noBack: true }) }
-  );
+  const lines = [
+    `✨ <b>تکمیل پروفایل</b> (${stepTitle(1)})`,
+    '',
+    'نام نمایشی‌ات رو بنویس:',
+  ];
+  if (currentName) {
+    lines.push(`<i>الان: ${escapeHtml(currentName)}</i>`);
+    lines.push('یا «✓ همین نام» رو بزن.');
+  }
+  lines.push('', 'اگر الان وقت نداری «⏭ فعلاً رد کن» رو بزن.');
+
+  await ctx.reply(lines.join('\n'), {
+    parse_mode: 'HTML',
+    reply_markup: textStepKeyboard({
+      ...profileNavOpts({ noBack: true }),
+      keepName: currentName,
+    }),
+  });
 }
 
 async function askProfileAge(ctx: Context): Promise<void> {
   await ctx.reply(
-    `🎂 **${stepTitle(2)}**\n\nسنت چند سالِ؟\nاز دکمه‌ها انتخاب کن یا عدد بنویس:`,
-    { parse_mode: 'Markdown', reply_markup: ageChipKeyboard(PROFILE_AGE_CHIPS) }
+    `🎂 <b>${stepTitle(2)}</b>\n\nسنت چند سالِ؟\nاز دکمه‌ها انتخاب کن یا عدد بنویس:`,
+    { parse_mode: 'HTML', reply_markup: ageChipKeyboard(PROFILE_AGE_CHIPS) }
   );
 }
 
 async function askProfileGender(ctx: Context): Promise<void> {
-  await ctx.reply(`⚧ **${stepTitle(3)}**\n\nجنسیتت رو از منو انتخاب کن:`, {
-    parse_mode: 'Markdown',
+  await ctx.reply(`⚧ <b>${stepTitle(3)}</b>\n\nجنسیتت رو از منو انتخاب کن:`, {
+    parse_mode: 'HTML',
     reply_markup: genderReplyKeyboard(),
   });
 }
 
 async function askProfileCountry(ctx: Context): Promise<void> {
-  await ctx.reply(`🌍 **${stepTitle(4)}**\n\nکشورت رو انتخاب کن:`, {
-    parse_mode: 'Markdown',
+  await ctx.reply(`🌍 <b>${stepTitle(4)}</b>\n\nکشورت رو انتخاب کن:`, {
+    parse_mode: 'HTML',
     reply_markup: countryReplyKeyboard(),
   });
 }
 
 async function askProfileProvince(ctx: Context): Promise<void> {
-  await ctx.reply(`🗺 **${stepTitle(5)}**\n\nاستانت رو انتخاب کن:`, {
-    parse_mode: 'Markdown',
+  await ctx.reply(`🗺 <b>${stepTitle(5)}</b>\n\nاستانت رو انتخاب کن:`, {
+    parse_mode: 'HTML',
     reply_markup: provinceReplyKeyboard(),
   });
 }
 
 async function askProfileCity(ctx: Context, province?: string): Promise<void> {
-  await ctx.reply(`🏙 **${stepTitle(6)}**\n\nشهرت رو انتخاب کن یا «شهر دیگر» بزن:`, {
-    parse_mode: 'Markdown',
-    reply_markup: cityReplyKeyboard({ province }),
+  await ctx.reply(`🏙 <b>${stepTitle(6)}</b>\n\nشهرت رو انتخاب کن یا «شهر دیگر» بزن:`, {
+    parse_mode: 'HTML',
+    reply_markup: cityReplyKeyboard({ province, skipLater: true }),
   });
 }
 
 async function askProfilePhone(ctx: Context): Promise<void> {
   await ctx.reply(
-    `📱 **${stepTitle(7)}**\n\nشماره موبایلت رو بفرست یا دکمه اشتراک‌گذاری رو بزن:`,
-    { parse_mode: 'Markdown', reply_markup: phoneWizardKeyboard() }
+    `📱 <b>${stepTitle(7)}</b>\n\nشماره موبایلت رو بفرست یا دکمه اشتراک‌گذاری رو بزن:`,
+    { parse_mode: 'HTML', reply_markup: phoneWizardKeyboard() }
   );
 }
 
 async function askProfilePhoto(ctx: Context): Promise<void> {
-  await ctx.reply(`🖼 **${stepTitle(8)}**\n\nیک عکس پروفایل بفرست:`, {
-    parse_mode: 'Markdown',
-    reply_markup: textStepKeyboard({ skip: true }),
+  await ctx.reply(`🖼 <b>${stepTitle(8)}</b>\n\nیک عکس پروفایل بفرست:`, {
+    parse_mode: 'HTML',
+    reply_markup: textStepKeyboard(profileNavOpts({ skip: true })),
   });
 }
 
 async function askProfileBio(ctx: Context): Promise<void> {
   await ctx.reply(
-    `💬 **${stepTitle(9)}**\n\nچند خط درباره خودت بنویس:\n_(علاقه‌ها، پت‌ها، محله...)_`,
-    { parse_mode: 'Markdown', reply_markup: textStepKeyboard({ skip: true }) }
+    `💬 <b>${stepTitle(9)}</b>\n\nچند خط درباره خودت بنویس:\n<i>علاقه‌ها، پت‌ها، محله...</i>`,
+    { parse_mode: 'HTML', reply_markup: textStepKeyboard(profileNavOpts({ skip: true })) }
   );
 }
 
 async function askProfileInterests(ctx: Context, selected: string[] = []): Promise<void> {
-  const picked = selected.length ? `\nانتخاب‌شده: ${selected.join(' · ')}` : '';
+  const picked = selected.length ? `\nانتخاب‌شده: ${escapeHtml(selected.join(' · '))}` : '';
   await ctx.reply(
-    `💚 **${stepTitle(10)}**\n\nعلایقت رو از منو انتخاب کن (چندتا اوکیه)، بعد «ثبت علایق» بزن:${picked}`,
-    { parse_mode: 'Markdown', reply_markup: interestsReplyKeyboard(selected) }
+    `💚 <b>${stepTitle(10)}</b>\n\nعلایقت رو از منو انتخاب کن (چندتا اوکیه)، بعد «ثبت علایق» بزن:${picked}`,
+    { parse_mode: 'HTML', reply_markup: interestsReplyKeyboard(selected) }
   );
 }
 
@@ -344,11 +367,25 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
   if (!from) return false;
 
   const telegramId = String(from.id);
-  const session = await getSession(telegramId);
-  if (!session?.userId) return false;
+  let session = await getSession(telegramId);
+  if (!session) return false;
   if (!String(session.step).startsWith('profile_')) return false;
 
+  if (!session.userId) {
+    const user = await getCtxUser(ctx);
+    if (!user) {
+      await ctx.reply('اول /start بزن.');
+      return true;
+    }
+    session = await upsertSession(telegramId, { userId: user.id, role: user.role });
+  }
+
   const draft: ProfileDraft = { ...session.draftProfile };
+
+  if (text === WIZARD_NAV.skipLater) {
+    await skipProfileWizardLater(ctx, telegramId);
+    return true;
+  }
 
   if (text === WIZARD_NAV.cancel) {
     await cancelWizard(ctx, telegramId);
@@ -390,13 +427,22 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
       await finishProfileWizard(ctx, telegramId, draft);
       return true;
     }
+    // در مراحل اجباری، رد کردن فیلد = رد کردن کل ویزارد
+    await skipProfileWizardLater(ctx, telegramId);
+    return true;
   }
 
   if (session.step === 'profile_name') {
-    const name = text.trim();
+    let name = text.trim();
+    if (text === WIZARD_NAV.keepName) {
+      name = (draft.name ?? '').trim();
+    }
     if (name.length < 2) {
       await ctx.reply('نام خیلی کوتاهه. حداقل ۲ حرف بنویس.', {
-        reply_markup: textStepKeyboard({ noBack: true }),
+        reply_markup: textStepKeyboard({
+          ...profileNavOpts({ noBack: true }),
+          keepName: draft.name,
+        }),
       });
       return true;
     }
@@ -434,7 +480,9 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
 
   if (session.step === 'profile_country') {
     if (text === 'سایر کشورها') {
-      await ctx.reply('نام کشور رو بنویس:', { reply_markup: textStepKeyboard() });
+      await ctx.reply('نام کشور رو بنویس:', {
+        reply_markup: textStepKeyboard(profileNavOpts()),
+      });
       return true;
     }
     const country = text.trim();
@@ -451,9 +499,9 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
       await askProfileProvince(ctx);
     } else {
       await upsertSession(telegramId, { step: 'profile_city', draftProfile: draft });
-      await ctx.reply(`🏙 **${stepTitle(6)}**\n\nشهرت رو بنویس:`, {
-        parse_mode: 'Markdown',
-        reply_markup: textStepKeyboard(),
+      await ctx.reply(`🏙 <b>${stepTitle(6)}</b>\n\nشهرت رو بنویس:`, {
+        parse_mode: 'HTML',
+        reply_markup: textStepKeyboard(profileNavOpts()),
       });
     }
     return true;
@@ -476,22 +524,17 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
 
   if (session.step === 'profile_city') {
     if (text === WIZARD_NAV.otherCity) {
-      await ctx.reply('نام شهرت رو بنویس:', { reply_markup: textStepKeyboard() });
+      await ctx.reply('نام شهرت رو بنویس:', {
+        reply_markup: textStepKeyboard(profileNavOpts()),
+      });
       return true;
     }
     const city = text.trim();
     if (city.length < 2) {
       await ctx.reply('نام شهر رو درست بنویس یا از منو انتخاب کن.', {
-        reply_markup: cityReplyKeyboard({ province: draft.province }),
+        reply_markup: cityReplyKeyboard({ province: draft.province, skipLater: true }),
       });
       return true;
-    }
-    // اگر از لیست استان آمده، ترجیحاً یکی از شهرهای همان استان باشد (یا دستی)
-    if (draft.province) {
-      const allowed = citiesForProvince(draft.province);
-      if (allowed.length && !allowed.includes(city) && text === city) {
-        // اجازه نوشتن دستی هم داده می‌شود
-      }
     }
     draft.city = city;
     await upsertSession(telegramId, { step: 'profile_phone', draftProfile: draft });
@@ -501,13 +544,13 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
 
   if (session.step === 'profile_phone') {
     const phone = text.trim().replace(/\s+/g, '');
-    if (!/^(\+98|0)?9\d{9}$/.test(phone) && !/^\+?\d{10,13}$/.test(phone)) {
+    if (!/^(\+98|0)?9\d{9}$/.test(toEnglishDigits(phone)) && !/^\+?\d{10,13}$/.test(toEnglishDigits(phone))) {
       await ctx.reply('شماره معتبر نیست. مثلاً ۰۹۱۲۳۴۵۶۷۸۹ یا دکمه اشتراک‌گذاری.', {
         reply_markup: phoneWizardKeyboard(),
       });
       return true;
     }
-    draft.phone = phone;
+    draft.phone = toEnglishDigits(phone);
     await upsertSession(telegramId, { step: 'profile_photo', draftProfile: draft });
     await askProfilePhoto(ctx);
     return true;
@@ -515,7 +558,7 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
 
   if (session.step === 'profile_photo') {
     await ctx.reply('لطفاً یک عکس بفرست یا «رد کردن» بزن.', {
-      reply_markup: textStepKeyboard({ skip: true }),
+      reply_markup: textStepKeyboard(profileNavOpts({ skip: true })),
     });
     return true;
   }
@@ -720,33 +763,46 @@ async function finishProfileWizard(
   draft: ProfileDraft
 ): Promise<void> {
   if (!draft.name || !draft.age || !draft.gender || !draft.country || !draft.city) {
-    await ctx.reply('اطلاعات ناقصه. دوباره از «پروفایل خودم» شروع کن.');
-    await upsertSession(telegramId, { step: 'ready', draftProfile: undefined });
+    await ctx.reply('اطلاعات ناقصه. دوباره از «پروفایل خودم» شروع کن یا مراحل رو کامل کن.');
+    await upsertSession(telegramId, { step: 'profile_name', draftProfile: draft });
+    await askProfileName(ctx, draft.name);
     return;
   }
 
-  const user = await updateUserProfile(telegramId, {
-    name: draft.name,
-    age: draft.age,
-    gender: draft.gender,
-    country: draft.country,
-    province: draft.province,
-    city: draft.city,
-    phone: draft.phone,
-    bio: draft.bio,
-    interests: draft.interests,
-    avatarUrl: draft.avatarFileId,
-    onboarding: 'profile_complete',
-  });
+  if (draft.country === COUNTRY_IRAN && !draft.province) {
+    await ctx.reply('برای ایران باید استان رو هم انتخاب کنی.');
+    await upsertSession(telegramId, { step: 'profile_province', draftProfile: draft });
+    await askProfileProvince(ctx);
+    return;
+  }
 
-  await upsertSession(telegramId, { step: 'ready', draftProfile: undefined });
+  try {
+    const user = await updateUserProfile(telegramId, {
+      name: draft.name,
+      age: draft.age,
+      gender: draft.gender,
+      country: draft.country,
+      province: draft.province,
+      city: draft.city,
+      phone: draft.phone,
+      bio: draft.bio,
+      interests: draft.interests,
+      avatarUrl: draft.avatarFileId,
+      onboarding: 'profile_complete',
+    });
 
-  const pets = await listPets({ ownerId: user.id });
-  const text = `✅ پروفایلت کامل شد!\n\n${formatProfileCard(
-    user,
-    pets.length,
-    pets.map((p) => p.name)
-  )}`;
-  await sendOwnProfileCard(ctx, user, pets.length, text);
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
+    await upsertSession(telegramId, { step: 'ready', draftProfile: undefined });
+
+    const pets = await listPets({ ownerId: user.id });
+    const text = `✅ پروفایلت کامل شد!\n\n${formatProfileCard(
+      user,
+      pets.length,
+      pets.map((p) => p.name)
+    )}`;
+    await sendOwnProfileCard(ctx, user, pets.length, text);
+    await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
+  } catch (err) {
+    console.error('finishProfileWizard failed:', err);
+    await ctx.reply('ثبت پروفایل با خطا مواجه شد. یک بار دیگه «✅ ثبت علایق» رو بزن یا از /profile دوباره شروع کن.');
+  }
 }

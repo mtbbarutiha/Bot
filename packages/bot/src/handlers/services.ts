@@ -1,7 +1,7 @@
 import type { Context } from 'grammy';
 import { InlineKeyboard } from 'grammy';
 import { mainMenuKeyboard } from '../keyboards';
-import { getCtxUser } from './start';
+import { getCtxUser } from './helpers';
 
 export async function handleCoins(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);

@@ -18,7 +18,7 @@ import {
   playdateActionKeyboard,
 } from '../keyboards';
 import { upsertSession } from '../session';
-import { getCtxUser } from './start';
+import { getCtxUser } from './helpers';
 
 export async function handleMyPets(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
