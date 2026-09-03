@@ -1,5 +1,5 @@
 import type { PetProfile, PlaydateRequest } from '@petdate/shared';
-import { PLAYDATE_STATUS_LABELS } from '@petdate/shared';
+import { PLAYDATE_STATUS_LABELS, formatPetAge } from '@petdate/shared';
 
 const SPECIES_LABELS: Record<string, string> = {
   dog: '🐕 سگ',
@@ -18,7 +18,7 @@ export function formatPet(pet: PetProfile, detailed = false): string {
     pet.city ? `📍 ${pet.city}${pet.neighborhood ? ` — ${pet.neighborhood}` : ''}` : '',
   ];
   if (detailed) {
-    if (pet.ageMonths) lines.push(`🎂 ${pet.ageMonths} ماه`);
+    if (pet.ageMonths) lines.push(`🎂 ${formatPetAge(pet.ageMonths)}`);
     if (pet.bio) lines.push(`💬 ${pet.bio}`);
     lines.push(pet.vaccinated ? '✅ واکسینه' : '⬜ واکسینه نشده');
     lines.push(pet.lookingForPlaymate ? '🔍 دنبال همبازی' : '⏸️ فعلاً همبازی نمی‌خواد');

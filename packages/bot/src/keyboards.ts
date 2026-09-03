@@ -1,6 +1,8 @@
 import { InlineKeyboard, Keyboard } from 'grammy';
 import type { PetBreed, PetProfile, PetSpecies, UserRole } from '@petdate/shared';
 import {
+  PET_AGE_CUSTOM_LABEL,
+  PET_AGE_OPTIONS,
   PET_GENDER_LABELS,
   PET_SIZE_LABELS,
   PROFILE_INTEREST_OPTIONS,
@@ -54,7 +56,8 @@ export const PET_MALE_LABEL = `♂ ${PET_GENDER_LABELS.male}`;
 export const PET_FEMALE_LABEL = `♀ ${PET_GENDER_LABELS.female}`;
 
 export const PROFILE_AGE_CHIPS = ['18', '22', '25', '28', '30', '35', '40', '45'];
-export const PET_AGE_CHIPS = ['3', '6', '12', '18', '24', '36', '48', '60'];
+/** @deprecated use PET_AGE_OPTIONS / petAgeReplyKeyboard */
+export const PET_AGE_CHIPS = PET_AGE_OPTIONS.map((o) => String(o.months));
 export const COMMON_CITIES = [
   'تهران',
   'کرج',
@@ -112,6 +115,12 @@ export function genderReplyKeyboard(): Keyboard {
 
 export function ageChipKeyboard(chips: string[], opts?: { noBack?: boolean }): Keyboard {
   return choiceReplyKeyboard(chips, { columns: 4, noBack: opts?.noBack });
+}
+
+/** کیبورد سن پت با برچسب‌های خوانا (ماه‌ای / سالی) */
+export function petAgeReplyKeyboard(): Keyboard {
+  const labels = [...PET_AGE_OPTIONS.map((o) => o.label), PET_AGE_CUSTOM_LABEL];
+  return choiceReplyKeyboard(labels, { columns: 3 });
 }
 
 export function cityReplyKeyboard(opts?: { skip?: boolean }): Keyboard {

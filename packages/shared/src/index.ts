@@ -17,11 +17,17 @@ export type GameStatus = 'open' | 'full' | 'cancelled' | 'completed';
 
 export {
   ONBOARDING_STATUS_LABELS,
+  PET_AGE_CUSTOM_LABEL,
+  PET_AGE_OPTIONS,
   PLAYDATE_STATUS_LABELS,
   PROFILE_INTEREST_OPTIONS,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   USER_ROLES,
+  formatPetAge,
+  parsePetAgeInput,
+  toEnglishDigits,
+  toPersianDigits,
 } from './petdate';
 export type {
   BotStep,

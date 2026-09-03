@@ -1,9 +1,12 @@
 import type { Context } from 'grammy';
 import type { BotStep, PetDraft, PetGender, PetSize, PetSpecies } from '@petdate/shared';
 import {
+  PET_AGE_CUSTOM_LABEL,
   PET_GENDER_LABELS,
   PET_SIZE_LABELS,
   PET_SPECIES_LABELS,
+  formatPetAge,
+  parsePetAgeInput,
 } from '@petdate/shared';
 import {
   createPet,
@@ -15,15 +18,14 @@ import {
   BREED_PAGE_SIZE,
   COMMON_CITIES,
   NO_LABEL,
-  PET_AGE_CHIPS,
   PET_FEMALE_LABEL,
   PET_MALE_LABEL,
   WIZARD_NAV,
   YES_LABEL,
-  ageChipKeyboard,
   breedReplyKeyboard,
   cityReplyKeyboard,
   mainMenuKeyboard,
+  petAgeReplyKeyboard,
   petGenderReplyKeyboard,
   petSizeReplyKeyboard,
   speciesReplyKeyboard,
@@ -52,12 +54,6 @@ const PET_BACK: Partial<Record<BotStep, BotStep>> = {
 
 function stepLabel(n: number): string {
   return `مرحله ${n} از ${TOTAL_STEPS}`;
-}
-
-function toEnglishDigits(raw: string): string {
-  return raw
-    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
-    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
 }
 
 async function cancelWizard(ctx: Context, telegramId: string): Promise<void> {
@@ -125,8 +121,14 @@ async function askGender(ctx: Context): Promise<void> {
 
 async function askAge(ctx: Context): Promise<void> {
   await ctx.reply(
-    `🎂 **${stepLabel(5)}**\n\nسن پت چند ماهه؟\nاز دکمه‌ها انتخاب کن یا عدد بنویس:`,
-    { parse_mode: 'Markdown', reply_markup: ageChipKeyboard(PET_AGE_CHIPS) }
+    [
+      `🎂 **${stepLabel(5)}**`,
+      '',
+      'سن پت رو انتخاب کن:',
+      '',
+      '_یا بنویس مثل: ۸ ماهه · ۲ ساله · ۱ سال و ۳ ماه_',
+    ].join('\n'),
+    { parse_mode: 'Markdown', reply_markup: petAgeReplyKeyboard() }
   );
 }
 
@@ -365,15 +367,30 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
   }
 
   if (step === 'pet_age') {
-    const ageMonths = Number(toEnglishDigits(text.trim()).replace(/[^\d]/g, ''));
-    if (!Number.isFinite(ageMonths) || ageMonths < 1 || ageMonths > 360) {
-      await ctx.reply('سن معتبر وارد کن (۱ تا ۳۶۰ ماه) یا از دکمه‌ها انتخاب کن.', {
-        reply_markup: ageChipKeyboard(PET_AGE_CHIPS),
-      });
+    if (text.trim() === PET_AGE_CUSTOM_LABEL) {
+      await ctx.reply(
+        [
+          'سن دقیق رو بنویس، مثلاً:',
+          '• ۸ ماهه',
+          '• ۲ ساله',
+          '• ۱ سال و ۳ ماه',
+        ].join('\n'),
+        { reply_markup: textStepKeyboard() }
+      );
+      return true;
+    }
+
+    const ageMonths = parsePetAgeInput(text);
+    if (ageMonths == null) {
+      await ctx.reply(
+        'سن رو از دکمه‌ها انتخاب کن یا با واحد بنویس؛ مثل «۶ ماهه» یا «۲ ساله».',
+        { reply_markup: petAgeReplyKeyboard() }
+      );
       return true;
     }
     draft.ageMonths = ageMonths;
     await upsertSession(telegramId, { step: 'pet_size', draftPet: draft });
+    await ctx.reply(`✅ سن ثبت شد: **${formatPetAge(ageMonths)}**`, { parse_mode: 'Markdown' });
     await askSize(ctx);
     return true;
   }
@@ -831,7 +848,7 @@ async function finishPetWizard(
       `نوع: ${speciesLabel}`,
       pet.breed ? `نژاد: ${pet.breed}` : null,
       gender ? `جنسیت: ${gender}` : null,
-      pet.ageMonths != null ? `سن: ${pet.ageMonths} ماه` : null,
+      pet.ageMonths != null ? `سن: ${formatPetAge(pet.ageMonths)}` : null,
       size ? `اندازه: ${size}` : null,
       pet.color ? `رنگ: ${pet.color}` : null,
       pet.city ? `📍 ${pet.city}` : null,

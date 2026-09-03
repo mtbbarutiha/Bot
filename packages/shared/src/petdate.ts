@@ -209,3 +209,96 @@ export const ONBOARDING_STATUS_LABELS: Record<OnboardingStatus, string> = {
   profile_incomplete: 'پروفایل ناقص',
   profile_complete: 'پروفایل کامل',
 };
+
+/** گزینه‌های سن پت با برچسب خوانا (ذخیره به‌صورت ماه) */
+export const PET_AGE_OPTIONS: ReadonlyArray<{ label: string; months: number }> = [
+  { label: 'زیر ۲ ماه', months: 1 },
+  { label: '۲ ماهه', months: 2 },
+  { label: '۳ ماهه', months: 3 },
+  { label: '۴ ماهه', months: 4 },
+  { label: '۶ ماهه', months: 6 },
+  { label: '۹ ماهه', months: 9 },
+  { label: '۱ ساله', months: 12 },
+  { label: '۱٫۵ ساله', months: 18 },
+  { label: '۲ ساله', months: 24 },
+  { label: '۳ ساله', months: 36 },
+  { label: '۴ ساله', months: 48 },
+  { label: '۵ ساله', months: 60 },
+  { label: '۷ ساله', months: 84 },
+  { label: '۱۰ ساله', months: 120 },
+  { label: '۱۲ ساله+', months: 144 },
+] as const;
+
+export const PET_AGE_CUSTOM_LABEL = '✏️ سن دقیق';
+
+const FA_DIGITS = '۰۱۲۳۴۵۶۷۸۹';
+
+export function toEnglishDigits(raw: string): string {
+  return raw
+    .replace(/[۰-۹]/g, (d) => String(FA_DIGITS.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+}
+
+export function toPersianDigits(value: number | string): string {
+  return String(value).replace(/\d/g, (d) => FA_DIGITS[Number(d)] ?? d);
+}
+
+/** نمایش سن پت به فارسی خوانا */
+export function formatPetAge(ageMonths: number): string {
+  if (!Number.isFinite(ageMonths) || ageMonths < 1) return '—';
+  const months = Math.round(ageMonths);
+  if (months < 12) return `${toPersianDigits(months)} ماهه`;
+  if (months === 18) return '۱٫۵ ساله';
+  const years = Math.floor(months / 12);
+  const rem = months % 12;
+  if (rem === 0) return `${toPersianDigits(years)} ساله`;
+  if (rem === 6 && years === 1) return '۱٫۵ ساله';
+  return `${toPersianDigits(years)} سال و ${toPersianDigits(rem)} ماه`;
+}
+
+/**
+ * پارس ورودی سن پت.
+ * پشتیبانی: برچسب دکمه، «۲ ساله»، «۸ ماهه»، «۱ سال و ۳ ماه»، عدد خام
+ */
+export function parsePetAgeInput(raw: string): number | null {
+  const trimmed = raw.trim().replace(/ي/g, 'ی').replace(/ك/g, 'ک');
+  if (!trimmed || trimmed === PET_AGE_CUSTOM_LABEL) return null;
+
+  const byLabel = PET_AGE_OPTIONS.find((o) => o.label === trimmed);
+  if (byLabel) return byLabel.months;
+
+  const text = toEnglishDigits(trimmed);
+
+  // ۱ سال و ۳ ماه / 1 سال 3 ماه
+  const yearsAndMonths = text.match(
+    /^(\d+(?:[./٫]\d+)?)\s*سال(?:\s*و)?\s*(\d+)\s*ماه/
+  );
+  if (yearsAndMonths) {
+    const y = Number(yearsAndMonths[1]!.replace('٫', '.').replace('/', '.'));
+    const m = Number(yearsAndMonths[2]);
+    if (!Number.isFinite(y) || !Number.isFinite(m)) return null;
+    const total = Math.round(y * 12) + m;
+    return total >= 1 && total <= 360 ? total : null;
+  }
+
+  // ۱٫۵ ساله / 2 ساله / ۲ سال
+  const yearsOnly = text.match(/^(\d+(?:[./٫]\d+)?)\s*سال/);
+  if (yearsOnly) {
+    const y = Number(yearsOnly[1]!.replace('٫', '.').replace('/', '.'));
+    if (!Number.isFinite(y) || y <= 0) return null;
+    const total = Math.round(y * 12);
+    return total >= 1 && total <= 360 ? total : null;
+  }
+
+  // ۸ ماهه / 3 ماه
+  const monthsOnly = text.match(/^(\d+)\s*ماه/);
+  if (monthsOnly) {
+    const m = Number(monthsOnly[1]);
+    return Number.isFinite(m) && m >= 1 && m <= 360 ? m : null;
+  }
+
+  // عدد خام بدون واحد قبول نیست — باید ماهه/ساله باشد یا از دکمه انتخاب شود
+  if (/^\d+$/.test(text)) return null;
+
+  return null;
+}
