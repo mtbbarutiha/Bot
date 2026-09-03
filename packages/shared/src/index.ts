@@ -1,6 +1,7 @@
 export * from './petdate';
 
 import type { OnboardingStatus, UserRole } from './petdate';
+import type { UserGender } from './petdate';
 
 export type GameType =
   | 'football'
@@ -16,10 +17,20 @@ export type GameStatus = 'open' | 'full' | 'cancelled' | 'completed';
 export {
   ONBOARDING_STATUS_LABELS,
   PLAYDATE_STATUS_LABELS,
+  USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   USER_ROLES,
 } from './petdate';
-export type { BotStep, OnboardingStatus, PetDraft, PlaydateRequest, PlaydateStatus, PetProfile } from './petdate';
+export type {
+  BotStep,
+  OnboardingStatus,
+  PetDraft,
+  PlaydateRequest,
+  PlaydateStatus,
+  PetProfile,
+  ProfileDraft,
+  UserGender,
+} from './petdate';
 
 export interface User {
   id: number;
@@ -29,6 +40,12 @@ export interface User {
   sectionId?: number;
   role?: UserRole;
   onboarding?: OnboardingStatus;
+  age?: number;
+  gender?: UserGender;
+  city?: string;
+  phone?: string;
+  bio?: string;
+  avatarUrl?: string;
   createdAt: string;
 }
 

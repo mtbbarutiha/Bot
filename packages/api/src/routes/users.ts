@@ -88,6 +88,44 @@ usersRouter.patch('/:id/onboarding', (req, res) => {
   res.json(user);
 });
 
+usersRouter.patch('/telegram/:telegramId/profile', (req, res) => {
+  const patch = req.body ?? {};
+  const user = dbService.updateUserProfileByTelegramId(req.params.telegramId, {
+    name: patch.name,
+    age: patch.age != null ? Number(patch.age) : undefined,
+    gender: patch.gender,
+    city: patch.city,
+    phone: patch.phone,
+    bio: patch.bio,
+    avatarUrl: patch.avatarUrl,
+    onboarding: patch.onboarding,
+  });
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(user);
+});
+
+usersRouter.patch('/:id/profile', (req, res) => {
+  const patch = req.body ?? {};
+  const user = dbService.updateUserProfile(Number(req.params.id), {
+    name: patch.name,
+    age: patch.age != null ? Number(patch.age) : undefined,
+    gender: patch.gender,
+    city: patch.city,
+    phone: patch.phone,
+    bio: patch.bio,
+    avatarUrl: patch.avatarUrl,
+    onboarding: patch.onboarding,
+  });
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(user);
+});
+
 usersRouter.patch('/:id/section', (req, res) => {
   const { sectionId } = req.body;
   const user = dbService.setUserSection(Number(req.params.id), sectionId ?? null);

@@ -46,6 +46,25 @@ export async function setUserOnboarding(telegramId: string, onboarding: Onboardi
   });
 }
 
+export async function updateUserProfile(
+  telegramId: string,
+  patch: Partial<{
+    name: string;
+    age: number;
+    gender: import('@petdate/shared').UserGender;
+    city: string;
+    phone: string;
+    bio: string;
+    avatarUrl: string;
+    onboarding: OnboardingStatus;
+  }>
+): Promise<User> {
+  return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/profile`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
 export async function listPets(filters?: { ownerId?: number; lookingForPlaymate?: boolean }): Promise<PetProfile[]> {
   const params = new URLSearchParams();
   if (filters?.ownerId) params.set('ownerId', String(filters.ownerId));

@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3';
 import path from 'path';
-import type { Game, GamePlayer, GameStatus, GameType, OnboardingStatus, PetProfile, PlaydateRequest, PlaydateStatus, Section, User, UserRole } from '@petdate/shared';
+import type { Game, GamePlayer, GameStatus, GameType, OnboardingStatus, PetProfile, PlaydateRequest, PlaydateStatus, Section, User, UserGender, UserRole } from '@petdate/shared';
 
 const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'petdate.db');
 
@@ -101,12 +101,17 @@ function initSchema() {
 
 function migrateSchema() {
   const columns = db.prepare("PRAGMA table_info(users)").all() as { name: string }[];
-  if (!columns.some((c) => c.name === 'role')) {
-    db.exec("ALTER TABLE users ADD COLUMN role TEXT");
-  }
-  if (!columns.some((c) => c.name === 'onboarding')) {
+  const names = new Set(columns.map((c) => c.name));
+  if (!names.has('role')) db.exec('ALTER TABLE users ADD COLUMN role TEXT');
+  if (!names.has('onboarding')) {
     db.exec("ALTER TABLE users ADD COLUMN onboarding TEXT NOT NULL DEFAULT 'role_selected'");
   }
+  if (!names.has('age')) db.exec('ALTER TABLE users ADD COLUMN age INTEGER');
+  if (!names.has('gender')) db.exec('ALTER TABLE users ADD COLUMN gender TEXT');
+  if (!names.has('city')) db.exec('ALTER TABLE users ADD COLUMN city TEXT');
+  if (!names.has('phone')) db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
+  if (!names.has('bio')) db.exec('ALTER TABLE users ADD COLUMN bio TEXT');
+  if (!names.has('avatar_url')) db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
 }
 
 function seedIfEmpty() {
@@ -172,6 +177,12 @@ function mapUser(row: Record<string, unknown>): User {
     sectionId: row.section_id as number | undefined,
     role: row.role as UserRole | undefined,
     onboarding: (row.onboarding as OnboardingStatus | undefined) ?? undefined,
+    age: row.age != null ? Number(row.age) : undefined,
+    gender: row.gender as UserGender | undefined,
+    city: row.city as string | undefined,
+    phone: row.phone as string | undefined,
+    bio: row.bio as string | undefined,
+    avatarUrl: row.avatar_url as string | undefined,
     createdAt: row.created_at as string,
   };
 }
@@ -334,6 +345,57 @@ export const dbService = {
     const user = this.getUserByTelegramId(telegramId);
     if (!user) return null;
     return this.setUserRole(user.id, role);
+  },
+
+  updateUserProfile(
+    userId: number,
+    patch: Partial<{
+      name: string;
+      age: number;
+      gender: UserGender;
+      city: string;
+      phone: string;
+      bio: string;
+      avatarUrl: string;
+      onboarding: OnboardingStatus;
+    }>
+  ): User | null {
+    const existing = this.getUserById(userId);
+    if (!existing) return null;
+
+    const fields: string[] = [];
+    const values: unknown[] = [];
+    if (patch.name !== undefined) { fields.push('name = ?'); values.push(patch.name); }
+    if (patch.age !== undefined) { fields.push('age = ?'); values.push(patch.age); }
+    if (patch.gender !== undefined) { fields.push('gender = ?'); values.push(patch.gender); }
+    if (patch.city !== undefined) { fields.push('city = ?'); values.push(patch.city); }
+    if (patch.phone !== undefined) { fields.push('phone = ?'); values.push(patch.phone); }
+    if (patch.bio !== undefined) { fields.push('bio = ?'); values.push(patch.bio); }
+    if (patch.avatarUrl !== undefined) { fields.push('avatar_url = ?'); values.push(patch.avatarUrl); }
+    if (patch.onboarding !== undefined) { fields.push('onboarding = ?'); values.push(patch.onboarding); }
+
+    if (fields.length === 0) return existing;
+    values.push(userId);
+    db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+    return this.getUserById(userId);
+  },
+
+  updateUserProfileByTelegramId(
+    telegramId: string,
+    patch: Partial<{
+      name: string;
+      age: number;
+      gender: UserGender;
+      city: string;
+      phone: string;
+      bio: string;
+      avatarUrl: string;
+      onboarding: OnboardingStatus;
+    }>
+  ): User | null {
+    const user = this.getUserByTelegramId(telegramId);
+    if (!user) return null;
+    return this.updateUserProfile(user.id, patch);
   },
 
   listSections(): Section[] {

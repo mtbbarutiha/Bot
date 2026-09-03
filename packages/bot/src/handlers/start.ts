@@ -104,7 +104,7 @@ export async function handleRoleSelect(ctx: Context, role: UserRole): Promise<vo
 
   if (role === 'pet_owner') {
     await ctx.reply(
-      'منوی صاحب پت آماده است 👇\n\nاگر هنوز پت ثبت نکردی، از «🐾 پت‌های من» شروع کن.',
+      'منوی صاحب پت آماده است 👇\n\nاول «👤 پروفایل خودم» رو تکمیل کن، بعد پت ثبت کن.',
       { reply_markup: mainMenuKeyboard('pet_owner') }
     );
   } else {
@@ -158,6 +158,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
   await upsertSession(String(from.id), {
     step: 'ready',
     draftPet: undefined,
+    draftProfile: undefined,
     selectedPetId: undefined,
     selectedToPetId: undefined,
   });

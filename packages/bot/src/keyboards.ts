@@ -136,6 +136,30 @@ export function webLinksKeyboard(telegramId: string): InlineKeyboard | undefined
   return new InlineKeyboard().url('🌐 باز کردن petdate', `${base}/profile?from=telegram&tg=${telegramId}`);
 }
 
+export function genderKeyboard(): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('👨 آقا', 'profile:gender:male')
+    .text('👩 خانم', 'profile:gender:female');
+}
+
+export function phoneKeyboard(): Keyboard {
+  return new Keyboard().requestContact('📱 ارسال شماره تماس').resized().oneTime();
+}
+
+export function profileActionsKeyboard(complete: boolean): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  if (complete) {
+    kb.text('✏️ ویرایش پروفایل', 'profile:edit').row();
+  } else {
+    kb.text('✨ تکمیل پروفایل', 'profile:edit').row();
+  }
+  return kb;
+}
+
+export function skipProfileKeyboard(callback: string): InlineKeyboard {
+  return new InlineKeyboard().text('⏭ رد کردن', callback);
+}
+
 export function myPetsActionKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text('➕ ثبت پت جدید', 'pets:add')

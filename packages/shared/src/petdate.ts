@@ -14,6 +14,8 @@ export type OnboardingStatus =
   | 'profile_incomplete'
   | 'profile_complete';
 
+export type UserGender = 'male' | 'female';
+
 export interface PetdateUser {
   id: number;
   telegramId?: string;
@@ -25,8 +27,22 @@ export interface PetdateUser {
   onboarding: OnboardingStatus;
   locale: string;
   avatarUrl?: string;
+  age?: number;
+  gender?: UserGender;
+  city?: string;
+  bio?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProfileDraft {
+  name?: string;
+  age?: number;
+  gender?: UserGender;
+  city?: string;
+  phone?: string;
+  avatarFileId?: string;
+  bio?: string;
 }
 
 export interface PetProfile {
@@ -63,7 +79,6 @@ export interface PlaydateRequest {
   location?: string;
   createdAt: string;
   updatedAt: string;
-  /** Populated on list/detail responses */
   fromPet?: PetProfile;
   toPet?: PetProfile;
 }
@@ -75,6 +90,7 @@ export interface BotSession {
   step: BotStep;
   locale: string;
   draftPet?: PetDraft;
+  draftProfile?: ProfileDraft;
   selectedPetId?: number;
   selectedToPetId?: number;
   explorePage?: number;
@@ -84,6 +100,13 @@ export interface BotSession {
 export type BotStep =
   | 'start'
   | 'role_select'
+  | 'profile_name'
+  | 'profile_age'
+  | 'profile_gender'
+  | 'profile_city'
+  | 'profile_phone'
+  | 'profile_photo'
+  | 'profile_bio'
   | 'pet_name'
   | 'pet_species'
   | 'pet_breed'
@@ -123,6 +146,11 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
   community_seeker: '👥 جامعه پت',
   trainer: '🎓 مربی',
   pet_sitter: '🏡 نگهبان پت',
+};
+
+export const USER_GENDER_LABELS: Record<UserGender, string> = {
+  male: 'آقا',
+  female: 'خانم',
 };
 
 export const ONBOARDING_STATUS_LABELS: Record<OnboardingStatus, string> = {

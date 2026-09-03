@@ -1,5 +1,5 @@
 import type { Bot, Context } from 'grammy';
-import type { UserRole } from '@petdate/shared';
+import type { UserGender, UserRole } from '@petdate/shared';
 import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, mainMenuKeyboard } from '../keyboards';
 import { handleExplore, handleExploreBack, handleExplorePet } from './explore';
 import {
@@ -17,7 +17,15 @@ import {
   handlePlaydateSend,
   handleRequests,
 } from './playdates';
-import { handleProfile } from './profile';
+import {
+  handleProfile,
+  handleProfileContact,
+  handleProfileGender,
+  handleProfilePhoto,
+  handleProfileSkip,
+  handleProfileWizardText,
+  startProfileWizard,
+} from './profile';
 import {
   handleCancel,
   handleHelp,
@@ -92,10 +100,29 @@ export function registerHandlers(bot: Bot): void {
     await handleRequests(ctx);
   });
 
+  bot.callbackQuery('profile:edit', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startProfileWizard(ctx);
+  });
+  bot.callbackQuery(/^profile:gender:(male|female)$/, (ctx) =>
+    handleProfileGender(ctx, ctx.match![1] as UserGender)
+  );
+  bot.callbackQuery('profile:skip_phone', (ctx) => handleProfileSkip(ctx, 'phone'));
+  bot.callbackQuery('profile:skip_photo', (ctx) => handleProfileSkip(ctx, 'photo'));
+  bot.callbackQuery('profile:skip_bio', (ctx) => handleProfileSkip(ctx, 'bio'));
+
   bot.callbackQuery(/^medical:/, (ctx) => handleComingSoon(ctx, 'پزشکی'));
   bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));
   bot.callbackQuery(/^shop:/, (ctx) => handleComingSoon(ctx, 'پت شاپ'));
   bot.callbackQuery(/^svc:/, (ctx) => handleComingSoon(ctx, 'خدمات'));
+
+  bot.on('message:contact', async (ctx) => {
+    await handleProfileContact(ctx);
+  });
+
+  bot.on('message:photo', async (ctx) => {
+    await handleProfilePhoto(ctx);
+  });
 
   bot.on('message:text', handleTextMessage);
 }
@@ -104,6 +131,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   const text = ctx.message?.text?.trim();
   if (!text || text.startsWith('/')) return;
 
+  if (await handleProfileWizardText(ctx, text)) return;
   if (await handleWizardText(ctx, text)) return;
 
   const m = PET_OWNER_MENU;
