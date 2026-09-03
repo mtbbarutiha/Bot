@@ -8,20 +8,14 @@ export type RequiredChannel = {
   url: string;
 };
 
-/** کانال‌های اجباری برای استفاده از بات */
+/** کانال‌های اجباری برای استفاده از بات (فعلاً فقط petdate) */
 export function requiredChannels(): RequiredChannel[] {
   const petdate = config.forceJoinPetdateChannel ?? 'petdating';
-  const dordoria = config.forceJoinDordoriaChannel ?? 'dordoriabot';
   return [
     {
       username: petdate.replace(/^@/, ''),
       title: 'کانال petdate',
       url: `https://t.me/${petdate.replace(/^@/, '')}`,
-    },
-    {
-      username: dordoria.replace(/^@/, ''),
-      title: 'کانال دوردوریا',
-      url: `https://t.me/${dordoria.replace(/^@/, '')}`,
     },
   ];
 }
