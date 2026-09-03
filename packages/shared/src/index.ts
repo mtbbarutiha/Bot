@@ -46,6 +46,13 @@ export type {
   ProfileDraft,
   UserGender,
 } from './petdate';
+export {
+  COUNTRY_IRAN,
+  IRAN_CITIES_BY_PROVINCE,
+  IRAN_PROVINCES,
+  PROFILE_COUNTRIES,
+  citiesForProvince,
+} from './locations';
 export type { PetBreed, PetSpecies, PetSpeciesCode } from './catalog';
 export {
   PET_BREEDS_SEED,
@@ -65,6 +72,7 @@ export interface User {
   onboarding?: OnboardingStatus;
   age?: number;
   gender?: UserGender;
+  country?: string;
   city?: string;
   province?: string;
   phone?: string;

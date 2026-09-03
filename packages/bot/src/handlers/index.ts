@@ -124,7 +124,6 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery('wizard:skip_breed', (ctx) => handleWizardSkip(ctx, 'breed'));
   bot.callbackQuery('wizard:skip_color', (ctx) => handleWizardSkip(ctx, 'color'));
   bot.callbackQuery('wizard:skip_diseases', (ctx) => handleWizardSkip(ctx, 'diseases'));
-  bot.callbackQuery('wizard:skip_city', (ctx) => handleWizardSkip(ctx, 'city'));
   bot.callbackQuery('wizard:skip_bio', (ctx) => handleWizardSkip(ctx, 'bio'));
   bot.callbackQuery('wizard:skip_photo', (ctx) => handleWizardSkip(ctx, 'photo'));
   bot.callbackQuery('noop', (ctx) => ctx.answerCallbackQuery());

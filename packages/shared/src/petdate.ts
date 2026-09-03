@@ -31,6 +31,7 @@ export interface PetdateUser {
   gender?: UserGender;
   city?: string;
   province?: string;
+  country?: string;
   bio?: string;
   interests?: string[];
   coins?: number;
@@ -45,6 +46,7 @@ export interface ProfileDraft {
   name?: string;
   age?: number;
   gender?: UserGender;
+  country?: string;
   city?: string;
   province?: string;
   phone?: string;
@@ -138,6 +140,7 @@ export type BotStep =
   | 'profile_name'
   | 'profile_age'
   | 'profile_gender'
+  | 'profile_country'
   | 'profile_province'
   | 'profile_city'
   | 'profile_phone'

@@ -1,9 +1,12 @@
 import type { Context } from 'grammy';
 import type { BotStep, ProfileDraft, User, UserGender } from '@petdate/shared';
 import {
+  COUNTRY_IRAN,
+  IRAN_PROVINCES,
   PROFILE_INTEREST_OPTIONS,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
+  citiesForProvince,
 } from '@petdate/shared';
 import {
   deleteUserAccount,
@@ -18,23 +21,27 @@ import {
   WIZARD_NAV,
   ageChipKeyboard,
   cityReplyKeyboard,
+  countryReplyKeyboard,
   genderReplyKeyboard,
   interestsReplyKeyboard,
   mainMenuKeyboard,
   phoneWizardKeyboard,
   profileActionsKeyboard,
   profileConfirmKeyboard,
+  provinceReplyKeyboard,
   textStepKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser } from './start';
 
-const PROFILE_TOTAL = 8;
+const PROFILE_TOTAL = 10;
 
 const PROFILE_BACK: Partial<Record<BotStep, BotStep>> = {
   profile_age: 'profile_name',
   profile_gender: 'profile_age',
-  profile_city: 'profile_gender',
+  profile_country: 'profile_gender',
+  profile_province: 'profile_country',
+  profile_city: 'profile_province',
   profile_phone: 'profile_city',
   profile_photo: 'profile_phone',
   profile_bio: 'profile_photo',
@@ -52,7 +59,7 @@ function toEnglishDigits(raw: string): string {
 }
 
 function isProfileComplete(user: User): boolean {
-  return Boolean(user.name && user.age && user.gender && user.city);
+  return Boolean(user.name && user.age && user.gender && user.country && user.city);
 }
 
 function formatNum(n: number | undefined | null): string {
@@ -63,7 +70,8 @@ function formatNum(n: number | undefined | null): string {
 function formatProfileCard(user: User, petCount: number): string {
   const gender = user.gender ? USER_GENDER_LABELS[user.gender] : '—';
   const role = user.role ? USER_ROLE_LABELS[user.role] : '—';
-  const loc = [user.province, user.city].filter(Boolean).join('، ') || '—';
+  const loc =
+    [user.country, user.province, user.city].filter(Boolean).join('، ') || '—';
   const interests =
     user.interests && user.interests.length > 0
       ? user.interests.join(' · ')
@@ -168,6 +176,8 @@ export async function startProfileWizard(ctx: Context): Promise<void> {
       name: user.name,
       age: user.age,
       gender: user.gender,
+      country: user.country,
+      province: user.province,
       city: user.city,
       phone: user.phone,
       bio: user.bio,
@@ -207,22 +217,36 @@ async function askProfileGender(ctx: Context): Promise<void> {
   });
 }
 
-async function askProfileCity(ctx: Context): Promise<void> {
-  await ctx.reply(`🏙 **${stepTitle(4)}**\n\nشهرت رو انتخاب کن یا «شهر دیگر» بزن:`, {
+async function askProfileCountry(ctx: Context): Promise<void> {
+  await ctx.reply(`🌍 **${stepTitle(4)}**\n\nکشورت رو انتخاب کن:`, {
     parse_mode: 'Markdown',
-    reply_markup: cityReplyKeyboard(),
+    reply_markup: countryReplyKeyboard(),
+  });
+}
+
+async function askProfileProvince(ctx: Context): Promise<void> {
+  await ctx.reply(`🗺 **${stepTitle(5)}**\n\nاستانت رو انتخاب کن:`, {
+    parse_mode: 'Markdown',
+    reply_markup: provinceReplyKeyboard(),
+  });
+}
+
+async function askProfileCity(ctx: Context, province?: string): Promise<void> {
+  await ctx.reply(`🏙 **${stepTitle(6)}**\n\nشهرت رو انتخاب کن یا «شهر دیگر» بزن:`, {
+    parse_mode: 'Markdown',
+    reply_markup: cityReplyKeyboard({ province }),
   });
 }
 
 async function askProfilePhone(ctx: Context): Promise<void> {
   await ctx.reply(
-    `📱 **${stepTitle(5)}**\n\nشماره موبایلت رو بفرست یا دکمه اشتراک‌گذاری رو بزن:`,
+    `📱 **${stepTitle(7)}**\n\nشماره موبایلت رو بفرست یا دکمه اشتراک‌گذاری رو بزن:`,
     { parse_mode: 'Markdown', reply_markup: phoneWizardKeyboard() }
   );
 }
 
 async function askProfilePhoto(ctx: Context): Promise<void> {
-  await ctx.reply(`🖼 **${stepTitle(6)}**\n\nیک عکس پروفایل بفرست:`, {
+  await ctx.reply(`🖼 **${stepTitle(8)}**\n\nیک عکس پروفایل بفرست:`, {
     parse_mode: 'Markdown',
     reply_markup: textStepKeyboard({ skip: true }),
   });
@@ -230,7 +254,7 @@ async function askProfilePhoto(ctx: Context): Promise<void> {
 
 async function askProfileBio(ctx: Context): Promise<void> {
   await ctx.reply(
-    `💬 **${stepTitle(7)}**\n\nچند خط درباره خودت بنویس:\n_(علاقه‌ها، پت‌ها، محله...)_`,
+    `💬 **${stepTitle(9)}**\n\nچند خط درباره خودت بنویس:\n_(علاقه‌ها، پت‌ها، محله...)_`,
     { parse_mode: 'Markdown', reply_markup: textStepKeyboard({ skip: true }) }
   );
 }
@@ -238,7 +262,7 @@ async function askProfileBio(ctx: Context): Promise<void> {
 async function askProfileInterests(ctx: Context, selected: string[] = []): Promise<void> {
   const picked = selected.length ? `\nانتخاب‌شده: ${selected.join(' · ')}` : '';
   await ctx.reply(
-    `💚 **${stepTitle(8)}**\n\nعلایقت رو از منو انتخاب کن (چندتا اوکیه)، بعد «ثبت علایق» بزن:${picked}`,
+    `💚 **${stepTitle(10)}**\n\nعلایقت رو از منو انتخاب کن (چندتا اوکیه)، بعد «ثبت علایق» بزن:${picked}`,
     { parse_mode: 'Markdown', reply_markup: interestsReplyKeyboard(selected) }
   );
 }
@@ -254,8 +278,14 @@ async function promptProfileStep(ctx: Context, step: BotStep, draft: ProfileDraf
     case 'profile_gender':
       await askProfileGender(ctx);
       return;
+    case 'profile_country':
+      await askProfileCountry(ctx);
+      return;
+    case 'profile_province':
+      await askProfileProvince(ctx);
+      return;
     case 'profile_city':
-      await askProfileCity(ctx);
+      await askProfileCity(ctx, draft.province);
       return;
     case 'profile_phone':
       await askProfilePhone(ctx);
@@ -291,7 +321,10 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
   }
 
   if (text === WIZARD_NAV.back) {
-    const prev = PROFILE_BACK[session.step];
+    let prev = PROFILE_BACK[session.step];
+    if (session.step === 'profile_city' && !draft.province) {
+      prev = 'profile_country';
+    }
     if (!prev) {
       await cancelWizard(ctx, telegramId);
       return true;
@@ -359,8 +392,50 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
       return true;
     }
     draft.gender = gender;
+    await upsertSession(telegramId, { step: 'profile_country', draftProfile: draft });
+    await askProfileCountry(ctx);
+    return true;
+  }
+
+  if (session.step === 'profile_country') {
+    if (text === 'سایر کشورها') {
+      await ctx.reply('نام کشور رو بنویس:', { reply_markup: textStepKeyboard() });
+      return true;
+    }
+    const country = text.trim();
+    if (country.length < 2) {
+      await ctx.reply('کشور رو از منو انتخاب کن یا بنویس.', {
+        reply_markup: countryReplyKeyboard(),
+      });
+      return true;
+    }
+    draft.country = country;
+    draft.province = undefined;
+    if (country === COUNTRY_IRAN) {
+      await upsertSession(telegramId, { step: 'profile_province', draftProfile: draft });
+      await askProfileProvince(ctx);
+    } else {
+      await upsertSession(telegramId, { step: 'profile_city', draftProfile: draft });
+      await ctx.reply(`🏙 **${stepTitle(6)}**\n\nشهرت رو بنویس:`, {
+        parse_mode: 'Markdown',
+        reply_markup: textStepKeyboard(),
+      });
+    }
+    return true;
+  }
+
+  if (session.step === 'profile_province') {
+    const province = text.trim();
+    if (!(IRAN_PROVINCES as readonly string[]).includes(province)) {
+      await ctx.reply('استان رو از دکمه‌ها انتخاب کن:', {
+        reply_markup: provinceReplyKeyboard(),
+      });
+      return true;
+    }
+    draft.province = province;
+    draft.city = undefined;
     await upsertSession(telegramId, { step: 'profile_city', draftProfile: draft });
-    await askProfileCity(ctx);
+    await askProfileCity(ctx, province);
     return true;
   }
 
@@ -372,9 +447,16 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
     const city = text.trim();
     if (city.length < 2) {
       await ctx.reply('نام شهر رو درست بنویس یا از منو انتخاب کن.', {
-        reply_markup: cityReplyKeyboard(),
+        reply_markup: cityReplyKeyboard({ province: draft.province }),
       });
       return true;
+    }
+    // اگر از لیست استان آمده، ترجیحاً یکی از شهرهای همان استان باشد (یا دستی)
+    if (draft.province) {
+      const allowed = citiesForProvince(draft.province);
+      if (allowed.length && !allowed.includes(city) && text === city) {
+        // اجازه نوشتن دستی هم داده می‌شود
+      }
     }
     draft.city = city;
     await upsertSession(telegramId, { step: 'profile_phone', draftProfile: draft });
@@ -457,9 +539,9 @@ export async function handleProfileGender(ctx: Context, gender: UserGender): Pro
   if (!session) return;
 
   const draft: ProfileDraft = { ...session.draftProfile, gender };
-  await upsertSession(telegramId, { step: 'profile_city', draftProfile: draft });
+  await upsertSession(telegramId, { step: 'profile_country', draftProfile: draft });
   await ctx.answerCallbackQuery({ text: USER_GENDER_LABELS[gender] });
-  await askProfileCity(ctx);
+  await askProfileCountry(ctx);
 }
 
 export async function handleProfileContact(ctx: Context): Promise<boolean> {
@@ -599,7 +681,7 @@ async function finishProfileWizard(
   telegramId: string,
   draft: ProfileDraft
 ): Promise<void> {
-  if (!draft.name || !draft.age || !draft.gender || !draft.city) {
+  if (!draft.name || !draft.age || !draft.gender || !draft.country || !draft.city) {
     await ctx.reply('اطلاعات ناقصه. دوباره از «پروفایل خودم» شروع کن.');
     await upsertSession(telegramId, { step: 'ready', draftProfile: undefined });
     return;
@@ -609,6 +691,8 @@ async function finishProfileWizard(
     name: draft.name,
     age: draft.age,
     gender: draft.gender,
+    country: draft.country,
+    province: draft.province,
     city: draft.city,
     phone: draft.phone,
     bio: draft.bio,

@@ -7,10 +7,13 @@ import {
   PET_COLOR_OPTIONS,
   PET_GENDER_LABELS,
   PET_SIZE_LABELS,
+  PROFILE_COUNTRIES,
   PROFILE_INTEREST_OPTIONS,
+  IRAN_PROVINCES,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   USER_ROLES,
+  citiesForProvince,
 } from '@petdate/shared';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
@@ -137,11 +140,22 @@ export function petAgeReplyKeyboard(): Keyboard {
   return choiceReplyKeyboard(labels, { columns: 3 });
 }
 
-export function cityReplyKeyboard(opts?: { skip?: boolean }): Keyboard {
-  return choiceReplyKeyboard([...COMMON_CITIES, WIZARD_NAV.otherCity], {
+export function cityReplyKeyboard(opts?: { skip?: boolean; province?: string }): Keyboard {
+  const cities = opts?.province
+    ? [...citiesForProvince(opts.province), WIZARD_NAV.otherCity]
+    : [...COMMON_CITIES, WIZARD_NAV.otherCity];
+  return choiceReplyKeyboard(cities, {
     columns: 2,
     skip: opts?.skip,
   });
+}
+
+export function countryReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([...PROFILE_COUNTRIES], { columns: 1 });
+}
+
+export function provinceReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([...IRAN_PROVINCES], { columns: 2 });
 }
 
 export function phoneWizardKeyboard(): Keyboard {

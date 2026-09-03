@@ -15,10 +15,15 @@ export function formatPet(pet: PetProfile, detailed = false): string {
   const lines = [
     `🐾 <b>${escapeHtml(pet.name)}</b>`,
     `${speciesLabel(pet.species)}${pet.breed ? ` · ${escapeHtml(pet.breed)}` : ''}`,
-    pet.city
-      ? `📍 ${escapeHtml(pet.city)}${pet.neighborhood ? ` — ${escapeHtml(pet.neighborhood)}` : ''}`
-      : '',
   ];
+  const ownerLoc = [pet.ownerProvince, pet.ownerCity || pet.city].filter(Boolean).join('، ');
+  if (ownerLoc) {
+    lines.push(`📍 ${escapeHtml(ownerLoc)}`);
+  } else if (pet.city) {
+    lines.push(
+      `📍 ${escapeHtml(pet.city)}${pet.neighborhood ? ` — ${escapeHtml(pet.neighborhood)}` : ''}`
+    );
+  }
   if (detailed) {
     if (pet.gender) lines.push(`⚧ ${PET_GENDER_LABELS[pet.gender] ?? pet.gender}`);
     if (pet.ageMonths) lines.push(`🎂 ${formatPetAge(pet.ageMonths)}`);

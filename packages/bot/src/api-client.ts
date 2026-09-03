@@ -71,6 +71,7 @@ export async function updateUserProfile(
     name: string;
     age: number;
     gender: import('@petdate/shared').UserGender;
+    country: string;
     city: string;
     province: string;
     phone: string;

@@ -127,6 +127,7 @@ function initSchema() {
       species_code TEXT NOT NULL REFERENCES pet_species(code),
       name_fa TEXT NOT NULL,
       name_en TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 100,
       UNIQUE(species_code, name_fa)
     );
   `);
@@ -148,6 +149,7 @@ function migrateSchema() {
   if (!names.has('bio')) db.exec('ALTER TABLE users ADD COLUMN bio TEXT');
   if (!names.has('avatar_url')) db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
   if (!names.has('province')) db.exec('ALTER TABLE users ADD COLUMN province TEXT');
+  if (!names.has('country')) db.exec("ALTER TABLE users ADD COLUMN country TEXT");
   if (!names.has('interests')) db.exec("ALTER TABLE users ADD COLUMN interests TEXT NOT NULL DEFAULT '[]'");
   if (!names.has('coins')) db.exec('ALTER TABLE users ADD COLUMN coins INTEGER NOT NULL DEFAULT 0');
   if (!names.has('profile_views')) db.exec('ALTER TABLE users ADD COLUMN profile_views INTEGER NOT NULL DEFAULT 0');
@@ -549,6 +551,7 @@ function mapUser(row: Record<string, unknown>): User {
     onboarding: (row.onboarding as OnboardingStatus | undefined) ?? undefined,
     age: row.age != null ? Number(row.age) : undefined,
     gender: row.gender as UserGender | undefined,
+    country: row.country as string | undefined,
     city: row.city as string | undefined,
     province: row.province as string | undefined,
     phone: row.phone as string | undefined,
@@ -734,6 +737,7 @@ export const dbService = {
       name: string;
       age: number;
       gender: UserGender;
+      country: string;
       city: string;
       province: string;
       phone: string;
@@ -753,6 +757,7 @@ export const dbService = {
     if (patch.name !== undefined) { fields.push('name = ?'); values.push(patch.name); }
     if (patch.age !== undefined) { fields.push('age = ?'); values.push(patch.age); }
     if (patch.gender !== undefined) { fields.push('gender = ?'); values.push(patch.gender); }
+    if (patch.country !== undefined) { fields.push('country = ?'); values.push(patch.country); }
     if (patch.city !== undefined) { fields.push('city = ?'); values.push(patch.city); }
     if (patch.province !== undefined) { fields.push('province = ?'); values.push(patch.province); }
     if (patch.phone !== undefined) { fields.push('phone = ?'); values.push(patch.phone); }
@@ -778,6 +783,7 @@ export const dbService = {
       name: string;
       age: number;
       gender: UserGender;
+      country: string;
       city: string;
       province: string;
       phone: string;

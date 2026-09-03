@@ -33,7 +33,6 @@ import {
   WIZARD_NAV,
   YES_LABEL,
   breedReplyKeyboard,
-  cityReplyKeyboard,
   lookingReplyKeyboard,
   mainMenuKeyboard,
   myPetsSectionKeyboard,
@@ -48,7 +47,7 @@ import {
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 
-const TOTAL_STEPS = 14;
+const TOTAL_STEPS = 13;
 
 const PET_BACK: Partial<Record<BotStep, BotStep>> = {
   pet_species: 'pet_name',
@@ -60,8 +59,7 @@ const PET_BACK: Partial<Record<BotStep, BotStep>> = {
   pet_vaccinated: 'pet_color',
   pet_neutered: 'pet_vaccinated',
   pet_diseases: 'pet_neutered',
-  pet_city: 'pet_diseases',
-  pet_looking: 'pet_city',
+  pet_looking: 'pet_diseases',
   pet_bio: 'pet_looking',
   pet_photo: 'pet_bio',
 };
@@ -205,15 +203,8 @@ async function askDiseases(ctx: Context): Promise<void> {
   );
 }
 
-async function askCity(ctx: Context): Promise<void> {
-  await ctx.reply(`🏙 **${stepLabel(11)}**\n\nشهر پت رو انتخاب کن یا بنویس:`, {
-    parse_mode: 'Markdown',
-    reply_markup: cityReplyKeyboard({ skip: true }),
-  });
-}
-
 async function askLooking(ctx: Context): Promise<void> {
-  await ctx.reply(`🤝 **${stepLabel(12)}**\n\nدنبال همبازی هست؟`, {
+  await ctx.reply(`🤝 **${stepLabel(11)}**\n\nدنبال همبازی هست؟`, {
     parse_mode: 'Markdown',
     reply_markup: lookingReplyKeyboard(),
   });
@@ -221,13 +212,13 @@ async function askLooking(ctx: Context): Promise<void> {
 
 async function askBio(ctx: Context): Promise<void> {
   await ctx.reply(
-    `💬 **${stepLabel(13)}**\n\nچند خط درباره پت بنویس (شخصیت، عادت‌ها...) یا رد کن:`,
+    `💬 **${stepLabel(12)}**\n\nچند خط درباره پت بنویس (شخصیت، عادت‌ها...) یا رد کن:`,
     { parse_mode: 'Markdown', reply_markup: textStepKeyboard({ skip: true }) }
   );
 }
 
 async function askPhoto(ctx: Context): Promise<void> {
-  await ctx.reply(`🖼 **${stepLabel(14)}**\n\nیک عکس از پت بفرست (یا رد کن):`, {
+  await ctx.reply(`🖼 **${stepLabel(13)}**\n\nیک عکس از پت بفرست (یا رد کن):`, {
     parse_mode: 'Markdown',
     reply_markup: textStepKeyboard({ skip: true }),
   });
@@ -269,9 +260,6 @@ async function promptPetStep(
       return;
     case 'pet_diseases':
       await askDiseases(ctx);
-      return;
-    case 'pet_city':
-      await askCity(ctx);
       return;
     case 'pet_looking':
       await askLooking(ctx);
@@ -548,17 +536,6 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
 
   if (step === 'pet_diseases') {
     draft.diseases = text.trim().slice(0, 200);
-    await upsertSession(telegramId, { step: 'pet_city', draftPet: draft });
-    await askCity(ctx);
-    return true;
-  }
-
-  if (step === 'pet_city') {
-    if (text === WIZARD_NAV.otherCity) {
-      await ctx.reply('نام شهر رو بنویس:', { reply_markup: textStepKeyboard({ skip: true }) });
-      return true;
-    }
-    draft.city = text.trim();
     await upsertSession(telegramId, { step: 'pet_looking', draftPet: draft });
     await askLooking(ctx);
     return true;
@@ -668,13 +645,12 @@ async function handleSkipText(
     return true;
   }
   if (step === 'pet_diseases') {
-    await upsertSession(telegramId, { step: 'pet_city', draftPet: draft });
-    await askCity(ctx);
-    return true;
-  }
-  if (step === 'pet_city') {
     await upsertSession(telegramId, { step: 'pet_looking', draftPet: draft });
     await askLooking(ctx);
+    return true;
+  }
+  if (step === 'pet_looking') {
+    // looking is required via buttons — skip not used
     return true;
   }
   if (step === 'pet_bio') {
@@ -813,7 +789,7 @@ export async function handlePetBoolSelect(
 
 export async function handleWizardSkip(
   ctx: Context,
-  field: 'breed' | 'color' | 'diseases' | 'city' | 'bio' | 'photo'
+  field: 'breed' | 'color' | 'diseases' | 'bio' | 'photo'
 ): Promise<void> {
   const from = ctx.from;
   if (!from) return;
@@ -838,12 +814,6 @@ export async function handleWizardSkip(
   }
 
   if (field === 'diseases') {
-    await upsertSession(telegramId, { step: 'pet_city', draftPet: draft });
-    await askCity(ctx);
-    return;
-  }
-
-  if (field === 'city') {
     await upsertSession(telegramId, { step: 'pet_looking', draftPet: draft });
     await askLooking(ctx);
     return;
@@ -895,6 +865,7 @@ async function finishPetWizard(
 
   let pet;
   try {
+    const owner = await getUserByTelegramId(telegramId);
     pet = await createPet({
       ownerId: userId,
       name: draft.name,
@@ -911,7 +882,8 @@ async function finishPetWizard(
       health,
       diseases: draft.diseases,
       imageUrl: draft.imageUrl,
-      city: draft.city,
+      // مکان از پروفایل مالک می‌آید
+      city: owner?.city,
       neighborhood: draft.neighborhood,
     });
   } catch (err) {
@@ -939,7 +911,9 @@ async function finishPetWizard(
     pet.ageMonths != null ? `سن: ${formatPetAge(pet.ageMonths)}` : null,
     size ? `اندازه: ${size}` : null,
     pet.color ? `رنگ: ${escape(pet.color)}` : null,
-    pet.city ? `📍 ${escape(pet.city)}` : null,
+    pet.ownerCity || pet.city
+      ? `📍 ${escape([pet.ownerProvince, pet.ownerCity || pet.city].filter(Boolean).join('، '))}`
+      : null,
     `واکسن: ${pet.vaccinated ? 'بله' : 'خیر'} · عقیم: ${pet.neutered ? 'بله' : 'خیر'}`,
     pet.lookingForPlaymate ? '🤝 دنبال همبازی' : null,
   ].filter(Boolean);
