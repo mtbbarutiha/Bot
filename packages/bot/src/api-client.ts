@@ -192,3 +192,9 @@ export async function updatePlaydateStatus(id: number, status: PlaydateStatus): 
     body: JSON.stringify({ status }),
   });
 }
+
+export async function deletePet(id: number, ownerId: number): Promise<void> {
+  await request<{ ok: boolean }>(`/api/pets/${id}?ownerId=${ownerId}`, {
+    method: 'DELETE',
+  });
+}

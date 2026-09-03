@@ -467,6 +467,34 @@ export function myPetsActionKeyboard(): InlineKeyboard {
   return new InlineKeyboard().text('➕ ثبت پت جدید', 'pets:add').success();
 }
 
+/** لیست پت‌های کاربر + ثبت جدید */
+export function myPetsListKeyboard(pets: PetProfile[]): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  pets.forEach((pet) => {
+    const bits = [pet.breed, pet.city].filter(Boolean).join(' · ');
+    const label = bits ? `${pet.name} (${bits})` : pet.name;
+    kb.text(`🐾 ${label}`, `pets:view:${pet.id}`).primary().row();
+  });
+  kb.text('➕ ثبت پت جدید', 'pets:add').success();
+  return kb;
+}
+
+export function myPetProfileKeyboard(petId: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('🗑 حذف پت', `pets:delete:${petId}`)
+    .danger()
+    .row()
+    .text('🔙 بازگشت به پت‌های من', 'pets:list');
+}
+
+export function confirmPetDeleteKeyboard(petId: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('✅ بله، حذف شود', `pets:delete:yes:${petId}`)
+    .danger()
+    .text('↩️ نه', `pets:view:${petId}`)
+    .primary();
+}
+
 export const MENU_LABELS = new Set<string>([
   ...Object.values(PET_OWNER_MENU),
   ...Object.values(DEFAULT_MENU),

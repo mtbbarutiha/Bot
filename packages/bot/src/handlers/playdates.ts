@@ -1,7 +1,21 @@
 import type { Context } from 'grammy';
-import { createPlaydate, listPets, listPlaydates, updatePlaydateStatus } from '../api-client';
-import { formatPlaydate } from '../format';
-import { fromPetKeyboard, mainMenuKeyboard, playdateActionKeyboard } from '../keyboards';
+import {
+  createPlaydate,
+  deletePet,
+  getPet,
+  listPets,
+  listPlaydates,
+  updatePlaydateStatus,
+} from '../api-client';
+import { formatPet, formatPlaydate } from '../format';
+import {
+  confirmPetDeleteKeyboard,
+  fromPetKeyboard,
+  mainMenuKeyboard,
+  myPetProfileKeyboard,
+  myPetsListKeyboard,
+  playdateActionKeyboard,
+} from '../keyboards';
 import { upsertSession } from '../session';
 import { getCtxUser } from './start';
 
@@ -14,28 +28,133 @@ export async function handleMyPets(ctx: Context): Promise<void> {
 
   const pets = await listPets({ ownerId: user.id });
   if (pets.length === 0) {
-    const { myPetsActionKeyboard } = await import('../keyboards');
     await ctx.reply('هنوز پتی ثبت نکردی. از دکمه زیر پت جدید اضافه کن:', {
-      reply_markup: myPetsActionKeyboard(),
+      reply_markup: myPetsListKeyboard([]),
     });
     await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
     return;
   }
 
-  const lines = pets.map((p, i) => {
-    const bits = [
-      p.breed,
-      p.gender === 'male' ? 'نر' : p.gender === 'female' ? 'ماده' : null,
-      p.city,
-    ].filter(Boolean);
-    return `${i + 1}. **${p.name}** — ${p.species}${bits.length ? ` · ${bits.join(' · ')}` : ''}`;
-  });
-  const { myPetsActionKeyboard } = await import('../keyboards');
-  await ctx.reply(`🐾 **پت‌های من**\n\n${lines.join('\n')}`, {
+  await ctx.reply(`🐾 **پت‌های من** (${pets.length})\n\nروی هر پت بزن تا پروفایلش باز بشه:`, {
     parse_mode: 'Markdown',
-    reply_markup: myPetsActionKeyboard(),
+    reply_markup: myPetsListKeyboard(pets),
   });
   await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
+}
+
+export async function handleMyPetView(ctx: Context, petId: number): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user?.id) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+
+  const pet = await getPet(petId);
+  if (!pet || pet.ownerId !== user.id) {
+    await ctx.answerCallbackQuery({ text: 'پت پیدا نشد', show_alert: true });
+    return;
+  }
+
+  await ctx.answerCallbackQuery();
+  const text = `🐾 **پروفایل پت**\n\n${formatPet(pet, true)}`;
+  const kb = myPetProfileKeyboard(pet.id);
+
+  try {
+    if (ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message) {
+      await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: kb });
+      return;
+    }
+  } catch {
+    /* fall through */
+  }
+
+  if (pet.imageUrl) {
+    try {
+      await ctx.replyWithPhoto(pet.imageUrl, {
+        caption: text,
+        parse_mode: 'Markdown',
+        reply_markup: kb,
+      });
+      return;
+    } catch {
+      /* fall through to text */
+    }
+  }
+
+  await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: kb });
+}
+
+export async function handleMyPetDeleteAsk(ctx: Context, petId: number): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user?.id) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+
+  const pet = await getPet(petId);
+  if (!pet || pet.ownerId !== user.id) {
+    await ctx.answerCallbackQuery({ text: 'پت پیدا نشد', show_alert: true });
+    return;
+  }
+
+  await ctx.answerCallbackQuery();
+  const text = `⚠️ مطمئنی می‌خوای **${pet.name}** رو حذف کنی؟\nاین کار قابل برگشت نیست.`;
+  const kb = confirmPetDeleteKeyboard(pet.id);
+
+  try {
+    if (ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message) {
+      await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: kb });
+      return;
+    }
+  } catch {
+    /* fall through */
+  }
+  await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: kb });
+}
+
+export async function handleMyPetDeleteConfirm(ctx: Context, petId: number): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user?.id) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+
+  const pet = await getPet(petId);
+  if (!pet || pet.ownerId !== user.id) {
+    await ctx.answerCallbackQuery({ text: 'پت پیدا نشد', show_alert: true });
+    return;
+  }
+
+  try {
+    await deletePet(petId, user.id);
+  } catch (err) {
+    console.error('deletePet failed:', err);
+    await ctx.answerCallbackQuery({ text: 'حذف ناموفق بود', show_alert: true });
+    return;
+  }
+
+  await ctx.answerCallbackQuery({ text: 'حذف شد' });
+  const pets = await listPets({ ownerId: user.id });
+  const text =
+    pets.length === 0
+      ? `✅ **${pet.name}** حذف شد.\n\nهنوز پتی نداری. از دکمه زیر ثبت کن:`
+      : `✅ **${pet.name}** حذف شد.\n\n🐾 **پت‌های من** (${pets.length})`;
+
+  try {
+    if (ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message) {
+      await ctx.editMessageText(text, {
+        parse_mode: 'Markdown',
+        reply_markup: myPetsListKeyboard(pets),
+      });
+      return;
+    }
+  } catch {
+    /* fall through */
+  }
+  await ctx.reply(text, {
+    parse_mode: 'Markdown',
+    reply_markup: myPetsListKeyboard(pets),
+  });
 }
 
 export async function handleRequests(ctx: Context): Promise<void> {

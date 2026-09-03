@@ -18,6 +18,9 @@ import {
   handleWizardText,
 } from './wizard';
 import {
+  handleMyPetDeleteAsk,
+  handleMyPetDeleteConfirm,
+  handleMyPetView,
   handleMyPets,
   handlePlaydateAction,
   handlePlaydateAsk,
@@ -161,6 +164,23 @@ export function registerHandlers(bot: Bot): void {
     }
     await handleAddPetCommand(ctx);
   });
+  bot.callbackQuery('pets:list', async (ctx) => {
+    try {
+      await ctx.answerCallbackQuery();
+    } catch {
+      /* ignore */
+    }
+    await handleMyPets(ctx);
+  });
+  bot.callbackQuery(/^pets:view:(\d+)$/, (ctx) =>
+    handleMyPetView(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery(/^pets:delete:yes:(\d+)$/, (ctx) =>
+    handleMyPetDeleteConfirm(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery(/^pets:delete:(\d+)$/, (ctx) =>
+    handleMyPetDeleteAsk(ctx, Number(ctx.match![1]))
+  );
 
   bot.callbackQuery('profile:edit', async (ctx) => {
     await ctx.answerCallbackQuery();

@@ -1,5 +1,5 @@
 import type { PetProfile, PlaydateRequest } from '@petdate/shared';
-import { PLAYDATE_STATUS_LABELS, formatPetAge } from '@petdate/shared';
+import { PET_GENDER_LABELS, PET_SIZE_LABELS, PLAYDATE_STATUS_LABELS, formatPetAge } from '@petdate/shared';
 
 const SPECIES_LABELS: Record<string, string> = {
   dog: '🐕 سگ',
@@ -18,9 +18,15 @@ export function formatPet(pet: PetProfile, detailed = false): string {
     pet.city ? `📍 ${pet.city}${pet.neighborhood ? ` — ${pet.neighborhood}` : ''}` : '',
   ];
   if (detailed) {
+    if (pet.gender) lines.push(`⚧ ${PET_GENDER_LABELS[pet.gender] ?? pet.gender}`);
     if (pet.ageMonths) lines.push(`🎂 ${formatPetAge(pet.ageMonths)}`);
+    if (pet.size) lines.push(`📏 ${PET_SIZE_LABELS[pet.size] ?? pet.size}`);
+    if (pet.color) lines.push(`🎨 ${pet.color}`);
+    lines.push(pet.vaccinated ? '💉 واکسن زده' : '🚫 واکسن نزده');
+    lines.push(pet.neutered ? '✂️ عقیم شده' : '➖ عقیم نشده');
+    const diseases = typeof pet.health?.diseases === 'string' ? pet.health.diseases : null;
+    if (diseases) lines.push(`🏥 ${diseases}`);
     if (pet.bio) lines.push(`💬 ${pet.bio}`);
-    lines.push(pet.vaccinated ? '✅ واکسینه' : '⬜ واکسینه نشده');
     lines.push(pet.lookingForPlaymate ? '🔍 دنبال همبازی' : '⏸️ فعلاً همبازی نمی‌خواد');
   }
   return lines.filter(Boolean).join('\n');

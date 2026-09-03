@@ -114,3 +114,35 @@ petsRouter.patch('/:id', (req, res) => {
   }
   res.json(pet);
 });
+
+petsRouter.delete('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  const ownerId = req.query.ownerId
+    ? Number(req.query.ownerId)
+    : req.body?.ownerId
+      ? Number(req.body.ownerId)
+      : undefined;
+
+  if (Number.isNaN(id)) {
+    res.status(400).json({ error: 'شناسه پت نامعتبر است' });
+    return;
+  }
+
+  const existing = dbService.getPet(id);
+  if (!existing) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+
+  if (ownerId !== undefined && existing.ownerId !== ownerId) {
+    res.status(403).json({ error: 'اجازه حذف این پت را نداری' });
+    return;
+  }
+
+  const ok = dbService.deletePet(id, ownerId);
+  if (!ok) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+  res.json({ ok: true, id });
+});

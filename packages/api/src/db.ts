@@ -817,6 +817,18 @@ export const dbService = {
     return this.getPet(id);
   },
 
+  deletePet(id: number, ownerId?: number): boolean {
+    const pet = this.getPet(id);
+    if (!pet) return false;
+    if (ownerId !== undefined && pet.ownerId !== ownerId) return false;
+
+    db.prepare(
+      'DELETE FROM playdate_requests WHERE from_pet_id = ? OR to_pet_id = ?'
+    ).run(id, id);
+    const result = db.prepare('DELETE FROM pets WHERE id = ?').run(id);
+    return result.changes > 0;
+  },
+
   listPlaydateRequests(filters?: {
     userId?: number;
     petId?: number;
