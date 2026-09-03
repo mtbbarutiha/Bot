@@ -1,6 +1,13 @@
 import { InlineKeyboard, Keyboard } from 'grammy';
 import type { PetBreed, PetProfile, PetSpecies, UserRole } from '@petdate/shared';
-import { PET_GENDER_LABELS, PET_SIZE_LABELS, USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
+import {
+  PET_GENDER_LABELS,
+  PET_SIZE_LABELS,
+  PROFILE_INTEREST_OPTIONS,
+  USER_GENDER_LABELS,
+  USER_ROLE_LABELS,
+  USER_ROLES,
+} from '@petdate/shared';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
 /** Labels for pet_owner main menu */
@@ -25,6 +32,170 @@ export const DEFAULT_MENU = {
   addPet: '➕ ثبت پت',
   help: '❓ راهنما',
 } as const;
+
+/** دکمه‌های ناوبری ویزارد (reply keyboard) */
+export const WIZARD_NAV = {
+  back: '↩️ بازگشت',
+  cancel: '❌ انصراف',
+  skip: '⏭ رد کردن',
+  nextPage: 'بعدی ▶️',
+  prevPage: '◀️ قبلی',
+  custom: '✏️ نوشتن دستی',
+  otherCity: '✏️ شهر دیگر',
+  sharePhone: '📱 ارسال شماره تماس',
+  interestsDone: '✅ ثبت علایق',
+} as const;
+
+export const YES_LABEL = '✅ بله';
+export const NO_LABEL = '❌ خیر';
+export const USER_MALE_LABEL = `👨 ${USER_GENDER_LABELS.male}`;
+export const USER_FEMALE_LABEL = `👩 ${USER_GENDER_LABELS.female}`;
+export const PET_MALE_LABEL = `♂ ${PET_GENDER_LABELS.male}`;
+export const PET_FEMALE_LABEL = `♀ ${PET_GENDER_LABELS.female}`;
+
+export const PROFILE_AGE_CHIPS = ['18', '22', '25', '28', '30', '35', '40', '45'];
+export const PET_AGE_CHIPS = ['3', '6', '12', '18', '24', '36', '48', '60'];
+export const COMMON_CITIES = [
+  'تهران',
+  'کرج',
+  'مشهد',
+  'اصفهان',
+  'شیراز',
+  'تبریز',
+  'اهواز',
+  'قم',
+] as const;
+
+export const BREED_PAGE_SIZE = 6;
+
+export const WIZARD_NAV_LABELS = new Set<string>(Object.values(WIZARD_NAV));
+
+export function isWizardNav(text: string): boolean {
+  return WIZARD_NAV_LABELS.has(text);
+}
+
+export function withWizardNav(
+  kb: Keyboard,
+  opts?: { skip?: boolean; noBack?: boolean }
+): Keyboard {
+  if (opts?.skip) {
+    kb.row().text(WIZARD_NAV.skip);
+  }
+  kb.row();
+  if (!opts?.noBack) kb.text(WIZARD_NAV.back);
+  kb.text(WIZARD_NAV.cancel);
+  return kb.resized().persistent();
+}
+
+/** کیبورد انتخابی منویی برای مراحل ویزارد */
+export function choiceReplyKeyboard(
+  labels: string[],
+  opts?: { columns?: number; skip?: boolean; noBack?: boolean }
+): Keyboard {
+  const cols = opts?.columns ?? 2;
+  const kb = new Keyboard();
+  labels.forEach((label, i) => {
+    kb.text(label);
+    if ((i + 1) % cols === 0) kb.row();
+  });
+  if (labels.length % cols !== 0) kb.row();
+  return withWizardNav(kb, opts);
+}
+
+export function textStepKeyboard(opts?: { skip?: boolean; noBack?: boolean }): Keyboard {
+  return withWizardNav(new Keyboard(), opts);
+}
+
+export function genderReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([USER_MALE_LABEL, USER_FEMALE_LABEL]);
+}
+
+export function ageChipKeyboard(chips: string[], opts?: { noBack?: boolean }): Keyboard {
+  return choiceReplyKeyboard(chips, { columns: 4, noBack: opts?.noBack });
+}
+
+export function cityReplyKeyboard(opts?: { skip?: boolean }): Keyboard {
+  return choiceReplyKeyboard([...COMMON_CITIES, WIZARD_NAV.otherCity], {
+    columns: 2,
+    skip: opts?.skip,
+  });
+}
+
+export function phoneWizardKeyboard(): Keyboard {
+  return new Keyboard()
+    .requestContact(WIZARD_NAV.sharePhone)
+    .row()
+    .text(WIZARD_NAV.skip)
+    .row()
+    .text(WIZARD_NAV.back)
+    .text(WIZARD_NAV.cancel)
+    .resized()
+    .persistent();
+}
+
+export function interestsReplyKeyboard(selected: string[] = []): Keyboard {
+  const kb = new Keyboard();
+  PROFILE_INTEREST_OPTIONS.forEach((opt, i) => {
+    const label = selected.includes(opt) ? `✓ ${opt}` : opt;
+    kb.text(label);
+    if ((i + 1) % 2 === 0) kb.row();
+  });
+  if (PROFILE_INTEREST_OPTIONS.length % 2 !== 0) kb.row();
+  kb.text(WIZARD_NAV.interestsDone);
+  return withWizardNav(kb, { skip: true });
+}
+
+export function speciesReplyKeyboard(species: PetSpecies[]): Keyboard {
+  return choiceReplyKeyboard(species.map((s) => `${s.emoji} ${s.labelFa}`));
+}
+
+export function breedReplyKeyboard(breeds: PetBreed[], page: number): Keyboard {
+  const totalPages = Math.max(1, Math.ceil(breeds.length / BREED_PAGE_SIZE));
+  const safePage = Math.min(Math.max(0, page), totalPages - 1);
+  const slice = breeds.slice(safePage * BREED_PAGE_SIZE, (safePage + 1) * BREED_PAGE_SIZE);
+
+  const kb = new Keyboard();
+  slice.forEach((b, i) => {
+    kb.text(b.nameFa);
+    if ((i + 1) % 2 === 0) kb.row();
+  });
+  if (slice.length % 2 !== 0) kb.row();
+
+  kb.text(WIZARD_NAV.custom);
+  if (totalPages > 1) {
+    kb.row();
+    if (safePage > 0) kb.text(WIZARD_NAV.prevPage);
+    kb.text(`${safePage + 1}/${totalPages}`);
+    if (safePage < totalPages - 1) kb.text(WIZARD_NAV.nextPage);
+  }
+  return withWizardNav(kb, { skip: true });
+}
+
+export function petGenderReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([PET_MALE_LABEL, PET_FEMALE_LABEL]);
+}
+
+export function petSizeReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([
+    PET_SIZE_LABELS.small,
+    PET_SIZE_LABELS.medium,
+    PET_SIZE_LABELS.large,
+  ]);
+}
+
+export function yesNoReplyKeyboard(): Keyboard {
+  return choiceReplyKeyboard([YES_LABEL, NO_LABEL]);
+}
+
+export function roleReplyKeyboard(): Keyboard {
+  const kb = new Keyboard();
+  USER_ROLES.forEach((role, index) => {
+    kb.text(USER_ROLE_LABELS[role]);
+    if (index % 2 === 1) kb.row();
+  });
+  if (USER_ROLES.length % 2 === 1) kb.row();
+  return kb.resized().persistent();
+}
 
 export function roleKeyboard(): InlineKeyboard {
   const kb = new InlineKeyboard();
@@ -183,17 +354,32 @@ export function genderKeyboard(): InlineKeyboard {
 }
 
 export function phoneKeyboard(): Keyboard {
-  return new Keyboard().requestContact('📱 ارسال شماره تماس').resized().oneTime();
+  return phoneWizardKeyboard();
 }
 
-export function profileActionsKeyboard(complete: boolean): InlineKeyboard {
+export function profileActionsKeyboard(complete: boolean, isActive = true): InlineKeyboard {
   const kb = new InlineKeyboard();
   if (complete) {
     kb.text('✏️ ویرایش پروفایل', 'profile:edit').row();
   } else {
     kb.text('✨ تکمیل پروفایل', 'profile:edit').row();
   }
+  kb.text('🗑 حذف', 'profile:delete').text(
+    isActive ? '⏸ غیرفعال‌سازی' : '▶️ فعال‌سازی',
+    isActive ? 'profile:deactivate' : 'profile:activate'
+  );
   return kb;
+}
+
+export function profileConfirmKeyboard(action: 'deactivate' | 'delete'): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('✅ بله، مطمئنم', `profile:${action}:yes`)
+    .text('↩️ نه', `profile:${action}:no`);
+}
+
+/** @deprecated alias — use profileConfirmKeyboard('delete') */
+export function confirmDeleteKeyboard(): InlineKeyboard {
+  return profileConfirmKeyboard('delete');
 }
 
 export function skipProfileKeyboard(callback: string): InlineKeyboard {

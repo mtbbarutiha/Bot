@@ -5,11 +5,12 @@ import { getCtxUser } from './start';
 
 export async function handleCoins(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
+  const balance = new Intl.NumberFormat('fa-IR').format(user?.coins ?? 0);
   await ctx.reply(
     [
       '🪙 **سکه petdate**',
       '',
-      'موجودی فعلی: **۰ سکه**',
+      `موجودی فعلی: **${balance} سکه**`,
       '',
       'با سکه می‌تونی:',
       '• درخواست همبازی ویژه',

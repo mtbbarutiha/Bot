@@ -95,16 +95,39 @@ usersRouter.patch('/telegram/:telegramId/profile', (req, res) => {
     age: patch.age != null ? Number(patch.age) : undefined,
     gender: patch.gender,
     city: patch.city,
+    province: patch.province,
     phone: patch.phone,
     bio: patch.bio,
+    interests: Array.isArray(patch.interests) ? patch.interests.map(String) : undefined,
     avatarUrl: patch.avatarUrl,
+    coins: patch.coins != null ? Number(patch.coins) : undefined,
     onboarding: patch.onboarding,
+    isActive: typeof patch.isActive === 'boolean' ? patch.isActive : undefined,
   });
   if (!user) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;
   }
   res.json(user);
+});
+
+usersRouter.patch('/telegram/:telegramId/active', (req, res) => {
+  const isActive = Boolean(req.body?.isActive);
+  const user = dbService.setUserActiveByTelegramId(req.params.telegramId, isActive);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(user);
+});
+
+usersRouter.delete('/telegram/:telegramId', (req, res) => {
+  const ok = dbService.deleteUserByTelegramId(req.params.telegramId);
+  if (!ok) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json({ ok: true });
 });
 
 usersRouter.patch('/:id/profile', (req, res) => {
@@ -114,10 +137,14 @@ usersRouter.patch('/:id/profile', (req, res) => {
     age: patch.age != null ? Number(patch.age) : undefined,
     gender: patch.gender,
     city: patch.city,
+    province: patch.province,
     phone: patch.phone,
     bio: patch.bio,
+    interests: Array.isArray(patch.interests) ? patch.interests.map(String) : undefined,
     avatarUrl: patch.avatarUrl,
+    coins: patch.coins != null ? Number(patch.coins) : undefined,
     onboarding: patch.onboarding,
+    isActive: typeof patch.isActive === 'boolean' ? patch.isActive : undefined,
   });
   if (!user) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });

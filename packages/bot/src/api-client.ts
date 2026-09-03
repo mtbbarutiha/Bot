@@ -64,15 +64,32 @@ export async function updateUserProfile(
     age: number;
     gender: import('@petdate/shared').UserGender;
     city: string;
+    province: string;
     phone: string;
     bio: string;
+    interests: string[];
     avatarUrl: string;
+    coins: number;
     onboarding: OnboardingStatus;
+    isActive: boolean;
   }>
 ): Promise<User> {
   return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/profile`, {
     method: 'PATCH',
     body: JSON.stringify(patch),
+  });
+}
+
+export async function setUserActive(telegramId: string, isActive: boolean): Promise<User> {
+  return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/active`, {
+    method: 'PATCH',
+    body: JSON.stringify({ isActive }),
+  });
+}
+
+export async function deleteUserAccount(telegramId: string): Promise<void> {
+  await request<{ ok: boolean }>(`/api/users/telegram/${encodeURIComponent(telegramId)}`, {
+    method: 'DELETE',
   });
 }
 

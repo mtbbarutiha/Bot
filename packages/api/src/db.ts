@@ -146,6 +146,12 @@ function migrateSchema() {
   if (!names.has('phone')) db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
   if (!names.has('bio')) db.exec('ALTER TABLE users ADD COLUMN bio TEXT');
   if (!names.has('avatar_url')) db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
+  if (!names.has('province')) db.exec('ALTER TABLE users ADD COLUMN province TEXT');
+  if (!names.has('interests')) db.exec("ALTER TABLE users ADD COLUMN interests TEXT NOT NULL DEFAULT '[]'");
+  if (!names.has('coins')) db.exec('ALTER TABLE users ADD COLUMN coins INTEGER NOT NULL DEFAULT 0');
+  if (!names.has('profile_views')) db.exec('ALTER TABLE users ADD COLUMN profile_views INTEGER NOT NULL DEFAULT 0');
+  if (!names.has('likes_count')) db.exec('ALTER TABLE users ADD COLUMN likes_count INTEGER NOT NULL DEFAULT 0');
+  if (!names.has('is_active')) db.exec('ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
 
   const petCols = db.prepare("PRAGMA table_info(pets)").all() as { name: string }[];
   const petNames = new Set(petCols.map((c) => c.name));
@@ -222,6 +228,22 @@ function seedDemoPetsIfEmpty() {
   insertPet.run(2, 'راکی', 'dog', 'هاسکی', 30, 'دوست داره دویدن', 1, 0, 1, 'تهران', 'سعادت‌آباد');
 }
 
+function parseInterests(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return Array.isArray(parsed) ? parsed.map(String) : [];
+    } catch {
+      return value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+  }
+  return [];
+}
+
 function mapUser(row: Record<string, unknown>): User {
   return {
     id: row.id as number,
@@ -234,9 +256,15 @@ function mapUser(row: Record<string, unknown>): User {
     age: row.age != null ? Number(row.age) : undefined,
     gender: row.gender as UserGender | undefined,
     city: row.city as string | undefined,
+    province: row.province as string | undefined,
     phone: row.phone as string | undefined,
     bio: row.bio as string | undefined,
+    interests: parseInterests(row.interests),
     avatarUrl: row.avatar_url as string | undefined,
+    coins: row.coins != null ? Number(row.coins) : 0,
+    profileViews: row.profile_views != null ? Number(row.profile_views) : 0,
+    likesCount: row.likes_count != null ? Number(row.likes_count) : 0,
+    isActive: row.is_active == null ? true : Boolean(row.is_active),
     createdAt: row.created_at as string,
   };
 }
@@ -411,10 +439,14 @@ export const dbService = {
       age: number;
       gender: UserGender;
       city: string;
+      province: string;
       phone: string;
       bio: string;
+      interests: string[];
       avatarUrl: string;
+      coins: number;
       onboarding: OnboardingStatus;
+      isActive: boolean;
     }>
   ): User | null {
     const existing = this.getUserById(userId);
@@ -426,10 +458,17 @@ export const dbService = {
     if (patch.age !== undefined) { fields.push('age = ?'); values.push(patch.age); }
     if (patch.gender !== undefined) { fields.push('gender = ?'); values.push(patch.gender); }
     if (patch.city !== undefined) { fields.push('city = ?'); values.push(patch.city); }
+    if (patch.province !== undefined) { fields.push('province = ?'); values.push(patch.province); }
     if (patch.phone !== undefined) { fields.push('phone = ?'); values.push(patch.phone); }
     if (patch.bio !== undefined) { fields.push('bio = ?'); values.push(patch.bio); }
+    if (patch.interests !== undefined) {
+      fields.push('interests = ?');
+      values.push(JSON.stringify(patch.interests));
+    }
     if (patch.avatarUrl !== undefined) { fields.push('avatar_url = ?'); values.push(patch.avatarUrl); }
+    if (patch.coins !== undefined) { fields.push('coins = ?'); values.push(patch.coins); }
     if (patch.onboarding !== undefined) { fields.push('onboarding = ?'); values.push(patch.onboarding); }
+    if (patch.isActive !== undefined) { fields.push('is_active = ?'); values.push(patch.isActive ? 1 : 0); }
 
     if (fields.length === 0) return existing;
     values.push(userId);
@@ -444,15 +483,44 @@ export const dbService = {
       age: number;
       gender: UserGender;
       city: string;
+      province: string;
       phone: string;
       bio: string;
+      interests: string[];
       avatarUrl: string;
+      coins: number;
       onboarding: OnboardingStatus;
+      isActive: boolean;
     }>
   ): User | null {
     const user = this.getUserByTelegramId(telegramId);
     if (!user) return null;
     return this.updateUserProfile(user.id, patch);
+  },
+
+  setUserActiveByTelegramId(telegramId: string, isActive: boolean): User | null {
+    return this.updateUserProfileByTelegramId(telegramId, { isActive });
+  },
+
+  /** Soft-delete: anonymize + detach telegram so /start can create a fresh account */
+  deleteUserByTelegramId(telegramId: string): boolean {
+    const user = this.getUserByTelegramId(telegramId);
+    if (!user) return false;
+    db.prepare(
+      `UPDATE users SET
+         telegram_id = NULL,
+         username = NULL,
+         name = ?,
+         phone = NULL,
+         bio = NULL,
+         avatar_url = NULL,
+         interests = '[]',
+         is_active = 0,
+         onboarding = 'role_selected',
+         role = NULL
+       WHERE id = ?`
+    ).run(`[حذف‌شده #${user.id}]`, user.id);
+    return true;
   },
 
   listSections(): Section[] {

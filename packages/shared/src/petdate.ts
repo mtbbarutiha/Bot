@@ -30,7 +30,13 @@ export interface PetdateUser {
   age?: number;
   gender?: UserGender;
   city?: string;
+  province?: string;
   bio?: string;
+  interests?: string[];
+  coins?: number;
+  profileViews?: number;
+  likesCount?: number;
+  isActive?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -40,10 +46,24 @@ export interface ProfileDraft {
   age?: number;
   gender?: UserGender;
   city?: string;
+  province?: string;
   phone?: string;
   avatarFileId?: string;
   bio?: string;
+  interests?: string[];
 }
+
+/** علایق پیش‌فرض پروفایل (سبک دوردوریا) */
+export const PROFILE_INTEREST_OPTIONS = [
+  '🐾 همبازی پت',
+  '🚶 پیاده‌روی',
+  '🎓 آموزش',
+  '🏕 سفر با پت',
+  '📸 عکاسی',
+  '🏃 ورزش',
+  '☕ کافه پت‌فرندلی',
+  '💚 داوطلبانه',
+] as const;
 
 export type PetGender = 'male' | 'female';
 export type PetSize = 'small' | 'medium' | 'large';
@@ -100,6 +120,8 @@ export interface BotSession {
   selectedPetId?: number;
   selectedToPetId?: number;
   explorePage?: number;
+  /** صفحهٔ نژاد در ویزارد ثبت پت (reply keyboard) */
+  breedPage?: number;
   updatedAt: string;
 }
 
@@ -109,10 +131,12 @@ export type BotStep =
   | 'profile_name'
   | 'profile_age'
   | 'profile_gender'
+  | 'profile_province'
   | 'profile_city'
   | 'profile_phone'
   | 'profile_photo'
   | 'profile_bio'
+  | 'profile_interests'
   | 'pet_name'
   | 'pet_species'
   | 'pet_breed'

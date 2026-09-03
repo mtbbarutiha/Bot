@@ -25,7 +25,12 @@ import {
 } from './playdates';
 import {
   handleProfile,
+  handleProfileActivate,
   handleProfileContact,
+  handleProfileDeactivate,
+  handleProfileDeactivateConfirm,
+  handleProfileDeleteAsk,
+  handleProfileDeleteConfirm,
   handleProfileGender,
   handleProfilePhoto,
   handleProfileSkip,
@@ -132,6 +137,13 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery('profile:skip_phone', (ctx) => handleProfileSkip(ctx, 'phone'));
   bot.callbackQuery('profile:skip_photo', (ctx) => handleProfileSkip(ctx, 'photo'));
   bot.callbackQuery('profile:skip_bio', (ctx) => handleProfileSkip(ctx, 'bio'));
+  bot.callbackQuery('profile:delete', (ctx) => handleProfileDeleteAsk(ctx));
+  bot.callbackQuery('profile:delete:yes', (ctx) => handleProfileDeleteConfirm(ctx, true));
+  bot.callbackQuery('profile:delete:no', (ctx) => handleProfileDeleteConfirm(ctx, false));
+  bot.callbackQuery('profile:deactivate', (ctx) => handleProfileDeactivate(ctx));
+  bot.callbackQuery('profile:deactivate:yes', (ctx) => handleProfileDeactivateConfirm(ctx, true));
+  bot.callbackQuery('profile:deactivate:no', (ctx) => handleProfileDeactivateConfirm(ctx, false));
+  bot.callbackQuery('profile:activate', (ctx) => handleProfileActivate(ctx));
 
   bot.callbackQuery(/^medical:/, (ctx) => handleComingSoon(ctx, 'پزشکی'));
   bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));

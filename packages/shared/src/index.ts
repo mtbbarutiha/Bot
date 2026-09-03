@@ -18,6 +18,7 @@ export type GameStatus = 'open' | 'full' | 'cancelled' | 'completed';
 export {
   ONBOARDING_STATUS_LABELS,
   PLAYDATE_STATUS_LABELS,
+  PROFILE_INTEREST_OPTIONS,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   USER_ROLES,
@@ -54,9 +55,16 @@ export interface User {
   age?: number;
   gender?: UserGender;
   city?: string;
+  province?: string;
   phone?: string;
   bio?: string;
+  interests?: string[];
   avatarUrl?: string;
+  coins?: number;
+  profileViews?: number;
+  likesCount?: number;
+  /** false = حساب غیرفعال (سبک دوردوریا) */
+  isActive?: boolean;
   createdAt: string;
 }
 
