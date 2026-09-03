@@ -58,30 +58,33 @@ export async function handleMyPetView(ctx: Context, petId: number): Promise<void
   await ctx.answerCallbackQuery();
   const text = `🐾 **پروفایل پت**\n\n${formatPet(pet, true)}`;
   const kb = myPetProfileKeyboard(pet.id);
+  const photo = pet.imageUrl || defaultPetPhoto(pet);
 
   try {
-    if (ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message) {
-      await ctx.editMessageText(text, { parse_mode: 'Markdown', reply_markup: kb });
-      return;
-    }
-  } catch {
-    /* fall through */
-  }
-
-  if (pet.imageUrl) {
-    try {
-      await ctx.replyWithPhoto(pet.imageUrl, {
-        caption: text,
-        parse_mode: 'Markdown',
-        reply_markup: kb,
-      });
-      return;
-    } catch {
-      /* fall through to text */
-    }
+    await ctx.replyWithPhoto(photo, {
+      caption: text,
+      parse_mode: 'Markdown',
+      reply_markup: kb,
+    });
+    return;
+  } catch (err) {
+    console.warn('pet profile photo failed:', (err as Error).message);
   }
 
   await ctx.reply(text, { parse_mode: 'Markdown', reply_markup: kb });
+}
+
+function defaultPetPhoto(pet: { species?: string; id: number }): string {
+  const dogs = [
+    'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
+  ];
+  const cats = [
+    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80',
+  ];
+  const pool = pet.species === 'cat' ? cats : dogs;
+  return pool[pet.id % pool.length]!;
 }
 
 export async function handleMyPetDeleteAsk(ctx: Context, petId: number): Promise<void> {

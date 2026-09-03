@@ -35,6 +35,7 @@ export function getDb(): Database.Database {
     initSchema();
     seedIfEmpty();
     seedDemoPetsIfEmpty();
+    seedFakeDogOwners();
   }
   return db;
 }
@@ -219,13 +220,282 @@ function seedDemoPetsIfEmpty() {
   db.prepare("UPDATE users SET role = 'pet_owner', onboarding = 'profile_complete' WHERE id IN (1, 2)").run();
 
   const insertPet = db.prepare(`
-    INSERT INTO pets (owner_id, name, species, breed, age_months, bio, vaccinated, neutered, looking_for_playmate, city, neighborhood)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO pets (
+      owner_id, name, species, breed, gender, age_months, size, color, bio,
+      vaccinated, neutered, looking_for_playmate, image_url, city, neighborhood
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
-  insertPet.run(1, 'ماکس', 'dog', 'گلدن رتریور', 24, 'بسیار بازیگوش و اجتماعی', 1, 1, 1, 'تهران', 'جردن');
-  insertPet.run(1, 'لونا', 'cat', 'پرشین', 18, 'آرام و مهربان', 1, 1, 1, 'تهران', 'ولنجک');
-  insertPet.run(2, 'راکی', 'dog', 'هاسکی', 30, 'دوست داره دویدن', 1, 0, 1, 'تهران', 'سعادت‌آباد');
+  insertPet.run(
+    1, 'ماکس', 'dog', 'گلدن رتریور', 'male', 24, 'large', 'طلایی',
+    'بسیار بازیگوش و اجتماعی', 1, 1, 1,
+    DEMO_DOG_PHOTOS[0], 'تهران', 'جردن'
+  );
+  insertPet.run(
+    1, 'لونا', 'cat', 'پرشین', 'female', 18, 'small', 'سفید',
+    'آرام و مهربان', 1, 1, 1,
+    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80',
+    'تهران', 'ولنجک'
+  );
+  insertPet.run(
+    2, 'راکی', 'dog', 'هاسکی', 'male', 30, 'large', 'خاکستری',
+    'دوست داره دویدن', 1, 0, 1,
+    DEMO_DOG_PHOTOS[1], 'تهران', 'سعادت‌آباد'
+  );
+}
+
+/** عکس‌های عمومی سگ (HTTPS) — برای نمایش در تلگرام */
+const DEMO_DOG_PHOTOS = [
+  'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1530281700549-e82e7bf110d6?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1548199973-03cce0bbc87b?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1477884213360-7e9d7dcc1e48?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1561037404-61cd46aa615b?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1537151608828-ea2b11777ee8?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1544568100-847a948585b9?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1601758228041-f3b2795255f1?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1507146426996-ef05306b995a?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1598133894008-61f7fdb8cc3a?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1588943211346-0908a1fb0b01?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1576201836106-db1758fd1c97?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1558788353-f76d92427f16?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1529429617124-95b109e86ad8?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1518717756530-d6d9b0b8a0e5?auto=format&fit=crop&w=800&q=80',
+  'https://images.unsplash.com/photo-1596492784531-6e6eb5ea9993?auto=format&fit=crop&w=800&q=80',
+] as const;
+
+const FAKE_DOG_OWNERS: Array<{
+  telegramId: string;
+  name: string;
+  username: string;
+  city: string;
+  province: string;
+  gender: UserGender;
+  age: number;
+  dogs: Array<{
+    name: string;
+    breed: string;
+    gender: PetGender;
+    ageMonths: number;
+    size: PetSize;
+    color: string;
+    bio: string;
+    city: string;
+    neighborhood: string;
+  }>;
+}> = [
+  {
+    telegramId: 'fake_owner_01',
+    name: 'نیما کریمی',
+    username: 'nima_k',
+    city: 'تهران',
+    province: 'تهران',
+    gender: 'male',
+    age: 29,
+    dogs: [
+      { name: 'ماکس', breed: 'گلدن رتریور', gender: 'male', ageMonths: 36, size: 'large', color: 'طلایی', bio: 'عاشق توپ و پارک', city: 'تهران', neighborhood: 'جردن' },
+      { name: 'بلا', breed: 'لابرادور', gender: 'female', ageMonths: 24, size: 'large', color: 'شکلاتی', bio: 'مهربون و آرام', city: 'تهران', neighborhood: 'جردن' },
+    ],
+  },
+  {
+    telegramId: 'fake_owner_02',
+    name: 'سارا احمدی',
+    username: 'sara_ahm',
+    city: 'تهران',
+    province: 'تهران',
+    gender: 'female',
+    age: 27,
+    dogs: [
+      { name: 'لونا', breed: 'هاسکی', gender: 'female', ageMonths: 30, size: 'large', color: 'خاکستری-سفید', bio: 'پر انرژی و بازیگوش', city: 'تهران', neighborhood: 'سعادت‌آباد' },
+      { name: 'تدی', breed: 'پامرانین', gender: 'male', ageMonths: 18, size: 'small', color: 'نارنجی', bio: 'کوچولو ولی شجاع', city: 'تهران', neighborhood: 'سعادت‌آباد' },
+    ],
+  },
+  {
+    telegramId: 'fake_owner_03',
+    name: 'رضا موسوی',
+    username: 'reza_m',
+    city: 'کرج',
+    province: 'البرز',
+    gender: 'male',
+    age: 34,
+    dogs: [
+      { name: 'راکی', breed: 'ژرمن شپرد', gender: 'male', ageMonths: 48, size: 'large', color: 'مشکی-قهوه‌ای', bio: 'نگهبان خونه‌ست', city: 'کرج', neighborhood: 'گوهردشت' },
+      { name: 'میلو', breed: 'بیگل', gender: 'male', ageMonths: 20, size: 'medium', color: 'سه‌رنگ', bio: 'بینی قوی، دنبال بو!', city: 'کرج', neighborhood: 'گوهردشت' },
+    ],
+  },
+  {
+    telegramId: 'fake_owner_04',
+    name: 'مریم حسینی',
+    username: 'maryam_h',
+    city: 'اصفهان',
+    province: 'اصفهان',
+    gender: 'female',
+    age: 31,
+    dogs: [
+      { name: 'کوکا', breed: 'شیتزو', gender: 'female', ageMonths: 22, size: 'small', color: 'سفید', bio: 'دوست داره بغل بشه', city: 'اصفهان', neighborhood: 'جلفا' },
+      { name: 'بادی', breed: 'بولداگ فرانسوی', gender: 'male', ageMonths: 28, size: 'medium', color: 'خاکستری', bio: 'خنده‌دار و تنبل', city: 'اصفهان', neighborhood: 'جلفا' },
+    ],
+  },
+  {
+    telegramId: 'fake_owner_05',
+    name: 'امیر جعفری',
+    username: 'amir_j',
+    city: 'شیراز',
+    province: 'فارس',
+    gender: 'male',
+    age: 26,
+    dogs: [
+      { name: 'چیس', breed: 'مرزپایه', gender: 'male', ageMonths: 16, size: 'medium', color: 'مشکی-سفید', bio: 'باحال و سریع', city: 'شیراز', neighborhood: 'معالی‌آباد' },
+      { name: 'نالا', breed: 'مالینویز', gender: 'female', ageMonths: 40, size: 'large', color: 'قهوه‌ای', bio: 'ورزشی و باهوش', city: 'شیراز', neighborhood: 'معالی‌آباد' },
+    ],
+  },
+  {
+    telegramId: 'fake_owner_06',
+    name: 'یگانه رضایی',
+    username: 'yegane_r',
+    city: 'مشهد',
+    province: 'خراسان رضوی',
+    gender: 'female',
+    age: 24,
+    dogs: [
+      { name: 'داکوتا', breed: 'هاسکی سیبری', gender: 'female', ageMonths: 26, size: 'large', color: 'سفید', bio: 'چشم آبی داره', city: 'مشهد', neighborhood: 'احمدآباد' },
+      { name: 'پوچی', breed: 'چیهواهوا', gender: 'male', ageMonths: 14, size: 'small', color: 'قهوه‌ای', bio: 'جیغ‌جیغو ولی بامزه', city: 'مشهد', neighborhood: 'احمدآباد' },
+    ],
+  },
+  {
+    telegramId: 'fake_owner_07',
+    name: 'حسین کاظمی',
+    username: 'hossein_k',
+    city: 'تبریز',
+    province: 'آذربایجان شرقی',
+    gender: 'male',
+    age: 38,
+    dogs: [
+      { name: 'آتو', breed: 'آکیتا', gender: 'male', ageMonths: 42, size: 'large', color: 'سفید-نارنجی', bio: 'وفادار و جدی', city: 'تبریز', neighborhood: 'ولیعصر' },
+      { name: 'سفید', breed: 'ساموید', gender: 'female', ageMonths: 20, size: 'medium', color: 'سفید', bio: 'مثل ابر پنبه‌ای', city: 'تبریز', neighborhood: 'ولیعصر' },
+    ],
+  },
+  {
+    telegramId: 'fake_owner_08',
+    name: 'النا مرادی',
+    username: 'elena_m',
+    city: 'تهران',
+    province: 'تهران',
+    gender: 'female',
+    age: 33,
+    dogs: [
+      { name: 'کویین', breed: 'پودل', gender: 'female', ageMonths: 32, size: 'medium', color: 'کرم', bio: 'مرتب و شیک', city: 'تهران', neighborhood: 'ونک' },
+      { name: 'جک', breed: 'جک راسل', gender: 'male', ageMonths: 18, size: 'small', color: 'سفید-قهوه‌ای', bio: 'همیشه در حال دویدن', city: 'تهران', neighborhood: 'ونک' },
+    ],
+  },
+  {
+    telegramId: 'fake_owner_09',
+    name: 'پویا نوری',
+    username: 'pouya_n',
+    city: 'اهواز',
+    province: 'خوزستان',
+    gender: 'male',
+    age: 30,
+    dogs: [
+      { name: 'رکس', breed: 'روتوایلر', gender: 'male', ageMonths: 36, size: 'large', color: 'مشکی-قهوه‌ای', bio: 'قوی و محافظ', city: 'اهواز', neighborhood: 'کیانپارس' },
+      { name: 'لیلا', breed: 'داکسوند', gender: 'female', ageMonths: 24, size: 'small', color: 'قهوه‌ای', bio: 'بدن دراز، قلب بزرگ', city: 'اهواز', neighborhood: 'کیانپارس' },
+    ],
+  },
+  {
+    telegramId: 'fake_owner_10',
+    name: 'نازنین شریفی',
+    username: 'nazanin_sh',
+    city: 'قم',
+    province: 'قم',
+    gender: 'female',
+    age: 28,
+    dogs: [
+      { name: 'مالی', breed: 'مالیتیز', gender: 'female', ageMonths: 15, size: 'small', color: 'سفید', bio: 'پر حرف و بامزه', city: 'قم', neighborhood: 'پردیسان' },
+      { name: 'برنو', breed: 'باکسر', gender: 'male', ageMonths: 28, size: 'large', color: 'قهوه‌ای', bio: 'بازیگوش و وفادار', city: 'قم', neighborhood: 'پردیسان' },
+    ],
+  },
+];
+
+function seedFakeDogOwners() {
+  const existing = db
+    .prepare("SELECT id FROM users WHERE telegram_id = 'fake_owner_01'")
+    .get() as { id: number } | undefined;
+
+  if (!existing) {
+    const insertUser = db.prepare(`
+      INSERT INTO users (
+        telegram_id, name, username, role, onboarding, age, gender, city, province,
+        bio, interests, coins, is_active
+      ) VALUES (?, ?, ?, 'pet_owner', 'profile_complete', ?, ?, ?, ?, ?, '[]', 50, 1)
+    `);
+
+    const insertPet = db.prepare(`
+      INSERT INTO pets (
+        owner_id, name, species, breed, gender, age_months, size, color, bio,
+        vaccinated, neutered, looking_for_playmate, image_url, city, neighborhood
+      ) VALUES (?, ?, 'dog', ?, ?, ?, ?, ?, ?, 1, ?, 1, ?, ?, ?)
+    `);
+
+    let photoIdx = 0;
+    for (const owner of FAKE_DOG_OWNERS) {
+      const result = insertUser.run(
+        owner.telegramId,
+        owner.name,
+        owner.username,
+        owner.age,
+        owner.gender,
+        owner.city,
+        owner.province,
+        `صاحب پت در ${owner.city}`
+      );
+      const ownerId = Number(result.lastInsertRowid);
+
+      owner.dogs.forEach((dog, dogIdx) => {
+        const imageUrl = DEMO_DOG_PHOTOS[photoIdx % DEMO_DOG_PHOTOS.length];
+        photoIdx += 1;
+        insertPet.run(
+          ownerId,
+          dog.name,
+          dog.breed,
+          dog.gender,
+          dog.ageMonths,
+          dog.size,
+          dog.color,
+          dog.bio,
+          dogIdx === 0 ? 1 : 0,
+          imageUrl,
+          dog.city,
+          dog.neighborhood
+        );
+      });
+    }
+
+    console.log('🐾 seeded 10 fake owners with 20 dogs (+photos)');
+  }
+
+  // پر کردن عکس برای پت‌هایی که هنوز image_url ندارند
+  const missing = db
+    .prepare(`SELECT id, species FROM pets WHERE image_url IS NULL OR image_url = ''`)
+    .all() as Array<{ id: number; species: string }>;
+  if (missing.length) {
+    const update = db.prepare('UPDATE pets SET image_url = ?, updated_at = datetime(\'now\') WHERE id = ?');
+    const catPhoto =
+      'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80';
+    for (const pet of missing) {
+      const photo =
+        pet.species === 'cat'
+          ? catPhoto
+          : DEMO_DOG_PHOTOS[pet.id % DEMO_DOG_PHOTOS.length]!;
+      update.run(photo, pet.id);
+    }
+    console.log(`🐾 backfilled photos for ${missing.length} pets`);
+  }
+
+  db.prepare("UPDATE pets SET name = 'داکوتا' WHERE name = 'داکota'").run();
 }
 
 function parseInterests(value: unknown): string[] {
