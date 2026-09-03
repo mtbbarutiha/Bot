@@ -167,6 +167,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
     draftProfile: undefined,
     selectedPetId: undefined,
     selectedToPetId: undefined,
+    breedPage: undefined,
   });
   await ctx.reply('عملیات لغو شد.', { reply_markup: mainMenuKeyboard(user?.role) });
 }
