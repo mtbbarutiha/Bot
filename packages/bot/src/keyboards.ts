@@ -17,6 +17,7 @@ export const PET_OWNER_MENU = {
   findPlaymate: '🔍 پیدا کردن همبازی',
   myProfile: '👤 پروفایل خودم',
   myPets: '🐾 پت‌های من',
+  addPet: '➕ ثبت پت',
   coins: '🪙 سکه',
   medical: '🩺 پزشکی',
   invite: '🎁 معرفی به دوستان',
@@ -237,17 +238,19 @@ export function petOwnerMenuKeyboard(): Keyboard {
     .text(m.myProfile)
     .text(m.myPets)
     .row()
+    .text(m.addPet)
+    .success()
     .text(m.coins)
-    .text(m.medical)
     .row()
+    .text(m.medical)
     .text(m.invite)
     .success()
+    .row()
     .text(m.quickVet)
     .primary()
-    .row()
     .text(m.shop)
-    .text(m.services)
     .row()
+    .text(m.services)
     .text(m.help)
     .resized()
     .persistent();

@@ -67,7 +67,18 @@ async function cancelWizard(ctx: Context, telegramId: string): Promise<void> {
 }
 
 export async function startPetWizard(ctx: Context, telegramId: string): Promise<void> {
-  await upsertSession(telegramId, { step: 'pet_name', draftPet: {}, breedPage: 0 });
+  const user = await getUserByTelegramId(telegramId);
+  if (!user?.id) {
+    await ctx.reply('اول /start بزن.');
+    return;
+  }
+  await upsertSession(telegramId, {
+    step: 'pet_name',
+    userId: user.id,
+    role: user.role,
+    draftPet: {},
+    breedPage: 0,
+  });
   await askPetName(ctx);
 }
 
@@ -85,11 +96,24 @@ async function askPetName(ctx: Context): Promise<void> {
 }
 
 async function askSpecies(ctx: Context): Promise<void> {
-  const species = await listSpecies();
-  await ctx.reply(`🐾 **${stepLabel(2)}**\n\nنوع پت رو از منو انتخاب کن:`, {
-    parse_mode: 'Markdown',
-    reply_markup: speciesReplyKeyboard(species),
-  });
+  try {
+    const species = await listSpecies();
+    if (!species.length) {
+      await ctx.reply('لیست نوع پت در دسترس نیست. کمی بعد دوباره امتحان کن.', {
+        reply_markup: textStepKeyboard(),
+      });
+      return;
+    }
+    await ctx.reply(`🐾 **${stepLabel(2)}**\n\nنوع پت رو از منو انتخاب کن:`, {
+      parse_mode: 'Markdown',
+      reply_markup: speciesReplyKeyboard(species),
+    });
+  } catch (err) {
+    console.error('askSpecies failed:', err);
+    await ctx.reply('خطا در دریافت نوع پت. دوباره «➕ ثبت پت» رو بزن.', {
+      reply_markup: mainMenuKeyboard('pet_owner'),
+    });
+  }
 }
 
 async function askBreed(ctx: Context, speciesCode: string, page = 0): Promise<void> {
@@ -289,12 +313,23 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
   if (!from) return false;
 
   const telegramId = String(from.id);
-  const session = await getSession(telegramId);
-  if (!session || !session.userId) return false;
+  let session = await getSession(telegramId);
+  if (!session) return false;
 
   const step = session.step;
   if (!String(step).startsWith('pet_') && step !== 'playdate_message') return false;
 
+  // بعد از ری‌استارت/سشن ناقص، userId را بازیابی کن
+  if (!session.userId) {
+    const user = await getUserByTelegramId(telegramId);
+    if (!user?.id) {
+      await ctx.reply('نشست منقضی شده. دوباره /start بزن.');
+      return true;
+    }
+    session = await upsertSession(telegramId, { userId: user.id, role: user.role });
+  }
+
+  const userId = session.userId!;
   const draft: PetDraft = { ...session.draftPet };
 
   if (step === 'playdate_message') {
@@ -329,7 +364,7 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
   }
 
   if (text === WIZARD_NAV.skip) {
-    return handleSkipText(ctx, telegramId, session.userId, step, draft);
+    return handleSkipText(ctx, telegramId, userId, step, draft);
   }
 
   if (step === 'pet_name') {
@@ -861,17 +896,22 @@ export async function handleAddPetCommand(ctx: Context): Promise<void> {
   const from = ctx.from;
   if (!from) return;
 
-  const user = await getUserByTelegramId(String(from.id));
-  if (!user) {
-    await ctx.reply('اول /start بزن.');
-    return;
-  }
-  if (user.role !== 'pet_owner') {
-    await ctx.reply('ثبت پت فقط برای **صاحب پت** فعاله. نقشت رو در /start عوض کن.', {
-      parse_mode: 'Markdown',
-    });
-    return;
-  }
+  try {
+    const user = await getUserByTelegramId(String(from.id));
+    if (!user) {
+      await ctx.reply('اول /start بزن.');
+      return;
+    }
+    if (user.role !== 'pet_owner') {
+      await ctx.reply('ثبت پت فقط برای **صاحب پت** فعاله. نقشت رو در /start عوض کن.', {
+        parse_mode: 'Markdown',
+      });
+      return;
+    }
 
-  await startPetWizard(ctx, String(from.id));
+    await startPetWizard(ctx, String(from.id));
+  } catch (err) {
+    console.error('handleAddPetCommand failed:', err);
+    await ctx.reply('شروع ثبت پت با خطا مواجه شد. دوباره امتحان کن.');
+  }
 }

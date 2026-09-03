@@ -154,7 +154,11 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery('playdate:cancel', handlePlaydateCancel);
 
   bot.callbackQuery('pets:add', async (ctx) => {
-    await ctx.answerCallbackQuery();
+    try {
+      await ctx.answerCallbackQuery();
+    } catch {
+      /* ignore */
+    }
     await handleAddPetCommand(ctx);
   });
 
@@ -228,6 +232,9 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case m.myPets:
     case d.myPets:
       return handleMyPets(ctx);
+    case m.addPet:
+    case d.addPet:
+      return handleAddPetCommand(ctx);
     case m.coins:
       return handleCoins(ctx);
     case m.medical:
@@ -243,8 +250,6 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       return handlePetShop(ctx);
     case m.services:
       return handleServices(ctx);
-    case d.addPet:
-      return handleAddPetCommand(ctx);
     default:
       if (!MENU_LABELS.has(text)) {
         const user = await getCtxUser(ctx);
