@@ -59,43 +59,66 @@ function toEnglishDigits(raw: string): string {
 }
 
 function isProfileComplete(user: User): boolean {
-  return Boolean(user.name && user.age && user.gender && user.country && user.city);
+  return Boolean(
+    user.name &&
+      user.age &&
+      user.gender &&
+      user.country &&
+      user.city &&
+      (user.country !== 'ایران' || user.province)
+  );
 }
 
 function formatNum(n: number | undefined | null): string {
   return new Intl.NumberFormat('fa-IR').format(n ?? 0);
 }
 
-/** کارت پروفایل خودم — سبک دوردوریا (باکس آمار + caption) */
-function formatProfileCard(user: User, petCount: number): string {
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** کارت کامل پروفایل کاربر */
+function formatProfileCard(user: User, petCount: number, petNames: string[] = []): string {
   const gender = user.gender ? USER_GENDER_LABELS[user.gender] : '—';
   const role = user.role ? USER_ROLE_LABELS[user.role] : '—';
-  const loc =
-    [user.country, user.province, user.city].filter(Boolean).join('، ') || '—';
   const interests =
     user.interests && user.interests.length > 0
-      ? user.interests.join(' · ')
-      : 'هنوز انتخاب نشده';
+      ? user.interests.map(escapeHtml).join(' · ')
+      : '—';
   const activeLabel = user.isActive === false ? '⏸ غیرفعال' : '✅ فعال';
+  const phone = user.phone ? escapeHtml(user.phone) : '—';
+  const petsLine =
+    petNames.length > 0
+      ? petNames.map((n) => `• ${escapeHtml(n)}`).join('\n')
+      : 'هنوز پتی ثبت نشده';
 
   return [
-    '📦 **پروفایل خودم**',
+    '👤 <b>پروفایل من</b>',
     '',
-    `👤 ${user.name}`,
-    user.username ? `@${user.username}` : null,
-    `🎂 ${user.age ?? '—'} · ${gender}`,
-    `📍 ${loc}`,
-    `🐾 پت‌ها: ${formatNum(petCount)} · نقش: ${role}`,
+    `<b>نام:</b> ${escapeHtml(user.name)}`,
+    user.username ? `<b>یوزرنیم:</b> @${escapeHtml(user.username)}` : null,
+    `<b>سن:</b> ${user.age != null ? formatNum(user.age) : '—'}`,
+    `<b>جنسیت:</b> ${gender}`,
+    `<b>نقش:</b> ${role}`,
+    '',
+    '📍 <b>موقعیت</b>',
+    `<b>کشور:</b> ${user.country ? escapeHtml(user.country) : '—'}`,
+    `<b>استان:</b> ${user.province ? escapeHtml(user.province) : '—'}`,
+    `<b>شهر:</b> ${user.city ? escapeHtml(user.city) : '—'}`,
+    '',
+    `📱 <b>موبایل:</b> ${phone}`,
+    user.bio ? `💬 <b>درباره من:</b>\n${escapeHtml(user.bio)}` : '💬 <b>درباره من:</b> —',
+    '',
+    `🏷 <b>علایق:</b>\n${interests}`,
+    '',
+    `🐾 <b>پت‌های من</b> (${formatNum(petCount)})`,
+    petsLine,
+    '',
+    '📊 <b>آمار</b>',
+    `🪙 سکه: ${formatNum(user.coins)}`,
+    `👁 بازدید: ${formatNum(user.profileViews)}`,
+    `❤️ لایک: ${formatNum(user.likesCount)}`,
     `وضعیت حساب: ${activeLabel}`,
-    user.bio ? `💬 ${user.bio}` : null,
-    '',
-    '┏━━ آمار ━━┓',
-    `┃ 🪙 سکه: ${formatNum(user.coins)}`,
-    `┃ 👁 بازدید: ${formatNum(user.profileViews)}`,
-    `┃ ❤️ لایک: ${formatNum(user.likesCount)}`,
-    '┗━━━━━━━━┛',
-    '',
-    `🏷 علایق: ${interests}`,
   ]
     .filter((line) => line !== null)
     .join('\n');
@@ -112,7 +135,7 @@ async function sendOwnProfileCard(
     try {
       await ctx.replyWithPhoto(user.avatarUrl, {
         caption,
-        parse_mode: 'Markdown',
+        parse_mode: 'HTML',
         reply_markup: kb,
       });
       return;
@@ -120,7 +143,7 @@ async function sendOwnProfileCard(
       /* fall through */
     }
   }
-  await ctx.reply(caption, { parse_mode: 'Markdown', reply_markup: kb });
+  await ctx.reply(caption, { parse_mode: 'HTML', reply_markup: kb });
 }
 
 async function cancelWizard(ctx: Context, telegramId: string): Promise<void> {
@@ -142,20 +165,30 @@ export async function handleProfile(ctx: Context): Promise<void> {
     return;
   }
 
+  const pets = await listPets({ ownerId: user.id });
+  const petNames = pets.map((p) => p.name);
+  const card = formatProfileCard(user, pets.length, petNames);
+
   if (!isProfileComplete(user)) {
-    const caption = [
-      formatProfileCard(user, 0),
-      '',
-      '⚠️ پروفایلت هنوز کامل نیست.',
-      'با «تکمیل پروفایل» مرحله‌به‌مرحله کاملش می‌کنیم 👇',
-    ].join('\n');
-    await sendOwnProfileCard(ctx, user, 0, caption);
-    await ctx.reply('منوی اصلی:', { reply_markup: mainMenuKeyboard(user.role) });
+    // اگر onboarding اشتباه کامل علامت خورده، اصلاح کن
+    if (user.onboarding === 'profile_complete') {
+      try {
+        await updateUserProfile(String(ctx.from!.id), { onboarding: 'profile_incomplete' });
+      } catch {
+        /* ignore */
+      }
+    }
+    await sendOwnProfileCard(
+      ctx,
+      user,
+      pets.length,
+      `${card}\n\n⚠️ <b>پروفایلت هنوز کامل نیست.</b>\nالان مرحله‌به‌مرحله تکمیلش می‌کنیم 👇`
+    );
+    await startProfileWizard(ctx);
     return;
   }
 
-  const pets = await listPets({ ownerId: user.id });
-  await sendOwnProfileCard(ctx, user, pets.length, formatProfileCard(user, pets.length));
+  await sendOwnProfileCard(ctx, user, pets.length, card);
   await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
 }
 
@@ -704,7 +737,11 @@ async function finishProfileWizard(
   await upsertSession(telegramId, { step: 'ready', draftProfile: undefined });
 
   const pets = await listPets({ ownerId: user.id });
-  const text = `✅ پروفایلت کامل شد!\n\n${formatProfileCard(user, pets.length)}`;
+  const text = `✅ پروفایلت کامل شد!\n\n${formatProfileCard(
+    user,
+    pets.length,
+    pets.map((p) => p.name)
+  )}`;
   await sendOwnProfileCard(ctx, user, pets.length, text);
   await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role) });
 }
