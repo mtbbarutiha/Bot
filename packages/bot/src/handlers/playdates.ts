@@ -80,6 +80,13 @@ export async function handlePlaydateAsk(ctx: Context, toPetId: number): Promise<
 
   await ctx.answerCallbackQuery();
 
+  const session = await import('../session').then((m) => m.getSession(String(ctx.from!.id)));
+  const preferredId = session?.exploreForPetId;
+  if (preferredId && myPets.some((p) => p.id === preferredId)) {
+    await startPlaydateMessage(ctx, preferredId, toPetId, user.id);
+    return;
+  }
+
   if (myPets.length === 1) {
     await startPlaydateMessage(ctx, myPets[0]!.id, toPetId, user.id);
     return;

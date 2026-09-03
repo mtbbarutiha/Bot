@@ -120,6 +120,10 @@ export interface BotSession {
   selectedPetId?: number;
   selectedToPetId?: number;
   explorePage?: number;
+  /** پتی که برایش همبازی می‌گردیم؛ undefined = همه / هنوز انتخاب نشده */
+  exploreForPetId?: number;
+  /** آیا کاربر پت مبدأ را برای جست‌وجوی همبازی انتخاب کرده */
+  exploreForPicked?: boolean;
   /** صفحهٔ نژاد در ویزارد ثبت پت (reply keyboard) */
   breedPage?: number;
   updatedAt: string;

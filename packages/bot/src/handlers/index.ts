@@ -3,7 +3,7 @@ import type { PetGender, PetSize, UserGender, UserRole } from '@petdate/shared';
 import { USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
 import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, WIZARD_NAV, mainMenuKeyboard } from '../keyboards';
 import { getSession } from '../session';
-import { handleExplore, handleExploreBack, handleExplorePet } from './explore';
+import { handleExplore, handleExploreBack, handleExploreForPet, handleExplorePet, handleExplorePickPet, handleFindPlaymate } from './explore';
 import {
   handleAddPetCommand,
   handleBreedCustom,
@@ -62,7 +62,7 @@ export function registerHandlers(bot: Bot): void {
   bot.command('menu', handleMenu);
   bot.command('help', handleHelp);
   bot.command('cancel', handleCancel);
-  bot.command('explore', (ctx) => handleExplore(ctx));
+  bot.command('explore', (ctx) => handleFindPlaymate(ctx));
   bot.command('pets', handleMyPets);
   bot.command('requests', handleRequests);
   bot.command('profile', handleProfile);
@@ -104,6 +104,11 @@ export function registerHandlers(bot: Bot): void {
   });
   bot.callbackQuery(/^explore:pet:(\d+)$/, (ctx) => handleExplorePet(ctx, Number(ctx.match![1])));
   bot.callbackQuery('explore:back', handleExploreBack);
+  bot.callbackQuery('explore:pick', (ctx) => handleExplorePickPet(ctx));
+  bot.callbackQuery('explore:for:all', (ctx) => handleExploreForPet(ctx, 'all'));
+  bot.callbackQuery(/^explore:for:(\d+)$/, (ctx) =>
+    handleExploreForPet(ctx, Number(ctx.match![1]))
+  );
 
   bot.callbackQuery(/^playdate:ask:(\d+)$/, (ctx) => handlePlaydateAsk(ctx, Number(ctx.match![1])));
   bot.callbackQuery(/^playdate:from:(\d+):(\d+)$/, (ctx) =>
@@ -188,7 +193,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   switch (text) {
     case m.findPlaymate:
     case d.explore:
-      return handleExplore(ctx);
+      return handleFindPlaymate(ctx);
     case m.myProfile:
     case d.profile:
       return handleProfile(ctx);

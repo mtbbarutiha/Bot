@@ -354,7 +354,21 @@ export function exploreListKeyboard(pets: PetProfile[], page: number, pageSize: 
     if (page > 0) kb.text('◀️ قبلی', `explore:page:${page - 1}`);
     kb.text(`${page + 1}/${totalPages}`, 'noop');
     if (page < totalPages - 1) kb.text('بعدی ▶️', `explore:page:${page + 1}`);
+    kb.row();
   }
+  kb.text('🔄 تعویض پت من', 'explore:pick').row();
+  return kb;
+}
+
+/** انتخاب پت مبدأ برای پیدا کردن همبازی */
+export function explorePickMyPetKeyboard(pets: PetProfile[]): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  kb.text('🌟 همه', 'explore:for:all').success().row();
+  pets.forEach((pet) => {
+    const bits = [pet.breed, pet.city].filter(Boolean).join(' · ');
+    const label = bits ? `${pet.name} (${bits})` : pet.name;
+    kb.text(label, `explore:for:${pet.id}`).primary().row();
+  });
   return kb;
 }
 
