@@ -123,7 +123,9 @@ export async function sendWelcomeBack(ctx: Context, user: User, name: string): P
   ].join('\n');
 
   if (!profileDone) {
-    await ctx.reply(caption);
+    // اول کیبورد اصلی با «📋 منو» را بفرست تا کیبورد قدیمی تلگرام عوض شود،
+    // بعد ویزارد پروفایل شروع می‌شود (ویزارد هم دکمه منو دارد).
+    await ctx.reply(caption, { reply_markup: menuKeyboardFor(ctx, user) });
     await startProfileWizard(ctx);
     return;
   }
@@ -551,7 +553,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
 
 export async function handleMenu(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
-  await ctx.reply(`منوی ${BRAND.name} 👇`, {
+  await ctx.reply(`منوی ${BRAND.name} 👇\n(دکمه «📋 منو» در ردیف اول)`, {
     reply_markup: menuKeyboardFor(ctx, user),
   });
 }

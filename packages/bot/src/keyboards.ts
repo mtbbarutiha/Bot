@@ -72,6 +72,7 @@ export const ADMIN_MENU = {
   faceQueue: '📋 صف احراز چهره',
   vetQueue: '📄 صف مدارک دامپزشک',
   stats: '📊 وضعیت صف‌ها',
+  pendingPayments: '💳 پرداخت‌های در انتظار',
   back: '🔙 بازگشت به منو',
   menu: MAIN_MENU_BTN,
 } as const;
@@ -180,6 +181,8 @@ export function withWizardNav(
   kb.row();
   if (!opts?.noBack) kb.text(WIZARD_NAV.back);
   kb.text(WIZARD_NAV.cancel).danger();
+  // همیشه «منو» قابل‌دسترس باشد تا کیبورد قدیمی تلگرام گیر نکند
+  kb.row().text(MAIN_MENU_BTN);
   return kb.resized().persistent();
 }
 
@@ -262,6 +265,8 @@ export function phoneWizardKeyboard(): Keyboard {
     .text(WIZARD_NAV.back)
     .text(WIZARD_NAV.cancel)
     .danger()
+    .row()
+    .text(MAIN_MENU_BTN)
     .resized()
     .persistent();
 }
@@ -308,6 +313,7 @@ export function breedReplyKeyboard(breeds: PetBreed[], page: number): Keyboard {
   kb.text(WIZARD_NAV.custom);
   kb.row();
   kb.text(WIZARD_NAV.cancel).danger();
+  kb.row().text(MAIN_MENU_BTN);
   return kb.resized().persistent();
 }
 
@@ -340,6 +346,8 @@ export function yesNoReplyKeyboard(): Keyboard {
     .text(WIZARD_NAV.back)
     .text(WIZARD_NAV.cancel)
     .danger()
+    .row()
+    .text(MAIN_MENU_BTN)
     .resized()
     .persistent();
 }
@@ -416,7 +424,10 @@ function appendAccessRow(kb: Keyboard, telegramId?: string | number | null): Key
 
 export function vetMenuKeyboard(telegramId?: string | number | null): Keyboard {
   const m = VET_MENU;
+  // «📋 منو» ردیف اول — روی موبایل دیده شود (قبلاً ته کیبورد بلند گم می‌شد)
   const kb = new Keyboard()
+    .text(m.menu)
+    .row()
     .text(m.patients)
     .primary()
     .row()
@@ -427,8 +438,6 @@ export function vetMenuKeyboard(telegramId?: string | number | null): Keyboard {
     .text(m.phoneVerify)
     .primary()
     .text(m.help)
-    .row()
-    .text(m.menu)
     .resized()
     .persistent();
   return appendAccessRow(kb, telegramId);
@@ -436,7 +445,10 @@ export function vetMenuKeyboard(telegramId?: string | number | null): Keyboard {
 
 export function petOwnerMenuKeyboard(telegramId?: string | number | null): Keyboard {
   const m = PET_OWNER_MENU;
+  // «📋 منو» ردیف اول — کاربر فوراً ببیند (نه ته منوی ۱۲ ردیفی)
   const kb = new Keyboard()
+    .text(m.menu)
+    .row()
     .text(m.findPlaymate)
     .primary()
     .row()
@@ -466,8 +478,6 @@ export function petOwnerMenuKeyboard(telegramId?: string | number | null): Keybo
     .row()
     .text(m.services)
     .text(m.help)
-    .row()
-    .text(m.menu)
     .resized()
     .persistent();
   return appendAccessRow(kb, telegramId);
@@ -476,6 +486,8 @@ export function petOwnerMenuKeyboard(telegramId?: string | number | null): Keybo
 export function searchPetsMenuKeyboard(): Keyboard {
   const m = SEARCH_PETS_MENU;
   return new Keyboard()
+    .text(m.menu)
+    .row()
     .text(m.byBreed)
     .primary()
     .row()
@@ -486,7 +498,6 @@ export function searchPetsMenuKeyboard(): Keyboard {
     .row()
     .text(m.allPets)
     .row()
-    .text(m.menu)
     .text(m.backToMenu)
     .resized()
     .persistent();
@@ -495,6 +506,8 @@ export function searchPetsMenuKeyboard(): Keyboard {
 export function defaultMenuKeyboard(telegramId?: string | number | null): Keyboard {
   const m = DEFAULT_MENU;
   const kb = new Keyboard()
+    .text(m.menu)
+    .row()
     .text(m.explore)
     .primary()
     .row()
@@ -507,7 +520,6 @@ export function defaultMenuKeyboard(telegramId?: string | number | null): Keyboa
     .primary()
     .row()
     .text(m.help)
-    .text(m.menu)
     .resized()
     .persistent();
   return appendAccessRow(kb, telegramId);
@@ -524,6 +536,7 @@ export function adminPanelKeyboard(): Keyboard {
     .row()
     .text(m.stats)
     .success()
+    .text(m.pendingPayments)
     .row()
     .text(m.menu)
     .text(m.back)
@@ -565,10 +578,11 @@ export function adminVetCredentialKeyboard(userId: number): InlineKeyboard {
 export function myPetsSectionKeyboard(): Keyboard {
   const m = MY_PETS_SECTION;
   return new Keyboard()
+    .text(m.menu)
+    .row()
     .text(m.addPet)
     .success()
     .row()
-    .text(m.menu)
     .text(m.backToMenu)
     .resized()
     .persistent();

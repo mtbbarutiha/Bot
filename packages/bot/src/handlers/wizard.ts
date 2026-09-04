@@ -76,6 +76,7 @@ async function cancelWizard(ctx: Context, telegramId: string): Promise<void> {
     step: 'ready',
     draftPet: undefined,
     breedPage: undefined,
+    paymentPendingOrderId: undefined,
   });
   await ctx.reply('ثبت پت لغو شد.', { reply_markup: menuKeyboardFor(ctx, user) });
 }
@@ -92,6 +93,7 @@ export async function startPetWizard(ctx: Context, telegramId: string): Promise<
     role: user.role,
     draftPet: {},
     breedPage: 0,
+    paymentPendingOrderId: undefined,
   });
   await askPetName(ctx);
 }
@@ -220,10 +222,21 @@ async function askBio(ctx: Context): Promise<void> {
 }
 
 async function askPhoto(ctx: Context): Promise<void> {
-  await ctx.reply(`🖼 **${stepLabel(13)}**\n\nیک عکس از پت بفرست (یا رد کن):`, {
-    parse_mode: 'Markdown',
-    reply_markup: textStepKeyboard({ skip: true }),
-  });
+  await ctx.reply(
+    [
+      `🖼 **${stepLabel(13)}**`,
+      '',
+      'یک **عکس** از پت بفرست (همان عکس فشرده تلگرام کافی است).',
+      'اگر خواستی می‌تونی عکس را به‌صورت فایل هم بفرستی.',
+      '',
+      'اگر فعلاً عکس نداری، «⏭ رد کردن» را بزن.',
+      'برای خروج: «❌ انصراف» یا «📋 منو» یا /cancel',
+    ].join('\n'),
+    {
+      parse_mode: 'Markdown',
+      reply_markup: textStepKeyboard({ skip: true }),
+    }
+  );
 }
 
 async function promptPetStep(
@@ -564,9 +577,10 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
   }
 
   if (step === 'pet_photo') {
-    await ctx.reply('لطفاً یک عکس بفرست یا «رد کردن» بزن.', {
-      reply_markup: textStepKeyboard({ skip: true }),
-    });
+    await ctx.reply(
+      'الان مرحلهٔ عکسه.\nیک عکس (یا فایل تصویری) بفرست، یا «⏭ رد کردن» / «❌ انصراف» / «📋 منو» بزن.',
+      { reply_markup: textStepKeyboard({ skip: true }) }
+    );
     return true;
   }
 
@@ -831,21 +845,67 @@ export async function handleWizardSkip(
   await finishPetWizard(ctx, telegramId, session.userId, draft);
 }
 
+function extractImageFileId(ctx: Context): string | null {
+  const photos = ctx.message?.photo;
+  if (photos?.length) {
+    return photos[photos.length - 1]!.file_id;
+  }
+  const doc = ctx.message?.document;
+  if (!doc?.file_id) return null;
+  const mime = (doc.mime_type ?? '').toLowerCase();
+  const name = (doc.file_name ?? '').toLowerCase();
+  if (mime.startsWith('image/')) return doc.file_id;
+  if (/\.(jpe?g|png|webp|gif|heic|heif|bmp)$/i.test(name)) return doc.file_id;
+  // بعضی کلاینت‌ها mime/نام نمی‌فرستند — فقط اگر پسوند خطرناک نباشد بپذیر
+  if (!mime && !name) return doc.file_id;
+  return null;
+}
+
+/**
+ * عکس / فایل تصویری در مرحلهٔ ثبت پت.
+ * true = پیام مصرف شد (حتی اگر فقط راهنمایی دادیم).
+ */
 export async function handlePetPhoto(ctx: Context): Promise<boolean> {
   const from = ctx.from;
-  const photos = ctx.message?.photo;
-  if (!from || !photos?.length) return false;
+  if (!from) return false;
 
   const telegramId = String(from.id);
-  const session = await getSession(telegramId);
-  if (!session?.userId || session.step !== 'pet_photo') return false;
+  let session = await getSession(telegramId);
+  if (!session || session.step !== 'pet_photo') return false;
 
-  const best = photos[photos.length - 1]!;
+  // بازیابی userId بعد از ری‌استارت / سشن ناقص (مثل ویزارد متنی)
+  if (!session.userId) {
+    const user = await getUserByTelegramId(telegramId);
+    if (!user?.id) {
+      await ctx.reply('نشست منقضی شده. دوباره /start بزن و ثبت پت را از اول شروع کن.');
+      await upsertSession(telegramId, { step: 'ready', draftPet: undefined, breedPage: undefined });
+      return true;
+    }
+    session = await upsertSession(telegramId, { userId: user.id, role: user.role });
+  }
+
+  const fileId = extractImageFileId(ctx);
+  if (!fileId) {
+    await ctx.reply(
+      'لطفاً یک عکس بفرست (یا فایل تصویری)، یا «⏭ رد کردن» بزن.\nخروج: «❌ انصراف» / «📋 منو» / /cancel',
+      { reply_markup: textStepKeyboard({ skip: true }) }
+    );
+    return true;
+  }
+
   const draft: PetDraft = {
     ...session.draftPet,
-    imageUrl: best.file_id,
+    imageUrl: fileId,
   };
-  await finishPetWizard(ctx, telegramId, session.userId, draft);
+
+  try {
+    await finishPetWizard(ctx, telegramId, session.userId!, draft);
+  } catch (err) {
+    console.error('handlePetPhoto/finishPetWizard failed:', err);
+    await ctx.reply('ثبت عکس پت با خطا مواجه شد. دوباره عکس بفرست یا «⏭ رد کردن» بزن.', {
+      reply_markup: textStepKeyboard({ skip: true }),
+    });
+  }
   return true;
 }
 

@@ -1,21 +1,25 @@
 import type { Context } from 'grammy';
 import {
   approveVetCredential,
+  listPendingCardPayments,
   listPendingVerifications,
   listPendingVetCredentials,
   rejectVetCredential,
+  type PaymentOrder,
 } from '../api-client';
 import {
   checkAdminPassword,
   hasConfiguredAdminIds,
   isTelegramAdmin,
 } from '../config';
+import { formatNum, formatToman, paymentCardInfo } from '../economy';
 import { isAdminAuthorized, requireAdminAuth } from './admin-auth';
 
 export { isAdminAuthorized, requireAdminAuth } from './admin-auth';
 import {
   ADMIN_MENU,
   adminPanelKeyboard,
+  adminPaymentKeyboard,
   adminVetCredentialKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
@@ -81,6 +85,7 @@ export async function handleAdminStats(ctx: Context): Promise<void> {
   if (!(await requireAdminAuth(ctx))) return;
   let face = 0;
   let vet = 0;
+  let payments = 0;
   try {
     face = (await listPendingVerifications()).length;
   } catch (err) {
@@ -91,15 +96,89 @@ export async function handleAdminStats(ctx: Context): Promise<void> {
   } catch (err) {
     console.error('admin stats vet queue failed:', err);
   }
+  try {
+    payments = (await listPendingCardPayments()).length;
+  } catch (err) {
+    console.error('admin stats payment queue failed:', err);
+  }
   await ctx.reply(
     [
       '📊 <b>وضعیت صف‌ها</b>',
       '',
       `🛡 احراز چهره: <b>${face}</b>`,
       `📄 مدارک دامپزشک: <b>${vet}</b>`,
+      `💳 پرداخت‌های در انتظار: <b>${payments}</b>`,
     ].join('\n'),
     { parse_mode: 'HTML', reply_markup: adminPanelKeyboard() }
   );
+}
+
+function formatPendingPaymentCard(order: PaymentOrder): string {
+  const card = paymentCardInfo();
+  return [
+    '💳 <b>پرداخت کارت‌به‌کارت — در انتظار</b>',
+    '',
+    `<b>سفارش:</b> #${order.id}`,
+    `<b>کاربر:</b> ${escapeHtml(order.userName || '—')}`,
+    order.userUsername ? `<b>یوزرنیم:</b> @${escapeHtml(order.userUsername)}` : null,
+    order.userTelegramId
+      ? `<b>تلگرام:</b> <code>${escapeHtml(order.userTelegramId)}</code>`
+      : null,
+    `<b>بسته:</b> ${escapeHtml(order.packageId)} · ${formatNum(order.coins)} سکه`,
+    `<b>مبلغ:</b> ${formatToman(order.amountToman ?? 0)}`,
+    `<b>کارت مقصد:</b> <code>${card.number}</code>`,
+    `<b>به‌نام:</b> ${escapeHtml(card.holder)}`,
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+}
+
+async function sendPendingPaymentItem(ctx: Context, order: PaymentOrder): Promise<void> {
+  const caption = formatPendingPaymentCard(order);
+  const kb = adminPaymentKeyboard(order.id);
+  if (order.receiptFileId) {
+    try {
+      await ctx.replyWithPhoto(order.receiptFileId, {
+        caption,
+        parse_mode: 'HTML',
+        reply_markup: kb,
+      });
+      return;
+    } catch {
+      /* fall through */
+    }
+  }
+  await ctx.reply(
+    order.receiptFileId ? `${caption}\n\n⚠️ رسید در دسترس نیست.` : `${caption}\n\n⚠️ هنوز رسیدی ثبت نشده.`,
+    { parse_mode: 'HTML', reply_markup: kb }
+  );
+}
+
+/** صف پرداخت‌های کارت‌به‌کارت در انتظار تأیید */
+export async function handleAdminPendingPayments(ctx: Context): Promise<void> {
+  if (!(await requireAdminAuth(ctx))) return;
+  let pending: PaymentOrder[];
+  try {
+    pending = await listPendingCardPayments();
+  } catch (err) {
+    console.error('listPendingCardPayments failed:', err);
+    await ctx.reply('خطا در دریافت صف پرداخت‌ها.', { reply_markup: adminPanelKeyboard() });
+    return;
+  }
+  if (pending.length === 0) {
+    await ctx.reply('📭 پرداخت در انتظاری نیست.', { reply_markup: adminPanelKeyboard() });
+    return;
+  }
+  await ctx.reply(`💳 ${pending.length} پرداخت در صف بررسی:`, {
+    reply_markup: adminPanelKeyboard(),
+  });
+  const limit = Math.min(pending.length, 5);
+  for (let i = 0; i < limit; i++) {
+    await sendPendingPaymentItem(ctx, pending[i]!);
+  }
+  if (pending.length > limit) {
+    await ctx.reply(`+ ${pending.length - limit} مورد دیگر — دوباره «${ADMIN_MENU.pendingPayments}» را بزن.`);
+  }
 }
 
 export async function handleAdminBackToMenu(ctx: Context): Promise<void> {
@@ -247,6 +326,9 @@ export async function handleAdminMenuText(ctx: Context, text: string): Promise<b
       return true;
     case m.stats:
       await handleAdminStats(ctx);
+      return true;
+    case m.pendingPayments:
+      await handleAdminPendingPayments(ctx);
       return true;
     case m.back:
     case m.menu:

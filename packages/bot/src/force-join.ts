@@ -35,9 +35,14 @@ function isForceJoinBypass(ctx: Context): boolean {
   if (data === 'join:check') return true;
 
   const text = ctx.message?.text?.trim();
-  if (!text) return false;
-  // /start@BotName و مشابه
-  if (/^\/(start|menu|help|cancel)(@\w+)?(\s|$)/i.test(text)) return true;
+  if (text) {
+    // /start@BotName و مشابه
+    if (/^\/(start|menu|help|cancel)(@\w+)?(\s|$)/i.test(text)) return true;
+    // دکمه‌های خروج از جریان گیرکرده
+    if (text === '📋 منو' || text === 'منو' || text === 'منوی اصلی' || text === '❌ انصراف') {
+      return true;
+    }
+  }
   return false;
 }
 

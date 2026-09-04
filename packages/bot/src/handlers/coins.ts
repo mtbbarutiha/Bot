@@ -11,7 +11,8 @@ import {
   submitCoinSell,
   type PaymentOrder,
 } from '../api-client';
-import { config, isTelegramAdmin } from '../config';
+import { config } from '../config';
+import { isAdminAuthorized } from './admin-auth';
 import {
   COIN_PACKAGES,
   COIN_SELL_PRICE_TOMAN,
@@ -348,7 +349,7 @@ async function notifyAdminsPendingPayment(ctx: Context, order: PaymentOrder): Pr
 }
 
 export async function handlePaymentApprove(ctx: Context, orderId: number): Promise<void> {
-  if (!ctx.from || !isTelegramAdmin(ctx.from.id)) {
+  if (!(await isAdminAuthorized(ctx))) {
     await ctx.answerCallbackQuery({ text: 'فقط ادمین', show_alert: true });
     return;
   }
@@ -390,7 +391,7 @@ export async function handlePaymentApprove(ctx: Context, orderId: number): Promi
 }
 
 export async function handlePaymentReject(ctx: Context, orderId: number): Promise<void> {
-  if (!ctx.from || !isTelegramAdmin(ctx.from.id)) {
+  if (!(await isAdminAuthorized(ctx))) {
     await ctx.answerCallbackQuery({ text: 'فقط ادمین', show_alert: true });
     return;
   }

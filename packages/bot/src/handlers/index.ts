@@ -483,6 +483,24 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:photo', async (ctx) => {
+    // اول بر اساس session.step مسیریابی کن تا handler اشتباه عکس را نبلعد
+    const step = ctx.from ? (await getSession(String(ctx.from.id)))?.step : undefined;
+    if (step === 'pet_photo') {
+      if (await handlePetPhoto(ctx)) return;
+    }
+    if (step === 'payment_receipt') {
+      if (await handlePaymentReceiptPhoto(ctx)) return;
+    }
+    if (step === 'verify_photo') {
+      if (await handleVerifyPhoto(ctx)) return;
+    }
+    if (step === 'vet_credential') {
+      if (await handleVetCredentialPhoto(ctx)) return;
+    }
+    if (step === 'profile_photo') {
+      if (await handleProfilePhoto(ctx)) return;
+    }
+    // fallback (سشن نامشخص / قدیمی)
     if (await handlePaymentReceiptPhoto(ctx)) return;
     if (await handleVerifyPhoto(ctx)) return;
     if (await handleVetCredentialPhoto(ctx)) return;
@@ -499,6 +517,14 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:document', async (ctx) => {
+    const step = ctx.from ? (await getSession(String(ctx.from.id)))?.step : undefined;
+    if (step === 'pet_photo') {
+      if (await handlePetPhoto(ctx)) return;
+    }
+    if (step === 'vet_credential') {
+      if (await handleVetCredentialDocument(ctx)) return;
+    }
+    if (await handlePetPhoto(ctx)) return;
     if (await handleVetCredentialDocument(ctx)) return;
   });
 
@@ -521,7 +547,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     }
   }
 
-  // «📋 منو» / «منو» / «منوی اصلی» — همیشه منوی نقش فعال را نشان بده
+  // «📋 منو» / «منو» / «منوی اصلی» — از هر جریان گیرکرده‌ای خارج شو و منو را نشان بده
   // (به‌جز انتخاب نقش اولیه که هنوز کاربر نقش ندارد)
   if (MAIN_MENU_ALIASES.has(text) || text === MAIN_MENU_BTN) {
     const from = ctx.from;
@@ -530,6 +556,11 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       if (session?.step === 'role_select') {
         // بگذار handleRoleReplyText مدیریت کند / نادیده بگیرد
       } else {
+        // منو باید ویزارد/عکس/پرداخت گیرکرده را باز کند (مثل /cancel)
+        if (session && session.step !== 'ready' && session.step !== 'start') {
+          await handleCancel(ctx);
+          return;
+        }
         await handleMenu(ctx);
         return;
       }
