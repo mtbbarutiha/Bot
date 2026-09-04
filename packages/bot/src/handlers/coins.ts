@@ -25,6 +25,7 @@ import {
   earnConfirmKeyboard,
   earnKeyboard,
   mainMenuKeyboard,
+  MENU_LABELS,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser } from './helpers';
@@ -266,6 +267,14 @@ export async function handleEarnCardText(ctx: Context, text: string): Promise<bo
 
   const session = await getSession(String(from.id));
   if (!session || session.step !== 'earn_card' || !session.earnPendingCoins) {
+    return false;
+  }
+
+  if (MENU_LABELS.has(text) || text.startsWith('/')) {
+    await upsertSession(String(from.id), {
+      step: 'ready',
+      earnPendingCoins: undefined,
+    });
     return false;
   }
 

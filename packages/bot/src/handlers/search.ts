@@ -4,6 +4,7 @@ import { listBreeds, listPets } from '../api-client';
 import { formatPet } from '../format';
 import {
   BREED_PAGE_SIZE,
+  MENU_LABELS,
   SEARCH_PETS_MENU,
   WIZARD_NAV,
   breedReplyKeyboard,
@@ -276,6 +277,31 @@ export async function handleSearchBreedText(ctx: Context, text: string): Promise
   const breeds = await listBreeds();
   const page = session.searchBreedPage ?? 0;
   const totalPages = Math.max(1, Math.ceil(breeds.length / BREED_PAGE_SIZE));
+
+  if (MENU_LABELS.has(text) && !Object.values(SEARCH_PETS_MENU).includes(text as never)) {
+    // اجازه بده دکمه‌های منوی اصلی جابه‌جا شوند؛ زیرمنوی جستجو پایین‌تر هندل می‌شود
+    await upsertSession(String(from.id), {
+      step: 'ready',
+      searchBreedPage: undefined,
+    });
+    return false;
+  }
+
+  if (text === SEARCH_PETS_MENU.byBreed) {
+    return true; // همین صفحه
+  }
+  if (
+    text === SEARCH_PETS_MENU.sameProvince ||
+    text === SEARCH_PETS_MENU.mashhad ||
+    text === SEARCH_PETS_MENU.allPets ||
+    text === SEARCH_PETS_MENU.backToMenu
+  ) {
+    await upsertSession(String(from.id), {
+      step: 'ready',
+      searchBreedPage: undefined,
+    });
+    return false;
+  }
 
   if (text === WIZARD_NAV.cancel || text === SEARCH_PETS_MENU.backToMenu) {
     await upsertSession(String(from.id), {
