@@ -4,7 +4,9 @@ import {
   createVetConsultation,
   creditUserCoins,
   debitUserCoins,
+  getUserById,
   listVerifiedVets,
+  updateVetConsultationStatus,
 } from '../api-client';
 import { QUICK_VET_COST, formatNum } from '../economy';
 import { mainMenuKeyboard } from '../keyboards';
@@ -107,7 +109,7 @@ export async function handleQuickVet(ctx: Context): Promise<void> {
   await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
 }
 
-/** اتصال فوری: کسر ۱ سکه و ارسال درخواست به همه دامپزشک‌های احرازشده */
+/** اتصال فوری: کسر سکه و ارسال درخواست به همه دامپزشک‌های واجد شرایط */
 export async function handleQuickVetConnect(ctx: Context): Promise<void> {
   const from = ctx.from;
   if (!from) return;
@@ -146,7 +148,7 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
   if (!vets.length) {
     await ctx.answerCallbackQuery({ text: 'پزشک آنلاینی نیست', show_alert: true });
     await ctx.reply(
-      'فعلاً دامپزشک احرازشده‌ای آنلاین نیست.\nبعداً دوباره امتحان کن.',
+      'فعلاً دامپزشک آنلاینی برای اتصال پیدا نشد.\nکمی بعد دوباره امتحان کن.',
       { reply_markup: mainMenuKeyboard(user.role, user.roles) }
     );
     return;
@@ -165,7 +167,7 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
   let sent = 0;
   for (const vet of vets) {
     try {
-      await createVetConsultation({
+      const consult = await createVetConsultation({
         vetUserId: vet.id,
         patientUserId: user.id,
         notes: 'اتصال سریع آنلاین',
@@ -179,22 +181,25 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
               '',
               `بیمار: <b>${escapeHtml(user.name)}</b>`,
               user.city ? `شهر: ${escapeHtml(user.city)}` : null,
+              user.phone ? `تماس: <code>${escapeHtml(user.phone)}</code>` : null,
               '',
-              'از منو «📋 بیماران / مشاوره‌ها» می‌تونی ببینی.',
-              'برای شروع مشاوره به بیمار پیام بده یا قبول کن.',
+              'اگر آماده‌ای قبول کن؛ بیمار منتظر پاسخته.',
+              'از منو «📋 بیماران / مشاوره‌ها» هم می‌تونی ببینی.',
             ]
               .filter(Boolean)
               .join('\n'),
             {
               parse_mode: 'HTML',
               reply_markup: new InlineKeyboard()
-                .text('✅ دیدم', `vet:consult:ack:${user.id}`)
-                .success(),
+                .text('✅ قبول', `vet:consult:accept:${consult.id}`)
+                .success()
+                .text('❌ رد', `vet:consult:reject:${consult.id}`)
+                .danger(),
             }
           );
           sent += 1;
         } catch {
-          /* blocked */
+          /* blocked / can't DM */
         }
       }
     } catch (err) {
@@ -226,6 +231,84 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
     ].join('\n'),
     { reply_markup: mainMenuKeyboard(user.role, user.roles) }
   );
+}
+
+/** قبول / رد درخواست مشاوره توسط دامپزشک */
+export async function handleVetConsultDecision(
+  ctx: Context,
+  consultId: number,
+  action: 'accept' | 'reject'
+): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const vet = await getCtxUser(ctx);
+  if (!vet) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+
+  let updated;
+  try {
+    updated = await updateVetConsultationStatus(
+      consultId,
+      action === 'accept' ? 'active' : 'cancelled'
+    );
+  } catch (err) {
+    console.error('consult status update failed:', err);
+    await ctx.answerCallbackQuery({ text: 'خطا در به‌روزرسانی', show_alert: true });
+    return;
+  }
+
+  if (updated.vetUserId !== vet.id) {
+    await ctx.answerCallbackQuery({ text: 'این درخواست مال تو نیست', show_alert: true });
+    return;
+  }
+
+  await ctx.answerCallbackQuery({
+    text: action === 'accept' ? 'قبول شد ✅' : 'رد شد',
+  });
+
+  const statusLine =
+    action === 'accept'
+      ? '✅ درخواست را قبول کردی. با بیمار هماهنگ کن.'
+      : '❌ درخواست رد شد.';
+
+  try {
+    const prev =
+      ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message
+        ? String(ctx.callbackQuery.message.text)
+        : '📬 درخواست مشاوره';
+    await ctx.editMessageText(`${prev}\n\n${statusLine}`);
+  } catch {
+    await ctx.reply(statusLine);
+  }
+
+  try {
+    const patient = await getUserById(updated.patientUserId);
+    if (patient?.telegramId) {
+      await ctx.api.sendMessage(
+        patient.telegramId,
+        action === 'accept'
+          ? [
+              '🎉 <b>پزشک درخواستت را قبول کرد</b>',
+              '',
+              `دامپزشک: <b>${escapeHtml(vet.name)}</b>`,
+              vet.city ? `شهر: ${escapeHtml(vet.city)}` : null,
+              '',
+              'به‌زودی باهات هماهنگ می‌کنه.',
+            ]
+              .filter(Boolean)
+              .join('\n')
+          : [
+              'دامپزشک این درخواست را نپذیرفت.',
+              'می‌تونی دوباره از «ارتباط سریع با پزشک» درخواست بدی.',
+            ].join('\n'),
+        { parse_mode: 'HTML' }
+      );
+    }
+  } catch (err) {
+    console.warn('notify patient of consult decision failed:', err);
+  }
 }
 
 function escapeHtml(value: string): string {

@@ -75,6 +75,7 @@ import {
   handleQuickVet,
   handleQuickVetConnect,
   handleServices,
+  handleVetConsultDecision,
 } from './services';
 import { handleVetPatients } from './vet';
 import {
@@ -369,6 +370,12 @@ export function registerHandlers(bot: Bot): void {
 
   bot.callbackQuery(/^medical:/, (ctx) => handleComingSoon(ctx, 'پزشکی'));
   bot.callbackQuery('vet:connect', (ctx) => handleQuickVetConnect(ctx));
+  bot.callbackQuery(/^vet:consult:accept:(\d+)$/, (ctx) =>
+    handleVetConsultDecision(ctx, Number(ctx.match![1]), 'accept')
+  );
+  bot.callbackQuery(/^vet:consult:reject:(\d+)$/, (ctx) =>
+    handleVetConsultDecision(ctx, Number(ctx.match![1]), 'reject')
+  );
   bot.callbackQuery(/^vet:consult:ack:/, async (ctx) => {
     await ctx.answerCallbackQuery({ text: 'باشه ✅' }).catch(() => undefined);
   });

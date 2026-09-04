@@ -298,6 +298,17 @@ export async function createVetConsultation(data: {
   });
 }
 
+export async function updateVetConsultationStatus(
+  id: number,
+  status: 'requested' | 'active' | 'completed' | 'cancelled'
+): Promise<VetConsultation> {
+  return request<VetConsultation>(`/api/consultations/${id}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+/** دامپزشک‌های واجد شرایط اتصال سریع */
 export async function listVerifiedVets(): Promise<User[]> {
   return request<User[]>('/api/users/vets/verified');
 }
