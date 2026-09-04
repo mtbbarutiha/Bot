@@ -256,7 +256,7 @@ usersRouter.post('/:id/verification/approve', (req, res) => {
   res.json({ ok: true, user, rewardCoins: Number.isFinite(reward) ? reward : 100 });
 });
 
-/** دامپزشک‌های احرازشده (نقش vet + تأیید ادمین) */
+/** دامپزشک‌های واجد شرایط اتصال سریع (نقش vet؛ ترجیح phoneVerified) */
 usersRouter.get('/vets/verified', (_req, res) => {
   res.json(dbService.listVerifiedVets());
 });

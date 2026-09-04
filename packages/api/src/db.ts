@@ -1184,27 +1184,34 @@ export const dbService = {
     return this.getUserById(userId);
   },
 
-  /** دامپزشک‌های تأییدشده توسط ادمین (نقش vet + احراز verified) */
+  /**
+   * دامپزشک‌های واجد شرایط برای اتصال سریع.
+   * احراز چهره الزامی نیست.
+   * ترجیح: نقش vet + phone_verified؛ اگر هنوز کسی موبایل تأیید نکرده،
+   * همهٔ کاربران فعال با نقش vet برمی‌گردند (برای تست/rollout پیامک).
+   */
   listVerifiedVets(): User[] {
     const rows = db
       .prepare(
         `SELECT * FROM users
          WHERE is_active = 1
-           AND verification_status = 'verified'
            AND (
              role = 'vet'
              OR roles LIKE '%"vet"%'
-             OR roles LIKE '%vet%'
            )
-         ORDER BY verified_at DESC, id DESC`
+         ORDER BY
+           CASE WHEN COALESCE(phone_verified, 0) = 1 THEN 0 ELSE 1 END,
+           id DESC`
       )
       .all() as Record<string, unknown>[];
-    return rows
+    const vets = rows
       .map(mapUser)
       .filter((u) => {
         const roles = u.roles?.length ? u.roles : u.role ? [u.role] : [];
         return roles.includes('vet');
       });
+    const phoneOk = vets.filter((v) => Boolean(v.phoneVerified));
+    return phoneOk.length > 0 ? phoneOk : vets;
   },
 
   /** کم کردن سکه اتمیک؛ اگر موجودی کافی نباشد null */
@@ -1733,6 +1740,35 @@ export const dbService = {
         createdAt: new Date().toISOString(),
       }
     );
+  },
+
+  getVetConsultation(id: number): VetConsultation | null {
+    const rows = db
+      .prepare(
+        `SELECT vc.*,
+                pu.name AS patient_name,
+                pu.city AS patient_city,
+                p.name AS pet_name,
+                p.species AS pet_species,
+                p.breed AS pet_breed
+         FROM vet_consultations vc
+         LEFT JOIN users pu ON pu.id = vc.patient_user_id
+         LEFT JOIN pets p ON p.id = vc.pet_id
+         WHERE vc.id = ?`
+      )
+      .all(id) as Record<string, unknown>[];
+    if (!rows.length) return null;
+    return mapVetConsultation(rows[0]!);
+  },
+
+  updateVetConsultationStatus(
+    id: number,
+    status: VetConsultStatus
+  ): VetConsultation | null {
+    const existing = this.getVetConsultation(id);
+    if (!existing) return null;
+    db.prepare(`UPDATE vet_consultations SET status = ? WHERE id = ?`).run(status, id);
+    return this.getVetConsultation(id);
   },
 
   submitCoinSell(input: {
