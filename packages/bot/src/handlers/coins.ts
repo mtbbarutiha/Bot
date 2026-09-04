@@ -39,9 +39,13 @@ import {
   earnKeyboard,
   MENU_LABELS,
   paymentReceiptCancelKeyboard,
+  paymentReceiptReplyKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
+
+export const SEND_RECEIPT_BTN = '📤 ارسال فیش';
+export const CANCEL_PAYMENT_BTN = '↩️ انصراف از پرداخت';
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -174,6 +178,42 @@ async function startCardPayment(ctx: Context, pkg: CoinPackage): Promise<void> {
       reply_markup: paymentReceiptCancelKeyboard(),
     });
   }
+  await ctx.reply('برای ثبت فیش، دکمه زیر را بزن یا مستقیم عکس رسید را بفرست 👇', {
+    reply_markup: paymentReceiptReplyKeyboard(),
+  });
+}
+
+/** راهنمای ارسال فیش — کاربر هنوز باید عکس بفرستد */
+export async function handleCoinsSendReceiptPrompt(ctx: Context): Promise<void> {
+  const session = ctx.from ? await getSession(String(ctx.from.id)) : null;
+  if (!session || session.step !== 'payment_receipt' || !session.paymentPendingOrderId) {
+    if (ctx.callbackQuery) {
+      await ctx.answerCallbackQuery({
+        text: 'سفارش فعالی نیست — از فروشگاه سکه دوباره شروع کن',
+        show_alert: true,
+      });
+    } else {
+      await ctx.reply('سفارش فعالی نیست. از منو «🪙 سکه» را بزن و بسته را انتخاب کن.');
+    }
+    return;
+  }
+
+  if (ctx.callbackQuery) {
+    await ctx.answerCallbackQuery({ text: 'عکس فیش را بفرست' });
+  }
+
+  await ctx.reply(
+    [
+      '📤 <b>ارسال فیش</b>',
+      '',
+      'الان <b>عکس رسید کارت‌به‌کارت</b> را همین‌جا بفرست.',
+      'بعد از بررسی ادمین، سکه‌ها به حسابت اضافه می‌شود.',
+    ].join('\n'),
+    {
+      parse_mode: 'HTML',
+      reply_markup: paymentReceiptReplyKeyboard(),
+    }
+  );
 }
 
 async function startStarsPayment(ctx: Context, pkg: CoinPackage): Promise<void> {
@@ -258,20 +298,36 @@ export async function handleCoinsBack(ctx: Context): Promise<void> {
   }
 }
 
-/** عکس رسید کارت‌به‌کارت */
+/** عکس یا فایل رسید کارت‌به‌کارت */
 export async function handlePaymentReceiptPhoto(ctx: Context): Promise<boolean> {
   const from = ctx.from;
-  const photos = ctx.message?.photo;
-  if (!from || !photos?.length) return false;
+  if (!from) return false;
 
   const session = await getSession(String(from.id));
   if (!session || session.step !== 'payment_receipt' || !session.paymentPendingOrderId) {
     return false;
   }
 
-  const best = photos[photos.length - 1]!;
+  const photos = ctx.message?.photo;
+  const doc = ctx.message?.document;
+  let fileId: string | undefined;
+  if (photos?.length) {
+    fileId = photos[photos.length - 1]!.file_id;
+  } else if (doc?.file_id) {
+    const mime = doc.mime_type || '';
+    if (mime.startsWith('image/') || !mime) {
+      fileId = doc.file_id;
+    }
+  }
+  if (!fileId) {
+    await ctx.reply('لطفاً عکس فیش را به‌صورت تصویر بفرست (یا دکمه 📤 ارسال فیش را بزن).', {
+      reply_markup: paymentReceiptReplyKeyboard(),
+    });
+    return true;
+  }
+
   const orderId = session.paymentPendingOrderId;
-  const result = await attachPaymentReceipt(orderId, best.file_id);
+  const result = await attachPaymentReceipt(orderId, fileId);
   await upsertSession(String(from.id), {
     step: 'ready',
     paymentPendingOrderId: undefined,

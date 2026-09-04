@@ -15,7 +15,7 @@ import {
   WIZARD_NAV,
   mainMenuKeyboard,
 } from '../keyboards';
-import { getSession } from '../session';
+import { getSession, upsertSession } from '../session';
 import { handleExplore, handleExploreBack, handleExploreForPet, handleExplorePet, handleExplorePickPet, handleFindPlaymate } from './explore';
 import {
   handleAddPetCommand,
@@ -93,6 +93,9 @@ import {
   handleCoinsPackage,
   handleCoinsPay,
   handleCoinsPayCancel,
+  handleCoinsSendReceiptPrompt,
+  CANCEL_PAYMENT_BTN,
+  SEND_RECEIPT_BTN,
   handleEarn,
   handleEarnCancel,
   handleEarnCardText,
@@ -450,6 +453,7 @@ export function registerHandlers(bot: Bot): void {
     handleCoinsPay(ctx, ctx.match![1] as 'stars' | 'card', ctx.match![2]!)
   );
   bot.callbackQuery('coins:pay:cancel', (ctx) => handleCoinsPayCancel(ctx));
+  bot.callbackQuery('coins:pay:receipt', (ctx) => handleCoinsSendReceiptPrompt(ctx));
   bot.callbackQuery('coins:back', (ctx) => handleCoinsBack(ctx));
   bot.callbackQuery(/^pay:approve:(\d+)$/, (ctx) =>
     handlePaymentApprove(ctx, Number(ctx.match![1]))
@@ -518,12 +522,16 @@ export function registerHandlers(bot: Bot): void {
 
   bot.on('message:document', async (ctx) => {
     const step = ctx.from ? (await getSession(String(ctx.from.id)))?.step : undefined;
+    if (step === 'payment_receipt') {
+      if (await handlePaymentReceiptPhoto(ctx)) return;
+    }
     if (step === 'pet_photo') {
       if (await handlePetPhoto(ctx)) return;
     }
     if (step === 'vet_credential') {
       if (await handleVetCredentialDocument(ctx)) return;
     }
+    if (await handlePaymentReceiptPhoto(ctx)) return;
     if (await handlePetPhoto(ctx)) return;
     if (await handleVetCredentialDocument(ctx)) return;
   });
@@ -549,6 +557,22 @@ async function handleTextMessage(ctx: Context): Promise<void> {
 
   // «📋 منو» / «منو» / «منوی اصلی» — از هر جریان گیرکرده‌ای خارج شو و منو را نشان بده
   // (به‌جز انتخاب نقش اولیه که هنوز کاربر نقش ندارد)
+  if (text === SEND_RECEIPT_BTN) {
+    await handleCoinsSendReceiptPrompt(ctx);
+    return;
+  }
+  if (text === CANCEL_PAYMENT_BTN) {
+    if (ctx.from) {
+      await upsertSession(String(ctx.from.id), {
+        step: 'ready',
+        paymentPendingOrderId: undefined,
+      });
+    }
+    const user = await getCtxUser(ctx);
+    await ctx.reply('پرداخت لغو شد.', { reply_markup: menuKeyboardFor(ctx, user) });
+    return;
+  }
+
   if (MAIN_MENU_ALIASES.has(text) || text === MAIN_MENU_BTN) {
     const from = ctx.from;
     if (from) {

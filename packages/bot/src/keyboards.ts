@@ -424,10 +424,7 @@ function appendAccessRow(kb: Keyboard, telegramId?: string | number | null): Key
 
 export function vetMenuKeyboard(telegramId?: string | number | null): Keyboard {
   const m = VET_MENU;
-  // «📋 منو» ردیف اول — روی موبایل دیده شود (قبلاً ته کیبورد بلند گم می‌شد)
   const kb = new Keyboard()
-    .text(m.menu)
-    .row()
     .text(m.patients)
     .primary()
     .row()
@@ -445,10 +442,7 @@ export function vetMenuKeyboard(telegramId?: string | number | null): Keyboard {
 
 export function petOwnerMenuKeyboard(telegramId?: string | number | null): Keyboard {
   const m = PET_OWNER_MENU;
-  // «📋 منو» ردیف اول — کاربر فوراً ببیند (نه ته منوی ۱۲ ردیفی)
   const kb = new Keyboard()
-    .text(m.menu)
-    .row()
     .text(m.findPlaymate)
     .primary()
     .row()
@@ -486,8 +480,6 @@ export function petOwnerMenuKeyboard(telegramId?: string | number | null): Keybo
 export function searchPetsMenuKeyboard(): Keyboard {
   const m = SEARCH_PETS_MENU;
   return new Keyboard()
-    .text(m.menu)
-    .row()
     .text(m.byBreed)
     .primary()
     .row()
@@ -506,8 +498,6 @@ export function searchPetsMenuKeyboard(): Keyboard {
 export function defaultMenuKeyboard(telegramId?: string | number | null): Keyboard {
   const m = DEFAULT_MENU;
   const kb = new Keyboard()
-    .text(m.menu)
-    .row()
     .text(m.explore)
     .primary()
     .row()
@@ -538,7 +528,6 @@ export function adminPanelKeyboard(): Keyboard {
     .success()
     .text(m.pendingPayments)
     .row()
-    .text(m.menu)
     .text(m.back)
     .resized()
     .persistent();
@@ -578,8 +567,6 @@ export function adminVetCredentialKeyboard(userId: number): InlineKeyboard {
 export function myPetsSectionKeyboard(): Keyboard {
   const m = MY_PETS_SECTION;
   return new Keyboard()
-    .text(m.menu)
-    .row()
     .text(m.addPet)
     .success()
     .row()
@@ -903,7 +890,22 @@ export function coinPackagePayKeyboard(pkgId: string): InlineKeyboard {
 }
 
 export function paymentReceiptCancelKeyboard(): InlineKeyboard {
-  return new InlineKeyboard().text('↩️ انصراف از پرداخت', 'coins:pay:cancel');
+  return new InlineKeyboard()
+    .text('📤 ارسال فیش', 'coins:pay:receipt')
+    .primary()
+    .row()
+    .text('↩️ انصراف از پرداخت', 'coins:pay:cancel');
+}
+
+/** کیبورد reply هنگام انتظار فیش کارت‌به‌کارت */
+export function paymentReceiptReplyKeyboard(): Keyboard {
+  return new Keyboard()
+    .text('📤 ارسال فیش')
+    .primary()
+    .row()
+    .text('↩️ انصراف از پرداخت')
+    .resized()
+    .persistent();
 }
 
 export function adminPaymentKeyboard(orderId: number): InlineKeyboard {
