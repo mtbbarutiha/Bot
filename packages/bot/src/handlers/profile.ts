@@ -127,7 +127,7 @@ function formatProfileCard(user: User, petCount: number, petNames: string[] = []
     `<b>استان:</b> ${user.province ? escapeHtml(user.province) : '—'}`,
     `<b>شهر:</b> ${user.city ? escapeHtml(user.city) : '—'}`,
     '',
-    `📱 <b>موبایل:</b> ${phone}`,
+    `📱 <b>موبایل:</b> ${phone}${user.phoneVerified ? ' ✅ تأیید شده' : ''}`,
     user.bio ? `💬 <b>درباره من:</b>\n${escapeHtml(user.bio)}` : '💬 <b>درباره من:</b> —',
     '',
     `🏷 <b>علایق:</b>\n${interests}`,
