@@ -458,6 +458,10 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case d.profile:
     case v.profile:
       return handleProfile(ctx);
+    // Legacy: face verify was removed from main menus — keep old keyboards working
+    case '🛡 احراز چهره':
+    case '🛡 احراز هویت':
+      return handleVerifyStart(ctx);
     case m.myPets:
     case d.myPets:
       return handleMyPets(ctx);

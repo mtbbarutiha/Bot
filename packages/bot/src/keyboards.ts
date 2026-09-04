@@ -598,12 +598,13 @@ export function profileActionsKeyboard(
     kb.text('📄 آپلود مدرک', 'profile:vet_credential').row();
   }
 
+  // Face verify lives only in profile (not main reply menus)
   if (verificationStatus === 'verified') {
-    kb.text('✅ احراز شده', 'verify:status').row();
+    kb.text('✅ احراز چهره شده', 'verify:status').row();
   } else if (verificationStatus === 'pending') {
-    kb.text('⏳ در انتظار احراز', 'verify:status').row();
+    kb.text('⏳ در انتظار احراز چهره', 'verify:status').row();
   } else {
-    kb.text('🛡 احراز هویت', 'verify:start').row();
+    kb.text('🛡 احراز چهره', 'verify:start').row();
   }
 
   kb.text('🗑 حذف', 'profile:delete').danger();
