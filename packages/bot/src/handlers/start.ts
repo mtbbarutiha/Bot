@@ -311,6 +311,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
     breedPage: undefined,
     searchMode: undefined,
     searchBreed: undefined,
+    searchSpecies: undefined,
     searchPage: undefined,
     searchBreedPage: undefined,
     earnPendingCoins: undefined,

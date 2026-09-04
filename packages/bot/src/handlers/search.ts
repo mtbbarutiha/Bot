@@ -1,6 +1,7 @@
 import type { Context } from 'grammy';
-import type { PetBreed, PetProfile } from '@petdate/shared';
-import { listBreeds, listPets } from '../api-client';
+import type { PetBreed, PetProfile, PetSpecies } from '@petdate/shared';
+import { PET_SPECIES_LABELS } from '@petdate/shared';
+import { listBreeds, listPets, listSpecies } from '../api-client';
 import { formatPet } from '../format';
 import {
   BREED_PAGE_SIZE,
@@ -11,11 +12,31 @@ import {
   mainMenuKeyboard,
   searchPetsMenuKeyboard,
   searchResultsNavKeyboard,
+  speciesReplyKeyboard,
+  textStepKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser } from './helpers';
 
 const PAGE_SIZE = 5;
+
+function matchSpecies(text: string, species: PetSpecies[]): PetSpecies | null {
+  const t = text.trim();
+  return (
+    species.find(
+      (s) =>
+        t === `${s.emoji} ${s.labelFa}` ||
+        t === s.labelFa ||
+        t === s.code ||
+        t === PET_SPECIES_LABELS[s.code]
+    ) ?? null
+  );
+}
+
+function speciesTitle(code?: string): string {
+  if (!code) return '—';
+  return PET_SPECIES_LABELS[code] ?? code;
+}
 
 export async function handleNearbyPets(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
@@ -29,6 +50,7 @@ export async function handleNearbyPets(ctx: Context): Promise<void> {
     searchMode: 'nearby',
     searchPage: 0,
     searchBreed: undefined,
+    searchSpecies: undefined,
   });
 
   if (!user.city && !user.province) {
@@ -56,6 +78,7 @@ export async function handleSearchPetsMenu(ctx: Context): Promise<void> {
       step: 'ready',
       searchMode: undefined,
       searchBreed: undefined,
+      searchSpecies: undefined,
       searchPage: 0,
       searchBreedPage: undefined,
     });
@@ -65,7 +88,7 @@ export async function handleSearchPetsMenu(ctx: Context): Promise<void> {
       '🔎 <b>جستجوی پت</b>',
       '',
       'یکی رو انتخاب کن:',
-      '• نژاد',
+      '• گونه → نژاد',
       '• هم‌استان',
       '• مشهد',
       '• همه پت‌ها',
@@ -80,22 +103,60 @@ export async function handleSearchPetsMenu(ctx: Context): Promise<void> {
   }
 }
 
+/** شروع جستجو بر اساس نژاد: اول گونه */
 export async function handleSearchByBreedStart(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
   if (!user?.id || !ctx.from) {
     await ctx.reply('اول /start بزن.');
     return;
   }
-  const breeds = await listBreeds();
+
+  let species: PetSpecies[];
+  try {
+    species = await listSpecies();
+  } catch (err) {
+    console.error('listSpecies failed:', err);
+    await ctx.reply('لیست گونه در دسترس نیست. کمی بعد دوباره امتحان کن.', {
+      reply_markup: searchPetsMenuKeyboard(),
+    });
+    return;
+  }
+
+  if (!species.length) {
+    await ctx.reply('لیست گونه خالی است. کمی بعد دوباره امتحان کن.', {
+      reply_markup: searchPetsMenuKeyboard(),
+    });
+    return;
+  }
+
   await upsertSession(String(ctx.from.id), {
-    step: 'search_breed',
+    step: 'search_species',
     searchMode: 'breed',
+    searchSpecies: undefined,
+    searchBreed: undefined,
     searchBreedPage: 0,
     searchPage: 0,
   });
-  await ctx.reply('نژاد مورد نظرت رو از لیست انتخاب کن:', {
-    reply_markup: breedReplyKeyboard(breeds, 0),
+  await ctx.reply('🐾 اول گونه پت رو انتخاب کن (سگ، گربه، …):', {
+    reply_markup: speciesReplyKeyboard(species),
   });
+}
+
+async function askSearchBreed(ctx: Context, speciesCode: string, page = 0): Promise<void> {
+  const breeds = await listBreeds(speciesCode);
+  if (breeds.length === 0) {
+    await ctx.reply(
+      `🧬 نژادی برای «${speciesTitle(speciesCode)}» در کاتالوگ نیست.\nنام نژاد رو بنویس:`,
+      { reply_markup: textStepKeyboard() }
+    );
+    return;
+  }
+  const totalPages = Math.max(1, Math.ceil(breeds.length / BREED_PAGE_SIZE));
+  const safePage = Math.min(Math.max(0, page), totalPages - 1);
+  await ctx.reply(
+    `🧬 نژاد «${speciesTitle(speciesCode)}» رو انتخاب کن (صفحه ${safePage + 1}/${totalPages}):`,
+    { reply_markup: breedReplyKeyboard(breeds, safePage) }
+  );
 }
 
 export async function handleSearchSameProvince(ctx: Context): Promise<void> {
@@ -157,7 +218,8 @@ type SearchMode = 'nearby' | 'breed' | 'province' | 'mashhad' | 'all';
 async function fetchPetsForMode(
   mode: SearchMode,
   user: { id: number; city?: string; province?: string },
-  breed?: string
+  breed?: string,
+  species?: string
 ): Promise<PetProfile[]> {
   const base = { excludeOwnerId: user.id as number | undefined };
   switch (mode) {
@@ -171,7 +233,7 @@ async function fetchPetsForMode(
       return [];
     case 'breed':
       if (!breed) return [];
-      return listPets({ ...base, breed });
+      return listPets({ ...base, breed, ...(species ? { species } : {}) });
     case 'province':
       if (!user.province) return [];
       return listPets({ ...base, province: user.province });
@@ -184,12 +246,12 @@ async function fetchPetsForMode(
   }
 }
 
-function modeTitle(mode: SearchMode, breed?: string): string {
+function modeTitle(mode: SearchMode, breed?: string, species?: string): string {
   switch (mode) {
     case 'nearby':
       return '📍 پت‌های نزدیک من';
     case 'breed':
-      return `🧬 نژاد: ${breed ?? '—'}`;
+      return `🧬 ${speciesTitle(species)}${breed ? ` · ${breed}` : ''}`;
     case 'province':
       return '🗺 پت‌های هم‌استان';
     case 'mashhad':
@@ -214,7 +276,8 @@ async function showSearchResults(
 
   const session = await getSession(String(ctx.from.id));
   const breed = session?.searchBreed;
-  const pets = await fetchPetsForMode(mode, user, breed);
+  const species = session?.searchSpecies;
+  const pets = await fetchPetsForMode(mode, user, breed, species);
   const safePage = Math.max(0, page);
   const slice = pets.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
   const hasMore = (safePage + 1) * PAGE_SIZE < pets.length;
@@ -227,7 +290,7 @@ async function showSearchResults(
   if (pets.length === 0) {
     await ctx.reply(
       [
-        `<b>${modeTitle(mode, breed)}</b>`,
+        `<b>${modeTitle(mode, breed, species)}</b>`,
         '',
         'فعلاً پتی با این فیلتر پیدا نشد.',
       ].join('\n'),
@@ -243,7 +306,7 @@ async function showSearchResults(
   }
 
   const header = [
-    `<b>${modeTitle(mode, breed)}</b>`,
+    `<b>${modeTitle(mode, breed, species)}</b>`,
     `نتیجه: ${pets.length} پت — صفحه ${safePage + 1}`,
     '',
   ].join('\n');
@@ -266,60 +329,163 @@ async function showSearchResults(
   }
 }
 
-/** متن در حالت انتخاب نژاد برای جستجو */
+function isSearchSubmenuNav(text: string): boolean {
+  return (
+    text === SEARCH_PETS_MENU.sameProvince ||
+    text === SEARCH_PETS_MENU.mashhad ||
+    text === SEARCH_PETS_MENU.allPets ||
+    text === SEARCH_PETS_MENU.backToMenu
+  );
+}
+
+/** متن در حالت انتخاب گونه / نژاد برای جستجو */
 export async function handleSearchBreedText(ctx: Context, text: string): Promise<boolean> {
   const from = ctx.from;
   if (!from) return false;
 
   const session = await getSession(String(from.id));
-  if (!session || session.step !== 'search_breed') return false;
+  if (!session) return false;
 
-  const breeds = await listBreeds();
-  const page = session.searchBreedPage ?? 0;
-  const totalPages = Math.max(1, Math.ceil(breeds.length / BREED_PAGE_SIZE));
+  if (session.step === 'search_species') {
+    return handleSearchSpeciesText(ctx, text);
+  }
+  if (session.step === 'search_breed') {
+    return handleSearchBreedPickText(ctx, text, session);
+  }
+  return false;
+}
+
+async function handleSearchSpeciesText(ctx: Context, text: string): Promise<boolean> {
+  const from = ctx.from!;
+  const telegramId = String(from.id);
 
   if (MENU_LABELS.has(text) && !Object.values(SEARCH_PETS_MENU).includes(text as never)) {
-    // اجازه بده دکمه‌های منوی اصلی جابه‌جا شوند؛ زیرمنوی جستجو پایین‌تر هندل می‌شود
-    await upsertSession(String(from.id), {
+    await upsertSession(telegramId, {
       step: 'ready',
+      searchSpecies: undefined,
+      searchBreed: undefined,
       searchBreedPage: undefined,
     });
     return false;
   }
 
   if (text === SEARCH_PETS_MENU.byBreed) {
-    return true; // همین صفحه
+    return true;
   }
-  if (
-    text === SEARCH_PETS_MENU.sameProvince ||
-    text === SEARCH_PETS_MENU.mashhad ||
-    text === SEARCH_PETS_MENU.allPets ||
-    text === SEARCH_PETS_MENU.backToMenu
-  ) {
-    await upsertSession(String(from.id), {
+  if (isSearchSubmenuNav(text)) {
+    await upsertSession(telegramId, {
       step: 'ready',
+      searchSpecies: undefined,
       searchBreedPage: undefined,
     });
     return false;
   }
 
-  if (text === WIZARD_NAV.cancel || text === SEARCH_PETS_MENU.backToMenu) {
-    await upsertSession(String(from.id), {
+  if (text === WIZARD_NAV.cancel || text === WIZARD_NAV.back || text === SEARCH_PETS_MENU.backToMenu) {
+    await upsertSession(telegramId, {
+      step: 'ready',
+      searchSpecies: undefined,
+      searchBreedPage: undefined,
+    });
+    await handleSearchPetsMenu(ctx);
+    return true;
+  }
+
+  let speciesList: PetSpecies[];
+  try {
+    speciesList = await listSpecies();
+  } catch {
+    await ctx.reply('خطا در دریافت گونه. دوباره امتحان کن.', {
+      reply_markup: searchPetsMenuKeyboard(),
+    });
+    return true;
+  }
+
+  const matched = matchSpecies(text, speciesList);
+  if (!matched) {
+    await ctx.reply('از دکمه‌ها گونه رو انتخاب کن:', {
+      reply_markup: speciesReplyKeyboard(speciesList),
+    });
+    return true;
+  }
+
+  await upsertSession(telegramId, {
+    step: 'search_breed',
+    searchMode: 'breed',
+    searchSpecies: matched.code,
+    searchBreed: undefined,
+    searchBreedPage: 0,
+    searchPage: 0,
+  });
+  await askSearchBreed(ctx, matched.code, 0);
+  return true;
+}
+
+async function handleSearchBreedPickText(
+  ctx: Context,
+  text: string,
+  session: { searchSpecies?: string; searchBreedPage?: number }
+): Promise<boolean> {
+  const from = ctx.from!;
+  const telegramId = String(from.id);
+  const speciesCode = session.searchSpecies;
+
+  if (MENU_LABELS.has(text) && !Object.values(SEARCH_PETS_MENU).includes(text as never)) {
+    await upsertSession(telegramId, {
       step: 'ready',
       searchBreedPage: undefined,
+      searchSpecies: undefined,
+    });
+    return false;
+  }
+
+  if (text === SEARCH_PETS_MENU.byBreed) {
+    // شروع دوباره از گونه
+    await handleSearchByBreedStart(ctx);
+    return true;
+  }
+  if (isSearchSubmenuNav(text)) {
+    await upsertSession(telegramId, {
+      step: 'ready',
+      searchBreedPage: undefined,
+      searchSpecies: undefined,
+    });
+    return false;
+  }
+
+  if (text === WIZARD_NAV.cancel || text === SEARCH_PETS_MENU.backToMenu) {
+    await upsertSession(telegramId, {
+      step: 'ready',
+      searchBreedPage: undefined,
+      searchSpecies: undefined,
     });
     await handleSearchPetsMenu(ctx);
     return true;
   }
 
   if (text === WIZARD_NAV.back) {
-    await upsertSession(String(from.id), {
-      step: 'ready',
+    // بازگشت به انتخاب گونه
+    let speciesList: PetSpecies[];
+    try {
+      speciesList = await listSpecies();
+    } catch {
+      await handleSearchPetsMenu(ctx);
+      return true;
+    }
+    await upsertSession(telegramId, {
+      step: 'search_species',
+      searchBreed: undefined,
       searchBreedPage: undefined,
     });
-    await handleSearchPetsMenu(ctx);
+    await ctx.reply('🐾 گونه پت رو انتخاب کن:', {
+      reply_markup: speciesReplyKeyboard(speciesList),
+    });
     return true;
   }
+
+  const breeds = speciesCode ? await listBreeds(speciesCode) : await listBreeds();
+  const page = session.searchBreedPage ?? 0;
+  const totalPages = Math.max(1, Math.ceil(Math.max(breeds.length, 1) / BREED_PAGE_SIZE));
 
   if (text === WIZARD_NAV.custom) {
     await ctx.reply('نام نژاد را بنویس:', {
@@ -328,26 +494,21 @@ export async function handleSearchBreedText(ctx: Context, text: string): Promise
     return true;
   }
 
-  // برچسب صفحه مثل ۱/۵
   if (/^\d+\/\d+$/.test(text.trim())) {
     return true;
   }
 
   if (text === WIZARD_NAV.nextPage) {
     const next = Math.min(totalPages - 1, page + 1);
-    await upsertSession(String(from.id), { searchBreedPage: next });
-    await ctx.reply('نژاد مورد نظرت رو انتخاب کن:', {
-      reply_markup: breedReplyKeyboard(breeds, next),
-    });
+    await upsertSession(telegramId, { searchBreedPage: next });
+    if (speciesCode) await askSearchBreed(ctx, speciesCode, next);
     return true;
   }
 
   if (text === WIZARD_NAV.prevPage) {
     const prev = Math.max(0, page - 1);
-    await upsertSession(String(from.id), { searchBreedPage: prev });
-    await ctx.reply('نژاد مورد نظرت رو انتخاب کن:', {
-      reply_markup: breedReplyKeyboard(breeds, prev),
-    });
+    await upsertSession(telegramId, { searchBreedPage: prev });
+    if (speciesCode) await askSearchBreed(ctx, speciesCode, prev);
     return true;
   }
 
@@ -360,7 +521,7 @@ export async function handleSearchBreedText(ctx: Context, text: string): Promise
     return true;
   }
 
-  await upsertSession(String(from.id), {
+  await upsertSession(telegramId, {
     step: 'ready',
     searchMode: 'breed',
     searchBreed: breedName,

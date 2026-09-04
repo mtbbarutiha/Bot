@@ -137,6 +137,8 @@ export interface BotSession {
   breedPage?: number;
   /** حالت مرور/جستجوی پت */
   searchMode?: 'nearby' | 'breed' | 'province' | 'mashhad' | 'all';
+  /** گونهٔ انتخاب‌شده در جستجو بر اساس نژاد */
+  searchSpecies?: string;
   searchBreed?: string;
   searchPage?: number;
   searchBreedPage?: number;
@@ -158,6 +160,7 @@ export type BotStep =
   | 'profile_photo'
   | 'profile_bio'
   | 'profile_interests'
+  | 'search_species'
   | 'search_breed'
   | 'earn_card'
   | 'pet_name'
