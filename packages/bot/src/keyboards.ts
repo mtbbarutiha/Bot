@@ -162,7 +162,8 @@ export function textStepKeyboard(
 export function profileNavOpts(extra?: {
   skip?: boolean;
   noBack?: boolean;
-}): { skip?: boolean; noBack?: boolean; skipLater: true } {
+  skipLater?: boolean;
+}): { skip?: boolean; noBack?: boolean; skipLater?: boolean } {
   return { skipLater: true, ...extra };
 }
 
@@ -560,13 +561,18 @@ export function phoneKeyboard(): Keyboard {
 export function profileActionsKeyboard(
   complete: boolean,
   isActive = true,
-  verificationStatus: 'none' | 'pending' | 'verified' | 'rejected' = 'none'
+  verificationStatus: 'none' | 'pending' | 'verified' | 'rejected' = 'none',
+  opts?: { isVet?: boolean }
 ): InlineKeyboard {
   const kb = new InlineKeyboard();
   if (complete) {
     kb.text('✏️ ویرایش پروفایل', 'profile:edit').primary().row();
   } else {
     kb.text('✨ تکمیل پروفایل', 'profile:edit').success().row();
+  }
+
+  if (opts?.isVet) {
+    kb.text('📄 آپلود مدرک', 'profile:vet_credential').row();
   }
 
   if (verificationStatus === 'verified') {
@@ -583,6 +589,35 @@ export function profileActionsKeyboard(
   } else {
     kb.text('▶️ فعال‌سازی', 'profile:activate').success();
   }
+  return kb;
+}
+
+/** منوی ویرایش بخش‌به‌بخش پروفایل */
+export function profileEditSectionsKeyboard(opts?: {
+  incomplete?: boolean;
+  isVet?: boolean;
+}): InlineKeyboard {
+  const kb = new InlineKeyboard()
+    .text('✏️ ویرایش نام', 'profile:edit:name')
+    .text('🎂 ویرایش سن', 'profile:edit:age')
+    .row()
+    .text('⚧ ویرایش جنسیت', 'profile:edit:gender')
+    .text('📍 ویرایش موقعیت', 'profile:edit:location')
+    .row()
+    .text('📱 ویرایش موبایل', 'profile:edit:phone')
+    .text('🖼 ویرایش عکس', 'profile:edit:photo')
+    .row()
+    .text('💬 ویرایش بیو', 'profile:edit:bio')
+    .text('💚 ویرایش علایق', 'profile:edit:interests')
+    .row();
+
+  if (opts?.isVet) {
+    kb.text('📄 آپلود مدرک', 'profile:vet_credential').row();
+  }
+  if (opts?.incomplete) {
+    kb.text('✨ تکمیل همه', 'profile:edit:all').success().row();
+  }
+  kb.text('↩️ بازگشت به پروفایل', 'profile:edit:back');
   return kb;
 }
 

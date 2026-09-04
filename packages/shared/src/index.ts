@@ -2,7 +2,12 @@ export * from './petdate';
 export * from './catalog';
 export * from './brand';
 
-import type { OnboardingStatus, UserRole, VerificationStatus } from './petdate';
+import type {
+  OnboardingStatus,
+  UserRole,
+  VerificationStatus,
+  VetCredentialStatus,
+} from './petdate';
 import type { UserGender } from './petdate';
 
 export type GameType =
@@ -28,6 +33,8 @@ export {
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   USER_ROLES,
+  VET_CREDENTIAL_STATUSES,
+  VET_CREDENTIAL_STATUS_LABELS,
   formatPetAge,
   normalizeRoles,
   parsePetAgeInput,
@@ -49,6 +56,7 @@ export type {
   PetProfile,
   ProfileDraft,
   UserGender,
+  VetCredentialStatus,
 } from './petdate';
 export {
   COUNTRY_IRAN,
@@ -96,6 +104,9 @@ export interface User {
   verificationPhotoFileId?: string;
   verifiedAt?: string;
   verificationNote?: string;
+  /** مدرک دامپزشک (Telegram file_id) */
+  vetCredentialFileId?: string;
+  vetCredentialStatus?: VetCredentialStatus;
   createdAt: string;
 }
 

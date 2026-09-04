@@ -49,7 +49,13 @@ import {
   handleProfilePhoto,
   handleProfileSkip,
   handleProfileWizardText,
+  handleVetCredentialDocument,
+  handleVetCredentialPhoto,
+  handleVetCredentialText,
+  showProfileEditMenu,
+  startProfileSectionEdit,
   startProfileWizard,
+  startVetCredentialUpload,
 } from './profile';
 import {
   handleCancel,
@@ -247,7 +253,51 @@ export function registerHandlers(bot: Bot): void {
 
   bot.callbackQuery('profile:edit', async (ctx) => {
     await ctx.answerCallbackQuery();
+    await showProfileEditMenu(ctx);
+  });
+  bot.callbackQuery('profile:edit:back', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await handleProfile(ctx);
+  });
+  bot.callbackQuery('profile:edit:all', async (ctx) => {
+    await ctx.answerCallbackQuery();
     await startProfileWizard(ctx);
+  });
+  bot.callbackQuery('profile:edit:name', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startProfileSectionEdit(ctx, 'name');
+  });
+  bot.callbackQuery('profile:edit:age', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startProfileSectionEdit(ctx, 'age');
+  });
+  bot.callbackQuery('profile:edit:gender', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startProfileSectionEdit(ctx, 'gender');
+  });
+  bot.callbackQuery('profile:edit:location', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startProfileSectionEdit(ctx, 'location');
+  });
+  bot.callbackQuery('profile:edit:phone', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startProfileSectionEdit(ctx, 'phone');
+  });
+  bot.callbackQuery('profile:edit:photo', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startProfileSectionEdit(ctx, 'photo');
+  });
+  bot.callbackQuery('profile:edit:bio', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startProfileSectionEdit(ctx, 'bio');
+  });
+  bot.callbackQuery('profile:edit:interests', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startProfileSectionEdit(ctx, 'interests');
+  });
+  bot.callbackQuery('profile:vet_credential', async (ctx) => {
+    await ctx.answerCallbackQuery();
+    await startVetCredentialUpload(ctx);
   });
   bot.callbackQuery(/^profile:gender:(male|female)$/, (ctx) =>
     handleProfileGender(ctx, ctx.match![1] as UserGender)
@@ -333,8 +383,13 @@ export function registerHandlers(bot: Bot): void {
 
   bot.on('message:photo', async (ctx) => {
     if (await handleVerifyPhoto(ctx)) return;
+    if (await handleVetCredentialPhoto(ctx)) return;
     if (await handlePetPhoto(ctx)) return;
     await handleProfilePhoto(ctx);
+  });
+
+  bot.on('message:document', async (ctx) => {
+    if (await handleVetCredentialDocument(ctx)) return;
   });
 
   bot.on('message:text', handleTextMessage);
@@ -362,6 +417,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   if (await handleAdminRejectReasonText(ctx, text)) return;
   if (await handleEarnCardText(ctx, text)) return;
   if (await handleSearchBreedText(ctx, text)) return;
+  if (await handleVetCredentialText(ctx, text)) return;
   if (await handleProfileWizardText(ctx, text)) return;
   if (await handleWizardText(ctx, text)) return;
 

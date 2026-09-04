@@ -263,6 +263,49 @@ usersRouter.post('/:id/verification/reject', (req, res) => {
   res.json({ ok: true, user });
 });
 
+/** صف مدارک دامپزشک در انتظار بررسی */
+usersRouter.get('/vet-credentials/pending', (_req, res) => {
+  res.json(dbService.listPendingVetCredentials());
+});
+
+/** آپلود مدرک دامپزشک */
+usersRouter.post('/telegram/:telegramId/vet-credential', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const fileId = String(req.body?.fileId ?? req.body?.vetCredentialFileId ?? '').trim();
+  const result = dbService.submitVetCredential(user.id, fileId);
+  if (!result.ok) {
+    res.status(result.reason === 'missing' ? 404 : 400).json({
+      ok: false,
+      reason: result.reason,
+      error: result.reason === 'no_file' ? 'فایل مدرک لازم است' : 'کاربر پیدا نشد',
+    });
+    return;
+  }
+  res.json({ ok: true, user: result.user });
+});
+
+usersRouter.post('/:id/vet-credential/approve', (req, res) => {
+  const user = dbService.approveVetCredential(Number(req.params.id));
+  if (!user) {
+    res.status(404).json({ error: 'مدرک در صف نیست' });
+    return;
+  }
+  res.json({ ok: true, user });
+});
+
+usersRouter.post('/:id/vet-credential/reject', (req, res) => {
+  const user = dbService.rejectVetCredential(Number(req.params.id));
+  if (!user) {
+    res.status(404).json({ error: 'مدرک در صف نیست' });
+    return;
+  }
+  res.json({ ok: true, user });
+});
+
 /** دریافت سکه روزانه */
 usersRouter.post('/telegram/:telegramId/coins/daily', (req, res) => {
   const user = dbService.getUserByTelegramId(req.params.telegramId);

@@ -130,6 +130,37 @@ export async function rejectVerification(
   });
 }
 
+export async function submitVetCredential(
+  telegramId: string,
+  fileId: string
+): Promise<{ ok: true; user: User }> {
+  return request<{ ok: true; user: User }>(
+    `/api/users/telegram/${encodeURIComponent(telegramId)}/vet-credential`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ fileId }),
+    }
+  );
+}
+
+export async function listPendingVetCredentials(): Promise<User[]> {
+  return request<User[]>('/api/users/vet-credentials/pending');
+}
+
+export async function approveVetCredential(userId: number): Promise<{ ok: true; user: User }> {
+  return request<{ ok: true; user: User }>(`/api/users/${userId}/vet-credential/approve`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function rejectVetCredential(userId: number): Promise<{ ok: true; user: User }> {
+  return request<{ ok: true; user: User }>(`/api/users/${userId}/vet-credential/reject`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
 export async function setUserActive(telegramId: string, isActive: boolean): Promise<User> {
   return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/active`, {
     method: 'PATCH',

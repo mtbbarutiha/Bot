@@ -36,6 +36,21 @@ export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
 /** بج نمایشی برای پروفایل‌های تأییدشده */
 export const VERIFIED_BADGE = '✅ احراز شده';
 
+/** وضعیت مدرک دامپزشک */
+export type VetCredentialStatus = 'none' | 'pending' | 'verified';
+
+export const VET_CREDENTIAL_STATUSES: VetCredentialStatus[] = [
+  'none',
+  'pending',
+  'verified',
+];
+
+export const VET_CREDENTIAL_STATUS_LABELS: Record<VetCredentialStatus, string> = {
+  none: 'مدرک ارسال نشده',
+  pending: 'در انتظار بررسی مدرک',
+  verified: 'مدرک تأیید شده',
+};
+
 export interface PetdateUser {
   id: number;
   telegramId?: string;
@@ -64,6 +79,9 @@ export interface PetdateUser {
   verificationPhotoFileId?: string;
   verifiedAt?: string;
   verificationNote?: string;
+  /** فایل مدرک دامپزشک (Telegram file_id) */
+  vetCredentialFileId?: string;
+  vetCredentialStatus?: VetCredentialStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -172,6 +190,11 @@ export interface BotSession {
   earnPendingCoins?: number;
   /** ادمین — رد احراز هویت برای این userId */
   adminRejectUserId?: number;
+  /**
+   * ویرایش تک‌فیلدی پروفایل (نه ویزارد کامل).
+   * بعد از ذخیرهٔ همان فیلد به منوی بخش‌ها برمی‌گردیم.
+   */
+  profileSectionEdit?: boolean;
   updatedAt: string;
 }
 
@@ -188,6 +211,8 @@ export type BotStep =
   | 'profile_photo'
   | 'profile_bio'
   | 'profile_interests'
+  | 'profile_edit_menu'
+  | 'vet_credential'
   | 'search_species'
   | 'search_breed'
   | 'earn_card'

@@ -18,6 +18,7 @@ import type {
   UserGender,
   UserRole,
   VerificationStatus,
+  VetCredentialStatus,
 } from '@petdate/shared';
 import { PET_BREEDS_SEED, PET_SPECIES } from '@petdate/shared';
 
@@ -166,6 +167,12 @@ function migrateSchema() {
   }
   if (!names.has('verified_at')) db.exec('ALTER TABLE users ADD COLUMN verified_at TEXT');
   if (!names.has('verification_note')) db.exec('ALTER TABLE users ADD COLUMN verification_note TEXT');
+  if (!names.has('vet_credential_file_id')) {
+    db.exec('ALTER TABLE users ADD COLUMN vet_credential_file_id TEXT');
+  }
+  if (!names.has('vet_credential_status')) {
+    db.exec("ALTER TABLE users ADD COLUMN vet_credential_status TEXT NOT NULL DEFAULT 'none'");
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS coin_sell_requests (
@@ -648,12 +655,21 @@ function mapUser(row: Record<string, unknown>): User {
     verificationPhotoFileId: (row.verification_photo_file_id as string | undefined) ?? undefined,
     verifiedAt: (row.verified_at as string | undefined) ?? undefined,
     verificationNote: (row.verification_note as string | undefined) ?? undefined,
+    vetCredentialFileId: (row.vet_credential_file_id as string | undefined) ?? undefined,
+    vetCredentialStatus: parseVetCredentialStatus(row.vet_credential_status),
     createdAt: row.created_at as string,
   };
 }
 
 function parseVerificationStatus(value: unknown): VerificationStatus {
   if (value === 'pending' || value === 'verified' || value === 'rejected' || value === 'none') {
+    return value;
+  }
+  return 'none';
+}
+
+function parseVetCredentialStatus(value: unknown): VetCredentialStatus {
+  if (value === 'pending' || value === 'verified' || value === 'none') {
     return value;
   }
   return 'none';
@@ -932,7 +948,9 @@ export const dbService = {
          verification_status = 'none',
          verification_photo_file_id = NULL,
          verified_at = NULL,
-         verification_note = NULL
+         verification_note = NULL,
+         vet_credential_file_id = NULL,
+         vet_credential_status = 'none'
        WHERE id = ?`
     ).run(`[حذف‌شده #${user.id}]`, user.id);
     return true;
@@ -948,6 +966,54 @@ export const dbService = {
         )
         .all() as Record<string, unknown>[]
     ).map(mapUser);
+  },
+
+  listPendingVetCredentials(): User[] {
+    return (
+      db
+        .prepare(
+          `SELECT * FROM users
+           WHERE vet_credential_status = 'pending'
+           ORDER BY id ASC`
+        )
+        .all() as Record<string, unknown>[]
+    ).map(mapUser);
+  },
+
+  submitVetCredential(
+    userId: number,
+    fileId: string
+  ): { ok: true; user: User } | { ok: false; reason: 'missing' | 'no_file' } {
+    const existing = this.getUserById(userId);
+    if (!existing) return { ok: false, reason: 'missing' };
+    const file = fileId?.trim();
+    if (!file) return { ok: false, reason: 'no_file' };
+    db.prepare(
+      `UPDATE users SET
+         vet_credential_status = 'pending',
+         vet_credential_file_id = ?
+       WHERE id = ?`
+    ).run(file, userId);
+    return { ok: true, user: this.getUserById(userId)! };
+  },
+
+  approveVetCredential(userId: number): User | null {
+    const existing = this.getUserById(userId);
+    if (!existing || existing.vetCredentialStatus !== 'pending') return null;
+    db.prepare(`UPDATE users SET vet_credential_status = 'verified' WHERE id = ?`).run(userId);
+    return this.getUserById(userId);
+  },
+
+  rejectVetCredential(userId: number): User | null {
+    const existing = this.getUserById(userId);
+    if (!existing || existing.vetCredentialStatus !== 'pending') return null;
+    db.prepare(
+      `UPDATE users SET
+         vet_credential_status = 'none',
+         vet_credential_file_id = NULL
+       WHERE id = ?`
+    ).run(userId);
+    return this.getUserById(userId);
   },
 
   submitVerification(
