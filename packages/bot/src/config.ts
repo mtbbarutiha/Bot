@@ -51,10 +51,13 @@ function resolveAdminIds(): string[] {
   return [...new Set(merged)];
 }
 
+const DEFAULT_PAYMENT_CARD_NUMBER = '62198611052407631';
+const DEFAULT_PAYMENT_CARD_HOLDER = 'محمد تقی باروتیها';
+
 export const config = {
   telegramBotToken: optional('TELEGRAM_BOT_TOKEN'),
   telegramBotUsername: optional('TELEGRAM_BOT_USERNAME'),
-  /** شناسه‌های تلگرام ادمین (جدا با کاما) — پنل ادمین / احراز */
+  /** شناسه‌های تلگرام ادمین (جدا با کاما) — پنل ادمین / احراز / تأیید پرداخت */
   telegramAdminIds: resolveAdminIds(),
   /** رمز ورود پنل وقتی لیست ادمین خالی است (پیش‌فرض: petdate) */
   adminPassword: optional('ADMIN_PASSWORD', 'petdate')!,
@@ -70,6 +73,9 @@ export const config = {
   forceJoinPetdateChannel: optional('FORCE_JOIN_PETDATE_CHANNEL', 'petdating'),
   /** کانال دوردوریا — فعلاً غیرفعال؛ برای فعال‌سازی دوباره به requiredChannels اضافه شود */
   forceJoinDordoriaChannel: optional('FORCE_JOIN_DORDORIA_CHANNEL'),
+  /** شماره کارت واریز خرید سکه */
+  paymentCardNumber: optional('PAYMENT_CARD_NUMBER', DEFAULT_PAYMENT_CARD_NUMBER)!,
+  paymentCardHolder: optional('PAYMENT_CARD_HOLDER', DEFAULT_PAYMENT_CARD_HOLDER)!,
 } as const;
 
 /** آیا حداقل یک ادمین با شناسه تلگرام در env تنظیم شده؟ */

@@ -879,13 +879,26 @@ export function coinsShopKeyboard(lastDailyCoinAt?: string | null): InlineKeyboa
 
 export function coinPackagePayKeyboard(pkgId: string): InlineKeyboard {
   return new InlineKeyboard()
-    .text('⭐ پرداخت با Stars', `coins:pay:stars:${pkgId}`)
+    .text('⭐ پرداخت با ستاره', `coins:pay:stars:${pkgId}`)
     .primary()
     .row()
-    .text('💳 کارت‌به‌کارت', `coins:pay:card:${pkgId}`)
+    .text('💳 کارت به کارت', `coins:pay:card:${pkgId}`)
     .row()
     .text('↩️ بازگشت', 'coins:back')
     .primary();
+}
+
+export function paymentReceiptCancelKeyboard(): InlineKeyboard {
+  return new InlineKeyboard().text('↩️ انصراف از پرداخت', 'coins:pay:cancel');
+}
+
+export function adminPaymentKeyboard(orderId: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('✅ تأیید واریز سکه', `pay:approve:${orderId}`)
+    .success()
+    .row()
+    .text('❌ رد', `pay:reject:${orderId}`)
+    .danger();
 }
 
 export function earnKeyboard(canSell: boolean): InlineKeyboard {

@@ -541,6 +541,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
     searchPage: undefined,
     searchBreedPage: undefined,
     earnPendingCoins: undefined,
+    paymentPendingOrderId: undefined,
     adminRejectUserId: undefined,
   });
   await ctx.reply('عملیات لغو شد.', {

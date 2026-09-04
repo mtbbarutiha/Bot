@@ -80,7 +80,7 @@ export function coinsShopIntroText(balance: number): string {
     `قیمت هر سکه: ${formatNum(COIN_PRICE_TOMAN)} تومان یا ${formatNum(COIN_PRICE_STARS)} Star`,
     `🎁 هر روز ${formatNum(DAILY_COIN_REWARD)} سکه رایگان — دکمه بالای لیست`,
     '',
-    'بسته را بزن → Stars یا کارت‌به‌کارت',
+    'بسته را بزن → پرداخت با ستاره یا کارت به کارت',
   ].join('\n');
 }
 
@@ -92,8 +92,8 @@ export function packageCheckoutText(p: CoinPackage): string {
       '👑━━━━━━━━━━━━━━👑',
       '',
       `💎 ${formatNum(p.coins)} سکه`,
-      `⭐ Telegram Stars: ${formatNum(p.stars)} (هر سکه ${formatNum(COIN_PRICE_STARS)} Star)`,
-      `💳 کارت‌به‌کارت: ${formatToman(p.toman)} (هر سکه ${formatNum(COIN_PRICE_TOMAN)} تومان)`,
+      `⭐ پرداخت با ستاره: ${formatNum(p.stars)} (هر سکه ${formatNum(COIN_PRICE_STARS)} Star)`,
+      `💳 کارت به کارت: ${formatToman(p.toman)} (هر سکه ${formatNum(COIN_PRICE_TOMAN)} تومان)`,
       '',
       'روش پرداخت را انتخاب کن:',
     ].join('\n');
@@ -102,8 +102,8 @@ export function packageCheckoutText(p: CoinPackage): string {
     '💰 <b>خرید سکه</b>',
     '',
     `بسته: ${formatNum(p.coins)} سکه`,
-    `⭐ Telegram Stars: ${formatNum(p.stars)} (هر سکه ${formatNum(COIN_PRICE_STARS)} Star)`,
-    `💳 کارت‌به‌کارت: ${formatToman(p.toman)} (هر سکه ${formatNum(COIN_PRICE_TOMAN)} تومان)`,
+    `⭐ پرداخت با ستاره: ${formatNum(p.stars)} (هر سکه ${formatNum(COIN_PRICE_STARS)} Star)`,
+    `💳 کارت به کارت: ${formatToman(p.toman)} (هر سکه ${formatNum(COIN_PRICE_TOMAN)} تومان)`,
     '',
     'روش پرداخت را انتخاب کن:',
   ].join('\n');
@@ -182,5 +182,33 @@ export function validateIranCard(
 
 export function formatCardGrouped(card: string): string {
   const d = normalizeCardNumber(card);
-  return d.replace(/(\d{4})(?=\d)/g, '$1-');
+  if (d.length === 16) return d.replace(/(\d{4})(?=\d)/g, '$1-');
+  return d;
+}
+
+/** جزئیات کارت واریز خرید سکه (از env با fallback) */
+export function paymentCardInfo(): { number: string; holder: string; display: string } {
+  const number = (
+    process.env.PAYMENT_CARD_NUMBER ||
+    '62198611052407631'
+  ).replace(/\s+/g, '');
+  const holder = process.env.PAYMENT_CARD_HOLDER || 'محمد تقی باروتیها';
+  return { number, holder, display: formatCardGrouped(number) };
+}
+
+export function cardPaymentInstructionsText(p: CoinPackage): string {
+  const card = paymentCardInfo();
+  return [
+    '💳 <b>پرداخت کارت‌به‌کارت</b>',
+    '',
+    `بسته: <b>${formatNum(p.coins)}</b> سکه`,
+    `مبلغ واریز: <b>${formatToman(p.toman)}</b>`,
+    '',
+    'به این کارت واریز کن:',
+    `🔢 شماره کارت: <code>${card.number}</code>`,
+    `👤 به‌نام: <b>${card.holder}</b>`,
+    '',
+    'بعد از واریز، <b>عکس رسید</b> را همین‌جا بفرست تا برای تأیید ادمین ثبت شود.',
+    'دکمهٔ زیر را برای انصراف بزن.',
+  ].join('\n');
 }

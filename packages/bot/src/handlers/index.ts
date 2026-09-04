@@ -92,12 +92,18 @@ import {
   handleCoinsDailyDone,
   handleCoinsPackage,
   handleCoinsPay,
+  handleCoinsPayCancel,
   handleEarn,
   handleEarnCancel,
   handleEarnCardText,
   handleEarnClose,
   handleEarnConfirm,
   handleEarnSell,
+  handlePaymentApprove,
+  handlePaymentReceiptPhoto,
+  handlePaymentReject,
+  handlePreCheckout,
+  handleSuccessfulPayment,
 } from './coins';
 import {
   handleNearbyPets,
@@ -443,7 +449,17 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery(/^coins:pay:(stars|card):(.+)$/, (ctx) =>
     handleCoinsPay(ctx, ctx.match![1] as 'stars' | 'card', ctx.match![2]!)
   );
+  bot.callbackQuery('coins:pay:cancel', (ctx) => handleCoinsPayCancel(ctx));
   bot.callbackQuery('coins:back', (ctx) => handleCoinsBack(ctx));
+  bot.callbackQuery(/^pay:approve:(\d+)$/, (ctx) =>
+    handlePaymentApprove(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery(/^pay:reject:(\d+)$/, (ctx) =>
+    handlePaymentReject(ctx, Number(ctx.match![1]))
+  );
+
+  bot.on('pre_checkout_query', (ctx) => handlePreCheckout(ctx));
+  bot.on('message:successful_payment', (ctx) => handleSuccessfulPayment(ctx));
 
   bot.callbackQuery('earn:sell', (ctx) => handleEarnSell(ctx));
   bot.callbackQuery(/^earn:confirm:(\d+)$/, (ctx) =>
@@ -467,6 +483,7 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:photo', async (ctx) => {
+    if (await handlePaymentReceiptPhoto(ctx)) return;
     if (await handleVerifyPhoto(ctx)) return;
     if (await handleVetCredentialPhoto(ctx)) return;
     if (await handlePetPhoto(ctx)) return;

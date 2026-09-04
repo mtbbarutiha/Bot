@@ -33,6 +33,48 @@ export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
   rejected: 'رد شده',
 };
 
+/** روش خرید سکه */
+export type PaymentMethod = 'card' | 'stars';
+
+/**
+ * وضعیت سفارش پرداخت:
+ * - awaiting_receipt: کارت — منتظر آپلود رسید
+ * - pending: کارت — منتظر بررسی ادمین
+ * - awaiting_stars: ستاره — فاکتور ارسال شده
+ * - paid: ستاره — پرداخت موفق و سکه واریز شده
+ * - approved: کارت — تأیید ادمین و سکه واریز شده
+ * - rejected: کارت — رد شده
+ * - cancelled: لغو
+ */
+export type PaymentOrderStatus =
+  | 'awaiting_receipt'
+  | 'pending'
+  | 'awaiting_stars'
+  | 'paid'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled';
+
+export interface PaymentOrder {
+  id: number;
+  userId: number;
+  packageId: string;
+  coins: number;
+  amountToman?: number;
+  amountStars?: number;
+  method: PaymentMethod;
+  status: PaymentOrderStatus;
+  receiptFileId?: string;
+  telegramPaymentChargeId?: string;
+  adminNote?: string;
+  createdAt: string;
+  reviewedAt?: string;
+  /** join — برای اعلان ادمین */
+  userName?: string;
+  userTelegramId?: string;
+  userUsername?: string;
+}
+
 /** بج نمایشی برای پروفایل‌های تأییدشده */
 export const VERIFIED_BADGE = '✅ احراز شده';
 
@@ -233,6 +275,8 @@ export interface BotSession {
   searchBreedPage?: number;
   /** فروش سکه — منتظر شماره کارت */
   earnPendingCoins?: number;
+  /** خرید سکه کارت‌به‌کارت — سفارش در انتظار رسید */
+  paymentPendingOrderId?: number;
   /** ادمین — رد احراز هویت برای این userId */
   adminRejectUserId?: number;
   /** ادمین — ورود با رمز (وقتی ADMIN_IDS خالی است) */
@@ -265,6 +309,7 @@ export type BotStep =
   | 'search_species'
   | 'search_breed'
   | 'earn_card'
+  | 'payment_receipt'
   | 'pet_name'
   | 'pet_species'
   | 'pet_breed'

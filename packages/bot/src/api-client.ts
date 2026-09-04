@@ -487,3 +487,160 @@ export async function submitCoinSell(
     user: body.user!,
   };
 }
+
+export type PaymentOrder = {
+  id: number;
+  userId: number;
+  packageId: string;
+  coins: number;
+  amountToman?: number;
+  amountStars?: number;
+  method: 'card' | 'stars';
+  status: string;
+  receiptFileId?: string;
+  telegramPaymentChargeId?: string;
+  adminNote?: string;
+  createdAt: string;
+  reviewedAt?: string;
+  userName?: string;
+  userTelegramId?: string;
+  userUsername?: string;
+};
+
+export async function createPaymentOrder(
+  telegramId: string,
+  data: {
+    packageId: string;
+    coins: number;
+    amountToman?: number;
+    amountStars?: number;
+    method: 'card' | 'stars';
+  }
+): Promise<{ ok: true; order: PaymentOrder } | { ok: false; reason: string }> {
+  const res = await fetch(
+    `${config.apiUrl}/api/users/telegram/${encodeURIComponent(telegramId)}/payments`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  );
+  const body = (await res.json()) as {
+    ok?: boolean;
+    order?: PaymentOrder;
+    reason?: string;
+    error?: string;
+  };
+  if (!res.ok || !body.ok || !body.order) {
+    return { ok: false, reason: body.reason ?? body.error ?? 'error' };
+  }
+  return { ok: true, order: body.order };
+}
+
+export async function getPaymentOrder(orderId: number): Promise<PaymentOrder | null> {
+  try {
+    return await request<PaymentOrder>(`/api/users/payments/${orderId}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function listPendingCardPayments(): Promise<PaymentOrder[]> {
+  return request<PaymentOrder[]>('/api/users/payments/pending/card');
+}
+
+export async function attachPaymentReceipt(
+  orderId: number,
+  receiptFileId: string
+): Promise<{ ok: true; order: PaymentOrder } | { ok: false; reason: string }> {
+  const res = await fetch(`${config.apiUrl}/api/users/payments/${orderId}/receipt`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ receiptFileId }),
+  });
+  const body = (await res.json()) as {
+    ok?: boolean;
+    order?: PaymentOrder;
+    reason?: string;
+    error?: string;
+  };
+  if (!res.ok || !body.ok || !body.order) {
+    return { ok: false, reason: body.reason ?? body.error ?? 'error' };
+  }
+  return { ok: true, order: body.order };
+}
+
+export async function approveCardPayment(
+  orderId: number,
+  note?: string
+): Promise<{ ok: true; order: PaymentOrder; user: User } | { ok: false; reason: string }> {
+  const res = await fetch(`${config.apiUrl}/api/users/payments/${orderId}/approve`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note }),
+  });
+  const body = (await res.json()) as {
+    ok?: boolean;
+    order?: PaymentOrder;
+    user?: User;
+    reason?: string;
+    error?: string;
+  };
+  if (!res.ok || !body.ok || !body.order || !body.user) {
+    return { ok: false, reason: body.reason ?? body.error ?? 'error' };
+  }
+  return { ok: true, order: body.order, user: body.user };
+}
+
+export async function rejectCardPayment(
+  orderId: number,
+  note?: string
+): Promise<{ ok: true; order: PaymentOrder; user: User | null } | { ok: false; reason: string }> {
+  const res = await fetch(`${config.apiUrl}/api/users/payments/${orderId}/reject`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ note }),
+  });
+  const body = (await res.json()) as {
+    ok?: boolean;
+    order?: PaymentOrder;
+    user?: User | null;
+    reason?: string;
+    error?: string;
+  };
+  if (!res.ok || !body.ok || !body.order) {
+    return { ok: false, reason: body.reason ?? body.error ?? 'error' };
+  }
+  return { ok: true, order: body.order, user: body.user ?? null };
+}
+
+export async function completeStarsPayment(
+  orderId: number,
+  telegramPaymentChargeId: string
+): Promise<
+  | { ok: true; order: PaymentOrder; user: User; credited: boolean }
+  | { ok: false; reason: string }
+> {
+  const res = await fetch(`${config.apiUrl}/api/users/payments/${orderId}/stars/complete`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ telegramPaymentChargeId }),
+  });
+  const body = (await res.json()) as {
+    ok?: boolean;
+    order?: PaymentOrder;
+    user?: User;
+    credited?: boolean;
+    reason?: string;
+    error?: string;
+  };
+  if (!res.ok || !body.ok || !body.order || !body.user) {
+    return { ok: false, reason: body.reason ?? body.error ?? 'error' };
+  }
+  return {
+    ok: true,
+    order: body.order,
+    user: body.user,
+    credited: Boolean(body.credited),
+  };
+}

@@ -538,3 +538,112 @@ usersRouter.post('/telegram/:telegramId/coins/sell', (req, res) => {
     user: result.user,
   });
 });
+
+/** ایجاد سفارش خرید سکه (کارت یا Stars) */
+usersRouter.post('/telegram/:telegramId/payments', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const packageId = String(req.body?.packageId ?? '').trim();
+  const method = String(req.body?.method ?? '').trim() as 'card' | 'stars';
+  const coins = Number(req.body?.coins);
+  const amountToman =
+    req.body?.amountToman != null ? Number(req.body.amountToman) : undefined;
+  const amountStars =
+    req.body?.amountStars != null ? Number(req.body.amountStars) : undefined;
+
+  if (!packageId || !Number.isFinite(coins) || coins <= 0) {
+    res.status(400).json({ error: 'بسته نامعتبر', reason: 'package' });
+    return;
+  }
+  if (method !== 'card' && method !== 'stars') {
+    res.status(400).json({ error: 'روش پرداخت نامعتبر', reason: 'method' });
+    return;
+  }
+
+  const status = method === 'card' ? 'awaiting_receipt' : 'awaiting_stars';
+  const order = dbService.createPaymentOrder({
+    userId: user.id,
+    packageId,
+    coins: Math.floor(coins),
+    amountToman: amountToman != null && Number.isFinite(amountToman) ? amountToman : undefined,
+    amountStars: amountStars != null && Number.isFinite(amountStars) ? amountStars : undefined,
+    method,
+    status,
+  });
+  res.status(201).json({ ok: true, order });
+});
+
+usersRouter.get('/payments/pending/card', (_req, res) => {
+  res.json(dbService.listPendingCardPayments());
+});
+
+usersRouter.get('/payments/:id', (req, res) => {
+  const order = dbService.getPaymentOrder(Number(req.params.id));
+  if (!order) {
+    res.status(404).json({ error: 'سفارش پیدا نشد' });
+    return;
+  }
+  res.json(order);
+});
+
+usersRouter.post('/payments/:id/receipt', (req, res) => {
+  const fileId = String(req.body?.receiptFileId ?? req.body?.fileId ?? '').trim();
+  const result = dbService.attachPaymentReceipt(Number(req.params.id), fileId);
+  if (!result.ok) {
+    const status =
+      result.reason === 'missing' ? 404 : result.reason === 'no_file' ? 400 : 409;
+    res.status(status).json({ ok: false, reason: result.reason });
+    return;
+  }
+  res.json({ ok: true, order: result.order });
+});
+
+usersRouter.post('/payments/:id/approve', (req, res) => {
+  const note = req.body?.note != null ? String(req.body.note) : undefined;
+  const result = dbService.approveCardPayment(Number(req.params.id), note);
+  if (!result.ok) {
+    res.status(result.reason === 'missing' ? 404 : 409).json({
+      ok: false,
+      reason: result.reason,
+    });
+    return;
+  }
+  res.json({ ok: true, order: result.order, user: result.user });
+});
+
+usersRouter.post('/payments/:id/reject', (req, res) => {
+  const note = req.body?.note != null ? String(req.body.note) : undefined;
+  const result = dbService.rejectCardPayment(Number(req.params.id), note);
+  if (!result.ok) {
+    res.status(result.reason === 'missing' ? 404 : 409).json({
+      ok: false,
+      reason: result.reason,
+    });
+    return;
+  }
+  res.json({ ok: true, order: result.order, user: result.user });
+});
+
+usersRouter.post('/payments/:id/stars/complete', (req, res) => {
+  const chargeId = String(req.body?.telegramPaymentChargeId ?? '').trim();
+  const result = dbService.completeStarsPayment({
+    orderId: Number(req.params.id),
+    telegramPaymentChargeId: chargeId,
+  });
+  if (!result.ok) {
+    res.status(result.reason === 'missing' ? 404 : 409).json({
+      ok: false,
+      reason: result.reason,
+    });
+    return;
+  }
+  res.json({
+    ok: true,
+    order: result.order,
+    user: result.user,
+    credited: result.credited,
+  });
+});

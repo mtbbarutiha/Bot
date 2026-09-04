@@ -8,6 +8,9 @@ import type {
   GameStatus,
   GameType,
   OnboardingStatus,
+  PaymentMethod,
+  PaymentOrder,
+  PaymentOrderStatus,
   PetBreed,
   PetGender,
   PetProfile,
@@ -233,6 +236,33 @@ function migrateSchema() {
       reviewed_at TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS payment_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      package_id TEXT NOT NULL,
+      coins INTEGER NOT NULL,
+      amount_toman INTEGER,
+      amount_stars INTEGER,
+      method TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      receipt_file_id TEXT,
+      telegram_payment_charge_id TEXT,
+      admin_note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      reviewed_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_payment_orders_user
+    ON payment_orders(user_id, status);
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_payment_orders_status
+    ON payment_orders(status, created_at);
   `);
 
   db.exec(`
@@ -843,6 +873,27 @@ function mapPlaydate(row: Record<string, unknown>): PlaydateRequest {
     location: row.location as string | undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+  };
+}
+
+function mapPaymentOrder(row: Record<string, unknown>): PaymentOrder {
+  return {
+    id: row.id as number,
+    userId: row.user_id as number,
+    packageId: row.package_id as string,
+    coins: Number(row.coins),
+    amountToman: row.amount_toman != null ? Number(row.amount_toman) : undefined,
+    amountStars: row.amount_stars != null ? Number(row.amount_stars) : undefined,
+    method: row.method as PaymentMethod,
+    status: row.status as PaymentOrderStatus,
+    receiptFileId: (row.receipt_file_id as string | undefined) ?? undefined,
+    telegramPaymentChargeId: (row.telegram_payment_charge_id as string | undefined) ?? undefined,
+    adminNote: (row.admin_note as string | undefined) ?? undefined,
+    createdAt: row.created_at as string,
+    reviewedAt: (row.reviewed_at as string | undefined) ?? undefined,
+    userName: (row.user_name as string | undefined) ?? undefined,
+    userTelegramId: (row.user_telegram_id as string | undefined) ?? undefined,
+    userUsername: (row.user_username as string | undefined) ?? undefined,
   };
 }
 
@@ -2058,5 +2109,221 @@ export const dbService = {
       }
       throw err;
     }
+  },
+
+  createPaymentOrder(input: {
+    userId: number;
+    packageId: string;
+    coins: number;
+    amountToman?: number;
+    amountStars?: number;
+    method: PaymentMethod;
+    status: PaymentOrderStatus;
+  }): PaymentOrder {
+    const result = db
+      .prepare(
+        `INSERT INTO payment_orders (
+          user_id, package_id, coins, amount_toman, amount_stars, method, status
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        input.userId,
+        input.packageId,
+        input.coins,
+        input.amountToman ?? null,
+        input.amountStars ?? null,
+        input.method,
+        input.status
+      );
+    return this.getPaymentOrder(Number(result.lastInsertRowid))!;
+  },
+
+  getPaymentOrder(id: number): PaymentOrder | null {
+    const row = db
+      .prepare(
+        `SELECT po.*,
+                u.name AS user_name,
+                u.telegram_id AS user_telegram_id,
+                u.username AS user_username
+         FROM payment_orders po
+         LEFT JOIN users u ON u.id = po.user_id
+         WHERE po.id = ?`
+      )
+      .get(id) as Record<string, unknown> | undefined;
+    return row ? mapPaymentOrder(row) : null;
+  },
+
+  listPendingCardPayments(): PaymentOrder[] {
+    return (
+      db
+        .prepare(
+          `SELECT po.*,
+                  u.name AS user_name,
+                  u.telegram_id AS user_telegram_id,
+                  u.username AS user_username
+           FROM payment_orders po
+           LEFT JOIN users u ON u.id = po.user_id
+           WHERE po.method = 'card' AND po.status = 'pending'
+           ORDER BY po.created_at ASC, po.id ASC`
+        )
+        .all() as Record<string, unknown>[]
+    ).map(mapPaymentOrder);
+  },
+
+  attachPaymentReceipt(
+    orderId: number,
+    receiptFileId: string
+  ):
+    | { ok: true; order: PaymentOrder }
+    | { ok: false; reason: 'missing' | 'bad_status' | 'no_file' } {
+    const fileId = receiptFileId.trim();
+    if (!fileId) return { ok: false, reason: 'no_file' };
+    const existing = this.getPaymentOrder(orderId);
+    if (!existing) return { ok: false, reason: 'missing' };
+    if (existing.method !== 'card' || existing.status !== 'awaiting_receipt') {
+      return { ok: false, reason: 'bad_status' };
+    }
+    db.prepare(
+      `UPDATE payment_orders
+       SET receipt_file_id = ?, status = 'pending'
+       WHERE id = ? AND status = 'awaiting_receipt'`
+    ).run(fileId, orderId);
+    const order = this.getPaymentOrder(orderId);
+    if (!order || order.status !== 'pending') return { ok: false, reason: 'bad_status' };
+    return { ok: true, order };
+  },
+
+  approveCardPayment(
+    orderId: number,
+    note?: string
+  ):
+    | { ok: true; order: PaymentOrder; user: User }
+    | { ok: false; reason: 'missing' | 'bad_status' } {
+    const existing = this.getPaymentOrder(orderId);
+    if (!existing) return { ok: false, reason: 'missing' };
+    if (existing.method !== 'card' || existing.status !== 'pending') {
+      return { ok: false, reason: 'bad_status' };
+    }
+
+    const tx = db.transaction(() => {
+      const updated = db
+        .prepare(
+          `UPDATE payment_orders
+           SET status = 'approved',
+               admin_note = ?,
+               reviewed_at = datetime('now')
+           WHERE id = ? AND status = 'pending'`
+        )
+        .run(note?.trim() || null, orderId);
+      if (updated.changes !== 1) throw new Error('BAD_STATUS');
+      db.prepare(`UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?`).run(
+        existing.coins,
+        existing.userId
+      );
+    });
+
+    try {
+      tx();
+    } catch (err) {
+      if (err instanceof Error && err.message === 'BAD_STATUS') {
+        return { ok: false, reason: 'bad_status' };
+      }
+      throw err;
+    }
+
+    const order = this.getPaymentOrder(orderId)!;
+    const user = this.getUserById(existing.userId)!;
+    return { ok: true, order, user };
+  },
+
+  rejectCardPayment(
+    orderId: number,
+    note?: string
+  ):
+    | { ok: true; order: PaymentOrder; user: User | null }
+    | { ok: false; reason: 'missing' | 'bad_status' } {
+    const existing = this.getPaymentOrder(orderId);
+    if (!existing) return { ok: false, reason: 'missing' };
+    if (existing.method !== 'card' || existing.status !== 'pending') {
+      return { ok: false, reason: 'bad_status' };
+    }
+    const updated = db
+      .prepare(
+        `UPDATE payment_orders
+         SET status = 'rejected',
+             admin_note = ?,
+             reviewed_at = datetime('now')
+         WHERE id = ? AND status = 'pending'`
+      )
+      .run(note?.trim() || null, orderId);
+    if (updated.changes !== 1) return { ok: false, reason: 'bad_status' };
+    return {
+      ok: true,
+      order: this.getPaymentOrder(orderId)!,
+      user: this.getUserById(existing.userId),
+    };
+  },
+
+  completeStarsPayment(input: {
+    orderId: number;
+    telegramPaymentChargeId: string;
+  }):
+    | { ok: true; order: PaymentOrder; user: User; credited: boolean }
+    | { ok: false; reason: 'missing' | 'bad_status' | 'already' } {
+    const existing = this.getPaymentOrder(input.orderId);
+    if (!existing) return { ok: false, reason: 'missing' };
+    if (existing.method !== 'stars') return { ok: false, reason: 'bad_status' };
+    if (existing.status === 'paid') {
+      return {
+        ok: true,
+        order: existing,
+        user: this.getUserById(existing.userId)!,
+        credited: false,
+      };
+    }
+    if (existing.status !== 'awaiting_stars') return { ok: false, reason: 'bad_status' };
+
+    const chargeId = input.telegramPaymentChargeId.trim();
+    const tx = db.transaction(() => {
+      const updated = db
+        .prepare(
+          `UPDATE payment_orders
+           SET status = 'paid',
+               telegram_payment_charge_id = ?,
+               reviewed_at = datetime('now')
+           WHERE id = ? AND status = 'awaiting_stars'`
+        )
+        .run(chargeId || null, input.orderId);
+      if (updated.changes !== 1) throw new Error('BAD_STATUS');
+      db.prepare(`UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?`).run(
+        existing.coins,
+        existing.userId
+      );
+    });
+
+    try {
+      tx();
+    } catch (err) {
+      if (err instanceof Error && err.message === 'BAD_STATUS') {
+        const again = this.getPaymentOrder(input.orderId);
+        if (again?.status === 'paid') {
+          return {
+            ok: true,
+            order: again,
+            user: this.getUserById(existing.userId)!,
+            credited: false,
+          };
+        }
+        return { ok: false, reason: 'bad_status' };
+      }
+      throw err;
+    }
+
+    return {
+      ok: true,
+      order: this.getPaymentOrder(input.orderId)!,
+      user: this.getUserById(existing.userId)!,
+      credited: true,
+    };
   },
 };

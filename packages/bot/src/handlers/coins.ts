@@ -1,34 +1,50 @@
 import type { Context } from 'grammy';
 import {
+  approveCardPayment,
+  attachPaymentReceipt,
   claimDailyCoins,
+  completeStarsPayment,
+  createPaymentOrder,
+  getPaymentOrder,
   hasOpenCoinSell,
+  rejectCardPayment,
   submitCoinSell,
+  type PaymentOrder,
 } from '../api-client';
+import { config, isTelegramAdmin } from '../config';
 import {
   COIN_PACKAGES,
   COIN_SELL_PRICE_TOMAN,
   DAILY_COIN_REWARD,
   MIN_SELL_COINS,
   canClaimDaily,
+  cardPaymentInstructionsText,
   coinsShopIntroText,
   earnIntroText,
   formatNum,
   formatToman,
   packageCheckoutText,
+  paymentCardInfo,
   sellAmountToman,
   validateIranCard,
+  type CoinPackage,
 } from '../economy';
 import {
+  adminPaymentKeyboard,
   coinPackagePayKeyboard,
   coinsShopKeyboard,
   earnCancelKeyboard,
   earnConfirmKeyboard,
   earnKeyboard,
-  mainMenuKeyboard,
   MENU_LABELS,
+  paymentReceiptCancelKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 export async function handleCoins(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
@@ -105,16 +121,123 @@ export async function handleCoinsPackage(ctx: Context, pkgId: string): Promise<v
 
 export async function handleCoinsPay(
   ctx: Context,
-  _method: 'stars' | 'card',
+  method: 'stars' | 'card',
   pkgId: string
 ): Promise<void> {
   const pkg = COIN_PACKAGES.find((p) => p.id === pkgId);
-  await ctx.answerCallbackQuery({
-    text: pkg
-      ? `پرداخت ${formatNum(pkg.coins)} سکه به‌زودی فعال می‌شه`
-      : 'پرداخت به‌زودی',
-    show_alert: true,
+  if (!pkg) {
+    await ctx.answerCallbackQuery({ text: 'بسته پیدا نشد', show_alert: true });
+    return;
+  }
+  if (method === 'card') {
+    await startCardPayment(ctx, pkg);
+    return;
+  }
+  await startStarsPayment(ctx, pkg);
+}
+
+async function startCardPayment(ctx: Context, pkg: CoinPackage): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user?.telegramId || !ctx.from) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+
+  const created = await createPaymentOrder(user.telegramId, {
+    packageId: pkg.id,
+    coins: pkg.coins,
+    amountToman: pkg.toman,
+    amountStars: pkg.stars,
+    method: 'card',
   });
+  if (!created.ok) {
+    await ctx.answerCallbackQuery({ text: 'ثبت سفارش ناموفق', show_alert: true });
+    return;
+  }
+
+  await upsertSession(String(ctx.from.id), {
+    step: 'payment_receipt',
+    paymentPendingOrderId: created.order.id,
+  });
+  await ctx.answerCallbackQuery();
+
+  const text = cardPaymentInstructionsText(pkg);
+  try {
+    await ctx.editMessageText(text, {
+      parse_mode: 'HTML',
+      reply_markup: paymentReceiptCancelKeyboard(),
+    });
+  } catch {
+    await ctx.reply(text, {
+      parse_mode: 'HTML',
+      reply_markup: paymentReceiptCancelKeyboard(),
+    });
+  }
+}
+
+async function startStarsPayment(ctx: Context, pkg: CoinPackage): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user?.telegramId || !ctx.from) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+
+  const created = await createPaymentOrder(user.telegramId, {
+    packageId: pkg.id,
+    coins: pkg.coins,
+    amountToman: pkg.toman,
+    amountStars: pkg.stars,
+    method: 'stars',
+  });
+  if (!created.ok) {
+    await ctx.answerCallbackQuery({ text: 'ثبت سفارش ناموفق', show_alert: true });
+    return;
+  }
+
+  await ctx.answerCallbackQuery();
+  const title = `خرید ${pkg.coins} سکه`.slice(0, 32);
+  const description = `بسته سکه همبازی (@Petdatebot) — ${pkg.coins} سکه`.slice(0, 255);
+  const payload = `pay:${created.order.id}:${pkg.id}`;
+
+  try {
+    await ctx.replyWithInvoice(
+      title,
+      description,
+      payload,
+      'XTR',
+      [{ label: `${pkg.coins} سکه`, amount: pkg.stars }],
+      { provider_token: '' }
+    );
+  } catch (err) {
+    console.error('sendInvoice Stars failed:', err);
+    await ctx.reply(
+      'ارسال فاکتور ستاره ممکن نشد. اگر ربات برای پرداخت Stars فعال نیست، از کارت‌به‌کارت استفاده کن.',
+      { reply_markup: coinPackagePayKeyboard(pkg.id) }
+    );
+  }
+}
+
+export async function handleCoinsPayCancel(ctx: Context): Promise<void> {
+  if (ctx.from) {
+    await upsertSession(String(ctx.from.id), {
+      step: 'ready',
+      paymentPendingOrderId: undefined,
+    });
+  }
+  await ctx.answerCallbackQuery({ text: 'لغو شد' });
+  const user = await getCtxUser(ctx);
+  const text = coinsShopIntroText(user?.coins ?? 0);
+  try {
+    await ctx.editMessageText(text, {
+      parse_mode: 'HTML',
+      reply_markup: coinsShopKeyboard(user?.lastDailyCoinAt),
+    });
+  } catch {
+    await ctx.reply(text, {
+      parse_mode: 'HTML',
+      reply_markup: coinsShopKeyboard(user?.lastDailyCoinAt),
+    });
+  }
 }
 
 export async function handleCoinsBack(ctx: Context): Promise<void> {
@@ -132,6 +255,242 @@ export async function handleCoinsBack(ctx: Context): Promise<void> {
       reply_markup: coinsShopKeyboard(user?.lastDailyCoinAt),
     });
   }
+}
+
+/** عکس رسید کارت‌به‌کارت */
+export async function handlePaymentReceiptPhoto(ctx: Context): Promise<boolean> {
+  const from = ctx.from;
+  const photos = ctx.message?.photo;
+  if (!from || !photos?.length) return false;
+
+  const session = await getSession(String(from.id));
+  if (!session || session.step !== 'payment_receipt' || !session.paymentPendingOrderId) {
+    return false;
+  }
+
+  const best = photos[photos.length - 1]!;
+  const orderId = session.paymentPendingOrderId;
+  const result = await attachPaymentReceipt(orderId, best.file_id);
+  await upsertSession(String(from.id), {
+    step: 'ready',
+    paymentPendingOrderId: undefined,
+  });
+
+  const user = await getCtxUser(ctx);
+  if (!result.ok) {
+    await ctx.reply(
+      result.reason === 'bad_status'
+        ? 'این سفارش دیگر در انتظار رسید نیست.'
+        : 'ثبت رسید ناموفق بود. دوباره از فروشگاه سکه شروع کن.',
+      { reply_markup: menuKeyboardFor(ctx, user) }
+    );
+    return true;
+  }
+
+  await ctx.reply(
+    [
+      '✅ رسید ثبت شد.',
+      `شماره سفارش: #${result.order.id}`,
+      '',
+      'بعد از بررسی ادمین، سکه‌ها به موجودی‌ات اضافه می‌شود.',
+    ].join('\n'),
+    { reply_markup: menuKeyboardFor(ctx, user) }
+  );
+
+  await notifyAdminsPendingPayment(ctx, result.order);
+  return true;
+}
+
+async function notifyAdminsPendingPayment(ctx: Context, order: PaymentOrder): Promise<void> {
+  const admins = config.telegramAdminIds;
+  if (!admins.length) {
+    console.warn('No TELEGRAM_ADMIN_IDS — pending payment #%s not notified', order.id);
+    return;
+  }
+
+  const card = paymentCardInfo();
+  const caption = [
+    '💳 <b>رسید کارت‌به‌کارت — بررسی</b>',
+    '',
+    `<b>سفارش:</b> #${order.id}`,
+    `<b>کاربر:</b> ${escapeHtml(order.userName || '—')}`,
+    order.userUsername ? `<b>یوزرنیم:</b> @${escapeHtml(order.userUsername)}` : null,
+    order.userTelegramId
+      ? `<b>تلگرام:</b> <code>${escapeHtml(order.userTelegramId)}</code>`
+      : null,
+    `<b>بسته:</b> ${escapeHtml(order.packageId)} · ${formatNum(order.coins)} سکه`,
+    `<b>مبلغ:</b> ${formatToman(order.amountToman ?? 0)}`,
+    `<b>کارت مقصد:</b> <code>${card.number}</code>`,
+    `<b>به‌نام:</b> ${escapeHtml(card.holder)}`,
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+
+  const kb = adminPaymentKeyboard(order.id);
+  for (const adminId of admins) {
+    try {
+      if (order.receiptFileId) {
+        await ctx.api.sendPhoto(adminId, order.receiptFileId, {
+          caption,
+          parse_mode: 'HTML',
+          reply_markup: kb,
+        });
+      } else {
+        await ctx.api.sendMessage(adminId, caption, {
+          parse_mode: 'HTML',
+          reply_markup: kb,
+        });
+      }
+    } catch (err) {
+      console.warn('notify admin payment failed:', adminId, err);
+    }
+  }
+}
+
+export async function handlePaymentApprove(ctx: Context, orderId: number): Promise<void> {
+  if (!ctx.from || !isTelegramAdmin(ctx.from.id)) {
+    await ctx.answerCallbackQuery({ text: 'فقط ادمین', show_alert: true });
+    return;
+  }
+
+  const result = await approveCardPayment(orderId);
+  if (!result.ok) {
+    await ctx.answerCallbackQuery({
+      text: result.reason === 'bad_status' ? 'قبلاً بررسی شده' : 'سفارش پیدا نشد',
+      show_alert: true,
+    });
+    return;
+  }
+
+  await ctx.answerCallbackQuery({ text: 'تأیید شد ✅' });
+  try {
+    await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+  } catch {
+    /* ignore */
+  }
+  await ctx.reply(
+    `✅ سفارش #${orderId} تأیید شد.\n${formatNum(result.order.coins)} سکه به ${escapeHtml(result.user.name)} واریز شد.`,
+    { parse_mode: 'HTML' }
+  );
+
+  if (result.user.telegramId) {
+    try {
+      await ctx.api.sendMessage(
+        result.user.telegramId,
+        [
+          '✅ پرداخت کارت‌به‌کارت تأیید شد.',
+          `${formatNum(result.order.coins)} سکه به موجودی‌ات اضافه شد.`,
+          `موجودی فعلی: ${formatNum(result.user.coins ?? 0)} سکه`,
+        ].join('\n')
+      );
+    } catch (err) {
+      console.warn('notify user payment approved failed:', err);
+    }
+  }
+}
+
+export async function handlePaymentReject(ctx: Context, orderId: number): Promise<void> {
+  if (!ctx.from || !isTelegramAdmin(ctx.from.id)) {
+    await ctx.answerCallbackQuery({ text: 'فقط ادمین', show_alert: true });
+    return;
+  }
+
+  const result = await rejectCardPayment(orderId);
+  if (!result.ok) {
+    await ctx.answerCallbackQuery({
+      text: result.reason === 'bad_status' ? 'قبلاً بررسی شده' : 'سفارش پیدا نشد',
+      show_alert: true,
+    });
+    return;
+  }
+
+  await ctx.answerCallbackQuery({ text: 'رد شد' });
+  try {
+    await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+  } catch {
+    /* ignore */
+  }
+  await ctx.reply(`❌ سفارش #${orderId} رد شد.`);
+
+  const tgId = result.user?.telegramId ?? result.order.userTelegramId;
+  if (tgId) {
+    try {
+      await ctx.api.sendMessage(
+        tgId,
+        [
+          '❌ رسید کارت‌به‌کارت رد شد.',
+          'اگر واریز کردی، با پشتیبانی هماهنگ کن یا دوباره از فروشگاه سکه اقدام کن.',
+        ].join('\n')
+      );
+    } catch (err) {
+      console.warn('notify user payment rejected failed:', err);
+    }
+  }
+}
+
+/** pre_checkout_query برای فاکتور Stars */
+export async function handlePreCheckout(ctx: Context): Promise<void> {
+  const q = ctx.preCheckoutQuery;
+  if (!q) return;
+  const payload = q.invoice_payload || '';
+  const match = /^pay:(\d+):(.+)$/.exec(payload);
+  if (!match) {
+    await ctx.answerPreCheckoutQuery(false, {
+      error_message: 'فاکتور نامعتبر است',
+    });
+    return;
+  }
+  const orderId = Number(match[1]);
+  const pkgId = match[2]!;
+  const order = await getPaymentOrder(orderId);
+  const pkg = COIN_PACKAGES.find((p) => p.id === pkgId);
+  if (
+    !order ||
+    !pkg ||
+    order.method !== 'stars' ||
+    order.status !== 'awaiting_stars' ||
+    order.packageId !== pkgId ||
+    q.currency !== 'XTR' ||
+    q.total_amount !== pkg.stars
+  ) {
+    await ctx.answerPreCheckoutQuery(false, {
+      error_message: 'این فاکتور منقضی یا نامعتبر است',
+    });
+    return;
+  }
+  await ctx.answerPreCheckoutQuery(true);
+}
+
+/** successful_payment — واریز سکه بعد از Stars */
+export async function handleSuccessfulPayment(ctx: Context): Promise<void> {
+  const payment = ctx.message?.successful_payment;
+  if (!payment) return;
+
+  const match = /^pay:(\d+):(.+)$/.exec(payment.invoice_payload || '');
+  if (!match) {
+    await ctx.reply('پرداخت دریافت شد ولی سفارش پیدا نشد. با پشتیبانی هماهنگ کن.');
+    return;
+  }
+  const orderId = Number(match[1]);
+  const result = await completeStarsPayment(orderId, payment.telegram_payment_charge_id);
+  if (!result.ok) {
+    await ctx.reply('پرداخت ثبت شد ولی واریز سکه با خطا روبه‌رو شد. با پشتیبانی هماهنگ کن.');
+    console.error('completeStarsPayment failed:', result.reason, orderId);
+    return;
+  }
+
+  const user = result.user;
+  await ctx.reply(
+    [
+      '⭐ پرداخت با ستاره موفق بود!',
+      `${formatNum(result.order.coins)} سکه به موجودی‌ات اضافه شد.`,
+      `موجودی فعلی: <b>${formatNum(user.coins ?? 0)}</b> سکه`,
+    ].join('\n'),
+    {
+      parse_mode: 'HTML',
+      reply_markup: menuKeyboardFor(ctx, user),
+    }
+  );
 }
 
 export async function handleEarn(ctx: Context): Promise<void> {
