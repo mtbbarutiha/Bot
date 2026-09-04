@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bot — Chat</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="chat">
+      <header class="chat__header">
+        <div class="chat__avatar" aria-hidden="true">🤖</div>
+        <div>
+          <h1 class="chat__title">Bot</h1>
+          <p class="chat__subtitle">A tiny rule-based chatbot</p>
+        </div>
+        <span class="chat__status" id="status" title="Server status">●</span>
+      </header>
+
+      <ul class="chat__log" id="log" aria-live="polite"></ul>
+
+      <form class="chat__form" id="form" autocomplete="off">
+        <input
+          class="chat__input"
+          id="input"
+          name="message"
+          type="text"
+          placeholder="Type a message… (try &quot;help&quot;)"
+          aria-label="Message"
+          required
+        />
+        <button class="chat__send" id="send" type="submit">Send</button>
+      </form>
+    </main>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
