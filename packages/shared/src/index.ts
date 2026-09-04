@@ -49,6 +49,8 @@ export type {
   PetProfile,
   ProfileDraft,
   UserGender,
+  VetConsultation,
+  VetConsultStatus,
 } from './petdate';
 export {
   COUNTRY_IRAN,

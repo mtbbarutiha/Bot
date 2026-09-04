@@ -9,6 +9,7 @@ import type {
   PlaydateStatus,
   User,
   UserRole,
+  VetConsultation,
 } from '@petdate/shared';
 import { config } from './config';
 
@@ -241,6 +242,11 @@ export async function updatePlaydateStatus(id: number, status: PlaydateStatus): 
     method: 'PATCH',
     body: JSON.stringify({ status }),
   });
+}
+
+export async function listVetConsultations(vetUserId: number): Promise<VetConsultation[]> {
+  const params = new URLSearchParams({ vetUserId: String(vetUserId) });
+  return request<VetConsultation[]>(`/api/consultations?${params.toString()}`);
 }
 
 export async function deletePet(id: number, ownerId: number): Promise<void> {

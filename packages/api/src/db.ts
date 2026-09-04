@@ -18,6 +18,8 @@ import type {
   UserGender,
   UserRole,
   VerificationStatus,
+  VetConsultation,
+  VetConsultStatus,
 } from '@petdate/shared';
 import { PET_BREEDS_SEED, PET_SPECIES } from '@petdate/shared';
 
@@ -181,6 +183,22 @@ function migrateSchema() {
       reviewed_at TEXT,
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS vet_consultations (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      vet_user_id INTEGER NOT NULL REFERENCES users(id),
+      patient_user_id INTEGER NOT NULL REFERENCES users(id),
+      pet_id INTEGER REFERENCES pets(id),
+      status TEXT NOT NULL DEFAULT 'requested',
+      notes TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_vet_consultations_vet
+      ON vet_consultations (vet_user_id, created_at DESC);
   `);
 
   const petCols = db.prepare("PRAGMA table_info(pets)").all() as { name: string }[];
@@ -711,6 +729,23 @@ function mapPlaydate(row: Record<string, unknown>): PlaydateRequest {
     location: row.location as string | undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+  };
+}
+
+function mapVetConsultation(row: Record<string, unknown>): VetConsultation {
+  return {
+    id: row.id as number,
+    vetUserId: row.vet_user_id as number,
+    patientUserId: row.patient_user_id as number,
+    petId: row.pet_id != null ? Number(row.pet_id) : undefined,
+    status: row.status as VetConsultStatus,
+    notes: (row.notes as string | undefined) ?? undefined,
+    createdAt: row.created_at as string,
+    patientName: (row.patient_name as string | undefined) ?? undefined,
+    patientCity: (row.patient_city as string | undefined) ?? undefined,
+    petName: (row.pet_name as string | undefined) ?? undefined,
+    petSpecies: (row.pet_species as string | undefined) ?? undefined,
+    petBreed: (row.pet_breed as string | undefined) ?? undefined,
   };
 }
 
@@ -1436,6 +1471,66 @@ export const dbService = {
       )
       .get(userId) as { c: number };
     return Number(row?.c ?? 0) > 0;
+  },
+
+  listVetConsultations(filters: {
+    vetUserId: number;
+    status?: VetConsultStatus;
+  }): VetConsultation[] {
+    let sql = `
+      SELECT vc.*,
+             patient.name AS patient_name,
+             patient.city AS patient_city,
+             pets.name AS pet_name,
+             pets.species AS pet_species,
+             pets.breed AS pet_breed
+      FROM vet_consultations vc
+      LEFT JOIN users patient ON patient.id = vc.patient_user_id
+      LEFT JOIN pets ON pets.id = vc.pet_id
+      WHERE vc.vet_user_id = ?
+    `;
+    const params: unknown[] = [filters.vetUserId];
+    if (filters.status) {
+      sql += ' AND vc.status = ?';
+      params.push(filters.status);
+    }
+    sql += ' ORDER BY vc.created_at DESC, vc.id DESC';
+    return (db.prepare(sql).all(...params) as Record<string, unknown>[]).map(mapVetConsultation);
+  },
+
+  createVetConsultation(data: {
+    vetUserId: number;
+    patientUserId: number;
+    petId?: number;
+    status?: VetConsultStatus;
+    notes?: string;
+  }): VetConsultation {
+    const result = db
+      .prepare(
+        `INSERT INTO vet_consultations (
+          vet_user_id, patient_user_id, pet_id, status, notes
+        ) VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(
+        data.vetUserId,
+        data.patientUserId,
+        data.petId ?? null,
+        data.status ?? 'requested',
+        data.notes ?? null
+      );
+    const rows = this.listVetConsultations({ vetUserId: data.vetUserId });
+    const created = rows.find((r) => r.id === Number(result.lastInsertRowid));
+    return (
+      created ?? {
+        id: Number(result.lastInsertRowid),
+        vetUserId: data.vetUserId,
+        patientUserId: data.patientUserId,
+        petId: data.petId,
+        status: data.status ?? 'requested',
+        notes: data.notes,
+        createdAt: new Date().toISOString(),
+      }
+    );
   },
 
   submitCoinSell(input: {

@@ -82,6 +82,7 @@ export async function handleStart(ctx: Context): Promise<void> {
 
 export async function sendWelcomeBack(ctx: Context, user: User, name: string): Promise<void> {
   const isOwner = userHasRole(user, 'pet_owner');
+  const isVetOnly = !isOwner && userHasRole(user, 'vet');
   const profileDone = Boolean(
     user.name &&
       user.age &&
@@ -94,7 +95,9 @@ export async function sendWelcomeBack(ctx: Context, user: User, name: string): P
     ? 'پروفایلت هنوز کامل نیست — الان می‌تونی تکمیل کنی یا «⏭ فعلاً رد کن» بزنی.'
     : isOwner
       ? 'از منوی زیر می‌تونی همبازی پیدا کنی، پت‌هات رو مدیریت کنی و از خدمات استفاده کنی.'
-      : 'از منوی زیر استفاده کن.';
+      : isVetOnly
+        ? 'از منوی زیر لیست بیماران و مشاوره‌هات رو ببین.'
+        : 'از منوی زیر استفاده کن.';
 
   const caption = [
     `سلام ${name}! 👋`,
@@ -256,6 +259,7 @@ export async function handleRoleSelect(ctx: Context, role: UserRole): Promise<vo
 export async function handleHelp(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
   const isOwner = userHasRole(user, 'pet_owner');
+  const isVetOnly = !isOwner && userHasRole(user, 'vet');
 
   const lines = isOwner
     ? [
@@ -279,17 +283,31 @@ export async function handleHelp(ctx: Context): Promise<void> {
         '/start — بازگشت به منو',
         '/cancel — لغو عملیات جاری',
       ]
-    : [
-        `🐾 **${BRAND.name}** — ${BRAND.taglineFa}`,
-        `_${BRAND.taglineEn}_`,
-        '',
-        '/start — شروع یا بازگشت',
-        '/menu — نمایش منو',
-        '/explore — کشف همبازی‌ها',
-        '/pets — پت‌های من',
-        '/profile — پروفایل',
-        '/help — راهنما',
-      ];
+    : isVetOnly
+      ? [
+          `🐾 **${BRAND.name}** — راهنمای دامپزشک`,
+          `_${BRAND.taglineEn}_`,
+          '',
+          '📋 **بیماران / مشاوره‌ها** — لیست بیمارانی که مشاوره گرفته‌اند',
+          '👤 **پروفایل** — اطلاعات حساب',
+          '',
+          '/start — شروع یا بازگشت به منو',
+          '/menu — نمایش منو',
+          '/profile — پروفایل',
+          '/help — راهنما',
+          '/cancel — لغو عملیات جاری',
+        ]
+      : [
+          `🐾 **${BRAND.name}** — ${BRAND.taglineFa}`,
+          `_${BRAND.taglineEn}_`,
+          '',
+          '/start — شروع یا بازگشت',
+          '/menu — نمایش منو',
+          '/explore — کشف همبازی‌ها',
+          '/pets — پت‌های من',
+          '/profile — پروفایل',
+          '/help — راهنما',
+        ];
 
   await ctx.reply(lines.join('\n'), {
     parse_mode: 'Markdown',

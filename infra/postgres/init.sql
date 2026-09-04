@@ -72,6 +72,18 @@ CREATE TABLE vet_profiles (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE TABLE vet_consultations (
+  id BIGSERIAL PRIMARY KEY,
+  vet_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  patient_user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  pet_id BIGINT REFERENCES pets(id) ON DELETE SET NULL,
+  status TEXT NOT NULL DEFAULT 'requested',
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_vet_consultations_vet ON vet_consultations (vet_user_id, created_at DESC);
+
 CREATE TABLE playdate_requests (
   id BIGSERIAL PRIMARY KEY,
   from_pet_id BIGINT NOT NULL REFERENCES pets(id) ON DELETE CASCADE,

@@ -12,6 +12,7 @@ import {
   infra,
 } from './config/infra';
 import { catalogRouter } from './routes/catalog';
+import { consultationsRouter } from './routes/consultations';
 import { gamesRouter } from './routes/games';
 import { petsRouter } from './routes/pets';
 import { playdatesRouter } from './routes/playdates';
@@ -49,6 +50,7 @@ app.get('/api/health/infra', (_req, res) => {
 });
 
 app.use('/api/catalog', catalogRouter);
+app.use('/api/consultations', consultationsRouter);
 app.use('/api/games', gamesRouter);
 app.use('/api/pets', petsRouter);
 app.use('/api/playdate-requests', playdatesRouter);
