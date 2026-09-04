@@ -8,9 +8,16 @@ export type RequiredChannel = {
   url: string;
 };
 
+const MEMBERSHIP_CHECK_TIMEOUT_MS = 2500;
+
 /** کانال‌های اجباری برای استفاده از بات (فعلاً فقط petdate) */
 export function requiredChannels(): RequiredChannel[] {
-  const petdate = config.forceJoinPetdateChannel ?? 'petdating';
+  const raw = config.forceJoinPetdateChannel ?? 'petdating';
+  const petdate = raw.trim();
+  // empty / off / none / false / disabled → force-join خاموش (ربات قفل نشود)
+  if (!petdate || /^(off|none|false|0|disabled|-)$/i.test(petdate)) {
+    return [];
+  }
   return [
     {
       username: petdate.replace(/^@/, ''),
@@ -21,6 +28,34 @@ export function requiredChannels(): RequiredChannel[] {
 }
 
 const MEMBER_OK = new Set(['creator', 'administrator', 'member', 'restricted']);
+
+/** دستورات/مسیرهایی که همیشه از گیت عضویت عبور می‌کنند تا ربات قفل نشود */
+function isForceJoinBypass(ctx: Context): boolean {
+  const data = ctx.callbackQuery?.data;
+  if (data === 'join:check') return true;
+
+  const text = ctx.message?.text?.trim();
+  if (!text) return false;
+  // /start@BotName و مشابه
+  if (/^\/(start|menu|help|cancel)(@\w+)?(\s|$)/i.test(text)) return true;
+  return false;
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`timeout after ${ms}ms`)), ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      }
+    );
+  });
+}
 
 export async function safeAnswerCallback(
   ctx: Context,
@@ -42,7 +77,10 @@ export async function isMemberOfChannel(
   if (!userId) return 'no';
   const chatId = channelUsername.startsWith('@') ? channelUsername : `@${channelUsername}`;
   try {
-    const member = await ctx.api.getChatMember(chatId, userId);
+    const member = await withTimeout(
+      ctx.api.getChatMember(chatId, userId),
+      MEMBERSHIP_CHECK_TIMEOUT_MS
+    );
     return MEMBER_OK.has(member.status) ? 'yes' : 'no';
   } catch (err) {
     const msg = (err as { description?: string }).description ?? (err as Error).message;
@@ -60,7 +98,7 @@ export async function missingChannels(ctx: Context): Promise<{
   for (const ch of requiredChannels()) {
     const status = await isMemberOfChannel(ctx, ch.username);
     if (status === 'no') missing.push(ch);
-    // error را بلاک نمی‌کنیم تا ربات قفل نشود (مثلاً rate-limit موقت)
+    // error/timeout را بلاک نمی‌کنیم تا ربات قفل نشود
     if (status === 'error') errors.push(ch);
   }
   return { missing, errors };
@@ -81,6 +119,7 @@ export async function sendForceJoinPrompt(
   _errors: RequiredChannel[] = []
 ): Promise<void> {
   const channels = missing.length ? missing : requiredChannels();
+  if (!channels.length) return;
 
   const lines = [
     '🔒 عضویت اجباری',
@@ -91,6 +130,8 @@ export async function sendForceJoinPrompt(
     '',
     missing.length ? `هنوز عضو نیستی:\n${missing.map((c) => `• ${c.title}`).join('\n')}\n` : '',
     'بعد از عضویت، دکمه «عضو شدم» رو بزن 👇',
+    '',
+    'اگر گیر کردی /start یا /cancel بزن.',
   ].filter((line) => line !== '');
 
   const kb = forceJoinKeyboard(channels);
@@ -114,6 +155,7 @@ export async function sendForceJoinPrompt(
 /** true = می‌تواند ادامه دهد */
 export async function ensureForceJoined(ctx: Context): Promise<boolean> {
   if (!ctx.from) return false;
+  if (!requiredChannels().length) return true;
   const { missing } = await missingChannels(ctx);
   if (missing.length === 0) return true;
   await sendForceJoinPrompt(ctx, missing);
@@ -122,18 +164,23 @@ export async function ensureForceJoined(ctx: Context): Promise<boolean> {
 
 /**
  * Middleware: تا عضویت در کانال‌های اجباری، بقیهٔ بات را مسدود می‌کند
- * (به‌جز دکمه بررسی عضویت).
- * خطای API چک عضویت باعث قفل کامل نمی‌شود.
+ * (به‌جز /start /menu /help /cancel و دکمه بررسی عضویت).
+ * خطای API / timeout چک عضویت باعث قفل کامل نمی‌شود (fail-open).
  */
 export async function forceJoinMiddleware(ctx: Context, next: NextFunction): Promise<void> {
-  if (!ctx.from) return next();
+  try {
+    if (!ctx.from) return next();
+    if (!requiredChannels().length) return next();
+    if (isForceJoinBypass(ctx)) return next();
 
-  const data = ctx.callbackQuery?.data;
-  if (data === 'join:check') return next();
+    const { missing } = await missingChannels(ctx);
+    if (missing.length === 0) return next();
 
-  const { missing } = await missingChannels(ctx);
-  if (missing.length === 0) return next();
-
-  await safeAnswerCallback(ctx, { text: 'اول عضو کانال شو', show_alert: true });
-  await sendForceJoinPrompt(ctx, missing);
+    await safeAnswerCallback(ctx, { text: 'اول عضو کانال شو', show_alert: true });
+    await sendForceJoinPrompt(ctx, missing);
+  } catch (err) {
+    // هرگز کل بات را قفل نکن — fail-open
+    console.error('force-join middleware failed (fail-open):', (err as Error).message);
+    return next();
+  }
 }

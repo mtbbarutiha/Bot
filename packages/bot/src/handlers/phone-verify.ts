@@ -10,12 +10,29 @@ import {
 } from '@petdate/shared';
 import { sendPhoneOtp, verifyPhoneOtp } from '../api-client';
 import {
+  ADMIN_MENU,
+  DEFAULT_MENU,
+  MY_PETS_SECTION,
+  PET_OWNER_MENU,
+  SEARCH_PETS_MENU,
+  VET_MENU,
   WIZARD_NAV,
   phoneWizardKeyboard,
   withWizardNav,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
+
+/** دکمه‌های منو نباید به‌عنوان شماره موبایل بلعیده شوند (جلوگیری از قفل شدن بات) */
+const MENU_LABELS = new Set<string>([
+  ...Object.values(PET_OWNER_MENU),
+  ...Object.values(DEFAULT_MENU),
+  ...Object.values(VET_MENU),
+  ...Object.values(ADMIN_MENU),
+  ...Object.values(SEARCH_PETS_MENU),
+  ...Object.values(MY_PETS_SECTION),
+  '🛡 احراز هویت',
+]);
 
 function phoneOtpKeyboard(): Keyboard {
   return withWizardNav(new Keyboard().text('🔄 ارسال مجدد کد'), {
@@ -159,6 +176,23 @@ export async function handlePhoneVerifyText(ctx: Context, text: string): Promise
     return true;
   }
 
+  // اگر کاربر دکمه منو زد، از گیت موبایل خارج شو تا بات قفل نشود
+  // (برای دامپزشک الزامی، فقط یادآوری می‌کنیم و منو را آزاد می‌گذاریم)
+  if (MENU_LABELS.has(text)) {
+    const user = await getCtxUser(ctx);
+    await upsertSession(telegramId, {
+      step: 'ready',
+      pendingPhone: undefined,
+    });
+    if (vetNeedsPhoneVerify(user)) {
+      await ctx.reply(
+        'احراز موبایل برای امکانات دامپزشکی لازم است — بعداً از منو «📱 احراز موبایل» بزن.',
+        { reply_markup: menuKeyboardFor(ctx, user) }
+      );
+    }
+    return false; // اجازه بده handler منو اجرا شود
+  }
+
   if (session.step === 'phone_verify_ask') {
     if (text === WIZARD_NAV.skip || text === WIZARD_NAV.skipLater) {
       const user = await getCtxUser(ctx);
@@ -172,7 +206,15 @@ export async function handlePhoneVerifyText(ctx: Context, text: string): Promise
       await handlePhoneVerifyCancel(ctx);
       return true;
     }
-    await dispatchSendOtp(ctx, telegramId, text);
+    // فقط اگر شبیه شماره موبایل بود OTP بفرست؛ وگرنه منو قفل نشود
+    const normalized = normalizeIranMobile(text);
+    if (!normalized) {
+      await ctx.reply('شماره موبایل معتبر بفرست (مثلاً 0912…) یا /cancel بزن.', {
+        reply_markup: phoneAskKeyboard(),
+      });
+      return true;
+    }
+    await dispatchSendOtp(ctx, telegramId, normalized);
     return true;
   }
 

@@ -56,6 +56,7 @@ export async function handleStart(ctx: Context): Promise<void> {
       draftRoles: roles,
       step: roles.length ? 'ready' : 'role_select',
       locale: 'fa',
+      pendingPhone: undefined,
     });
 
     if (!roles.length) {
