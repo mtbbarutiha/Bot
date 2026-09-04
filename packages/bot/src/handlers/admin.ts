@@ -249,6 +249,7 @@ export async function handleAdminMenuText(ctx: Context, text: string): Promise<b
       await handleAdminStats(ctx);
       return true;
     case m.back:
+    case m.menu:
       await handleAdminBackToMenu(ctx);
       return true;
     default:

@@ -30,6 +30,20 @@ import {
 import { isTelegramAdmin } from './config';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
+/** دکمهٔ ثابت بازگشت/باز کردن منوی اصلی روی reply keyboard */
+export const MAIN_MENU_BTN = '📋 منو' as const;
+
+/** متن‌های معادل «منو» که همان رندر منوی اصلی را صدا می‌زنند */
+export const MAIN_MENU_ALIASES = new Set<string>([
+  MAIN_MENU_BTN,
+  '🏠 منو',
+  'منو',
+  'منوی اصلی',
+  '🔙 منوی اصلی',
+  '🏠 منوی اصلی',
+  '🔙 بازگشت به منو',
+]);
+
 /** Labels for pet_owner main menu */
 export const PET_OWNER_MENU = {
   findPlaymate: '🔍 پیدا کردن همبازی',
@@ -45,6 +59,7 @@ export const PET_OWNER_MENU = {
   medical: '🩺 پزشکی',
   invite: '🎁 معرفی به دوستان',
   help: '❓ راهنما',
+  menu: MAIN_MENU_BTN,
   quickVet: '⚡ ارتباط سریع با پزشک',
   shop: '🛒 پت شاپ',
   services: '🛠 خدمات',
@@ -58,6 +73,7 @@ export const ADMIN_MENU = {
   vetQueue: '📄 صف مدارک دامپزشک',
   stats: '📊 وضعیت صف‌ها',
   back: '🔙 بازگشت به منو',
+  menu: MAIN_MENU_BTN,
 } as const;
 
 /** زیرمنوی جستجوی پت */
@@ -67,6 +83,7 @@ export const SEARCH_PETS_MENU = {
   mashhad: '🏙 مشهد',
   allPets: '🐾 همه پت‌ها',
   backToMenu: '🔙 بازگشت به منو',
+  menu: MAIN_MENU_BTN,
 } as const;
 
 export const DEFAULT_MENU = {
@@ -78,6 +95,7 @@ export const DEFAULT_MENU = {
   addPet: '➕ ثبت پت',
   myRoles: MY_ROLES_LABEL,
   help: '❓ راهنما',
+  menu: MAIN_MENU_BTN,
 } as const;
 
 /** منوی دامپزشک (بدون کشف همبازی) — فقط وقتی نقش فعال vet باشد */
@@ -88,12 +106,14 @@ export const VET_MENU = {
   phoneVerify: '📱 احراز موبایل',
   myRoles: MY_ROLES_LABEL,
   help: '❓ راهنما',
+  menu: MAIN_MENU_BTN,
 } as const;
 
 /** کیبورد مخصوص بخش پت‌های من (بدون پت‌های من / درخواست‌ها) */
 export const MY_PETS_SECTION = {
   addPet: '➕ ثبت پت جدید',
   backToMenu: '🔙 بازگشت به منو',
+  menu: MAIN_MENU_BTN,
 } as const;
 
 /** دکمه‌های ناوبری ویزارد (reply keyboard) */
@@ -407,6 +427,8 @@ export function vetMenuKeyboard(telegramId?: string | number | null): Keyboard {
     .text(m.phoneVerify)
     .primary()
     .text(m.help)
+    .row()
+    .text(m.menu)
     .resized()
     .persistent();
   return appendAccessRow(kb, telegramId);
@@ -444,6 +466,8 @@ export function petOwnerMenuKeyboard(telegramId?: string | number | null): Keybo
     .row()
     .text(m.services)
     .text(m.help)
+    .row()
+    .text(m.menu)
     .resized()
     .persistent();
   return appendAccessRow(kb, telegramId);
@@ -462,6 +486,7 @@ export function searchPetsMenuKeyboard(): Keyboard {
     .row()
     .text(m.allPets)
     .row()
+    .text(m.menu)
     .text(m.backToMenu)
     .resized()
     .persistent();
@@ -482,6 +507,7 @@ export function defaultMenuKeyboard(telegramId?: string | number | null): Keyboa
     .primary()
     .row()
     .text(m.help)
+    .text(m.menu)
     .resized()
     .persistent();
   return appendAccessRow(kb, telegramId);
@@ -499,6 +525,7 @@ export function adminPanelKeyboard(): Keyboard {
     .text(m.stats)
     .success()
     .row()
+    .text(m.menu)
     .text(m.back)
     .resized()
     .persistent();
@@ -541,6 +568,7 @@ export function myPetsSectionKeyboard(): Keyboard {
     .text(m.addPet)
     .success()
     .row()
+    .text(m.menu)
     .text(m.backToMenu)
     .resized()
     .persistent();
@@ -829,6 +857,7 @@ export const MENU_LABELS = new Set<string>([
   ...Object.values(ADMIN_MENU),
   ...Object.values(MY_PETS_SECTION),
   ...Object.values(SEARCH_PETS_MENU),
+  ...MAIN_MENU_ALIASES,
 ]);
 
 /** کیبورد فروشگاه سکه + سکه روزانه */

@@ -4,6 +4,8 @@ import { ROLE_CONFIRM_LABEL, USER_ROLE_LABELS, USER_ROLES } from '@petdate/share
 import { forceJoinMiddleware, missingChannels, safeAnswerCallback, sendForceJoinPrompt } from '../force-join';
 import {
   MENU_LABELS,
+  MAIN_MENU_ALIASES,
+  MAIN_MENU_BTN,
   PET_OWNER_MENU,
   DEFAULT_MENU,
   VET_MENU,
@@ -502,6 +504,24 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     }
   }
 
+  // «📋 منو» / «منو» / «منوی اصلی» — همیشه منوی نقش فعال را نشان بده
+  // (به‌جز انتخاب نقش اولیه که هنوز کاربر نقش ندارد)
+  if (MAIN_MENU_ALIASES.has(text) || text === MAIN_MENU_BTN) {
+    const from = ctx.from;
+    if (from) {
+      const session = await getSession(String(from.id));
+      if (session?.step === 'role_select') {
+        // بگذار handleRoleReplyText مدیریت کند / نادیده بگیرد
+      } else {
+        await handleMenu(ctx);
+        return;
+      }
+    } else {
+      await handleMenu(ctx);
+      return;
+    }
+  }
+
   // Role selection via reply keyboard
   if (await handleRoleReplyText(ctx, text)) return;
 
@@ -541,12 +561,14 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       return handleSearchMashhad(ctx);
     case search.allPets:
       return handleSearchAll(ctx);
-    case search.backToMenu: {
-      const user = await getCtxUser(ctx);
-      await ctx.reply('منوی اصلی 👇', {
-        reply_markup: menuKeyboardFor(ctx, user),
-      });
-      return;
+    case search.backToMenu:
+    case search.menu:
+    case m.menu:
+    case d.menu:
+    case v.menu:
+    case petsSection.menu:
+    case petsSection.backToMenu: {
+      return handleMenu(ctx);
     }
     case m.myProfile:
     case d.profile:
@@ -568,13 +590,6 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case d.addPet:
     case petsSection.addPet:
       return handleAddPetCommand(ctx);
-    case petsSection.backToMenu: {
-      const user = await getCtxUser(ctx);
-      await ctx.reply('منوی اصلی 👇', {
-        reply_markup: menuKeyboardFor(ctx, user),
-      });
-      return;
-    }
     case m.coins:
       return handleCoins(ctx);
     case m.earn:

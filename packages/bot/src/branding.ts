@@ -12,7 +12,7 @@ export function logoExists(filePath: string): boolean {
   return fs.existsSync(filePath);
 }
 
-/** Set bot name, profile photo, and descriptions on boot. */
+/** Set bot name, profile photo, descriptions, and Menu commands on boot. */
 export async function applyBotBranding(api: Api): Promise<void> {
   // نام را هر بار ست نکن — محدودیت 429 تلگرام
   try {
@@ -21,6 +21,20 @@ export async function applyBotBranding(api: Api): Promise<void> {
     console.log('   Branding: description set');
   } catch (err) {
     console.warn('   Branding: description skipped —', (err as Error).message);
+  }
+
+  try {
+    await api.setMyCommands([
+      { command: 'start', description: 'شروع / منوی اصلی' },
+      { command: 'menu', description: 'نمایش منو' },
+      { command: 'help', description: 'راهنما' },
+      { command: 'cancel', description: 'لغو عملیات جاری' },
+      { command: 'profile', description: 'پروفایل' },
+    ]);
+    await api.setChatMenuButton({ menu_button: { type: 'commands' } });
+    console.log('   Branding: commands + menu button set');
+  } catch (err) {
+    console.warn('   Branding: commands skipped —', (err as Error).message);
   }
 }
 

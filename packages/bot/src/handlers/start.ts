@@ -476,7 +476,9 @@ export async function handleHelp(ctx: Context): Promise<void> {
         '🛒 **پت شاپ** — خرید لوازم',
         '🛠 **خدمات** — مربی، نگهبان، grooming',
         '',
+        '📋 **منو** — بازگشت به منوی اصلی',
         '/start — بازگشت به منو',
+        '/menu — نمایش منو',
         '/cancel — لغو عملیات جاری',
       ]
     : isVetOnly

@@ -12,6 +12,7 @@ import { sendPhoneOtp, verifyPhoneOtp } from '../api-client';
 import {
   ADMIN_MENU,
   DEFAULT_MENU,
+  MAIN_MENU_ALIASES,
   MY_PETS_SECTION,
   PET_OWNER_MENU,
   SEARCH_PETS_MENU,
@@ -31,6 +32,7 @@ const MENU_LABELS = new Set<string>([
   ...Object.values(ADMIN_MENU),
   ...Object.values(SEARCH_PETS_MENU),
   ...Object.values(MY_PETS_SECTION),
+  ...MAIN_MENU_ALIASES,
   '🛡 احراز هویت',
 ]);
 
