@@ -18,6 +18,8 @@ function optional(name: string, fallback?: string): string | undefined {
 export const config = {
   telegramBotToken: optional('TELEGRAM_BOT_TOKEN'),
   telegramBotUsername: optional('TELEGRAM_BOT_USERNAME'),
+  /** شناسه‌های تلگرام ادمین (جدا با کاما) — پنل احراز هویت */
+  telegramAdminIds: parseIdList(optional('TELEGRAM_ADMIN_IDS', '')),
   apiUrl: optional('API_URL', 'http://localhost:3001')!,
   webUrl: optional('WEB_URL', 'http://localhost:5173')!,
   /** Optional public URL (tunnel/prod) for Telegram inline link buttons. */
@@ -31,6 +33,20 @@ export const config = {
   /** کانال دوردوریا — فعلاً غیرفعال؛ برای فعال‌سازی دوباره به requiredChannels اضافه شود */
   forceJoinDordoriaChannel: optional('FORCE_JOIN_DORDORIA_CHANNEL'),
 } as const;
+
+function parseIdList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(/[,;\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+export function isTelegramAdmin(telegramId: string | number | undefined | null): boolean {
+  if (telegramId == null) return false;
+  const id = String(telegramId);
+  return config.telegramAdminIds.includes(id);
+}
 
 export function assertBotToken(): string {
   return required('TELEGRAM_BOT_TOKEN');

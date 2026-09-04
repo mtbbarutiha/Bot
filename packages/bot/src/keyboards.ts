@@ -557,13 +557,26 @@ export function phoneKeyboard(): Keyboard {
   return phoneWizardKeyboard();
 }
 
-export function profileActionsKeyboard(complete: boolean, isActive = true): InlineKeyboard {
+export function profileActionsKeyboard(
+  complete: boolean,
+  isActive = true,
+  verificationStatus: 'none' | 'pending' | 'verified' | 'rejected' = 'none'
+): InlineKeyboard {
   const kb = new InlineKeyboard();
   if (complete) {
     kb.text('✏️ ویرایش پروفایل', 'profile:edit').primary().row();
   } else {
     kb.text('✨ تکمیل پروفایل', 'profile:edit').success().row();
   }
+
+  if (verificationStatus === 'verified') {
+    kb.text('✅ احراز شده', 'verify:status').row();
+  } else if (verificationStatus === 'pending') {
+    kb.text('⏳ در انتظار احراز', 'verify:status').row();
+  } else {
+    kb.text('🛡 احراز هویت', 'verify:start').row();
+  }
+
   kb.text('🗑 حذف', 'profile:delete').danger();
   if (isActive) {
     kb.text('⏸ غیرفعال‌سازی', 'profile:deactivate').danger();
@@ -571,6 +584,30 @@ export function profileActionsKeyboard(complete: boolean, isActive = true): Inli
     kb.text('▶️ فعال‌سازی', 'profile:activate').success();
   }
   return kb;
+}
+
+export function verificationSubmitKeyboard(hasAvatar: boolean): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  if (hasAvatar) {
+    kb.text('📷 ارسال عکس فعلی پروفایل', 'verify:use_avatar').success().row();
+  }
+  kb.text('↩️ انصراف', 'verify:cancel');
+  return kb;
+}
+
+export function adminVerificationKeyboard(userId: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('✅ تأیید', `verify:approve:${userId}`)
+    .success()
+    .text('❌ رد', `verify:reject:${userId}`)
+    .danger()
+    .row()
+    .text('⏭ بعدی', 'verify:admin:next')
+    .text('📋 صف', 'verify:admin:queue');
+}
+
+export function adminRejectSkipKeyboard(): InlineKeyboard {
+  return new InlineKeyboard().text('⏭ بدون دلیل', 'verify:reject_skip');
 }
 
 export function profileConfirmKeyboard(action: 'deactivate' | 'delete'): InlineKeyboard {

@@ -95,6 +95,19 @@ import {
   handleSearchPetView,
   handleSearchSameProvince,
 } from './search';
+import {
+  handleAdminApprove,
+  handleAdminRejectAsk,
+  handleAdminRejectReasonText,
+  handleAdminRejectSkip,
+  handleAdminVerifyNext,
+  handleAdminVerifyQueue,
+  handleVerifyCancel,
+  handleVerifyPhoto,
+  handleVerifyStart,
+  handleVerifyStatus,
+  handleVerifyUseAvatar,
+} from './verification';
 
 export function registerHandlers(bot: Bot): void {
   // عضویت اجباری در کانال‌ها — قبل از همهٔ دستورات
@@ -133,6 +146,8 @@ export function registerHandlers(bot: Bot): void {
   bot.command('requests', handleRequests);
   bot.command('profile', handleProfile);
   bot.command('addpet', handleAddPetCommand);
+  bot.command('admin', handleAdminVerifyQueue);
+  bot.command('verify', handleAdminVerifyQueue);
 
   bot.callbackQuery('role:confirm', async (ctx) => {
     try {
@@ -248,6 +263,41 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery('profile:delete:yes', (ctx) => handleProfileDeleteConfirm(ctx, true));
   bot.callbackQuery('profile:delete:no', (ctx) => handleProfileDeleteConfirm(ctx, false));
 
+  bot.callbackQuery('verify:start', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handleVerifyStart(ctx);
+  });
+  bot.callbackQuery('verify:status', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handleVerifyStatus(ctx);
+  });
+  bot.callbackQuery('verify:use_avatar', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handleVerifyUseAvatar(ctx);
+  });
+  bot.callbackQuery('verify:cancel', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handleVerifyCancel(ctx);
+  });
+  bot.callbackQuery('verify:admin:queue', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handleAdminVerifyQueue(ctx);
+  });
+  bot.callbackQuery('verify:admin:next', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handleAdminVerifyNext(ctx);
+  });
+  bot.callbackQuery(/^verify:approve:(\d+)$/, (ctx) =>
+    handleAdminApprove(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery(/^verify:reject:(\d+)$/, (ctx) =>
+    handleAdminRejectAsk(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery('verify:reject_skip', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handleAdminRejectSkip(ctx);
+  });
+
   bot.callbackQuery(/^medical:/, (ctx) => handleComingSoon(ctx, 'پزشکی'));
   bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));
   bot.callbackQuery(/^shop:/, (ctx) => handleComingSoon(ctx, 'پت شاپ'));
@@ -282,6 +332,7 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:photo', async (ctx) => {
+    if (await handleVerifyPhoto(ctx)) return;
     if (await handlePetPhoto(ctx)) return;
     await handleProfilePhoto(ctx);
   });
@@ -308,6 +359,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   // Role selection via reply keyboard
   if (await handleRoleReplyText(ctx, text)) return;
 
+  if (await handleAdminRejectReasonText(ctx, text)) return;
   if (await handleEarnCardText(ctx, text)) return;
   if (await handleSearchBreedText(ctx, text)) return;
   if (await handleProfileWizardText(ctx, text)) return;

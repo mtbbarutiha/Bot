@@ -16,6 +16,26 @@ export type OnboardingStatus =
 
 export type UserGender = 'male' | 'female';
 
+/** وضعیت احراز هویت پروفایل مالک (سبک دوردوریا) */
+export type VerificationStatus = 'none' | 'pending' | 'verified' | 'rejected';
+
+export const VERIFICATION_STATUSES: VerificationStatus[] = [
+  'none',
+  'pending',
+  'verified',
+  'rejected',
+];
+
+export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
+  none: 'احراز نشده',
+  pending: 'در انتظار بررسی',
+  verified: 'احراز شده',
+  rejected: 'رد شده',
+};
+
+/** بج نمایشی برای پروفایل‌های تأییدشده */
+export const VERIFIED_BADGE = '✅ احراز شده';
+
 export interface PetdateUser {
   id: number;
   telegramId?: string;
@@ -40,6 +60,10 @@ export interface PetdateUser {
   profileViews?: number;
   likesCount?: number;
   isActive?: boolean;
+  verificationStatus?: VerificationStatus;
+  verificationPhotoFileId?: string;
+  verifiedAt?: string;
+  verificationNote?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -94,6 +118,8 @@ export interface PetProfile {
   /** از پروفایل صاحب پت (برای مچ همبازی) */
   ownerProvince?: string;
   ownerCity?: string;
+  /** صاحب پت احراز هویت شده */
+  ownerVerified?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -144,6 +170,8 @@ export interface BotSession {
   searchBreedPage?: number;
   /** فروش سکه — منتظر شماره کارت */
   earnPendingCoins?: number;
+  /** ادمین — رد احراز هویت برای این userId */
+  adminRejectUserId?: number;
   updatedAt: string;
 }
 
@@ -178,6 +206,8 @@ export type BotStep =
   | 'pet_bio'
   | 'pet_photo'
   | 'playdate_message'
+  | 'verify_photo'
+  | 'admin_reject_reason'
   | 'ready';
 
 export interface PetDraft {

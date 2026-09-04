@@ -22,6 +22,7 @@ import { AdminPetsPage } from './admin/pages/AdminPetsPage';
 import { AdminPetFormPage } from './admin/pages/AdminPetFormPage';
 import { AdminMatchesPage } from './admin/pages/AdminMatchesPage';
 import { AdminUsersPage } from './admin/pages/AdminUsersPage';
+import { AdminVerificationPage } from './admin/pages/AdminVerificationPage';
 
 export default function App() {
   return (
@@ -56,6 +57,7 @@ export default function App() {
               <Route path="pets/:id/edit" element={<AdminPetFormPage />} />
               <Route path="matches" element={<AdminMatchesPage />} />
               <Route path="users" element={<AdminUsersPage />} />
+              <Route path="verification" element={<AdminVerificationPage />} />
             </Route>
           </Route>
         </Routes>

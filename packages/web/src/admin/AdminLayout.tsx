@@ -4,6 +4,7 @@ import {
   LogOut,
   Mail,
   PawPrint,
+  ShieldCheck,
   Users,
 } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
@@ -14,6 +15,7 @@ const NAV = [
   { to: '/admin/pets', icon: PawPrint, label: 'پت‌ها' },
   { to: '/admin/matches', icon: Mail, label: 'درخواست‌ها' },
   { to: '/admin/users', icon: Users, label: 'کاربران' },
+  { to: '/admin/verification', icon: ShieldCheck, label: 'احراز هویت' },
 ];
 
 export function AdminLayout() {

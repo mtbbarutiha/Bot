@@ -1,11 +1,13 @@
 import type { Context } from 'grammy';
-import type { BotStep, ProfileDraft, User, UserGender } from '@petdate/shared';
+import type { BotStep, ProfileDraft, User, UserGender, VerificationStatus } from '@petdate/shared';
 import {
   COUNTRY_IRAN,
   IRAN_PROVINCES,
   PROFILE_INTEREST_OPTIONS,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
+  VERIFIED_BADGE,
+  VERIFICATION_STATUS_LABELS,
   normalizeRoles,
 } from '@petdate/shared';
 import {
@@ -93,11 +95,17 @@ function formatProfileCard(user: User, petCount: number, petNames: string[] = []
     petNames.length > 0
       ? petNames.map((n) => `• ${escapeHtml(n)}`).join('\n')
       : 'هنوز پتی ثبت نشده';
+  const status = (user.verificationStatus ?? 'none') as VerificationStatus;
+  const verifyLine =
+    status === 'verified'
+      ? VERIFIED_BADGE
+      : `🛡 احراز: ${VERIFICATION_STATUS_LABELS[status]}`;
 
   return [
     '👤 <b>پروفایل من</b>',
+    verifyLine,
     '',
-    `<b>نام:</b> ${escapeHtml(user.name)}`,
+    `<b>نام:</b> ${escapeHtml(user.name)}${status === 'verified' ? ' ✅' : ''}`,
     user.username ? `<b>یوزرنیم:</b> @${escapeHtml(user.username)}` : null,
     `<b>سن:</b> ${user.age != null ? formatNum(user.age) : '—'}`,
     `<b>جنسیت:</b> ${gender}`,
@@ -132,7 +140,11 @@ async function sendOwnProfileCard(
   petCount: number,
   caption: string
 ): Promise<void> {
-  const kb = profileActionsKeyboard(isProfileComplete(user), user.isActive !== false);
+  const kb = profileActionsKeyboard(
+    isProfileComplete(user),
+    user.isActive !== false,
+    user.verificationStatus ?? 'none'
+  );
   if (user.avatarUrl) {
     try {
       await ctx.replyWithPhoto(user.avatarUrl, {

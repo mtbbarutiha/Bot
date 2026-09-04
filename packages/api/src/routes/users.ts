@@ -206,6 +206,63 @@ usersRouter.patch('/:id/section', (req, res) => {
   res.json(user);
 });
 
+/** صف احراز هویت در انتظار بررسی ادمین */
+usersRouter.get('/verification/pending', (_req, res) => {
+  res.json(dbService.listPendingVerifications());
+});
+
+/** ارسال درخواست احراز هویت (عکس پروفایل / سلفی) */
+usersRouter.post('/telegram/:telegramId/verification', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const photoFileId = String(
+    req.body?.photoFileId ?? req.body?.verificationPhotoFileId ?? user.avatarUrl ?? ''
+  ).trim();
+  const result = dbService.submitVerification(user.id, photoFileId);
+  if (!result.ok) {
+    const status =
+      result.reason === 'missing'
+        ? 404
+        : result.reason === 'already_verified'
+          ? 409
+          : 400;
+    res.status(status).json({
+      ok: false,
+      reason: result.reason,
+      error:
+        result.reason === 'already_verified'
+          ? 'قبلاً احراز شده‌ای'
+          : result.reason === 'no_photo'
+            ? 'عکس احراز لازم است'
+            : 'کاربر پیدا نشد',
+    });
+    return;
+  }
+  res.json({ ok: true, user: result.user });
+});
+
+usersRouter.post('/:id/verification/approve', (req, res) => {
+  const user = dbService.approveVerification(Number(req.params.id));
+  if (!user) {
+    res.status(404).json({ error: 'درخواست احراز پیدا نشد یا در صف نیست' });
+    return;
+  }
+  res.json({ ok: true, user });
+});
+
+usersRouter.post('/:id/verification/reject', (req, res) => {
+  const note = req.body?.note != null ? String(req.body.note) : undefined;
+  const user = dbService.rejectVerification(Number(req.params.id), note);
+  if (!user) {
+    res.status(404).json({ error: 'درخواست احراز پیدا نشد یا در صف نیست' });
+    return;
+  }
+  res.json({ ok: true, user });
+});
+
 /** دریافت سکه روزانه */
 usersRouter.post('/telegram/:telegramId/coins/daily', (req, res) => {
   const user = dbService.getUserByTelegramId(req.params.telegramId);

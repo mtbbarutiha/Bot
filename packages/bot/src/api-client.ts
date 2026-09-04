@@ -96,6 +96,40 @@ export async function updateUserProfile(
   });
 }
 
+export async function submitVerification(
+  telegramId: string,
+  photoFileId?: string
+): Promise<{ ok: true; user: User }> {
+  return request<{ ok: true; user: User }>(
+    `/api/users/telegram/${encodeURIComponent(telegramId)}/verification`,
+    {
+      method: 'POST',
+      body: JSON.stringify(photoFileId ? { photoFileId } : {}),
+    }
+  );
+}
+
+export async function listPendingVerifications(): Promise<User[]> {
+  return request<User[]>('/api/users/verification/pending');
+}
+
+export async function approveVerification(userId: number): Promise<{ ok: true; user: User }> {
+  return request<{ ok: true; user: User }>(`/api/users/${userId}/verification/approve`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function rejectVerification(
+  userId: number,
+  note?: string
+): Promise<{ ok: true; user: User }> {
+  return request<{ ok: true; user: User }>(`/api/users/${userId}/verification/reject`, {
+    method: 'POST',
+    body: JSON.stringify(note ? { note } : {}),
+  });
+}
+
 export async function setUserActive(telegramId: string, isActive: boolean): Promise<User> {
   return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/active`, {
     method: 'PATCH',

@@ -265,7 +265,8 @@ export async function handleHelp(ctx: Context): Promise<void> {
         '🔍 **پیدا کردن همبازی** — درخواست خودکار به هم‌گروه‌ها',
         '📍 **پت‌های نزدیک من** — بر اساس شهر/استان',
         '🔎 **جستجوی پت** — نژاد، هم‌استان، مشهد، همه',
-        '👤 **پروفایل خودم** — اطلاعات حساب',
+        '👤 **پروفایل خودم** — اطلاعات حساب + احراز هویت',
+        '🛡 از پروفایل «احراز هویت» بزن تا بج ✅ احراز شده بگیری',
         '🐾 **پت‌های من** — مدیریت و ثبت پت',
         '🪙 **سکه** — موجودی، سکه روزانه و خرید',
         '💵 **کسب درآمد** — فروش سکه',
@@ -315,6 +316,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
     searchPage: undefined,
     searchBreedPage: undefined,
     earnPendingCoins: undefined,
+    adminRejectUserId: undefined,
   });
   await ctx.reply('عملیات لغو شد.', {
     reply_markup: mainMenuKeyboard(user?.role, user?.roles),

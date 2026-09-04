@@ -17,6 +17,7 @@ import type {
   User,
   UserGender,
   UserRole,
+  VerificationStatus,
 } from '@petdate/shared';
 import { PET_BREEDS_SEED, PET_SPECIES } from '@petdate/shared';
 
@@ -157,6 +158,14 @@ function migrateSchema() {
   if (!names.has('profile_views')) db.exec('ALTER TABLE users ADD COLUMN profile_views INTEGER NOT NULL DEFAULT 0');
   if (!names.has('likes_count')) db.exec('ALTER TABLE users ADD COLUMN likes_count INTEGER NOT NULL DEFAULT 0');
   if (!names.has('is_active')) db.exec('ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
+  if (!names.has('verification_status')) {
+    db.exec("ALTER TABLE users ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'none'");
+  }
+  if (!names.has('verification_photo_file_id')) {
+    db.exec('ALTER TABLE users ADD COLUMN verification_photo_file_id TEXT');
+  }
+  if (!names.has('verified_at')) db.exec('ALTER TABLE users ADD COLUMN verified_at TEXT');
+  if (!names.has('verification_note')) db.exec('ALTER TABLE users ADD COLUMN verification_note TEXT');
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS coin_sell_requests (
@@ -635,8 +644,19 @@ function mapUser(row: Record<string, unknown>): User {
     profileViews: row.profile_views != null ? Number(row.profile_views) : 0,
     likesCount: row.likes_count != null ? Number(row.likes_count) : 0,
     isActive: row.is_active == null ? true : Boolean(row.is_active),
+    verificationStatus: parseVerificationStatus(row.verification_status),
+    verificationPhotoFileId: (row.verification_photo_file_id as string | undefined) ?? undefined,
+    verifiedAt: (row.verified_at as string | undefined) ?? undefined,
+    verificationNote: (row.verification_note as string | undefined) ?? undefined,
     createdAt: row.created_at as string,
   };
+}
+
+function parseVerificationStatus(value: unknown): VerificationStatus {
+  if (value === 'pending' || value === 'verified' || value === 'rejected' || value === 'none') {
+    return value;
+  }
+  return 'none';
 }
 
 function parseJsonObject(value: unknown): Record<string, unknown> {
@@ -672,6 +692,7 @@ function mapPet(row: Record<string, unknown>): PetProfile {
     neighborhood: row.neighborhood as string | undefined,
     ownerProvince: (row.owner_province as string | undefined) ?? undefined,
     ownerCity: (row.owner_city as string | undefined) ?? undefined,
+    ownerVerified: row.owner_verified != null ? Boolean(row.owner_verified) : undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -907,10 +928,78 @@ export const dbService = {
          interests = '[]',
          is_active = 0,
          onboarding = 'role_selected',
-         role = NULL
+         role = NULL,
+         verification_status = 'none',
+         verification_photo_file_id = NULL,
+         verified_at = NULL,
+         verification_note = NULL
        WHERE id = ?`
     ).run(`[حذف‌شده #${user.id}]`, user.id);
     return true;
+  },
+
+  listPendingVerifications(): User[] {
+    return (
+      db
+        .prepare(
+          `SELECT * FROM users
+           WHERE verification_status = 'pending'
+           ORDER BY id ASC`
+        )
+        .all() as Record<string, unknown>[]
+    ).map(mapUser);
+  },
+
+  submitVerification(
+    userId: number,
+    photoFileId: string
+  ): { ok: true; user: User } | { ok: false; reason: 'missing' | 'already_verified' | 'no_photo' } {
+    const existing = this.getUserById(userId);
+    if (!existing) return { ok: false, reason: 'missing' };
+    if (existing.verificationStatus === 'verified') {
+      return { ok: false, reason: 'already_verified' };
+    }
+    const photo = photoFileId?.trim();
+    if (!photo) return { ok: false, reason: 'no_photo' };
+    db.prepare(
+      `UPDATE users SET
+         verification_status = 'pending',
+         verification_photo_file_id = ?,
+         verification_note = NULL,
+         verified_at = NULL
+       WHERE id = ?`
+    ).run(photo, userId);
+    // Keep avatar in sync when submitting profile photo for review
+    if (!existing.avatarUrl || existing.avatarUrl !== photo) {
+      db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(photo, userId);
+    }
+    return { ok: true, user: this.getUserById(userId)! };
+  },
+
+  approveVerification(userId: number): User | null {
+    const existing = this.getUserById(userId);
+    if (!existing || existing.verificationStatus !== 'pending') return null;
+    db.prepare(
+      `UPDATE users SET
+         verification_status = 'verified',
+         verified_at = datetime('now'),
+         verification_note = NULL
+       WHERE id = ?`
+    ).run(userId);
+    return this.getUserById(userId);
+  },
+
+  rejectVerification(userId: number, note?: string): User | null {
+    const existing = this.getUserById(userId);
+    if (!existing || existing.verificationStatus !== 'pending') return null;
+    db.prepare(
+      `UPDATE users SET
+         verification_status = 'rejected',
+         verified_at = NULL,
+         verification_note = ?
+       WHERE id = ?`
+    ).run(note?.trim() || null, userId);
+    return this.getUserById(userId);
   },
 
   listSections(): Section[] {
@@ -1041,7 +1130,8 @@ export const dbService = {
     let sql = `
       SELECT pets.*,
              users.province AS owner_province,
-             users.city AS owner_city
+             users.city AS owner_city,
+             CASE WHEN users.verification_status = 'verified' THEN 1 ELSE 0 END AS owner_verified
       FROM pets
       LEFT JOIN users ON users.id = pets.owner_id
       WHERE 1=1`;
@@ -1084,7 +1174,8 @@ export const dbService = {
       .prepare(
         `SELECT pets.*,
                 users.province AS owner_province,
-                users.city AS owner_city
+                users.city AS owner_city,
+                CASE WHEN users.verification_status = 'verified' THEN 1 ELSE 0 END AS owner_verified
          FROM pets
          LEFT JOIN users ON users.id = pets.owner_id
          WHERE pets.id = ?`

@@ -2,7 +2,7 @@ export * from './petdate';
 export * from './catalog';
 export * from './brand';
 
-import type { OnboardingStatus, UserRole } from './petdate';
+import type { OnboardingStatus, UserRole, VerificationStatus } from './petdate';
 import type { UserGender } from './petdate';
 
 export type GameType =
@@ -91,6 +91,11 @@ export interface User {
   likesCount?: number;
   /** false = حساب غیرفعال (سبک دوردوریا) */
   isActive?: boolean;
+  /** احراز هویت پروفایل مالک (سبک دوردوریا) */
+  verificationStatus?: VerificationStatus;
+  verificationPhotoFileId?: string;
+  verifiedAt?: string;
+  verificationNote?: string;
   createdAt: string;
 }
 
