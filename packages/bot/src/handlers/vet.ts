@@ -19,8 +19,7 @@ function formatConsultLine(c: VetConsultation, index: number): string {
   const status = STATUS_FA[c.status] ?? c.status;
   const date = c.createdAt ? c.createdAt.slice(0, 10) : '—';
   const petPart = petBits ? ` — پت: ${petBits}` : '';
-  return `${index + 1}. ${patient}${city}${petPart}
-   وضعیت: ${status} · ${date}`;
+  return `${index + 1}. ${patient}${city}${petPart}\n   وضعیت: ${status} · ${date}`;
 }
 
 /** لیست بیمارانی که از این دامپزشک مشاوره گرفته‌اند */
@@ -47,8 +46,7 @@ export async function handleVetPatients(ctx: Context): Promise<void> {
           '',
           'هنوز بیماری که از شما مشاوره گرفته باشد ثبت نشده.',
           'وقتی مشاوره‌ای انجام شود، اینجا لیست بیماران را می‌بینی.',
-        ].join('
-'),
+        ].join('\n'),
         {
           parse_mode: 'Markdown',
           reply_markup: mainMenuKeyboard(user.role, user.roles),
@@ -72,8 +70,7 @@ export async function handleVetPatients(ctx: Context): Promise<void> {
       ...patients.map((c, i) => formatConsultLine(c, i)),
     ];
 
-    await ctx.reply(lines.join('
-'), {
+    await ctx.reply(lines.join('\n'), {
       parse_mode: 'Markdown',
       reply_markup: mainMenuKeyboard(user.role, user.roles),
     });
