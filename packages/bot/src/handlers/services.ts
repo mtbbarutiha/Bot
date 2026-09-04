@@ -3,26 +3,6 @@ import { InlineKeyboard } from 'grammy';
 import { mainMenuKeyboard } from '../keyboards';
 import { getCtxUser } from './helpers';
 
-export async function handleCoins(ctx: Context): Promise<void> {
-  const user = await getCtxUser(ctx);
-  const balance = new Intl.NumberFormat('fa-IR').format(user?.coins ?? 0);
-  await ctx.reply(
-    [
-      '🪙 **سکه petdate**',
-      '',
-      `موجودی فعلی: **${balance} سکه**`,
-      '',
-      'با سکه می‌تونی:',
-      '• درخواست همبازی ویژه',
-      '• مشاوره دامپزشک',
-      '• تخفیف پت‌شاپ',
-      '',
-      '_خرید سکه به‌زودی فعال می‌شه._',
-    ].join('\n'),
-    { parse_mode: 'Markdown', reply_markup: mainMenuKeyboard(user?.role, user?.roles) }
-  );
-}
-
 export async function handleMedical(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
   await ctx.reply(

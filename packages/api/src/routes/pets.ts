@@ -5,7 +5,11 @@ export const petsRouter = Router();
 
 petsRouter.get('/', (req, res) => {
   const ownerId = req.query.ownerId ? Number(req.query.ownerId) : undefined;
+  const excludeOwnerId = req.query.excludeOwnerId ? Number(req.query.excludeOwnerId) : undefined;
   const species = typeof req.query.species === 'string' ? req.query.species : undefined;
+  const city = typeof req.query.city === 'string' ? req.query.city : undefined;
+  const province = typeof req.query.province === 'string' ? req.query.province : undefined;
+  const breed = typeof req.query.breed === 'string' ? req.query.breed : undefined;
   const lookingForPlaymate =
     req.query.lookingForPlaymate === 'true'
       ? true
@@ -13,7 +17,15 @@ petsRouter.get('/', (req, res) => {
         ? false
         : undefined;
 
-  const pets = dbService.listPets({ ownerId, lookingForPlaymate, species });
+  const pets = dbService.listPets({
+    ownerId,
+    excludeOwnerId,
+    lookingForPlaymate,
+    species,
+    city,
+    province,
+    breed,
+  });
   res.json(pets);
 });
 

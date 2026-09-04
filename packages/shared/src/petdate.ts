@@ -135,6 +135,13 @@ export interface BotSession {
   exploreForPicked?: boolean;
   /** صفحهٔ نژاد در ویزارد ثبت پت (reply keyboard) */
   breedPage?: number;
+  /** حالت مرور/جستجوی پت */
+  searchMode?: 'nearby' | 'breed' | 'province' | 'mashhad' | 'all';
+  searchBreed?: string;
+  searchPage?: number;
+  searchBreedPage?: number;
+  /** فروش سکه — منتظر شماره کارت */
+  earnPendingCoins?: number;
   updatedAt: string;
 }
 
@@ -151,6 +158,8 @@ export type BotStep =
   | 'profile_photo'
   | 'profile_bio'
   | 'profile_interests'
+  | 'search_breed'
+  | 'earn_card'
   | 'pet_name'
   | 'pet_species'
   | 'pet_breed'

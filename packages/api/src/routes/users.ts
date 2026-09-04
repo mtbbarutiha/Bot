@@ -205,3 +205,74 @@ usersRouter.patch('/:id/section', (req, res) => {
   }
   res.json(user);
 });
+
+/** دریافت سکه روزانه */
+usersRouter.post('/telegram/:telegramId/coins/daily', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const amount = req.body?.amount != null ? Number(req.body.amount) : 10;
+  const result = dbService.claimDailyCoins(user.id, Number.isFinite(amount) ? amount : 10);
+  if (!result.ok) {
+    res.status(result.reason === 'already' ? 409 : 404).json({
+      error: result.reason === 'already' ? 'امروز سکه روزانه را گرفتی' : 'کاربر پیدا نشد',
+      user: result.user,
+      reason: result.reason,
+    });
+    return;
+  }
+  res.json({ ok: true, awarded: result.awarded, user: result.user });
+});
+
+/** وضعیت درخواست فروش باز */
+usersRouter.get('/telegram/:telegramId/coins/sell/open', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json({ open: dbService.userHasOpenCoinSell(user.id) });
+});
+
+/** ثبت درخواست فروش سکه */
+usersRouter.post('/telegram/:telegramId/coins/sell', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const coins = Number(req.body?.coins);
+  const cardNumber = String(req.body?.cardNumber ?? '');
+  const rateToman = req.body?.rateToman != null ? Number(req.body.rateToman) : 1000;
+  const minCoins = req.body?.minCoins != null ? Number(req.body.minCoins) : 50;
+
+  if (!cardNumber || cardNumber.length < 16) {
+    res.status(400).json({ error: 'شماره کارت نامعتبر', reason: 'card' });
+    return;
+  }
+
+  const result = dbService.submitCoinSell({
+    userId: user.id,
+    coins,
+    rateToman: Number.isFinite(rateToman) ? rateToman : 1000,
+    cardNumber,
+    minCoins: Number.isFinite(minCoins) ? minCoins : 50,
+  });
+
+  if (!result.ok) {
+    const status =
+      result.reason === 'missing' ? 404 : result.reason === 'pending' ? 409 : 400;
+    res.status(status).json({ ok: false, reason: result.reason });
+    return;
+  }
+
+  res.status(201).json({
+    ok: true,
+    requestId: result.requestId,
+    amountToman: result.amountToman,
+    rateToman: result.rateToman,
+    user: result.user,
+  });
+});

@@ -85,6 +85,8 @@ export interface User {
   interests?: string[];
   avatarUrl?: string;
   coins?: number;
+  /** آخرین دریافت سکه روزانه (ISO) */
+  lastDailyCoinAt?: string;
   profileViews?: number;
   likesCount?: number;
   /** false = حساب غیرفعال (سبک دوردوریا) */

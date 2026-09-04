@@ -2,7 +2,15 @@ import type { Bot, Context } from 'grammy';
 import type { PetGender, PetSize, UserGender, UserRole } from '@petdate/shared';
 import { ROLE_CONFIRM_LABEL, USER_ROLE_LABELS, USER_ROLES } from '@petdate/shared';
 import { forceJoinMiddleware, missingChannels, safeAnswerCallback, sendForceJoinPrompt } from '../force-join';
-import { MENU_LABELS, PET_OWNER_MENU, DEFAULT_MENU, MY_PETS_SECTION, WIZARD_NAV, mainMenuKeyboard } from '../keyboards';
+import {
+  MENU_LABELS,
+  PET_OWNER_MENU,
+  DEFAULT_MENU,
+  MY_PETS_SECTION,
+  SEARCH_PETS_MENU,
+  WIZARD_NAV,
+  mainMenuKeyboard,
+} from '../keyboards';
 import { getSession } from '../session';
 import { handleExplore, handleExploreBack, handleExploreForPet, handleExplorePet, handleExplorePickPet, handleFindPlaymate } from './explore';
 import {
@@ -53,7 +61,6 @@ import {
   getCtxUser,
 } from './start';
 import {
-  handleCoins,
   handleComingSoon,
   handleInviteFriends,
   handleMedical,
@@ -61,6 +68,31 @@ import {
   handleQuickVet,
   handleServices,
 } from './services';
+import {
+  handleCoins,
+  handleCoinsBack,
+  handleCoinsDaily,
+  handleCoinsDailyDone,
+  handleCoinsPackage,
+  handleCoinsPay,
+  handleEarn,
+  handleEarnCancel,
+  handleEarnCardText,
+  handleEarnClose,
+  handleEarnConfirm,
+  handleEarnSell,
+} from './coins';
+import {
+  handleNearbyPets,
+  handleSearchAll,
+  handleSearchBreedText,
+  handleSearchByBreedStart,
+  handleSearchMashhad,
+  handleSearchMenuCallback,
+  handleSearchPage,
+  handleSearchPetsMenu,
+  handleSearchSameProvince,
+} from './search';
 
 export function registerHandlers(bot: Bot): void {
   // عضویت اجباری در کانال‌ها — قبل از همهٔ دستورات
@@ -219,6 +251,26 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery(/^shop:/, (ctx) => handleComingSoon(ctx, 'پت شاپ'));
   bot.callbackQuery(/^svc:/, (ctx) => handleComingSoon(ctx, 'خدمات'));
 
+  bot.callbackQuery('coins:daily', (ctx) => handleCoinsDaily(ctx));
+  bot.callbackQuery('coins:daily:done', (ctx) => handleCoinsDailyDone(ctx));
+  bot.callbackQuery(/^coins:pkg:(.+)$/, (ctx) => handleCoinsPackage(ctx, ctx.match![1]!));
+  bot.callbackQuery(/^coins:pay:(stars|card):(.+)$/, (ctx) =>
+    handleCoinsPay(ctx, ctx.match![1] as 'stars' | 'card', ctx.match![2]!)
+  );
+  bot.callbackQuery('coins:back', (ctx) => handleCoinsBack(ctx));
+
+  bot.callbackQuery('earn:sell', (ctx) => handleEarnSell(ctx));
+  bot.callbackQuery(/^earn:confirm:(\d+)$/, (ctx) =>
+    handleEarnConfirm(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery('earn:cancel', (ctx) => handleEarnCancel(ctx));
+  bot.callbackQuery('earn:close', (ctx) => handleEarnClose(ctx));
+
+  bot.callbackQuery(/^search:page:([^:]+):(\d+)$/, (ctx) =>
+    handleSearchPage(ctx, ctx.match![1]!, Number(ctx.match![2]))
+  );
+  bot.callbackQuery('search:menu', (ctx) => handleSearchMenuCallback(ctx));
+
   bot.on('message:contact', async (ctx) => {
     await handleProfileContact(ctx);
   });
@@ -250,17 +302,39 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   // Role selection via reply keyboard
   if (await handleRoleReplyText(ctx, text)) return;
 
+  if (await handleEarnCardText(ctx, text)) return;
+  if (await handleSearchBreedText(ctx, text)) return;
   if (await handleProfileWizardText(ctx, text)) return;
   if (await handleWizardText(ctx, text)) return;
 
   const m = PET_OWNER_MENU;
   const d = DEFAULT_MENU;
   const petsSection = MY_PETS_SECTION;
+  const search = SEARCH_PETS_MENU;
 
   switch (text) {
     case m.findPlaymate:
     case d.explore:
       return handleFindPlaymate(ctx);
+    case m.nearbyPets:
+      return handleNearbyPets(ctx);
+    case m.searchPets:
+      return handleSearchPetsMenu(ctx);
+    case search.byBreed:
+      return handleSearchByBreedStart(ctx);
+    case search.sameProvince:
+      return handleSearchSameProvince(ctx);
+    case search.mashhad:
+      return handleSearchMashhad(ctx);
+    case search.allPets:
+      return handleSearchAll(ctx);
+    case search.backToMenu: {
+      const user = await getCtxUser(ctx);
+      await ctx.reply('منوی اصلی 👇', {
+        reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+      });
+      return;
+    }
     case m.myProfile:
     case d.profile:
       return handleProfile(ctx);
@@ -280,6 +354,8 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     }
     case m.coins:
       return handleCoins(ctx);
+    case m.earn:
+      return handleEarn(ctx);
     case m.medical:
       return handleMedical(ctx);
     case m.invite:

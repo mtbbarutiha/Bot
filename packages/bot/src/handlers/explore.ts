@@ -119,7 +119,9 @@ export async function handleExploreForPet(ctx: Context, petId: number | 'all'): 
 
   let sent = 0;
   let skipped = 0;
-  const preview: string[] = [];
+  /** فقط یک نمونه — ترجیح با هم‌کشور / هم‌استان */
+  let sample: string | undefined;
+  let preferredSample: string | undefined;
 
   for (const match of matches) {
     try {
@@ -129,9 +131,20 @@ export async function handleExploreForPet(ctx: Context, petId: number | 'all'): 
         fromUserId: user.id,
       });
       sent += 1;
-      if (preview.length < 8) {
-        const why = match.reasons.slice(0, 3).join(' · ');
-        preview.push(`• **${match.pet.name}**${why ? ` — ${why}` : ''}`);
+      const locReasons = match.reasons.filter(
+        (r) => r === 'هم‌کشور' || r === 'هم‌استان' || r === 'هم‌شهر'
+      );
+      const why =
+        locReasons.length > 0
+          ? locReasons.join(' · ')
+          : match.reasons.slice(0, 2).join(' · ');
+      const line = `• **${match.pet.name}**${why ? ` — ${why}` : ''}`;
+      if (!sample) sample = line;
+      if (
+        !preferredSample &&
+        (match.reasons.includes('هم‌استان') || match.reasons.includes('هم‌کشور'))
+      ) {
+        preferredSample = line;
       }
 
       // اطلاع به صاحب پت مقصد
@@ -162,6 +175,8 @@ export async function handleExploreForPet(ctx: Context, petId: number | 'all'): 
     }
   }
 
+  const oneSample = preferredSample ?? sample;
+
   const summary = [
     `✅ برای **${source.name}** درخواست همبازی ارسال شد.`,
     '',
@@ -171,8 +186,8 @@ export async function handleExploreForPet(ctx: Context, petId: number | 'all'): 
     '',
     'اولویت مچ: هم‌کشور · هم‌استان · هم‌دسته · هم‌نژاد · سن · جنسیت متفاوت',
     '',
-    preview.length ? 'نمونه‌ها:' : null,
-    ...preview,
+    oneSample ? 'نمونه:' : null,
+    oneSample ?? null,
   ]
     .filter(Boolean)
     .join('\n');

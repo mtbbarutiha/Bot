@@ -16,21 +16,40 @@ import {
   USER_ROLES,
   citiesForProvince,
 } from '@petdate/shared';
+import {
+  COIN_PACKAGES,
+  DAILY_COIN_REWARD,
+  canClaimDaily,
+  formatNum,
+  packagePickerLabel,
+} from './economy';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
 /** Labels for pet_owner main menu */
 export const PET_OWNER_MENU = {
   findPlaymate: '🔍 پیدا کردن همبازی',
+  nearbyPets: '📍 پت‌های نزدیک من',
+  searchPets: '🔎 جستجوی پت',
   myProfile: '👤 پروفایل خودم',
   myPets: '🐾 پت‌های من',
   addPet: '➕ ثبت پت',
   coins: '🪙 سکه',
+  earn: '💵 کسب درآمد',
   medical: '🩺 پزشکی',
   invite: '🎁 معرفی به دوستان',
   help: '❓ راهنما',
   quickVet: '⚡ ارتباط سریع با پزشک',
   shop: '🛒 پت شاپ',
   services: '🛠 خدمات',
+} as const;
+
+/** زیرمنوی جستجوی پت */
+export const SEARCH_PETS_MENU = {
+  byBreed: '🧬 بر اساس نژاد',
+  sameProvince: '🗺 هم‌استان',
+  mashhad: '🏙 مشهد',
+  allPets: '🐾 همه پت‌ها',
+  backToMenu: '🔙 بازگشت به منو',
 } as const;
 
 export const DEFAULT_MENU = {
@@ -332,21 +351,45 @@ export function petOwnerMenuKeyboard(): Keyboard {
     .text(m.findPlaymate)
     .primary()
     .row()
+    .text(m.nearbyPets)
+    .success()
+    .text(m.searchPets)
+    .primary()
+    .row()
     .text(m.myProfile)
     .text(m.myPets)
     .row()
     .text(m.coins)
-    .text(m.medical)
+    .text(m.earn)
     .row()
+    .text(m.medical)
     .text(m.invite)
     .success()
+    .row()
     .text(m.quickVet)
     .primary()
-    .row()
     .text(m.shop)
-    .text(m.services)
     .row()
+    .text(m.services)
     .text(m.help)
+    .resized()
+    .persistent();
+}
+
+export function searchPetsMenuKeyboard(): Keyboard {
+  const m = SEARCH_PETS_MENU;
+  return new Keyboard()
+    .text(m.byBreed)
+    .primary()
+    .row()
+    .text(m.sameProvince)
+    .success()
+    .text(m.mashhad)
+    .primary()
+    .row()
+    .text(m.allPets)
+    .row()
+    .text(m.backToMenu)
     .resized()
     .persistent();
 }
@@ -583,4 +626,67 @@ export const MENU_LABELS = new Set<string>([
   ...Object.values(PET_OWNER_MENU),
   ...Object.values(DEFAULT_MENU),
   ...Object.values(MY_PETS_SECTION),
+  ...Object.values(SEARCH_PETS_MENU),
 ]);
+
+/** کیبورد فروشگاه سکه + سکه روزانه */
+export function coinsShopKeyboard(lastDailyCoinAt?: string | null): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  if (canClaimDaily(lastDailyCoinAt)) {
+    kb.text(`🎁 سکه روزانه (+${formatNum(DAILY_COIN_REWARD)})`, 'coins:daily').success().row();
+  } else {
+    kb.text('🎁 سکه روزانه (فردا)', 'coins:daily:done').row();
+  }
+  for (const p of COIN_PACKAGES) {
+    kb.text(packagePickerLabel(p), `coins:pkg:${p.id}`);
+    if (p.vip) kb.success();
+    else kb.primary();
+    kb.row();
+  }
+  return kb;
+}
+
+export function coinPackagePayKeyboard(pkgId: string): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('⭐ پرداخت با Stars', `coins:pay:stars:${pkgId}`)
+    .primary()
+    .row()
+    .text('💳 کارت‌به‌کارت', `coins:pay:card:${pkgId}`)
+    .row()
+    .text('↩️ بازگشت', 'coins:back')
+    .primary();
+}
+
+export function earnKeyboard(canSell: boolean): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  if (canSell) {
+    kb.text('💵 فروش سکه', 'earn:sell').success().row();
+  }
+  kb.text('بستن', 'earn:close');
+  return kb;
+}
+
+export function earnConfirmKeyboard(coins: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('✅ تأیید فروش', `earn:confirm:${coins}`)
+    .success()
+    .row()
+    .text('↩️ انصراف', 'earn:cancel');
+}
+
+export function earnCancelKeyboard(): InlineKeyboard {
+  return new InlineKeyboard().text('↩️ انصراف', 'earn:cancel');
+}
+
+export function searchResultsNavKeyboard(
+  mode: string,
+  page: number,
+  hasMore: boolean
+): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  if (page > 0) kb.text('◀️ قبلی', `search:page:${mode}:${page - 1}`).primary();
+  if (hasMore) kb.text('بعدی ▶️', `search:page:${mode}:${page + 1}`).primary();
+  if (page > 0 || hasMore) kb.row();
+  kb.text('🔎 منوی جستجو', 'search:menu').primary();
+  return kb;
+}

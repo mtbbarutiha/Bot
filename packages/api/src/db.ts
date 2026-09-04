@@ -153,9 +153,26 @@ function migrateSchema() {
   if (!names.has('country')) db.exec("ALTER TABLE users ADD COLUMN country TEXT");
   if (!names.has('interests')) db.exec("ALTER TABLE users ADD COLUMN interests TEXT NOT NULL DEFAULT '[]'");
   if (!names.has('coins')) db.exec('ALTER TABLE users ADD COLUMN coins INTEGER NOT NULL DEFAULT 0');
+  if (!names.has('last_daily_coin_at')) db.exec('ALTER TABLE users ADD COLUMN last_daily_coin_at TEXT');
   if (!names.has('profile_views')) db.exec('ALTER TABLE users ADD COLUMN profile_views INTEGER NOT NULL DEFAULT 0');
   if (!names.has('likes_count')) db.exec('ALTER TABLE users ADD COLUMN likes_count INTEGER NOT NULL DEFAULT 0');
   if (!names.has('is_active')) db.exec('ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS coin_sell_requests (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      coins INTEGER NOT NULL,
+      rate_toman INTEGER NOT NULL,
+      amount_toman INTEGER NOT NULL,
+      card_number TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'open',
+      admin_note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      reviewed_at TEXT,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
 
   const petCols = db.prepare("PRAGMA table_info(pets)").all() as { name: string }[];
   const petNames = new Set(petCols.map((c) => c.name));
@@ -614,6 +631,7 @@ function mapUser(row: Record<string, unknown>): User {
     interests: parseInterests(row.interests),
     avatarUrl: row.avatar_url as string | undefined,
     coins: row.coins != null ? Number(row.coins) : 0,
+    lastDailyCoinAt: (row.last_daily_coin_at as string | undefined) ?? undefined,
     profileViews: row.profile_views != null ? Number(row.profile_views) : 0,
     likesCount: row.likes_count != null ? Number(row.likes_count) : 0,
     isActive: row.is_active == null ? true : Boolean(row.is_active),
@@ -1011,7 +1029,15 @@ export const dbService = {
     }));
   },
 
-  listPets(filters?: { ownerId?: number; lookingForPlaymate?: boolean; species?: string }): PetProfile[] {
+  listPets(filters?: {
+    ownerId?: number;
+    lookingForPlaymate?: boolean;
+    species?: string;
+    city?: string;
+    province?: string;
+    breed?: string;
+    excludeOwnerId?: number;
+  }): PetProfile[] {
     let sql = `
       SELECT pets.*,
              users.province AS owner_province,
@@ -1024,6 +1050,10 @@ export const dbService = {
       sql += ' AND pets.owner_id = ?';
       params.push(filters.ownerId);
     }
+    if (filters?.excludeOwnerId) {
+      sql += ' AND pets.owner_id != ?';
+      params.push(filters.excludeOwnerId);
+    }
     if (filters?.lookingForPlaymate !== undefined) {
       sql += ' AND pets.looking_for_playmate = ?';
       params.push(filters.lookingForPlaymate ? 1 : 0);
@@ -1031,6 +1061,19 @@ export const dbService = {
     if (filters?.species) {
       sql += ' AND pets.species = ?';
       params.push(filters.species);
+    }
+    if (filters?.city) {
+      sql +=
+        " AND (LOWER(TRIM(COALESCE(pets.city, ''))) = LOWER(TRIM(?)) OR LOWER(TRIM(COALESCE(users.city, ''))) = LOWER(TRIM(?)))";
+      params.push(filters.city, filters.city);
+    }
+    if (filters?.province) {
+      sql += " AND LOWER(TRIM(COALESCE(users.province, ''))) = LOWER(TRIM(?))";
+      params.push(filters.province);
+    }
+    if (filters?.breed) {
+      sql += " AND LOWER(TRIM(COALESCE(pets.breed, ''))) = LOWER(TRIM(?))";
+      params.push(filters.breed);
     }
     sql += ' ORDER BY pets.updated_at DESC';
     return (db.prepare(sql).all(...params) as Record<string, unknown>[]).map(mapPet);
@@ -1262,5 +1305,98 @@ export const dbService = {
   updatePlaydateStatus(id: number, status: PlaydateStatus): PlaydateRequest | null {
     db.prepare("UPDATE playdate_requests SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, id);
     return this.getPlaydateRequest(id);
+  },
+
+  /** سکه روزانه — یک‌بار در هر روز UTC */
+  claimDailyCoins(
+    userId: number,
+    amount: number
+  ):
+    | { ok: true; user: User; awarded: number }
+    | { ok: false; reason: 'missing' | 'already'; user?: User } {
+    const user = this.getUserById(userId);
+    if (!user) return { ok: false, reason: 'missing' };
+
+    if (user.lastDailyCoinAt) {
+      const last = new Date(user.lastDailyCoinAt);
+      const now = new Date();
+      if (
+        !Number.isNaN(last.getTime()) &&
+        last.getUTCFullYear() === now.getUTCFullYear() &&
+        last.getUTCMonth() === now.getUTCMonth() &&
+        last.getUTCDate() === now.getUTCDate()
+      ) {
+        return { ok: false, reason: 'already', user };
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    db.prepare(
+      'UPDATE users SET coins = COALESCE(coins, 0) + ?, last_daily_coin_at = ? WHERE id = ?'
+    ).run(amount, nowIso, userId);
+    const updated = this.getUserById(userId)!;
+    return { ok: true, user: updated, awarded: amount };
+  },
+
+  userHasOpenCoinSell(userId: number): boolean {
+    const row = db
+      .prepare(
+        `SELECT COUNT(*) as c FROM coin_sell_requests WHERE user_id = ? AND status = 'open'`
+      )
+      .get(userId) as { c: number };
+    return Number(row?.c ?? 0) > 0;
+  },
+
+  submitCoinSell(input: {
+    userId: number;
+    coins: number;
+    rateToman: number;
+    cardNumber: string;
+    minCoins: number;
+  }):
+    | { ok: true; requestId: number; amountToman: number; rateToman: number; user: User }
+    | { ok: false; reason: 'min' | 'balance' | 'pending' | 'missing' } {
+    const coins = Math.floor(input.coins);
+    if (!Number.isFinite(coins) || coins < input.minCoins) {
+      return { ok: false, reason: 'min' };
+    }
+    const user = this.getUserById(input.userId);
+    if (!user) return { ok: false, reason: 'missing' };
+    if (this.userHasOpenCoinSell(input.userId)) return { ok: false, reason: 'pending' };
+    if ((user.coins ?? 0) < coins) return { ok: false, reason: 'balance' };
+
+    const amountToman = coins * input.rateToman;
+    const tx = db.transaction(() => {
+      const debited = db
+        .prepare(
+          `UPDATE users SET coins = coins - ? WHERE id = ? AND COALESCE(coins, 0) >= ?`
+        )
+        .run(coins, input.userId, coins);
+      if (debited.changes !== 1) throw new Error('BALANCE');
+      const result = db
+        .prepare(
+          `INSERT INTO coin_sell_requests (
+            user_id, coins, rate_toman, amount_toman, card_number, status
+          ) VALUES (?, ?, ?, ?, ?, 'open')`
+        )
+        .run(input.userId, coins, input.rateToman, amountToman, input.cardNumber);
+      return Number(result.lastInsertRowid);
+    });
+
+    try {
+      const requestId = tx();
+      return {
+        ok: true,
+        requestId,
+        amountToman,
+        rateToman: input.rateToman,
+        user: this.getUserById(input.userId)!,
+      };
+    } catch (err) {
+      if (err instanceof Error && err.message === 'BALANCE') {
+        return { ok: false, reason: 'balance' };
+      }
+      throw err;
+    }
   },
 };

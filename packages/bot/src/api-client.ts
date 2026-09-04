@@ -120,12 +120,20 @@ export async function listBreeds(species?: string): Promise<PetBreed[]> {
 
 export async function listPets(filters?: {
   ownerId?: number;
+  excludeOwnerId?: number;
   lookingForPlaymate?: boolean;
   species?: string;
+  city?: string;
+  province?: string;
+  breed?: string;
 }): Promise<PetProfile[]> {
   const params = new URLSearchParams();
   if (filters?.ownerId) params.set('ownerId', String(filters.ownerId));
+  if (filters?.excludeOwnerId) params.set('excludeOwnerId', String(filters.excludeOwnerId));
   if (filters?.species) params.set('species', filters.species);
+  if (filters?.city) params.set('city', filters.city);
+  if (filters?.province) params.set('province', filters.province);
+  if (filters?.breed) params.set('breed', filters.breed);
   if (filters?.lookingForPlaymate !== undefined) {
     params.set('lookingForPlaymate', String(filters.lookingForPlaymate));
   }
@@ -205,4 +213,76 @@ export async function deletePet(id: number, ownerId: number): Promise<void> {
   await request<{ ok: boolean }>(`/api/pets/${id}?ownerId=${ownerId}`, {
     method: 'DELETE',
   });
+}
+
+export async function claimDailyCoins(
+  telegramId: string,
+  amount = 10
+): Promise<{ ok: true; awarded: number; user: User } | { ok: false; reason: string; user?: User }> {
+  const res = await fetch(
+    `${config.apiUrl}/api/users/telegram/${encodeURIComponent(telegramId)}/coins/daily`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount }),
+    }
+  );
+  const body = (await res.json()) as {
+    ok?: boolean;
+    awarded?: number;
+    user?: User;
+    reason?: string;
+    error?: string;
+  };
+  if (!res.ok) {
+    return { ok: false, reason: body.reason ?? body.error ?? 'error', user: body.user };
+  }
+  return { ok: true, awarded: body.awarded ?? amount, user: body.user! };
+}
+
+export async function hasOpenCoinSell(telegramId: string): Promise<boolean> {
+  try {
+    const data = await request<{ open: boolean }>(
+      `/api/users/telegram/${encodeURIComponent(telegramId)}/coins/sell/open`
+    );
+    return Boolean(data.open);
+  } catch {
+    return false;
+  }
+}
+
+export async function submitCoinSell(
+  telegramId: string,
+  data: { coins: number; cardNumber: string; rateToman: number; minCoins: number }
+): Promise<
+  | { ok: true; requestId: number; amountToman: number; rateToman: number; user: User }
+  | { ok: false; reason: string }
+> {
+  const res = await fetch(
+    `${config.apiUrl}/api/users/telegram/${encodeURIComponent(telegramId)}/coins/sell`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }
+  );
+  const body = (await res.json()) as {
+    ok?: boolean;
+    requestId?: number;
+    amountToman?: number;
+    rateToman?: number;
+    user?: User;
+    reason?: string;
+    error?: string;
+  };
+  if (!res.ok || !body.ok) {
+    return { ok: false, reason: body.reason ?? body.error ?? 'error' };
+  }
+  return {
+    ok: true,
+    requestId: body.requestId!,
+    amountToman: body.amountToman!,
+    rateToman: body.rateToman!,
+    user: body.user!,
+  };
 }
