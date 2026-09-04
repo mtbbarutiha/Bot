@@ -1,7 +1,7 @@
 import type { Context } from 'grammy';
 import type { PetBreed, PetProfile, PetSpecies } from '@petdate/shared';
 import { PET_SPECIES_LABELS } from '@petdate/shared';
-import { listBreeds, listPets, listSpecies } from '../api-client';
+import { getPet, listBreeds, listPets, listSpecies } from '../api-client';
 import { formatPet } from '../format';
 import {
   BREED_PAGE_SIZE,
@@ -10,15 +10,16 @@ import {
   WIZARD_NAV,
   breedReplyKeyboard,
   mainMenuKeyboard,
+  searchPetDetailKeyboard,
+  searchPetsListKeyboard,
   searchPetsMenuKeyboard,
-  searchResultsNavKeyboard,
   speciesReplyKeyboard,
   textStepKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser } from './helpers';
 
-const PAGE_SIZE = 5;
+const PAGE_SIZE = 8;
 
 function matchSpecies(text: string, species: PetSpecies[]): PetSpecies | null {
   const t = text.trim();
@@ -205,12 +206,77 @@ export async function handleSearchPage(
   page: number
 ): Promise<void> {
   await ctx.answerCallbackQuery();
-  await showSearchResults(ctx, mode as SearchMode, page);
+  await showSearchResults(ctx, mode as SearchMode, page, { edit: true });
 }
 
 export async function handleSearchMenuCallback(ctx: Context): Promise<void> {
   await ctx.answerCallbackQuery();
   await handleSearchPetsMenu(ctx);
+}
+
+export async function handleSearchHomeCallback(ctx: Context): Promise<void> {
+  await ctx.answerCallbackQuery();
+  const user = await getCtxUser(ctx);
+  if (ctx.from) {
+    await upsertSession(String(ctx.from.id), {
+      step: 'ready',
+      searchMode: undefined,
+      searchPage: undefined,
+    });
+  }
+  await ctx.reply('منوی اصلی 👇', {
+    reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+  });
+}
+
+/** باز کردن کارت پروفایل پت از لیست جستجو */
+export async function handleSearchPetView(ctx: Context, petId: number): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user?.id || !ctx.from) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+
+  const pet = await getPet(petId);
+  if (!pet) {
+    await ctx.answerCallbackQuery({ text: 'پت پیدا نشد', show_alert: true });
+    return;
+  }
+
+  const session = await getSession(String(ctx.from.id));
+  const mode = (session?.searchMode ?? 'all') as SearchMode;
+  const page = session?.searchPage ?? 0;
+
+  await ctx.answerCallbackQuery();
+  const text = `🐾 <b>پروفایل پت</b>\n\n${formatPet(pet, true)}`;
+  const kb = searchPetDetailKeyboard(mode, page);
+  const photo = pet.imageUrl || defaultSearchPetPhoto(pet);
+
+  try {
+    await ctx.replyWithPhoto(photo, {
+      caption: text,
+      parse_mode: 'HTML',
+      reply_markup: kb,
+    });
+    return;
+  } catch (err) {
+    console.warn('search pet photo failed:', (err as Error).message);
+  }
+
+  await ctx.reply(text, { parse_mode: 'HTML', reply_markup: kb });
+}
+
+function defaultSearchPetPhoto(pet: { species?: string; id: number }): string {
+  const dogs = [
+    'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
+  ];
+  const cats = [
+    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80',
+  ];
+  const pool = pet.species === 'cat' ? cats : dogs;
+  return pool[pet.id % pool.length]!;
 }
 
 type SearchMode = 'nearby' | 'breed' | 'province' | 'mashhad' | 'all';
@@ -266,7 +332,8 @@ function modeTitle(mode: SearchMode, breed?: string, species?: string): string {
 async function showSearchResults(
   ctx: Context,
   mode: SearchMode,
-  page: number
+  page: number,
+  opts?: { edit?: boolean }
 ): Promise<void> {
   const user = await getCtxUser(ctx);
   if (!user?.id || !ctx.from) {
@@ -278,9 +345,8 @@ async function showSearchResults(
   const breed = session?.searchBreed;
   const species = session?.searchSpecies;
   const pets = await fetchPetsForMode(mode, user, breed, species);
-  const safePage = Math.max(0, page);
-  const slice = pets.slice(safePage * PAGE_SIZE, (safePage + 1) * PAGE_SIZE);
-  const hasMore = (safePage + 1) * PAGE_SIZE < pets.length;
+  const totalPages = Math.max(1, Math.ceil(pets.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(0, page), Math.max(0, totalPages - 1));
 
   await upsertSession(String(ctx.from.id), {
     searchMode: mode,
@@ -288,44 +354,71 @@ async function showSearchResults(
   });
 
   if (pets.length === 0) {
-    await ctx.reply(
-      [
-        `<b>${modeTitle(mode, breed, species)}</b>`,
-        '',
-        'فعلاً پتی با این فیلتر پیدا نشد.',
-      ].join('\n'),
-      {
-        parse_mode: 'HTML',
-        reply_markup:
-          mode === 'nearby'
-            ? mainMenuKeyboard(user.role, user.roles)
-            : searchPetsMenuKeyboard(),
+    const empty = [
+      `<b>${modeTitle(mode, breed, species)}</b>`,
+      '',
+      'فعلاً پتی با این فیلتر پیدا نشد.',
+    ].join('\n');
+    const emptyKb =
+      mode === 'nearby'
+        ? mainMenuKeyboard(user.role, user.roles)
+        : searchPetsMenuKeyboard();
+
+    if (opts?.edit && ctx.callbackQuery) {
+      try {
+        await ctx.editMessageText(empty, { parse_mode: 'HTML' });
+        await ctx.reply(
+          mode === 'nearby' ? 'منوی اصلی 👇' : 'جستجوی پت 👇',
+          { reply_markup: emptyKb }
+        );
+        return;
+      } catch {
+        /* fall through */
       }
-    );
+    }
+    await ctx.reply(empty, {
+      parse_mode: 'HTML',
+      reply_markup: emptyKb,
+    });
     return;
   }
 
-  const header = [
+  const text = [
     `<b>${modeTitle(mode, breed, species)}</b>`,
-    `نتیجه: ${pets.length} پت — صفحه ${safePage + 1}`,
-    '',
-  ].join('\n');
+    `📋 ${pets.length} پت — روی هر مورد بزن تا پروفایل باز بشه`,
+    totalPages > 1 ? `صفحه ${safePage + 1} از ${totalPages}` : null,
+  ]
+    .filter(Boolean)
+    .join('\n');
 
-  const body = slice
-    .map((p, i) => `${safePage * PAGE_SIZE + i + 1}. ${formatPet(p, false)}`)
-    .join('\n\n');
+  const kb = searchPetsListKeyboard(pets, mode, safePage, PAGE_SIZE);
 
-  await ctx.reply(`${header}${body}`, {
-    parse_mode: 'HTML',
-    reply_markup: searchResultsNavKeyboard(mode, safePage, hasMore),
-  });
+  if (opts?.edit && ctx.callbackQuery) {
+    try {
+      const msg = ctx.callbackQuery.message;
+      if (msg && 'photo' in msg && msg.photo) {
+        // برگشت از کارت عکس — پیام جدید لیست
+        await ctx.reply(text, { parse_mode: 'HTML', reply_markup: kb });
+        return;
+      }
+      await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: kb });
+      return;
+    } catch {
+      /* fall through to reply */
+    }
+  }
 
-  if (mode === 'nearby') {
-    await ctx.reply('منوی اصلی 👇', {
-      reply_markup: mainMenuKeyboard(user.role, user.roles),
-    });
-  } else {
-    await ctx.reply('جستجوی پت 👇', { reply_markup: searchPetsMenuKeyboard() });
+  await ctx.reply(text, { parse_mode: 'HTML', reply_markup: kb });
+
+  // کیبورد reply منو را یک‌بار نگه می‌داریم (نه روی هر صفحه)
+  if (!opts?.edit) {
+    if (mode === 'nearby') {
+      await ctx.reply('منوی اصلی 👇', {
+        reply_markup: mainMenuKeyboard(user.role, user.roles),
+      });
+    } else {
+      await ctx.reply('جستجوی پت 👇', { reply_markup: searchPetsMenuKeyboard() });
+    }
   }
 }
 

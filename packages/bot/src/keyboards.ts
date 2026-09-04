@@ -678,6 +678,53 @@ export function earnCancelKeyboard(): InlineKeyboard {
   return new InlineKeyboard().text('↩️ انصراف', 'earn:cancel');
 }
 
+/** لیست پت‌های جستجو — یک ردیف برای هر پت + صفحه‌بندی (سبک دوردوریا) */
+export function searchPetsListKeyboard(
+  pets: PetProfile[],
+  mode: string,
+  page: number,
+  pageSize: number
+): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  const totalPages = Math.max(1, Math.ceil(pets.length / pageSize));
+  const safePage = Math.min(Math.max(0, page), totalPages - 1);
+  const slice = pets.slice(safePage * pageSize, (safePage + 1) * pageSize);
+
+  slice.forEach((pet) => {
+    const bits = [pet.breed, pet.ownerCity || pet.city].filter(Boolean).join(' · ');
+    let label = bits ? `${pet.name} (${bits})` : pet.name;
+    if (label.length > 56) label = `${label.slice(0, 53)}…`;
+    kb.text(`🐾 ${label}`, `search:pet:${pet.id}`).primary().row();
+  });
+
+  if (totalPages > 1) {
+    if (safePage > 0) kb.text('◀️ قبلی', `search:page:${mode}:${safePage - 1}`).primary();
+    kb.text(`${safePage + 1}/${totalPages}`, 'noop');
+    if (safePage < totalPages - 1) kb.text('بعدی ▶️', `search:page:${mode}:${safePage + 1}`).primary();
+    kb.row();
+  }
+
+  if (mode === 'nearby') {
+    kb.text('🔙 منوی اصلی', 'search:home').primary();
+  } else {
+    kb.text('🔎 منوی جستجو', 'search:menu').primary();
+  }
+  return kb;
+}
+
+/** پروفایل پت در نتایج جستجو — بازگشت به لیست */
+export function searchPetDetailKeyboard(mode: string, page: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('🔙 بازگشت به لیست', `search:page:${mode}:${page}`)
+    .primary()
+    .row()
+    .text(
+      mode === 'nearby' ? '🏠 منوی اصلی' : '🔎 منوی جستجو',
+      mode === 'nearby' ? 'search:home' : 'search:menu'
+    );
+}
+
+/** @deprecated استفاده از searchPetsListKeyboard */
 export function searchResultsNavKeyboard(
   mode: string,
   page: number,

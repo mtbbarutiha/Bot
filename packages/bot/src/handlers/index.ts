@@ -87,10 +87,12 @@ import {
   handleSearchAll,
   handleSearchBreedText,
   handleSearchByBreedStart,
+  handleSearchHomeCallback,
   handleSearchMashhad,
   handleSearchMenuCallback,
   handleSearchPage,
   handleSearchPetsMenu,
+  handleSearchPetView,
   handleSearchSameProvince,
 } from './search';
 
@@ -269,7 +271,11 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery(/^search:page:([^:]+):(\d+)$/, (ctx) =>
     handleSearchPage(ctx, ctx.match![1]!, Number(ctx.match![2]))
   );
+  bot.callbackQuery(/^search:pet:(\d+)$/, (ctx) =>
+    handleSearchPetView(ctx, Number(ctx.match![1]))
+  );
   bot.callbackQuery('search:menu', (ctx) => handleSearchMenuCallback(ctx));
+  bot.callbackQuery('search:home', (ctx) => handleSearchHomeCallback(ctx));
 
   bot.on('message:contact', async (ctx) => {
     await handleProfileContact(ctx);
