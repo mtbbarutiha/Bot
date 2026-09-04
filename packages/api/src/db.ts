@@ -1,3 +1,4 @@
+import './load-env';
 import Database from 'better-sqlite3';
 import path from 'path';
 import type {
@@ -24,7 +25,14 @@ import type {
 } from '@petdate/shared';
 import { PET_BREEDS_SEED, PET_SPECIES } from '@petdate/shared';
 
-const dbPath = process.env.DATABASE_PATH || path.join(__dirname, '..', 'data', 'petdate.db');
+/** Absolute DATABASE_PATH wins; relative paths ignored (cwd varies across worktrees). */
+function resolveDbPath(): string {
+  const raw = (process.env.DATABASE_PATH || '').trim();
+  if (raw && path.isAbsolute(raw)) return raw;
+  return path.join(__dirname, '..', 'data', 'petdate.db');
+}
+
+const dbPath = resolveDbPath();
 
 let db: Database.Database;
 

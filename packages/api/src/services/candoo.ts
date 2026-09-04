@@ -71,10 +71,40 @@ export function buildSendPayload(items: CandooSendItem[]): CandooSendItem[] {
   }));
 }
 
+function extractCandooErrorMessage(raw: unknown, fallback: string): string {
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    const msg = (raw as { message?: unknown }).message;
+    if (typeof msg === 'string' && msg.trim()) return msg.trim();
+  }
+  if (typeof raw === 'string' && raw.trim()) {
+    try {
+      const parsed = JSON.parse(raw) as { message?: string };
+      if (parsed?.message) return String(parsed.message);
+    } catch {
+      /* keep fallback */
+    }
+  }
+  return fallback;
+}
+
+/** آیا پاسخ send آرایه‌ای با ACCEPTED است؟ */
+export function isCandooSendAccepted(raw: unknown): boolean {
+  if (!Array.isArray(raw) || raw.length === 0) return false;
+  return raw.every((item) => {
+    if (!item || typeof item !== 'object') return false;
+    const row = item as { status?: string; statusCode?: number };
+    if (typeof row.status === 'string' && row.status.toUpperCase() === 'ACCEPTED') return true;
+    if (typeof row.statusCode === 'number' && row.statusCode >= 200 && row.statusCode < 300) {
+      return true;
+    }
+    return false;
+  });
+}
+
 export async function candooSend(items: CandooSendItem[]): Promise<CandooSendResult> {
   const key = apiKey();
   if (!key) {
-    return { ok: false, status: 0, raw: null, error: 'CANDOO_API_KEY تنظیم نشده' };
+    return { ok: false, status: 0, raw: null, error: 'سرویس پیامک پیکربندی نشده (کلید API)' };
   }
   if (!items.length) {
     return { ok: false, status: 0, raw: null, error: 'لیست پیام خالی است' };
@@ -100,20 +130,37 @@ export async function candooSend(items: CandooSendItem[]): Promise<CandooSendRes
       /* keep text */
     }
     if (!res.ok) {
+      const detail = extractCandooErrorMessage(
+        raw,
+        res.status === 401 ? 'کلید API نامعتبر است' : `خطای سرویس پیامک (HTTP ${res.status})`
+      );
       return {
         ok: false,
         status: res.status,
         raw,
-        error: res.status === 401 ? 'کلید API نامعتبر (401)' : `Candoo HTTP ${res.status}`,
+        error:
+          res.status === 401
+            ? 'کلید API پیامک نامعتبر است. با پشتیبانی تماس بگیر.'
+            : res.status >= 500
+              ? 'سرویس پیامک موقتاً در دسترس نیست. کمی بعد دوباره تلاش کن.'
+              : detail,
+      };
+    }
+    if (!isCandooSendAccepted(raw)) {
+      return {
+        ok: false,
+        status: res.status,
+        raw,
+        error: extractCandooErrorMessage(raw, 'سرویس پیامک ارسال را تأیید نکرد'),
       };
     }
     return { ok: true, status: res.status, raw };
-  } catch (err) {
+  } catch {
     return {
       ok: false,
       status: 0,
       raw: null,
-      error: err instanceof Error ? err.message : 'خطای شبکه Candoo',
+      error: 'ارتباط با سرویس پیامک برقرار نشد. کمی بعد دوباره تلاش کن.',
     };
   }
 }

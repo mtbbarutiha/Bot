@@ -11,7 +11,6 @@ import {
 import { sendPhoneOtp, verifyPhoneOtp } from '../api-client';
 import {
   WIZARD_NAV,
-  mainMenuKeyboard,
   phoneWizardKeyboard,
   withWizardNav,
 } from '../keyboards';
@@ -313,8 +312,9 @@ async function dispatchSendOtp(
     );
   } catch (err) {
     console.error('sendPhoneOtp failed:', err);
-    await ctx.reply('ارسال پیامک ناموفق بود. کمی بعد دوباره تلاش کن.', {
-      reply_markup: phoneAskKeyboard(),
-    });
+    await ctx.reply(
+      'ارتباط با سرور برقرار نشد یا سرویس پیامک قطع است. کمی بعد دوباره از منو «📱 احراز موبایل» رو بزن.',
+      { reply_markup: phoneAskKeyboard() }
+    );
   }
 }

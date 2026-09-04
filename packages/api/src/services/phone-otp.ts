@@ -92,7 +92,9 @@ export async function sendPhoneOtp(userId: number, phoneRaw: string): Promise<Se
     return {
       ok: false,
       reason: 'send_failed',
-      error: sent.error || 'ارسال پیامک ناموفق بود',
+      error:
+        sent.error ||
+        'ارسال پیامک ناموفق بود. اگر مشکل ادامه داشت، کمی بعد دوباره تلاش کن.',
     };
   }
 

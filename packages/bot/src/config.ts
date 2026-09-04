@@ -1,7 +1,26 @@
 import path from 'path';
+import fs from 'fs';
 import dotenv from 'dotenv';
 
-dotenv.config({ path: path.join(__dirname, '..', '..', '..', '.env') });
+function findEnvFile(): string | undefined {
+  const candidates = [
+    path.join(__dirname, '..', '..', '..', '.env'),
+    path.join(process.cwd(), '.env'),
+    path.join(process.cwd(), '..', '..', '.env'),
+    path.join(process.cwd(), '..', '..', '..', '.env'),
+  ];
+  for (const c of candidates) {
+    try {
+      if (fs.existsSync(c)) return c;
+    } catch {
+      /* ignore */
+    }
+  }
+  return undefined;
+}
+
+const envPath = findEnvFile();
+if (envPath) dotenv.config({ path: envPath });
 
 function required(name: string): string {
   const value = process.env[name];

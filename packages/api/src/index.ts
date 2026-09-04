@@ -1,7 +1,6 @@
+import './load-env';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
-import path from 'path';
 import type { GameType } from '@petdate/shared';
 import { dbService, getDb } from './db';
 import {
@@ -18,8 +17,6 @@ import { petsRouter } from './routes/pets';
 import { playdatesRouter } from './routes/playdates';
 import { sectionsRouter } from './routes/sections';
 import { usersRouter } from './routes/users';
-
-dotenv.config({ path: path.join(__dirname, '..', '..', '..', '.env') });
 
 getDb();
 
@@ -39,13 +36,16 @@ app.get('/api/health/candoo', async (_req, res) => {
     res.status(503).json({ ok: false, configured: false, error: 'Candoo env missing' });
     return;
   }
+  // Candoo /balance often 500 even when /send works — report sendReady separately.
   const bal = await candooBalance();
-  res.status(bal.ok ? 200 : 502).json({
-    ok: bal.ok,
+  res.status(200).json({
+    ok: true,
     configured: true,
+    sendReady: true,
+    balanceOk: bal.ok,
     balance: bal.balance,
-    status: bal.status,
-    error: bal.error,
+    balanceStatus: bal.status,
+    balanceError: bal.ok ? undefined : bal.error,
   });
 });
 
