@@ -307,6 +307,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
     draftPet: undefined,
     draftProfile: undefined,
     draftRoles: undefined,
+    profileSectionEdit: false,
     selectedPetId: undefined,
     selectedToPetId: undefined,
     breedPage: undefined,
