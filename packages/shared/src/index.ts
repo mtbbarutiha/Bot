@@ -56,6 +56,8 @@ export type {
   PetProfile,
   ProfileDraft,
   UserGender,
+  VetConsultation,
+  VetConsultStatus,
   VetCredentialStatus,
 } from './petdate';
 export {

@@ -160,6 +160,26 @@ export interface PlaydateRequest {
   toPet?: PetProfile;
 }
 
+/** وضعیت مشاوره دامپزشک */
+export type VetConsultStatus = 'requested' | 'active' | 'completed' | 'cancelled';
+
+/** رکورد مشاوره — برای لیست بیماران دامپزشک */
+export interface VetConsultation {
+  id: number;
+  vetUserId: number;
+  patientUserId: number;
+  petId?: number;
+  status: VetConsultStatus;
+  notes?: string;
+  createdAt: string;
+  /** غنی‌سازی در API */
+  patientName?: string;
+  patientCity?: string;
+  petName?: string;
+  petSpecies?: string;
+  petBreed?: string;
+}
+
 export interface BotSession {
   telegramId: string;
   userId?: number;

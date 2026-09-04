@@ -67,7 +67,7 @@ export function formatPlaydate(req: PlaydateRequest): string {
 export function roleWelcomeHint(role: string): string {
   const hints: Record<string, string> = {
     pet_owner: 'می‌تونی پت ثبت کنی و همبازی پیدا کنی.',
-    vet: 'می‌تونی مشاوره آنلاین بدی (به‌زودی).',
+    vet: 'می‌تونی لیست بیماران و مشاوره‌ها رو ببینی.',
     no_pet: 'می‌تونی همبازی‌ها رو ببینی و با جامعه پت آشنا بشی.',
     pet_seeker: 'می‌تونی پت مناسب پیدا کنی.',
     community_seeker: 'به جامعه petdate خوش اومدی!',

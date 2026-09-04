@@ -6,6 +6,7 @@ import {
   MENU_LABELS,
   PET_OWNER_MENU,
   DEFAULT_MENU,
+  VET_MENU,
   MY_PETS_SECTION,
   SEARCH_PETS_MENU,
   WIZARD_NAV,
@@ -74,6 +75,7 @@ import {
   handleQuickVet,
   handleServices,
 } from './services';
+import { handleVetPatients } from './vet';
 import {
   handleCoins,
   handleCoinsBack,
@@ -423,6 +425,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
 
   const m = PET_OWNER_MENU;
   const d = DEFAULT_MENU;
+  const v = VET_MENU;
   const petsSection = MY_PETS_SECTION;
   const search = SEARCH_PETS_MENU;
 
@@ -430,6 +433,8 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case m.findPlaymate:
     case d.explore:
       return handleFindPlaymate(ctx);
+    case v.patients:
+      return handleVetPatients(ctx);
     case m.nearbyPets:
       return handleNearbyPets(ctx);
     case m.searchPets:
@@ -451,6 +456,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     }
     case m.myProfile:
     case d.profile:
+    case v.profile:
       return handleProfile(ctx);
     case m.myPets:
     case d.myPets:
@@ -476,6 +482,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       return handleInviteFriends(ctx);
     case m.help:
     case d.help:
+    case v.help:
       return handleHelp(ctx);
     case m.quickVet:
       return handleQuickVet(ctx);

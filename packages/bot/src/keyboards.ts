@@ -60,6 +60,13 @@ export const DEFAULT_MENU = {
   help: '❓ راهنما',
 } as const;
 
+/** منوی دامپزشک (بدون کشف همبازی) — فقط وقتی نقش vet باشد و pet_owner نباشد */
+export const VET_MENU = {
+  patients: '📋 بیماران / مشاوره‌ها',
+  profile: '👤 پروفایل',
+  help: '❓ راهنما',
+} as const;
+
 /** کیبورد مخصوص بخش پت‌های من (بدون پت‌های من / درخواست‌ها) */
 export const MY_PETS_SECTION = {
   addPet: '➕ ثبت پت جدید',
@@ -343,9 +350,25 @@ export function mainMenuKeyboard(
   roles?: UserRole[] | null
 ): Keyboard {
   const list = roles?.length ? roles : role ? [role as UserRole] : [];
+  // صاحب پت اولویت دارد (حتی اگر همزمان دامپزشک باشد — همبازی می‌ماند)
   if (list.includes('pet_owner') || role === 'pet_owner') return petOwnerMenuKeyboard();
+  // دامپزشک بدون نقش صاحب پت — بدون کشف همبازی
+  if (list.includes('vet') || role === 'vet') return vetMenuKeyboard();
   return defaultMenuKeyboard();
 }
+
+export function vetMenuKeyboard(): Keyboard {
+  const m = VET_MENU;
+  return new Keyboard()
+    .text(m.patients)
+    .primary()
+    .row()
+    .text(m.profile)
+    .text(m.help)
+    .resized()
+    .persistent();
+}
+
 export function petOwnerMenuKeyboard(): Keyboard {
   const m = PET_OWNER_MENU;
   return new Keyboard()
@@ -697,6 +720,7 @@ export function confirmPetDeleteKeyboard(petId: number): InlineKeyboard {
 export const MENU_LABELS = new Set<string>([
   ...Object.values(PET_OWNER_MENU),
   ...Object.values(DEFAULT_MENU),
+  ...Object.values(VET_MENU),
   ...Object.values(MY_PETS_SECTION),
   ...Object.values(SEARCH_PETS_MENU),
 ]);
