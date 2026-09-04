@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { OnboardingStatus, UserRole } from '@petdate/shared';
-import { ONBOARDING_STATUS_LABELS, USER_ROLES } from '@petdate/shared';
+import { FACE_VERIFY_REWARD, ONBOARDING_STATUS_LABELS, USER_ROLES } from '@petdate/shared';
 import { dbService } from '../db';
 import { sendPhoneOtp, verifyPhoneOtp } from '../services/phone-otp';
 
@@ -16,7 +16,16 @@ usersRouter.post('/register', (req, res) => {
     res.status(400).json({ error: 'نام الزامی است' });
     return;
   }
-  const user = dbService.findOrCreateUser({ telegramId, name, username });
+  const { user, created } = dbService.findOrCreateUser({ telegramId, name, username });
+  if (!created) {
+    res.json(user);
+    return;
+  }
+  const bonus = dbService.claimSignupBonus(user.id);
+  if (bonus.awarded && bonus.user && bonus.award) {
+    res.json({ ...bonus.user, awardedRewards: [bonus.award] });
+    return;
+  }
   res.json(user);
 });
 
@@ -269,13 +278,17 @@ usersRouter.post('/telegram/:telegramId/verification', (req, res) => {
 
 usersRouter.post('/:id/verification/approve', (req, res) => {
   const reward =
-    req.body?.rewardCoins != null ? Number(req.body.rewardCoins) : Number(process.env.FACE_VERIFY_REWARD ?? 100);
-  const user = dbService.approveVerification(Number(req.params.id), Number.isFinite(reward) ? reward : 100);
+    req.body?.rewardCoins != null
+      ? Number(req.body.rewardCoins)
+      : Number(process.env.FACE_VERIFY_REWARD ?? FACE_VERIFY_REWARD);
+  const amount = Number.isFinite(reward) ? reward : FACE_VERIFY_REWARD;
+  const user = dbService.approveVerification(Number(req.params.id), amount);
   if (!user) {
     res.status(404).json({ error: 'درخواست احراز پیدا نشد یا در صف نیست' });
     return;
   }
-  res.json({ ok: true, user, rewardCoins: Number.isFinite(reward) ? reward : 100 });
+  const awarded = user.awardedRewards?.find((a) => a.reason === 'face_verify')?.amount ?? 0;
+  res.json({ ok: true, user, rewardCoins: awarded || amount });
 });
 
 /** دامپزشک‌های واجد شرایط اتصال سریع (نقش vet؛ ترجیح phoneVerified) */
@@ -311,6 +324,19 @@ usersRouter.post('/telegram/:telegramId/coins/credit', (req, res) => {
   const amount = Number(req.body?.amount ?? 0);
   if (!Number.isFinite(amount) || amount <= 0) {
     res.status(400).json({ error: 'مقدار نامعتبر' });
+    return;
+  }
+  const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim() : '';
+  if (reason) {
+    const once = dbService.creditCoinsOnce(user.id, amount, reason);
+    if (!once.user) {
+      res.status(404).json({ error: 'کاربر پیدا نشد' });
+      return;
+    }
+    res.json({
+      ...once.user,
+      awardedRewards: once.awarded ? [{ reason, amount: once.amount }] : [],
+    });
     return;
   }
   const updated = dbService.creditCoins(user.id, amount);

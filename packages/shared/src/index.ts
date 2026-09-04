@@ -1,6 +1,7 @@
 export * from './petdate';
 export * from './catalog';
 export * from './brand';
+export * from './economy';
 
 import type {
   OnboardingStatus,
@@ -9,6 +10,7 @@ import type {
   VetCredentialStatus,
 } from './petdate';
 import type { UserGender } from './petdate';
+import type { CoinAward } from './economy';
 
 export type GameType =
   | 'football'
@@ -107,6 +109,12 @@ export interface User {
   coins?: number;
   /** آخرین دریافت سکه روزانه (ISO) */
   lastDailyCoinAt?: string;
+  /** هدیه ثبت‌نام یک‌باره واریز شده؟ */
+  signupBonusClaimed?: boolean;
+  /** کلیدهای بخش پروفایل که جایزه‌شان گرفته شده */
+  profileRewards?: string[];
+  /** جایزه‌هایی که همین پاسخ API تازه واریز کرده (ephemeral) */
+  awardedRewards?: CoinAward[];
   profileViews?: number;
   likesCount?: number;
   /** false = حساب غیرفعال (سبک دوردوریا) */

@@ -19,6 +19,7 @@ import {
   submitVetCredential,
   updateUserProfile,
 } from '../api-client';
+import { formatCoinAwardMessage } from '../economy';
 import {
   PROFILE_AGE_CHIPS,
   USER_FEMALE_LABEL,
@@ -408,6 +409,10 @@ async function finishSectionField(
       profileSectionEdit: false,
     });
     await ctx.reply(`✅ ${successMsg}`);
+    if (user.awardedRewards?.length) {
+      const msg = formatCoinAwardMessage(user.awardedRewards);
+      if (msg) await ctx.reply(msg);
+    }
     await showProfileEditMenu(ctx);
   } catch (err) {
     console.error('finishSectionField failed:', err);
@@ -1181,6 +1186,11 @@ async function finishProfileWizard(
     });
 
     await upsertSession(telegramId, { step: 'ready', draftProfile: undefined, profileSectionEdit: false });
+
+    if (user.awardedRewards?.length) {
+      const msg = formatCoinAwardMessage(user.awardedRewards);
+      if (msg) await ctx.reply(msg);
+    }
 
     const pets = await listPets({ ownerId: user.id });
     const text = `✅ پروفایلت کامل شد!\n\n${formatProfileCard(

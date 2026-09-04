@@ -1,14 +1,24 @@
 /** اقتصاد سکه petdate — هم‌تراز با مدل دوردوریا */
 
+export {
+  SIGNUP_BONUS,
+  PROFILE_SECTION_REWARD,
+  FACE_VERIFY_REWARD,
+  COIN_REASON,
+  PROFILE_REWARD_SECTIONS,
+  PROFILE_SECTION_LABELS_FA,
+  formatCoinAwardMessage,
+} from '@petdate/shared';
+export type { CoinAward, ProfileRewardSection } from '@petdate/shared';
+
 export const COIN_PRICE_TOMAN = 2_000;
 export const COIN_PRICE_STARS = 1;
 export const COIN_SELL_PRICE_TOMAN = 1_000;
 export const MIN_SELL_COINS = 50;
 export const DAILY_COIN_REWARD = 10;
 export const REFERRAL_BONUS_COINS = 50;
-export const WELCOME_COINS = 15;
-/** جایزه تأیید احراز چهره توسط ادمین (مشابه دوردوریا) */
-export const FACE_VERIFY_REWARD = 100;
+/** @deprecated استفاده از SIGNUP_BONUS */
+export const WELCOME_COINS = 20;
 /** هزینه اتصال سریع به دامپزشک آنلاین */
 export const QUICK_VET_COST = 1;
 

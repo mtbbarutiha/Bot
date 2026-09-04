@@ -328,10 +328,14 @@ export async function debitUserCoins(telegramId: string, amount: number): Promis
   });
 }
 
-export async function creditUserCoins(telegramId: string, amount: number): Promise<User> {
+export async function creditUserCoins(
+  telegramId: string,
+  amount: number,
+  reason?: string
+): Promise<User> {
   return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/coins/credit`, {
     method: 'POST',
-    body: JSON.stringify({ amount }),
+    body: JSON.stringify(reason ? { amount, reason } : { amount }),
   });
 }
 

@@ -14,6 +14,7 @@ import {
   setUserPrimaryRole,
   setUserRoles,
 } from '../api-client';
+import { formatCoinAwardMessage } from '../economy';
 import { sendWelcomeLogo } from '../branding';
 import { roleWelcomeHint } from '../format';
 import {
@@ -48,6 +49,11 @@ export async function handleStart(ctx: Context): Promise<void> {
       name,
       username: from.username,
     });
+
+    if (user.awardedRewards?.length) {
+      const msg = formatCoinAwardMessage(user.awardedRewards);
+      if (msg) await ctx.reply(msg);
+    }
 
     const roles = normalizeRoles(user.roles, user.role);
     await upsertSession(telegramId, {

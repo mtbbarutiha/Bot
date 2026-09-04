@@ -2,6 +2,7 @@ import './load-env';
 import Database from 'better-sqlite3';
 import path from 'path';
 import type {
+  CoinAward,
   Game,
   GamePlayer,
   GameStatus,
@@ -14,6 +15,7 @@ import type {
   PetSpecies,
   PlaydateRequest,
   PlaydateStatus,
+  ProfileRewardSection,
   Section,
   User,
   UserGender,
@@ -23,7 +25,15 @@ import type {
   VetConsultStatus,
   VetCredentialStatus,
 } from '@petdate/shared';
-import { PET_BREEDS_SEED, PET_SPECIES } from '@petdate/shared';
+import {
+  COIN_REASON,
+  FACE_VERIFY_REWARD,
+  PET_BREEDS_SEED,
+  PET_SPECIES,
+  PROFILE_REWARD_SECTIONS,
+  PROFILE_SECTION_REWARD,
+  SIGNUP_BONUS,
+} from '@petdate/shared';
 
 /** Absolute DATABASE_PATH wins; relative paths ignored (cwd varies across worktrees). */
 function resolveDbPath(): string {
@@ -172,6 +182,12 @@ function migrateSchema() {
   if (!names.has('interests')) db.exec("ALTER TABLE users ADD COLUMN interests TEXT NOT NULL DEFAULT '[]'");
   if (!names.has('coins')) db.exec('ALTER TABLE users ADD COLUMN coins INTEGER NOT NULL DEFAULT 0');
   if (!names.has('last_daily_coin_at')) db.exec('ALTER TABLE users ADD COLUMN last_daily_coin_at TEXT');
+  if (!names.has('signup_bonus_claimed')) {
+    db.exec('ALTER TABLE users ADD COLUMN signup_bonus_claimed INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!names.has('profile_rewards')) {
+    db.exec("ALTER TABLE users ADD COLUMN profile_rewards TEXT NOT NULL DEFAULT '[]'");
+  }
   if (!names.has('profile_views')) db.exec('ALTER TABLE users ADD COLUMN profile_views INTEGER NOT NULL DEFAULT 0');
   if (!names.has('likes_count')) db.exec('ALTER TABLE users ADD COLUMN likes_count INTEGER NOT NULL DEFAULT 0');
   if (!names.has('is_active')) db.exec('ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
@@ -189,6 +205,19 @@ function migrateSchema() {
   if (!names.has('vet_credential_status')) {
     db.exec("ALTER TABLE users ADD COLUMN vet_credential_status TEXT NOT NULL DEFAULT 'none'");
   }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS coin_ledger (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      reason TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, reason),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_coin_ledger_user ON coin_ledger (user_id);`);
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS coin_sell_requests (
@@ -666,6 +695,46 @@ function parseRoles(value: unknown, fallbackRole?: unknown): UserRole[] {
   return [];
 }
 
+function parseProfileRewards(value: unknown): string[] {
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (Array.isArray(parsed)) return parsed.map(String);
+    } catch {
+      return [];
+    }
+  }
+  if (Array.isArray(value)) return value.map(String);
+  return [];
+}
+
+function isProfileSectionFilled(section: ProfileRewardSection, u: User): boolean {
+  switch (section) {
+    case 'name':
+      return Boolean(u.name?.trim());
+    case 'age':
+      return u.age != null && Number(u.age) > 0;
+    case 'gender':
+      return Boolean(u.gender);
+    case 'location':
+      return Boolean(
+        u.country?.trim() &&
+          u.city?.trim() &&
+          (u.country !== 'ایران' || Boolean(u.province?.trim()))
+      );
+    case 'phone':
+      return Boolean(u.phone?.trim());
+    case 'photo':
+      return Boolean(u.avatarUrl?.trim());
+    case 'bio':
+      return Boolean(u.bio?.trim());
+    case 'interests':
+      return Boolean(u.interests && u.interests.length > 0);
+    default:
+      return false;
+  }
+}
+
 function mapUser(row: Record<string, unknown>): User {
   const roles = parseRoles(row.roles, row.role);
   const role =
@@ -693,6 +762,8 @@ function mapUser(row: Record<string, unknown>): User {
     avatarUrl: row.avatar_url as string | undefined,
     coins: row.coins != null ? Number(row.coins) : 0,
     lastDailyCoinAt: (row.last_daily_coin_at as string | undefined) ?? undefined,
+    signupBonusClaimed: Boolean(row.signup_bonus_claimed),
+    profileRewards: parseProfileRewards(row.profile_rewards),
     profileViews: row.profile_views != null ? Number(row.profile_views) : 0,
     likesCount: row.likes_count != null ? Number(row.likes_count) : 0,
     isActive: row.is_active == null ? true : Boolean(row.is_active),
@@ -835,7 +906,11 @@ function mapGame(row: Record<string, unknown>): Game {
 }
 
 export const dbService = {
-  findOrCreateUser(data: { telegramId?: string; name: string; username?: string }): User {
+  findOrCreateUser(data: {
+    telegramId?: string;
+    name: string;
+    username?: string;
+  }): { user: User; created: boolean } {
     if (data.telegramId) {
       const existing = db
         .prepare('SELECT * FROM users WHERE telegram_id = ?')
@@ -848,20 +923,29 @@ export const dbService = {
             existing.id
           );
         }
-        return mapUser(
-          (db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(data.telegramId) as Record<
-            string,
-            unknown
-          >) ?? existing
-        );
+        return {
+          user: mapUser(
+            (db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(data.telegramId) as Record<
+              string,
+              unknown
+            >) ?? existing
+          ),
+          created: false,
+        };
       }
     }
     const result = db
       .prepare('INSERT INTO users (telegram_id, name, username) VALUES (?, ?, ?)')
       .run(data.telegramId ?? null, data.name, data.username ?? null);
-    return mapUser(
-      db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid) as Record<string, unknown>
-    );
+    return {
+      user: mapUser(
+        db.prepare('SELECT * FROM users WHERE id = ?').get(result.lastInsertRowid) as Record<
+          string,
+          unknown
+        >
+      ),
+      created: true,
+    };
   },
 
   getUserById(id: number): User | null {
@@ -1011,7 +1095,12 @@ export const dbService = {
     if (fields.length === 0) return existing;
     values.push(userId);
     db.prepare(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`).run(...values);
-    return this.getUserById(userId);
+    const updated = this.getUserById(userId);
+    if (!updated) return null;
+    const awards = this.claimProfileSectionRewards(existing, updated);
+    if (!awards.length) return updated;
+    const fresh = this.getUserById(userId) ?? updated;
+    return { ...fresh, awardedRewards: awards };
   },
 
   updateUserProfileByTelegramId(
@@ -1218,18 +1307,33 @@ export const dbService = {
     return { ok: true, user: this.getUserById(userId)! };
   },
 
-  approveVerification(userId: number, rewardCoins = 0): User | null {
+  approveVerification(userId: number, rewardCoins = FACE_VERIFY_REWARD): User | null {
     const existing = this.getUserById(userId);
     if (!existing || existing.verificationStatus !== 'pending') return null;
-    db.prepare(
-      `UPDATE users SET
-         verification_status = 'verified',
-         verified_at = datetime('now'),
-         verification_note = NULL,
-         coins = COALESCE(coins, 0) + ?
-       WHERE id = ?`
-    ).run(Math.max(0, rewardCoins), userId);
-    return this.getUserById(userId);
+    const reward = Math.max(0, Number.isFinite(rewardCoins) ? rewardCoins : FACE_VERIFY_REWARD);
+    const tx = db.transaction(() => {
+      const upd = db
+        .prepare(
+          `UPDATE users SET
+             verification_status = 'verified',
+             verified_at = datetime('now'),
+             verification_note = NULL
+           WHERE id = ? AND verification_status = 'pending'`
+        )
+        .run(userId);
+      if (upd.changes === 0) return null;
+      const awards: CoinAward[] = [];
+      if (reward > 0) {
+        const credited = this.creditCoinsOnce(userId, reward, COIN_REASON.faceVerify);
+        if (credited.awarded) {
+          awards.push({ reason: COIN_REASON.faceVerify, amount: reward });
+        }
+      }
+      const user = this.getUserById(userId);
+      if (!user) return null;
+      return { ...user, awardedRewards: awards };
+    });
+    return tx();
   },
 
   /**
@@ -1275,10 +1379,94 @@ export const dbService = {
     return this.getUserById(userId);
   },
 
-  creditCoins(userId: number, amount: number): User | null {
+  creditCoins(userId: number, amount: number, reason?: string): User | null {
     if (amount <= 0) return this.getUserById(userId);
+    if (reason) {
+      const once = this.creditCoinsOnce(userId, amount, reason);
+      return once.user;
+    }
     db.prepare(`UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?`).run(amount, userId);
     return this.getUserById(userId);
+  },
+
+  /**
+   * واریز idempotent با کلید یکتا در coin_ledger.
+   * اگر reason قبلاً ثبت شده باشد، سکه اضافه نمی‌شود.
+   */
+  creditCoinsOnce(
+    userId: number,
+    amount: number,
+    reason: string
+  ): { awarded: boolean; user: User | null; amount: number } {
+    const user = this.getUserById(userId);
+    if (!user) return { awarded: false, user: null, amount: 0 };
+    const safeAmount = Math.floor(amount);
+    if (!Number.isFinite(safeAmount) || safeAmount <= 0 || !reason.trim()) {
+      return { awarded: false, user, amount: 0 };
+    }
+    const insert = db
+      .prepare(
+        `INSERT OR IGNORE INTO coin_ledger (user_id, reason, amount) VALUES (?, ?, ?)`
+      )
+      .run(userId, reason.trim(), safeAmount);
+    if (insert.changes === 0) {
+      return { awarded: false, user, amount: 0 };
+    }
+    db.prepare(`UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?`).run(
+      safeAmount,
+      userId
+    );
+    if (reason.trim() === COIN_REASON.signup) {
+      db.prepare('UPDATE users SET signup_bonus_claimed = 1 WHERE id = ?').run(userId);
+    }
+    if (reason.trim().startsWith('profile:')) {
+      const section = reason.trim().slice('profile:'.length);
+      const rewards = new Set(user.profileRewards ?? []);
+      rewards.add(section);
+      db.prepare('UPDATE users SET profile_rewards = ? WHERE id = ?').run(
+        JSON.stringify([...rewards]),
+        userId
+      );
+    }
+    return { awarded: true, user: this.getUserById(userId), amount: safeAmount };
+  },
+
+  claimSignupBonus(userId: number): { awarded: boolean; user: User | null; award?: CoinAward } {
+    const result = this.creditCoinsOnce(userId, SIGNUP_BONUS, COIN_REASON.signup);
+    if (!result.awarded || !result.user) {
+      return { awarded: false, user: result.user };
+    }
+    return {
+      awarded: true,
+      user: result.user,
+      award: { reason: COIN_REASON.signup, amount: SIGNUP_BONUS },
+    };
+  },
+
+  /** جایزه بخش‌هایی که تازه از خالی → پر شده‌اند */
+  claimProfileSectionRewards(before: User, after: User): CoinAward[] {
+    const awards: CoinAward[] = [];
+    const claimed = new Set(after.profileRewards ?? before.profileRewards ?? []);
+    for (const section of PROFILE_REWARD_SECTIONS) {
+      if (claimed.has(section)) continue;
+      const wasEmpty = !isProfileSectionFilled(section, before);
+      const nowFilled = isProfileSectionFilled(section, after);
+      if (!wasEmpty || !nowFilled) continue;
+      const result = this.creditCoinsOnce(
+        after.id,
+        PROFILE_SECTION_REWARD,
+        COIN_REASON.profile(section)
+      );
+      if (result.awarded) {
+        awards.push({
+          reason: COIN_REASON.profile(section),
+          amount: PROFILE_SECTION_REWARD,
+          section,
+        });
+        claimed.add(section);
+      }
+    }
+    return awards;
   },
 
   rejectVerification(userId: number, note?: string): User | null {
