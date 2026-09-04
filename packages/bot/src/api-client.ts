@@ -114,11 +114,17 @@ export async function listPendingVerifications(): Promise<User[]> {
   return request<User[]>('/api/users/verification/pending');
 }
 
-export async function approveVerification(userId: number): Promise<{ ok: true; user: User }> {
-  return request<{ ok: true; user: User }>(`/api/users/${userId}/verification/approve`, {
-    method: 'POST',
-    body: JSON.stringify({}),
-  });
+export async function approveVerification(
+  userId: number,
+  rewardCoins?: number
+): Promise<{ ok: true; user: User; rewardCoins?: number }> {
+  return request<{ ok: true; user: User; rewardCoins?: number }>(
+    `/api/users/${userId}/verification/approve`,
+    {
+      method: 'POST',
+      body: JSON.stringify(rewardCoins != null ? { rewardCoins } : {}),
+    }
+  );
 }
 
 export async function rejectVerification(
@@ -278,6 +284,107 @@ export async function updatePlaydateStatus(id: number, status: PlaydateStatus): 
 export async function listVetConsultations(vetUserId: number): Promise<VetConsultation[]> {
   const params = new URLSearchParams({ vetUserId: String(vetUserId) });
   return request<VetConsultation[]>(`/api/consultations?${params.toString()}`);
+}
+
+export async function createVetConsultation(data: {
+  vetUserId: number;
+  patientUserId: number;
+  petId?: number;
+  notes?: string;
+}): Promise<VetConsultation> {
+  return request<VetConsultation>('/api/consultations', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listVerifiedVets(): Promise<User[]> {
+  return request<User[]>('/api/users/vets/verified');
+}
+
+export async function debitUserCoins(telegramId: string, amount: number): Promise<User> {
+  return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/coins/debit`, {
+    method: 'POST',
+    body: JSON.stringify({ amount }),
+  });
+}
+
+export async function creditUserCoins(telegramId: string, amount: number): Promise<User> {
+  return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/coins/credit`, {
+    method: 'POST',
+    body: JSON.stringify({ amount }),
+  });
+}
+
+export type SendPhoneOtpResult =
+  | { ok: true; phone: string; expiresAt: string }
+  | {
+      ok: false;
+      reason?: string;
+      error?: string;
+      retryAfterSec?: number;
+    };
+
+export async function sendPhoneOtp(
+  telegramId: string,
+  phone: string
+): Promise<SendPhoneOtpResult> {
+  const res = await fetch(
+    `${config.apiUrl}/api/users/telegram/${encodeURIComponent(telegramId)}/phone/send-otp`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+    }
+  );
+  const body = (await res.json().catch(() => ({}))) as SendPhoneOtpResult & {
+    error?: string;
+  };
+  if (!res.ok || !body.ok) {
+    return {
+      ok: false,
+      reason: (body as { reason?: string }).reason,
+      error: body.error || `API ${res.status}`,
+      retryAfterSec: (body as { retryAfterSec?: number }).retryAfterSec,
+    };
+  }
+  return body as { ok: true; phone: string; expiresAt: string };
+}
+
+export type VerifyPhoneOtpResult =
+  | { ok: true; user: User }
+  | {
+      ok: false;
+      reason?: string;
+      error?: string;
+      attemptsLeft?: number;
+    };
+
+export async function verifyPhoneOtp(
+  telegramId: string,
+  phone: string,
+  code: string
+): Promise<VerifyPhoneOtpResult> {
+  const res = await fetch(
+    `${config.apiUrl}/api/users/telegram/${encodeURIComponent(telegramId)}/phone/verify-otp`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone, code }),
+    }
+  );
+  const body = (await res.json().catch(() => ({}))) as VerifyPhoneOtpResult & {
+    error?: string;
+  };
+  if (!res.ok || !body.ok) {
+    return {
+      ok: false,
+      reason: (body as { reason?: string }).reason,
+      error: body.error || `API ${res.status}`,
+      attemptsLeft: (body as { attemptsLeft?: number }).attemptsLeft,
+    };
+  }
+  return body as { ok: true; user: User };
 }
 
 export async function deletePet(id: number, ownerId: number): Promise<void> {

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { OnboardingStatus, UserRole } from '@petdate/shared';
 import { ONBOARDING_STATUS_LABELS, USER_ROLES } from '@petdate/shared';
 import { dbService } from '../db';
+import { sendPhoneOtp, verifyPhoneOtp } from '../services/phone-otp';
 
 export const usersRouter = Router();
 
@@ -245,12 +246,125 @@ usersRouter.post('/telegram/:telegramId/verification', (req, res) => {
 });
 
 usersRouter.post('/:id/verification/approve', (req, res) => {
-  const user = dbService.approveVerification(Number(req.params.id));
+  const reward =
+    req.body?.rewardCoins != null ? Number(req.body.rewardCoins) : Number(process.env.FACE_VERIFY_REWARD ?? 100);
+  const user = dbService.approveVerification(Number(req.params.id), Number.isFinite(reward) ? reward : 100);
   if (!user) {
     res.status(404).json({ error: 'درخواست احراز پیدا نشد یا در صف نیست' });
     return;
   }
-  res.json({ ok: true, user });
+  res.json({ ok: true, user, rewardCoins: Number.isFinite(reward) ? reward : 100 });
+});
+
+/** دامپزشک‌های احرازشده (نقش vet + تأیید ادمین) */
+usersRouter.get('/vets/verified', (_req, res) => {
+  res.json(dbService.listVerifiedVets());
+});
+
+usersRouter.post('/telegram/:telegramId/coins/debit', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const amount = Number(req.body?.amount ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    res.status(400).json({ error: 'مقدار نامعتبر' });
+    return;
+  }
+  const updated = dbService.debitCoins(user.id, amount);
+  if (!updated) {
+    res.status(400).json({ error: 'سکه کافی نیست', reason: 'insufficient' });
+    return;
+  }
+  res.json(updated);
+});
+
+usersRouter.post('/telegram/:telegramId/coins/credit', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const amount = Number(req.body?.amount ?? 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    res.status(400).json({ error: 'مقدار نامعتبر' });
+    return;
+  }
+  const updated = dbService.creditCoins(user.id, amount);
+  res.json(updated);
+});
+
+/** ارسال OTP احراز موبایل (Candoo) */
+usersRouter.post('/telegram/:telegramId/phone/send-otp', async (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const phone = String(req.body?.phone ?? '').trim();
+  const result = await sendPhoneOtp(user.id, phone);
+  if (!result.ok) {
+    const status =
+      result.reason === 'invalid_phone'
+        ? 400
+        : result.reason === 'not_configured'
+          ? 503
+          : result.reason === 'cooldown'
+            ? 429
+            : result.reason === 'send_failed'
+              ? 502
+              : 400;
+    res.status(status).json({
+      ok: false,
+      reason: result.reason,
+      error: result.error,
+      retryAfterSec: result.retryAfterSec,
+    });
+    return;
+  }
+  res.json({
+    ok: true,
+    phone: result.phone,
+    expiresAt: result.expiresAt,
+  });
+});
+
+/** تأیید OTP احراز موبایل */
+usersRouter.post('/telegram/:telegramId/phone/verify-otp', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const phone = String(req.body?.phone ?? '').trim();
+  const code = String(req.body?.code ?? '').trim();
+  const result = verifyPhoneOtp(user.id, phone, code);
+  if (!result.ok) {
+    const status =
+      result.reason === 'invalid_phone' || result.reason === 'mismatch'
+        ? 400
+        : result.reason === 'expired' || result.reason === 'no_otp' || result.reason === 'too_many'
+          ? 400
+          : 400;
+    res.status(status).json({
+      ok: false,
+      reason: result.reason,
+      attemptsLeft: result.attemptsLeft,
+      error:
+        result.reason === 'mismatch'
+          ? `کد نادرست است${result.attemptsLeft != null ? ` (${result.attemptsLeft} تلاش باقی‌مانده)` : ''}`
+          : result.reason === 'expired'
+            ? 'کد منقضی شده؛ دوباره درخواست بده'
+            : result.reason === 'too_many'
+              ? 'تعداد تلاش بیش از حد؛ دوباره درخواست کد بده'
+              : result.reason === 'no_otp'
+                ? 'کدی برای این شماره ثبت نشده'
+                : 'تأیید ناموفق',
+    });
+    return;
+  }
+  res.json({ ok: true, user: result.user });
 });
 
 usersRouter.post('/:id/verification/reject', (req, res) => {

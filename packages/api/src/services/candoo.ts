@@ -1,0 +1,184 @@
+/**
+ * Candoo SMS REST client (api.candoosms.com v3.0.1)
+ *
+ * Auth: header `x-api-key`
+ * Send: POST /api/v3.0.1/send  body = JSON array of messages
+ * Balance: GET /api/v3.0.1/balance
+ * OTP messages should use type=1 (رمز یکبار مصرف)
+ */
+
+export type CandooSendItem = {
+  srcNum: string;
+  recipient: string;
+  body: string;
+  customerId?: number;
+  type?: number;
+  retryCount?: number;
+  validityPeriod?: number;
+};
+
+export type CandooSendResult = {
+  ok: boolean;
+  status: number;
+  raw: unknown;
+  error?: string;
+};
+
+function apiBase(): string {
+  const base = (process.env.CANDOO_API_URL || 'https://api.candoosms.com').replace(/\/$/, '');
+  return base;
+}
+
+function apiKey(): string {
+  return (process.env.CANDOO_API_KEY || '').trim();
+}
+
+function srcNumbers(): string[] {
+  const raw = process.env.CANDOO_SRC_NUMBERS || '';
+  return raw
+    .split(',')
+    .map((s) => s.trim().replace(/^\+/, ''))
+    .filter(Boolean);
+}
+
+let srcRoundRobin = 0;
+
+/** انتخاب شماره فرستنده — round-robin بین CANDOO_SRC_NUMBERS */
+export function nextSrcNumber(): string {
+  const nums = srcNumbers();
+  if (!nums.length) {
+    throw new Error('CANDOO_SRC_NUMBERS خالی است');
+  }
+  const n = nums[srcRoundRobin % nums.length]!;
+  srcRoundRobin += 1;
+  return n;
+}
+
+export function isCandooConfigured(): boolean {
+  return Boolean(apiKey() && srcNumbers().length);
+}
+
+/** ساخت بدنهٔ درخواست ارسال — برای تست واحد / اعتبارسنجی شکل */
+export function buildSendPayload(items: CandooSendItem[]): CandooSendItem[] {
+  return items.map((item) => ({
+    srcNum: String(item.srcNum),
+    recipient: String(item.recipient),
+    body: String(item.body),
+    ...(item.customerId != null ? { customerId: item.customerId } : {}),
+    ...(item.type != null ? { type: item.type } : {}),
+    ...(item.retryCount != null ? { retryCount: item.retryCount } : {}),
+    ...(item.validityPeriod != null ? { validityPeriod: item.validityPeriod } : {}),
+  }));
+}
+
+export async function candooSend(items: CandooSendItem[]): Promise<CandooSendResult> {
+  const key = apiKey();
+  if (!key) {
+    return { ok: false, status: 0, raw: null, error: 'CANDOO_API_KEY تنظیم نشده' };
+  }
+  if (!items.length) {
+    return { ok: false, status: 0, raw: null, error: 'لیست پیام خالی است' };
+  }
+
+  const url = `${apiBase()}/api/v3.0.1/send`;
+  const payload = buildSendPayload(items);
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+      },
+      body: JSON.stringify(payload),
+    });
+    const text = await res.text();
+    let raw: unknown = text;
+    try {
+      raw = text ? JSON.parse(text) : null;
+    } catch {
+      /* keep text */
+    }
+    if (!res.ok) {
+      return {
+        ok: false,
+        status: res.status,
+        raw,
+        error: res.status === 401 ? 'کلید API نامعتبر (401)' : `Candoo HTTP ${res.status}`,
+      };
+    }
+    return { ok: true, status: res.status, raw };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      raw: null,
+      error: err instanceof Error ? err.message : 'خطای شبکه Candoo',
+    };
+  }
+}
+
+/** ارسال OTP — type=1 طبق مستند Candoo */
+export async function candooSendOtp(opts: {
+  recipient: string;
+  body: string;
+  srcNum?: string;
+  customerId?: number;
+}): Promise<CandooSendResult & { srcNum: string }> {
+  const srcNum = opts.srcNum || nextSrcNumber();
+  const result = await candooSend([
+    {
+      srcNum,
+      recipient: opts.recipient,
+      body: opts.body,
+      type: 1,
+      retryCount: 2,
+      validityPeriod: 300,
+      ...(opts.customerId != null ? { customerId: opts.customerId } : {}),
+    },
+  ]);
+  return { ...result, srcNum };
+}
+
+/** بررسی اعتبار / موجودی — بدون ارسال SMS */
+export async function candooBalance(): Promise<{
+  ok: boolean;
+  status: number;
+  balance?: number;
+  error?: string;
+  raw?: unknown;
+}> {
+  const key = apiKey();
+  if (!key) {
+    return { ok: false, status: 0, error: 'CANDOO_API_KEY تنظیم نشده' };
+  }
+  const url = `${apiBase()}/api/v3.0.1/balance`;
+  try {
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { 'x-api-key': key },
+    });
+    const text = await res.text();
+    if (!res.ok) {
+      return {
+        ok: false,
+        status: res.status,
+        error: res.status === 401 ? 'کلید API نامعتبر (401)' : `Candoo HTTP ${res.status}`,
+        raw: text,
+      };
+    }
+    const balance = Number(text.trim());
+    return {
+      ok: true,
+      status: res.status,
+      balance: Number.isFinite(balance) ? balance : undefined,
+      raw: text,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: err instanceof Error ? err.message : 'خطای شبکه Candoo',
+    };
+  }
+}

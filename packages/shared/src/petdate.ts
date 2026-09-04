@@ -36,6 +36,26 @@ export const VERIFICATION_STATUS_LABELS: Record<VerificationStatus, string> = {
 /** بج نمایشی برای پروفایل‌های تأییدشده */
 export const VERIFIED_BADGE = '✅ احراز شده';
 
+/** متن معرفی احراز چهره — سبک دوردوریا */
+export function faceVerifyIntroText(rewardCoins: number): string {
+  const reward = new Intl.NumberFormat('fa-IR').format(rewardCoins);
+  return [
+    '🛡 <b>احراز چهره</b>',
+    '',
+    'اعتماد بیشتر = آشنایی امن‌تر 🤝',
+    '',
+    'با احراز چهره:',
+    '✔️ پروفایلت واقعی‌تر دیده می‌شه',
+    '✔️ اعتماد بقیه بیشتر می‌شه',
+    '✔️ فضای امن‌تری می‌سازی',
+    '',
+    `🎁 جایزه پس از تأیید ادمین: <b>${reward}</b> سکه`,
+    '',
+    'یک <b>سلفی واضح</b> از چهره‌ات بفرست (یا ویدیوی کوتاه از چهره).',
+    'عکس/ویدیو باید با چهرهٔ خودت یکی باشه.',
+  ].join('\n');
+}
+
 /** وضعیت مدرک دامپزشک */
 export type VetCredentialStatus = 'none' | 'pending' | 'verified';
 
@@ -55,6 +75,9 @@ export interface PetdateUser {
   id: number;
   telegramId?: string;
   phone?: string;
+  /** موبایل با OTP تأیید شده (Candoo) */
+  phoneVerified?: boolean;
+  phoneVerifiedAt?: string;
   email?: string;
   name: string;
   username?: string;
@@ -215,6 +238,8 @@ export interface BotSession {
    * بعد از ذخیرهٔ همان فیلد به منوی بخش‌ها برمی‌گردیم.
    */
   profileSectionEdit?: boolean;
+  /** شماره در انتظار OTP احراز موبایل (نرمال‌شده 98…) */
+  pendingPhone?: string;
   updatedAt: string;
 }
 
@@ -252,6 +277,8 @@ export type BotStep =
   | 'pet_photo'
   | 'playdate_message'
   | 'verify_photo'
+  | 'phone_verify_ask'
+  | 'phone_verify_otp'
   | 'admin_reject_reason'
   | 'ready';
 
@@ -385,6 +412,53 @@ export function toEnglishDigits(raw: string): string {
     .replace(/[۰-۹]/g, (d) => String(FA_DIGITS.indexOf(d)))
     .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
 }
+
+/**
+ * نرمال‌سازی موبایل ایران به فرم بین‌المللی بدون +: 98912xxxxxxx
+ * ورودی‌های مجاز: 09…، +989…، 989…، 9…
+ */
+export function normalizeIranMobile(raw: string): string | null {
+  let digits = toEnglishDigits(raw ?? '')
+    .replace(/[^\d]/g, '')
+    .trim();
+  if (!digits) return null;
+  if (digits.startsWith('00')) digits = digits.slice(2);
+  if (digits.startsWith('98') && digits.length >= 12) {
+    digits = digits.slice(0, 12);
+  } else if (digits.startsWith('0') && digits.length === 11) {
+    digits = `98${digits.slice(1)}`;
+  } else if (digits.startsWith('9') && digits.length === 10) {
+    digits = `98${digits}`;
+  } else {
+    return null;
+  }
+  // موبایل ایران: 989 + ۹ رقم (اپراتور با ۹ شروع می‌شود)
+  if (!/^989\d{9}$/.test(digits)) return null;
+  return digits;
+}
+
+/** نمایش موبایل به صورت ۰۹۱۲… */
+export function formatIranMobileDisplay(phone: string): string {
+  const n = normalizeIranMobile(phone) ?? phone.replace(/[^\d]/g, '');
+  if (n.startsWith('98') && n.length === 12) return `0${n.slice(2)}`;
+  return phone;
+}
+
+/** متن معرفی احراز موبایل */
+export function phoneVerifyIntroText(opts?: { required?: boolean }): string {
+  const required = opts?.required
+    ? 'برای دامپزشکان احراز موبایل <b>اجباری</b> است.'
+    : 'احراز موبایل اختیاری است — برای اعتماد بیشتر پیشنهاد می‌شه.';
+  return [
+    '📱 <b>احراز موبایل</b>',
+    '',
+    required,
+    '',
+    'شماره موبایل ایرانیت رو بفرست یا دکمهٔ «ارسال شماره تماس» رو بزن.',
+    'یک کد تأیید پیامکی برات می‌فرستیم.',
+  ].join('\n');
+}
+
 
 export function toPersianDigits(value: number | string): string {
   return String(value).replace(/\d/g, (d) => FA_DIGITS[Number(d)] ?? d);

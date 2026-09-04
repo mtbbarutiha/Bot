@@ -7,6 +7,10 @@ export const MIN_SELL_COINS = 50;
 export const DAILY_COIN_REWARD = 10;
 export const REFERRAL_BONUS_COINS = 50;
 export const WELCOME_COINS = 15;
+/** جایزه تأیید احراز چهره توسط ادمین (مشابه دوردوریا) */
+export const FACE_VERIFY_REWARD = 100;
+/** هزینه اتصال سریع به دامپزشک آنلاین */
+export const QUICK_VET_COST = 1;
 
 export type CoinPackage = {
   id: string;

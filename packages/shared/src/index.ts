@@ -35,14 +35,19 @@ export {
   USER_ROLES,
   VET_CREDENTIAL_STATUSES,
   VET_CREDENTIAL_STATUS_LABELS,
+  faceVerifyIntroText,
+  formatIranMobileDisplay,
   formatPetAge,
+  normalizeIranMobile,
   normalizeRoles,
   parsePetAgeInput,
+  phoneVerifyIntroText,
   primaryRole,
   rankPlaymateMatches,
   toEnglishDigits,
   toPersianDigits,
   userHasRole,
+  VERIFIED_BADGE,
 } from './petdate';
 export type { PlaymateMatchScore } from './petdate';
 export type {
@@ -91,6 +96,9 @@ export interface User {
   city?: string;
   province?: string;
   phone?: string;
+  /** تأیید OTP پیامکی (Candoo) */
+  phoneVerified?: boolean;
+  phoneVerifiedAt?: string;
   bio?: string;
   interests?: string[];
   avatarUrl?: string;

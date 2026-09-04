@@ -245,6 +245,19 @@ export async function handleRolesSelect(ctx: Context, roles: UserRole[]): Promis
 
   // ویزارد تکمیل پروفایل بلافاصله بعد از انتخاب نقش
   await startProfileWizard(ctx);
+
+  // دامپزشک: احراز موبایل اجباری است — بعد از ویزارد یادآوری می‌کنیم
+  if (normalized.includes('vet')) {
+    await ctx.reply(
+      [
+        '📱 <b>توجه دامپزشکان</b>',
+        '',
+        'برای فعال‌شدن امکانات دامپزشکی (بیماران، مدرک، آنلاین بودن) باید موبایلت رو با پیامک تأیید کنی.',
+        'از منو «📱 احراز موبایل» رو بزن.',
+      ].join('\n'),
+      { parse_mode: 'HTML' }
+    );
+  }
 }
 
 function escapeHtml(value: string): string {
@@ -326,6 +339,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
     draftProfile: undefined,
     draftRoles: undefined,
     profileSectionEdit: false,
+    pendingPhone: undefined,
     selectedPetId: undefined,
     selectedToPetId: undefined,
     breedPage: undefined,

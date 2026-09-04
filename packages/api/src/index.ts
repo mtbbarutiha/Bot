@@ -33,6 +33,22 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'petdate-api' });
 });
 
+app.get('/api/health/candoo', async (_req, res) => {
+  const { candooBalance, isCandooConfigured } = await import('./services/candoo');
+  if (!isCandooConfigured()) {
+    res.status(503).json({ ok: false, configured: false, error: 'Candoo env missing' });
+    return;
+  }
+  const bal = await candooBalance();
+  res.status(bal.ok ? 200 : 502).json({
+    ok: bal.ok,
+    configured: true,
+    balance: bal.balance,
+    status: bal.status,
+    error: bal.error,
+  });
+});
+
 app.get('/api/health/infra', (_req, res) => {
   res.json({
     ok: true,

@@ -1,5 +1,5 @@
 import type { Context } from 'grammy';
-import { VERIFIED_BADGE, VERIFICATION_STATUS_LABELS } from '@petdate/shared';
+import { VERIFIED_BADGE, VERIFICATION_STATUS_LABELS, faceVerifyIntroText } from '@petdate/shared';
 import {
   approveVerification,
   listPendingVerifications,
@@ -7,6 +7,7 @@ import {
   submitVerification,
 } from '../api-client';
 import { isTelegramAdmin } from '../config';
+import { FACE_VERIFY_REWARD, formatNum } from '../economy';
 import {
   adminRejectSkipKeyboard,
   adminVerificationKeyboard,
@@ -38,14 +39,19 @@ export async function handleVerifyStatus(ctx: Context): Promise<void> {
   const status = user.verificationStatus ?? 'none';
   if (status === 'verified') {
     await ctx.reply(
-      `${VERIFIED_BADGE}\n\nپروفایلت تأیید شده. بج احراز روی کارتت نمایش داده می‌شه.`,
+      [
+        `${VERIFIED_BADGE}`,
+        '',
+        'احراز چهره‌ات تأیید شده.',
+        'بج احراز روی پروفایلت نمایش داده می‌شه.',
+      ].join('\n'),
       { reply_markup: mainMenuKeyboard(user.role, user.roles) }
     );
     return;
   }
   if (status === 'pending') {
     await ctx.reply(
-      '⏳ درخواست احراز هویتت در صف بررسی ادمینه.\nبه‌محض تأیید یا رد، همین‌جا خبرت می‌کنیم.',
+      '⏳ درخواست احراز چهره‌ات در صف بررسی ادمینه.\nبه‌محض تأیید یا رد، همین‌جا خبرت می‌کنیم.',
       { reply_markup: mainMenuKeyboard(user.role, user.roles) }
     );
     return;
@@ -53,6 +59,7 @@ export async function handleVerifyStatus(ctx: Context): Promise<void> {
   await handleVerifyStart(ctx);
 }
 
+/** شروع احراز چهره — برای همه نقش‌ها (سبک دوردوریا) */
 export async function handleVerifyStart(ctx: Context): Promise<void> {
   const from = ctx.from;
   if (!from) return;
@@ -63,11 +70,7 @@ export async function handleVerifyStart(ctx: Context): Promise<void> {
   }
 
   const status = user.verificationStatus ?? 'none';
-  if (status === 'verified') {
-    await handleVerifyStatus(ctx);
-    return;
-  }
-  if (status === 'pending') {
+  if (status === 'verified' || status === 'pending') {
     await handleVerifyStatus(ctx);
     return;
   }
@@ -75,13 +78,7 @@ export async function handleVerifyStart(ctx: Context): Promise<void> {
   const telegramId = String(from.id);
   await upsertSession(telegramId, { step: 'verify_photo', adminRejectUserId: undefined });
 
-  const lines = [
-    '🛡 <b>احراز هویت پروفایل</b>',
-    '',
-    'برای اعتماد بیشتر، عکس پروفایلت رو برای بررسی ادمین بفرست.',
-    'ترجیحاً عکس واضح از چهره‌ات (سلفی) باشه — مثل احراز دوردوریا.',
-    '',
-  ];
+  const lines = [faceVerifyIntroText(FACE_VERIFY_REWARD), ''];
   if (status === 'rejected') {
     lines.push('⚠️ درخواست قبلی‌ات رد شده؛ می‌تونی دوباره ارسال کنی.');
     if (user.verificationNote) {
@@ -89,7 +86,11 @@ export async function handleVerifyStart(ctx: Context): Promise<void> {
     }
     lines.push('');
   }
-  lines.push('یک عکس جدید بفرست، یا از دکمهٔ زیر عکس فعلی پروفایل رو بفرست 👇');
+  lines.push('یک سلفی / ویدیوی کوتاه بفرست، یا از دکمهٔ زیر عکس فعلی پروفایل رو بفرست 👇');
+
+  if (ctx.callbackQuery) {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+  }
 
   await ctx.reply(lines.join('\n'), {
     parse_mode: 'HTML',
@@ -105,7 +106,7 @@ export async function handleVerifyCancel(ctx: Context): Promise<void> {
     step: 'ready',
     adminRejectUserId: undefined,
   });
-  await ctx.reply('احراز هویت لغو شد.', {
+  await ctx.reply('احراز چهره لغو شد.', {
     reply_markup: mainMenuKeyboard(user?.role, user?.roles),
   });
 }
@@ -115,7 +116,7 @@ export async function handleVerifyUseAvatar(ctx: Context): Promise<void> {
   if (!from) return;
   const user = await getCtxUser(ctx);
   if (!user?.avatarUrl) {
-    await ctx.reply('عکس پروفایل نداری. یک عکس جدید بفرست.');
+    await ctx.reply('عکس پروفایل نداری. یک سلفی جدید بفرست.');
     return;
   }
   await finishSubmit(ctx, String(from.id), user.avatarUrl);
@@ -132,6 +133,23 @@ export async function handleVerifyPhoto(ctx: Context): Promise<boolean> {
 
   const best = photos[photos.length - 1]!;
   await finishSubmit(ctx, telegramId, best.file_id);
+  return true;
+}
+
+/** ویدیو / ویدیو نوت برای احراز چهره (مثل دوردوریا) */
+export async function handleVerifyVideo(ctx: Context): Promise<boolean> {
+  const from = ctx.from;
+  if (!from) return false;
+  const telegramId = String(from.id);
+  const session = await getSession(telegramId);
+  if (!session || session.step !== 'verify_photo') return false;
+
+  const videoNote = ctx.message?.video_note;
+  const video = ctx.message?.video;
+  const fileId = videoNote?.file_id || video?.file_id;
+  if (!fileId) return false;
+
+  await finishSubmit(ctx, telegramId, fileId);
   return true;
 }
 
@@ -153,10 +171,11 @@ async function finishSubmit(ctx: Context, telegramId: string, photoFileId: strin
   await upsertSession(telegramId, { step: 'ready', adminRejectUserId: undefined });
   await ctx.reply(
     [
-      '✅ درخواست احراز هویت ثبت شد.',
+      '✅ درخواست احراز چهره ثبت شد.',
       '',
-      'عکست رفت تو صف بررسی ادمین.',
-      'نتیجه (تأیید یا رد) همین‌جا برات پیام میاد.',
+      'فایل رفت تو صف بررسی ادمین.',
+      `بعد از تأیید، بج احراز + ${formatNum(FACE_VERIFY_REWARD)} سکه جایزه می‌گیری.`,
+      'نتیجه همین‌جا برات پیام میاد.',
     ].join('\n'),
     { reply_markup: mainMenuKeyboard(user?.role, user?.roles) }
   );
@@ -164,13 +183,15 @@ async function finishSubmit(ctx: Context, telegramId: string, photoFileId: strin
 
 function formatAdminCard(user: Awaited<ReturnType<typeof listPendingVerifications>>[number]): string {
   const loc = [user.province, user.city].filter(Boolean).join('، ') || '—';
+  const roles = (user.roles?.length ? user.roles : user.role ? [user.role] : []).join(', ') || '—';
   return [
-    '🛡 <b>درخواست احراز هویت</b>',
+    '🛡 <b>درخواست احراز چهره</b>',
     '',
     `<b>نام:</b> ${escapeHtml(user.name)}`,
     user.username ? `<b>یوزرنیم:</b> @${escapeHtml(user.username)}` : null,
     `<b>آیدی:</b> <code>${user.id}</code>`,
     user.telegramId ? `<b>تلگرام:</b> <code>${escapeHtml(user.telegramId)}</code>` : null,
+    `<b>نقش:</b> ${escapeHtml(roles)}`,
     `<b>شهر:</b> ${escapeHtml(loc)}`,
     `<b>وضعیت:</b> ${VERIFICATION_STATUS_LABELS[user.verificationStatus ?? 'pending']}`,
   ]
@@ -194,10 +215,20 @@ async function sendAdminVerificationItem(
       });
       return;
     } catch {
+      /* maybe video file_id */
+    }
+    try {
+      await ctx.replyWithVideo(photo, {
+        caption,
+        parse_mode: 'HTML',
+        reply_markup: kb,
+      });
+      return;
+    } catch {
       /* fall through */
     }
   }
-  await ctx.reply(`${caption}\n\n⚠️ عکس در دسترس نیست.`, {
+  await ctx.reply(`${caption}\n\n⚠️ فایل در دسترس نیست.`, {
     parse_mode: 'HTML',
     reply_markup: kb,
   });
@@ -216,12 +247,11 @@ export async function handleAdminVerifyQueue(ctx: Context): Promise<void> {
   }
 
   if (pending.length === 0) {
-    await ctx.reply('📭 صف احراز هویت خالی است.');
+    await ctx.reply('📭 صف احراز چهره خالی است.');
     return;
   }
 
   await ctx.reply(`📋 ${pending.length} درخواست در صف احراز:`);
-  // Show first few to avoid spam; admin can tap بعدی
   const first = pending[0]!;
   await sendAdminVerificationItem(ctx, first);
   if (pending.length > 1) {
@@ -239,7 +269,7 @@ export async function handleAdminApprove(ctx: Context, userId: number): Promise<
 
   let result: Awaited<ReturnType<typeof approveVerification>>;
   try {
-    result = await approveVerification(userId);
+    result = await approveVerification(userId, FACE_VERIFY_REWARD);
   } catch (err) {
     console.error('approveVerification failed:', err);
     await ctx.answerCallbackQuery({ text: 'خطا یا دیگر در صف نیست', show_alert: true }).catch(() => undefined);
@@ -253,9 +283,10 @@ export async function handleAdminApprove(ctx: Context, userId: number): Promise<
   } catch {
     /* ignore */
   }
-  await ctx.reply(`✅ کاربر ${escapeHtml(user.name)} (#${user.id}) احراز شد.`, {
-    parse_mode: 'HTML',
-  });
+  await ctx.reply(
+    `✅ کاربر ${escapeHtml(user.name)} (#${user.id}) احراز شد.\n🎁 ${formatNum(FACE_VERIFY_REWARD)} سکه جایزه واریز شد.`,
+    { parse_mode: 'HTML' }
+  );
 
   if (user.telegramId) {
     try {
@@ -264,8 +295,9 @@ export async function handleAdminApprove(ctx: Context, userId: number): Promise<
         [
           `${VERIFIED_BADGE}`,
           '',
-          'تبریک! احراز هویت پروفایلت تأیید شد.',
+          'تبریک! احراز چهره‌ات تأیید شد 🎉',
           'بج «احراز شده» الان روی پروفایلت نمایش داده می‌شه.',
+          `🎁 ${formatNum(FACE_VERIFY_REWARD)} سکه به موجودی‌ات اضافه شد.`,
         ].join('\n')
       );
     } catch (err) {
@@ -342,10 +374,10 @@ async function finalizeReject(ctx: Context, userId: number, note?: string): Prom
   if (user.telegramId) {
     try {
       const lines = [
-        '❌ درخواست احراز هویتت رد شد.',
+        '❌ درخواست احراز چهره‌ات رد شد.',
         '',
-        note ? `دلیل: ${note}` : 'می‌تونی دوباره از پروفایل «🛡 احراز هویت» رو بزنی.',
-        note ? 'از پروفایل دوباره «🛡 احراز هویت» رو بزن و عکس واضح‌تری بفرست.' : '',
+        note ? `دلیل: ${note}` : 'می‌تونی دوباره از پروفایل «🛡 احراز چهره» رو بزنی.',
+        note ? 'از پروفایل دوباره «🛡 احراز چهره» رو بزن و سلفی واضح‌تری بفرست.' : '',
       ].filter(Boolean);
       await ctx.api.sendMessage(user.telegramId, lines.join('\n'));
     } catch (err) {

@@ -17,6 +17,16 @@ cp .env.example .env
 
 مقادیر پیش‌فرض با `docker-compose.yml` هم‌خوان هستند. در صورت نیاز `DATABASE_URL`، `REDIS_URL` و متغیرهای `S3_*` را ویرایش کنید.
 
+برای احراز موبایل با پیامک (Candoo):
+
+```
+CANDOO_API_URL=https://api.candoosms.com
+CANDOO_API_KEY=...          # فقط در .env — هرگز در git commit نشود
+CANDOO_SRC_NUMBERS=989999176033,989998884447
+```
+
+دامپزشکان باید موبایل را تأیید کنند؛ برای بقیه اختیاری است.
+
 ## ۲. بالا آوردن سرویس‌ها
 
 ```bash

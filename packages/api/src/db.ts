@@ -151,6 +151,12 @@ function migrateSchema() {
   if (!names.has('gender')) db.exec('ALTER TABLE users ADD COLUMN gender TEXT');
   if (!names.has('city')) db.exec('ALTER TABLE users ADD COLUMN city TEXT');
   if (!names.has('phone')) db.exec('ALTER TABLE users ADD COLUMN phone TEXT');
+  if (!names.has('phone_verified')) {
+    db.exec('ALTER TABLE users ADD COLUMN phone_verified INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!names.has('phone_verified_at')) {
+    db.exec('ALTER TABLE users ADD COLUMN phone_verified_at TEXT');
+  }
   if (!names.has('bio')) db.exec('ALTER TABLE users ADD COLUMN bio TEXT');
   if (!names.has('avatar_url')) db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
   if (!names.has('province')) db.exec('ALTER TABLE users ADD COLUMN province TEXT');
@@ -206,6 +212,17 @@ function migrateSchema() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_vet_consultations_vet
       ON vet_consultations (vet_user_id, created_at DESC);
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS phone_otps (
+      user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+      phone TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   const petCols = db.prepare("PRAGMA table_info(pets)").all() as { name: string }[];
@@ -661,6 +678,8 @@ function mapUser(row: Record<string, unknown>): User {
     city: row.city as string | undefined,
     province: row.province as string | undefined,
     phone: row.phone as string | undefined,
+    phoneVerified: row.phone_verified == null ? false : Boolean(row.phone_verified),
+    phoneVerifiedAt: (row.phone_verified_at as string | undefined) ?? undefined,
     bio: row.bio as string | undefined,
     interests: parseInterests(row.interests),
     avatarUrl: row.avatar_url as string | undefined,
@@ -920,7 +939,17 @@ export const dbService = {
     if (patch.country !== undefined) { fields.push('country = ?'); values.push(patch.country); }
     if (patch.city !== undefined) { fields.push('city = ?'); values.push(patch.city); }
     if (patch.province !== undefined) { fields.push('province = ?'); values.push(patch.province); }
-    if (patch.phone !== undefined) { fields.push('phone = ?'); values.push(patch.phone); }
+    if (patch.phone !== undefined) {
+      fields.push('phone = ?');
+      values.push(patch.phone);
+      // تغییر شماره بدون OTP → لغو تأیید قبلی
+      if (patch.phone !== existing.phone) {
+        fields.push('phone_verified = ?');
+        values.push(0);
+        fields.push('phone_verified_at = ?');
+        values.push(null);
+      }
+    }
     if (patch.bio !== undefined) { fields.push('bio = ?'); values.push(patch.bio); }
     if (patch.interests !== undefined) {
       fields.push('interests = ?');
@@ -974,6 +1003,8 @@ export const dbService = {
          username = NULL,
          name = ?,
          phone = NULL,
+         phone_verified = 0,
+         phone_verified_at = NULL,
          bio = NULL,
          avatar_url = NULL,
          interests = '[]',
@@ -988,7 +1019,69 @@ export const dbService = {
          vet_credential_status = 'none'
        WHERE id = ?`
     ).run(`[حذف‌شده #${user.id}]`, user.id);
+    db.prepare('DELETE FROM phone_otps WHERE user_id = ?').run(user.id);
     return true;
+  },
+
+  upsertPhoneOtp(data: {
+    userId: number;
+    phone: string;
+    codeHash: string;
+    expiresAt: string;
+  }): void {
+    db.prepare(
+      `INSERT INTO phone_otps (user_id, phone, code_hash, expires_at, attempts, created_at)
+       VALUES (?, ?, ?, ?, 0, datetime('now'))
+       ON CONFLICT(user_id) DO UPDATE SET
+         phone = excluded.phone,
+         code_hash = excluded.code_hash,
+         expires_at = excluded.expires_at,
+         attempts = 0,
+         created_at = datetime('now')`
+    ).run(data.userId, data.phone, data.codeHash, data.expiresAt);
+  },
+
+  getActivePhoneOtp(userId: number): {
+    userId: number;
+    phone: string;
+    codeHash: string;
+    expiresAt: string;
+    attempts: number;
+    createdAt: string;
+  } | null {
+    const row = db
+      .prepare('SELECT * FROM phone_otps WHERE user_id = ?')
+      .get(userId) as Record<string, unknown> | undefined;
+    if (!row) return null;
+    return {
+      userId: row.user_id as number,
+      phone: row.phone as string,
+      codeHash: row.code_hash as string,
+      expiresAt: row.expires_at as string,
+      attempts: Number(row.attempts ?? 0),
+      createdAt: row.created_at as string,
+    };
+  },
+
+  bumpPhoneOtpAttempts(userId: number): number {
+    db.prepare('UPDATE phone_otps SET attempts = attempts + 1 WHERE user_id = ?').run(userId);
+    const row = this.getActivePhoneOtp(userId);
+    return row?.attempts ?? 0;
+  },
+
+  deletePhoneOtpsForUser(userId: number): void {
+    db.prepare('DELETE FROM phone_otps WHERE user_id = ?').run(userId);
+  },
+
+  markPhoneVerified(userId: number, phone: string): User | null {
+    db.prepare(
+      `UPDATE users SET
+         phone = ?,
+         phone_verified = 1,
+         phone_verified_at = datetime('now')
+       WHERE id = ?`
+    ).run(phone, userId);
+    return this.getUserById(userId);
   },
 
   listPendingVerifications(): User[] {
@@ -1077,16 +1170,59 @@ export const dbService = {
     return { ok: true, user: this.getUserById(userId)! };
   },
 
-  approveVerification(userId: number): User | null {
+  approveVerification(userId: number, rewardCoins = 0): User | null {
     const existing = this.getUserById(userId);
     if (!existing || existing.verificationStatus !== 'pending') return null;
     db.prepare(
       `UPDATE users SET
          verification_status = 'verified',
          verified_at = datetime('now'),
-         verification_note = NULL
+         verification_note = NULL,
+         coins = COALESCE(coins, 0) + ?
        WHERE id = ?`
-    ).run(userId);
+    ).run(Math.max(0, rewardCoins), userId);
+    return this.getUserById(userId);
+  },
+
+  /** دامپزشک‌های تأییدشده توسط ادمین (نقش vet + احراز verified) */
+  listVerifiedVets(): User[] {
+    const rows = db
+      .prepare(
+        `SELECT * FROM users
+         WHERE is_active = 1
+           AND verification_status = 'verified'
+           AND (
+             role = 'vet'
+             OR roles LIKE '%"vet"%'
+             OR roles LIKE '%vet%'
+           )
+         ORDER BY verified_at DESC, id DESC`
+      )
+      .all() as Record<string, unknown>[];
+    return rows
+      .map(mapUser)
+      .filter((u) => {
+        const roles = u.roles?.length ? u.roles : u.role ? [u.role] : [];
+        return roles.includes('vet');
+      });
+  },
+
+  /** کم کردن سکه اتمیک؛ اگر موجودی کافی نباشد null */
+  debitCoins(userId: number, amount: number): User | null {
+    if (amount <= 0) return this.getUserById(userId);
+    const result = db
+      .prepare(
+        `UPDATE users SET coins = coins - ?
+         WHERE id = ? AND COALESCE(coins, 0) >= ?`
+      )
+      .run(amount, userId, amount);
+    if (result.changes === 0) return null;
+    return this.getUserById(userId);
+  },
+
+  creditCoins(userId: number, amount: number): User | null {
+    if (amount <= 0) return this.getUserById(userId);
+    db.prepare(`UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?`).run(amount, userId);
     return this.getUserById(userId);
   },
 

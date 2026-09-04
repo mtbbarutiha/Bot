@@ -73,6 +73,7 @@ import {
   handleMedical,
   handlePetShop,
   handleQuickVet,
+  handleQuickVetConnect,
   handleServices,
 } from './services';
 import { handleVetPatients } from './vet';
@@ -115,7 +116,14 @@ import {
   handleVerifyStart,
   handleVerifyStatus,
   handleVerifyUseAvatar,
+  handleVerifyVideo,
 } from './verification';
+import {
+  ensureVetPhoneVerified,
+  handlePhoneVerifyContact,
+  handlePhoneVerifyStart,
+  handlePhoneVerifyText,
+} from './phone-verify';
 
 export function registerHandlers(bot: Bot): void {
   // عضویت اجباری در کانال‌ها — قبل از همهٔ دستورات
@@ -299,6 +307,7 @@ export function registerHandlers(bot: Bot): void {
   });
   bot.callbackQuery('profile:vet_credential', async (ctx) => {
     await ctx.answerCallbackQuery();
+    if (!(await ensureVetPhoneVerified(ctx))) return;
     await startVetCredentialUpload(ctx);
   });
   bot.callbackQuery(/^profile:gender:(male|female)$/, (ctx) =>
@@ -308,7 +317,10 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery('profile:skip_photo', (ctx) => handleProfileSkip(ctx, 'photo'));
   bot.callbackQuery('profile:skip_bio', (ctx) => handleProfileSkip(ctx, 'bio'));
   bot.callbackQuery('profile:deactivate', (ctx) => handleProfileDeactivateAsk(ctx));
-  bot.callbackQuery('profile:activate', (ctx) => handleProfileActivate(ctx));
+  bot.callbackQuery('profile:activate', async (ctx) => {
+    if (!(await ensureVetPhoneVerified(ctx))) return;
+    await handleProfileActivate(ctx);
+  });
   bot.callbackQuery('profile:delete', (ctx) => handleProfileDeleteAsk(ctx));
   bot.callbackQuery('profile:deactivate:yes', (ctx) => handleProfileDeactivateConfirm(ctx, true));
   bot.callbackQuery('profile:deactivate:no', (ctx) => handleProfileDeactivateConfirm(ctx, false));
@@ -350,7 +362,16 @@ export function registerHandlers(bot: Bot): void {
     await handleAdminRejectSkip(ctx);
   });
 
+  bot.callbackQuery('phone:verify:start', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handlePhoneVerifyStart(ctx);
+  });
+
   bot.callbackQuery(/^medical:/, (ctx) => handleComingSoon(ctx, 'پزشکی'));
+  bot.callbackQuery('vet:connect', (ctx) => handleQuickVetConnect(ctx));
+  bot.callbackQuery(/^vet:consult:ack:/, async (ctx) => {
+    await ctx.answerCallbackQuery({ text: 'باشه ✅' }).catch(() => undefined);
+  });
   bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));
   bot.callbackQuery(/^shop:/, (ctx) => handleComingSoon(ctx, 'پت شاپ'));
   bot.callbackQuery(/^svc:/, (ctx) => handleComingSoon(ctx, 'خدمات'));
@@ -380,6 +401,7 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery('search:home', (ctx) => handleSearchHomeCallback(ctx));
 
   bot.on('message:contact', async (ctx) => {
+    if (await handlePhoneVerifyContact(ctx)) return;
     await handleProfileContact(ctx);
   });
 
@@ -388,6 +410,14 @@ export function registerHandlers(bot: Bot): void {
     if (await handleVetCredentialPhoto(ctx)) return;
     if (await handlePetPhoto(ctx)) return;
     await handleProfilePhoto(ctx);
+  });
+
+  bot.on('message:video', async (ctx) => {
+    if (await handleVerifyVideo(ctx)) return;
+  });
+
+  bot.on('message:video_note', async (ctx) => {
+    if (await handleVerifyVideo(ctx)) return;
   });
 
   bot.on('message:document', async (ctx) => {
@@ -417,6 +447,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   if (await handleRoleReplyText(ctx, text)) return;
 
   if (await handleAdminRejectReasonText(ctx, text)) return;
+  if (await handlePhoneVerifyText(ctx, text)) return;
   if (await handleEarnCardText(ctx, text)) return;
   if (await handleSearchBreedText(ctx, text)) return;
   if (await handleVetCredentialText(ctx, text)) return;
@@ -433,8 +464,10 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case m.findPlaymate:
     case d.explore:
       return handleFindPlaymate(ctx);
-    case v.patients:
+    case v.patients: {
+      if (!(await ensureVetPhoneVerified(ctx))) return;
       return handleVetPatients(ctx);
+    }
     case m.nearbyPets:
       return handleNearbyPets(ctx);
     case m.searchPets:
@@ -458,10 +491,15 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case d.profile:
     case v.profile:
       return handleProfile(ctx);
-    // Legacy: face verify was removed from main menus — keep old keyboards working
-    case '🛡 احراز چهره':
+    case m.verify:
+    case d.verify:
+    case v.verify:
     case '🛡 احراز هویت':
       return handleVerifyStart(ctx);
+    case m.phoneVerify:
+    case d.phoneVerify:
+    case v.phoneVerify:
+      return handlePhoneVerifyStart(ctx);
     case m.myPets:
     case d.myPets:
       return handleMyPets(ctx);

@@ -35,6 +35,8 @@ export const PET_OWNER_MENU = {
   addPet: '➕ ثبت پت',
   coins: '🪙 سکه',
   earn: '💵 کسب درآمد',
+  verify: '🛡 احراز چهره',
+  phoneVerify: '📱 احراز موبایل',
   medical: '🩺 پزشکی',
   invite: '🎁 معرفی به دوستان',
   help: '❓ راهنما',
@@ -56,6 +58,8 @@ export const DEFAULT_MENU = {
   explore: '🔍 کشف همبازی',
   myPets: '🐾 پت‌های من',
   profile: '👤 پروفایل',
+  verify: '🛡 احراز چهره',
+  phoneVerify: '📱 احراز موبایل',
   addPet: '➕ ثبت پت',
   help: '❓ راهنما',
 } as const;
@@ -64,6 +68,8 @@ export const DEFAULT_MENU = {
 export const VET_MENU = {
   patients: '📋 بیماران / مشاوره‌ها',
   profile: '👤 پروفایل',
+  verify: '🛡 احراز چهره',
+  phoneVerify: '📱 احراز موبایل',
   help: '❓ راهنما',
 } as const;
 
@@ -364,6 +370,11 @@ export function vetMenuKeyboard(): Keyboard {
     .primary()
     .row()
     .text(m.profile)
+    .text(m.verify)
+    .success()
+    .row()
+    .text(m.phoneVerify)
+    .primary()
     .text(m.help)
     .resized()
     .persistent();
@@ -385,6 +396,11 @@ export function petOwnerMenuKeyboard(): Keyboard {
     .row()
     .text(m.coins)
     .text(m.earn)
+    .row()
+    .text(m.verify)
+    .success()
+    .text(m.phoneVerify)
+    .primary()
     .row()
     .text(m.medical)
     .text(m.invite)
@@ -426,6 +442,11 @@ export function defaultMenuKeyboard(): Keyboard {
     .row()
     .text(m.myPets)
     .text(m.profile)
+    .row()
+    .text(m.verify)
+    .success()
+    .text(m.phoneVerify)
+    .primary()
     .row()
     .text(m.help)
     .resized()
@@ -606,6 +627,8 @@ export function profileActionsKeyboard(
   } else {
     kb.text('🛡 احراز چهره', 'verify:start').row();
   }
+
+  kb.text('📱 احراز موبایل', 'phone:verify:start').primary().row();
 
   kb.text('🗑 حذف', 'profile:delete').danger();
   if (isActive) {
