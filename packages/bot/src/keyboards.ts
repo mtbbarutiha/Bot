@@ -10,11 +10,15 @@ import {
   PROFILE_COUNTRIES,
   PROFILE_INTEREST_OPTIONS,
   IRAN_PROVINCES,
+  MY_ROLES_LABEL,
+  ROLE_ADD_LABEL,
   ROLE_CONFIRM_LABEL,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   USER_ROLES,
   citiesForProvince,
+  normalizeRoles,
+  primaryRole,
 } from '@petdate/shared';
 import {
   COIN_PACKAGES,
@@ -23,6 +27,7 @@ import {
   formatNum,
   packagePickerLabel,
 } from './economy';
+import { isTelegramAdmin } from './config';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
 /** Labels for pet_owner main menu */
@@ -43,6 +48,16 @@ export const PET_OWNER_MENU = {
   quickVet: '⚡ ارتباط سریع با پزشک',
   shop: '🛒 پت شاپ',
   services: '🛠 خدمات',
+  myRoles: MY_ROLES_LABEL,
+} as const;
+
+/** زیرمنوی پنل ادمین (reply keyboard) */
+export const ADMIN_MENU = {
+  panel: '🛠 پنل ادمین',
+  faceQueue: '📋 صف احراز چهره',
+  vetQueue: '📄 صف مدارک دامپزشک',
+  stats: '📊 وضعیت صف‌ها',
+  back: '🔙 بازگشت به منو',
 } as const;
 
 /** زیرمنوی جستجوی پت */
@@ -61,15 +76,17 @@ export const DEFAULT_MENU = {
   verify: '🛡 احراز چهره',
   phoneVerify: '📱 احراز موبایل',
   addPet: '➕ ثبت پت',
+  myRoles: MY_ROLES_LABEL,
   help: '❓ راهنما',
 } as const;
 
-/** منوی دامپزشک (بدون کشف همبازی) — فقط وقتی نقش vet باشد و pet_owner نباشد */
+/** منوی دامپزشک (بدون کشف همبازی) — فقط وقتی نقش فعال vet باشد */
 export const VET_MENU = {
   patients: '📋 بیماران / مشاوره‌ها',
   profile: '👤 پروفایل',
   verify: '🛡 احراز چهره',
   phoneVerify: '📱 احراز موبایل',
+  myRoles: MY_ROLES_LABEL,
   help: '❓ راهنما',
 } as const;
 
@@ -350,22 +367,36 @@ export function roleKeyboard(selected: UserRole[] = []): InlineKeyboard {
   return kb;
 }
 
-/** منوی اصلی بر اساس نقش(های) کاربر */
+/** منوی اصلی بر اساس نقش فعال کاربر + ردیف دسترسی */
 export function mainMenuKeyboard(
   role?: UserRole | string | null,
-  roles?: UserRole[] | null
+  roles?: UserRole[] | null,
+  telegramId?: string | number | null
 ): Keyboard {
-  const list = roles?.length ? roles : role ? [role as UserRole] : [];
-  // صاحب پت اولویت دارد (حتی اگر همزمان دامپزشک باشد — همبازی می‌ماند)
-  if (list.includes('pet_owner') || role === 'pet_owner') return petOwnerMenuKeyboard();
-  // دامپزشک بدون نقش صاحب پت — بدون کشف همبازی
-  if (list.includes('vet') || role === 'vet') return vetMenuKeyboard();
-  return defaultMenuKeyboard();
+  const list = normalizeRoles(roles as UserRole[] | null | undefined, role as UserRole | null | undefined);
+  const active = primaryRole(list, role as UserRole | null | undefined);
+
+  if (active === 'pet_owner') return petOwnerMenuKeyboard(telegramId);
+  if (active === 'vet') return vetMenuKeyboard(telegramId);
+  return defaultMenuKeyboard(telegramId);
 }
 
-export function vetMenuKeyboard(): Keyboard {
+/**
+ * ردیف دسترسی پنل‌ها:
+ * - «نقش‌های من» برای سوییچ نقش فعال (صاحب پت / دامپزشک / …)
+ * - «پنل ادمین» فقط اگر telegramId در ADMIN_TELEGRAM_IDS / TELEGRAM_ADMIN_IDS باشد
+ */
+function appendAccessRow(kb: Keyboard, telegramId?: string | number | null): Keyboard {
+  kb.row().text(MY_ROLES_LABEL);
+  if (telegramId != null && isTelegramAdmin(telegramId)) {
+    kb.text(ADMIN_MENU.panel).primary();
+  }
+  return kb;
+}
+
+export function vetMenuKeyboard(telegramId?: string | number | null): Keyboard {
   const m = VET_MENU;
-  return new Keyboard()
+  const kb = new Keyboard()
     .text(m.patients)
     .primary()
     .row()
@@ -378,11 +409,12 @@ export function vetMenuKeyboard(): Keyboard {
     .text(m.help)
     .resized()
     .persistent();
+  return appendAccessRow(kb, telegramId);
 }
 
-export function petOwnerMenuKeyboard(): Keyboard {
+export function petOwnerMenuKeyboard(telegramId?: string | number | null): Keyboard {
   const m = PET_OWNER_MENU;
-  return new Keyboard()
+  const kb = new Keyboard()
     .text(m.findPlaymate)
     .primary()
     .row()
@@ -414,6 +446,7 @@ export function petOwnerMenuKeyboard(): Keyboard {
     .text(m.help)
     .resized()
     .persistent();
+  return appendAccessRow(kb, telegramId);
 }
 
 export function searchPetsMenuKeyboard(): Keyboard {
@@ -434,9 +467,9 @@ export function searchPetsMenuKeyboard(): Keyboard {
     .persistent();
 }
 
-export function defaultMenuKeyboard(): Keyboard {
+export function defaultMenuKeyboard(telegramId?: string | number | null): Keyboard {
   const m = DEFAULT_MENU;
-  return new Keyboard()
+  const kb = new Keyboard()
     .text(m.explore)
     .primary()
     .row()
@@ -451,6 +484,54 @@ export function defaultMenuKeyboard(): Keyboard {
     .text(m.help)
     .resized()
     .persistent();
+  return appendAccessRow(kb, telegramId);
+}
+
+/** کیبورد پنل ادمین بعد از ورود */
+export function adminPanelKeyboard(): Keyboard {
+  const m = ADMIN_MENU;
+  return new Keyboard()
+    .text(m.faceQueue)
+    .primary()
+    .row()
+    .text(m.vetQueue)
+    .row()
+    .text(m.stats)
+    .success()
+    .row()
+    .text(m.back)
+    .resized()
+    .persistent();
+}
+
+/** اینلاین: سوییچ بین نقش‌های فعلی کاربر */
+export function myRolesSwitchKeyboard(
+  roles: UserRole[],
+  activeRole?: UserRole | null
+): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  const active = primaryRole(roles, activeRole);
+  roles.forEach((role) => {
+    const isActive = role === active;
+    const label = isActive ? `✓ ${USER_ROLE_LABELS[role]}` : USER_ROLE_LABELS[role];
+    kb.text(label, `myroles:switch:${role}`);
+    if (isActive) kb.success();
+    else kb.primary();
+    kb.row();
+  });
+  kb.text(ROLE_ADD_LABEL, 'myroles:add').primary().row();
+  return kb;
+}
+
+export function adminVetCredentialKeyboard(userId: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('✅ تأیید مدرک', `vetcred:approve:${userId}`)
+    .success()
+    .text('❌ رد', `vetcred:reject:${userId}`)
+    .danger()
+    .row()
+    .text('⏭ بعدی', 'vetcred:admin:next')
+    .text('📋 صف', 'vetcred:admin:queue');
 }
 
 /** ریپلای‌کیبورد داخل بخش پت‌های من — فقط ثبت و بازگشت */
@@ -745,6 +826,7 @@ export const MENU_LABELS = new Set<string>([
   ...Object.values(PET_OWNER_MENU),
   ...Object.values(DEFAULT_MENU),
   ...Object.values(VET_MENU),
+  ...Object.values(ADMIN_MENU),
   ...Object.values(MY_PETS_SECTION),
   ...Object.values(SEARCH_PETS_MENU),
 ]);

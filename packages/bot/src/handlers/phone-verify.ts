@@ -16,7 +16,7 @@ import {
   withWizardNav,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
-import { getCtxUser } from './helpers';
+import { getCtxUser, menuKeyboardFor } from './helpers';
 
 function phoneOtpKeyboard(): Keyboard {
   return withWizardNav(new Keyboard().text('🔄 ارسال مجدد کد'), {
@@ -91,7 +91,7 @@ export async function handlePhoneVerifyStart(
       ].join('\n'),
       {
         parse_mode: 'HTML',
-        reply_markup: mainMenuKeyboard(user.role, user.roles),
+        reply_markup: menuKeyboardFor(ctx, user),
       }
     );
     // Allow re-verify: still open ask flow if they continue typing
@@ -119,7 +119,7 @@ export async function handlePhoneVerifyCancel(ctx: Context): Promise<void> {
     pendingPhone: undefined,
   });
   await ctx.reply('احراز موبایل لغو شد.', {
-    reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+    reply_markup: menuKeyboardFor(ctx, user),
   });
 }
 
@@ -246,7 +246,7 @@ export async function handlePhoneVerifyText(ctx: Context, text: string): Promise
       ].join('\n'),
       {
         parse_mode: 'HTML',
-        reply_markup: mainMenuKeyboard(user.role, user.roles),
+        reply_markup: menuKeyboardFor(ctx, user),
       }
     );
   } catch (err) {

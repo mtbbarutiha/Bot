@@ -28,7 +28,7 @@ import {
   MENU_LABELS,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
-import { getCtxUser } from './helpers';
+import { getCtxUser, menuKeyboardFor } from './helpers';
 
 export async function handleCoins(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
@@ -37,7 +37,7 @@ export async function handleCoins(ctx: Context): Promise<void> {
     parse_mode: 'HTML',
     reply_markup: coinsShopKeyboard(user?.lastDailyCoinAt),
   });
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 export async function handleCoinsDaily(ctx: Context): Promise<void> {
@@ -150,7 +150,7 @@ export async function handleEarn(ctx: Context): Promise<void> {
     parse_mode: 'HTML',
     reply_markup: earnKeyboard(canSell),
   });
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 export async function handleEarnSell(ctx: Context): Promise<void> {
@@ -314,7 +314,7 @@ export async function handleEarnCardText(ctx: Context, text: string): Promise<bo
           : result.reason === 'pending'
             ? 'یک درخواست تسویه باز داری.'
             : 'ثبت درخواست ممکن نشد.';
-    await ctx.reply(msg, { reply_markup: mainMenuKeyboard(user.role, user.roles) });
+    await ctx.reply(msg, { reply_markup: menuKeyboardFor(ctx, user) });
     return true;
   }
 
@@ -326,7 +326,7 @@ export async function handleEarnCardText(ctx: Context, text: string): Promise<bo
       '',
       'ممنون! پرداخت پس از بررسی ادمین انجام می‌شود.',
     ].join('\n'),
-    { reply_markup: mainMenuKeyboard(result.user.role, result.user.roles) }
+    { reply_markup: menuKeyboardFor(ctx, result.user) }
   );
   return true;
 }

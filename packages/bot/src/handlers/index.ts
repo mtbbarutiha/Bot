@@ -7,6 +7,7 @@ import {
   PET_OWNER_MENU,
   DEFAULT_MENU,
   VET_MENU,
+  ADMIN_MENU,
   MY_PETS_SECTION,
   SEARCH_PETS_MENU,
   WIZARD_NAV,
@@ -62,11 +63,15 @@ import {
   handleCancel,
   handleHelp,
   handleMenu,
+  handleMyRoles,
+  handleMyRolesAdd,
+  handleMyRolesSwitch,
   handleRoleConfirm,
   handleRoleSelect,
   handleStart,
   getCtxUser,
 } from './start';
+import { menuKeyboardFor } from './helpers';
 import {
   handleComingSoon,
   handleInviteFriends,
@@ -120,6 +125,15 @@ import {
   handleVerifyVideo,
 } from './verification';
 import {
+  handleAdminEntry,
+  handleAdminMenuText,
+  handleAdminPasswordText,
+  handleAdminVetCredentialApprove,
+  handleAdminVetCredentialNext,
+  handleAdminVetCredentialQueue,
+  handleAdminVetCredentialReject,
+} from './admin';
+import {
   ensureVetPhoneVerified,
   handlePhoneVerifyContact,
   handlePhoneVerifyStart,
@@ -163,7 +177,7 @@ export function registerHandlers(bot: Bot): void {
   bot.command('requests', handleRequests);
   bot.command('profile', handleProfile);
   bot.command('addpet', handleAddPetCommand);
-  bot.command('admin', handleAdminVerifyQueue);
+  bot.command('admin', handleAdminEntry);
   bot.command('verify', handleAdminVerifyQueue);
 
   bot.callbackQuery('role:confirm', async (ctx) => {
@@ -172,6 +186,29 @@ export function registerHandlers(bot: Bot): void {
     } catch (err) {
       console.error('Role confirm failed:', err);
       await ctx.answerCallbackQuery({ text: 'خطا. دوباره /start بزن.', show_alert: true });
+    }
+  });
+
+  bot.callbackQuery('myroles:add', async (ctx) => {
+    try {
+      await handleMyRolesAdd(ctx);
+    } catch (err) {
+      console.error('My roles add failed:', err);
+      await ctx.answerCallbackQuery({ text: 'خطا', show_alert: true }).catch(() => undefined);
+    }
+  });
+
+  bot.callbackQuery(/^myroles:switch:(.+)$/, async (ctx) => {
+    try {
+      const role = ctx.match![1] as UserRole;
+      if (!USER_ROLES.includes(role)) {
+        await ctx.answerCallbackQuery({ text: 'نقش نامعتبر', show_alert: true });
+        return;
+      }
+      await handleMyRolesSwitch(ctx, role);
+    } catch (err) {
+      console.error('My roles switch failed:', err);
+      await ctx.answerCallbackQuery({ text: 'خطا', show_alert: true }).catch(() => undefined);
     }
   });
 
@@ -363,6 +400,21 @@ export function registerHandlers(bot: Bot): void {
     await handleAdminRejectSkip(ctx);
   });
 
+  bot.callbackQuery('vetcred:admin:queue', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handleAdminVetCredentialQueue(ctx);
+  });
+  bot.callbackQuery('vetcred:admin:next', async (ctx) => {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    await handleAdminVetCredentialNext(ctx);
+  });
+  bot.callbackQuery(/^vetcred:approve:(\d+)$/, (ctx) =>
+    handleAdminVetCredentialApprove(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery(/^vetcred:reject:(\d+)$/, (ctx) =>
+    handleAdminVetCredentialReject(ctx, Number(ctx.match![1]))
+  );
+
   bot.callbackQuery('phone:verify:start', async (ctx) => {
     await ctx.answerCallbackQuery().catch(() => undefined);
     await handlePhoneVerifyStart(ctx);
@@ -453,6 +505,8 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   // Role selection via reply keyboard
   if (await handleRoleReplyText(ctx, text)) return;
 
+  if (await handleAdminPasswordText(ctx, text)) return;
+  if (await handleAdminMenuText(ctx, text)) return;
   if (await handleAdminRejectReasonText(ctx, text)) return;
   if (await handlePhoneVerifyText(ctx, text)) return;
   if (await handleEarnCardText(ctx, text)) return;
@@ -490,7 +544,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case search.backToMenu: {
       const user = await getCtxUser(ctx);
       await ctx.reply('منوی اصلی 👇', {
-        reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+        reply_markup: menuKeyboardFor(ctx, user),
       });
       return;
     }
@@ -517,7 +571,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case petsSection.backToMenu: {
       const user = await getCtxUser(ctx);
       await ctx.reply('منوی اصلی 👇', {
-        reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+        reply_markup: menuKeyboardFor(ctx, user),
       });
       return;
     }
@@ -533,6 +587,10 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case d.help:
     case v.help:
       return handleHelp(ctx);
+    case m.myRoles:
+    case d.myRoles:
+    case v.myRoles:
+      return handleMyRoles(ctx);
     case m.quickVet:
       return handleQuickVet(ctx);
     case m.shop:
@@ -545,7 +603,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       {
         const user = await getCtxUser(ctx);
         await ctx.reply('این دکمه حذف شده. از منوی جدید استفاده کن 👇', {
-          reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+          reply_markup: menuKeyboardFor(ctx, user),
         });
       }
       return;
@@ -553,7 +611,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
       if (!MENU_LABELS.has(text)) {
         const user = await getCtxUser(ctx);
         await ctx.reply('از منو یا /help استفاده کن.', {
-          reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+          reply_markup: menuKeyboardFor(ctx, user),
         });
       }
   }

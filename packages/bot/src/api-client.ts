@@ -59,6 +59,14 @@ export async function setUserRole(telegramId: string, role: UserRole): Promise<U
   });
 }
 
+/** سوییچ نقش فعال بدون حذف بقیه نقش‌ها */
+export async function setUserPrimaryRole(telegramId: string, role: UserRole): Promise<User> {
+  return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/role`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role, primaryOnly: true }),
+  });
+}
+
 export async function setUserRoles(telegramId: string, roles: UserRole[]): Promise<User> {
   return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/role`, {
     method: 'PATCH',

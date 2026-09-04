@@ -15,11 +15,30 @@ function optional(name: string, fallback?: string): string | undefined {
   return value;
 }
 
+function parseIdList(raw: string | undefined): string[] {
+  if (!raw) return [];
+  return raw
+    .split(/[,;\s]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** TELEGRAM_ADMIN_IDS و ADMIN_TELEGRAM_IDS هر دو پذیرفته می‌شوند */
+function resolveAdminIds(): string[] {
+  const merged = [
+    ...parseIdList(optional('TELEGRAM_ADMIN_IDS', '')),
+    ...parseIdList(optional('ADMIN_TELEGRAM_IDS', '')),
+  ];
+  return [...new Set(merged)];
+}
+
 export const config = {
   telegramBotToken: optional('TELEGRAM_BOT_TOKEN'),
   telegramBotUsername: optional('TELEGRAM_BOT_USERNAME'),
-  /** شناسه‌های تلگرام ادمین (جدا با کاما) — پنل احراز هویت */
-  telegramAdminIds: parseIdList(optional('TELEGRAM_ADMIN_IDS', '')),
+  /** شناسه‌های تلگرام ادمین (جدا با کاما) — پنل ادمین / احراز */
+  telegramAdminIds: resolveAdminIds(),
+  /** رمز ورود پنل وقتی لیست ادمین خالی است (پیش‌فرض: petdate) */
+  adminPassword: optional('ADMIN_PASSWORD', 'petdate')!,
   apiUrl: optional('API_URL', 'http://localhost:3001')!,
   webUrl: optional('WEB_URL', 'http://localhost:5173')!,
   /** Optional public URL (tunnel/prod) for Telegram inline link buttons. */
@@ -34,18 +53,20 @@ export const config = {
   forceJoinDordoriaChannel: optional('FORCE_JOIN_DORDORIA_CHANNEL'),
 } as const;
 
-function parseIdList(raw: string | undefined): string[] {
-  if (!raw) return [];
-  return raw
-    .split(/[,;\s]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+/** آیا حداقل یک ادمین با شناسه تلگرام در env تنظیم شده؟ */
+export function hasConfiguredAdminIds(): boolean {
+  return config.telegramAdminIds.length > 0;
 }
 
+/** ادمین بر اساس شناسه تلگرام در env */
 export function isTelegramAdmin(telegramId: string | number | undefined | null): boolean {
   if (telegramId == null) return false;
-  const id = String(telegramId);
-  return config.telegramAdminIds.includes(id);
+  return config.telegramAdminIds.includes(String(telegramId));
+}
+
+/** بررسی رمز پنل ادمین */
+export function checkAdminPassword(password: string): boolean {
+  return password.trim() === config.adminPassword;
 }
 
 export function assertBotToken(): string {

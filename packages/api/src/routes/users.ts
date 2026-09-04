@@ -43,7 +43,7 @@ function isOnboardingStatus(value: unknown): value is OnboardingStatus {
 }
 
 usersRouter.patch('/telegram/:telegramId/role', (req, res) => {
-  const { role, roles } = req.body ?? {};
+  const { role, roles, primaryOnly } = req.body ?? {};
 
   if (Array.isArray(roles)) {
     const parsed = roles.filter(isUserRole) as UserRole[];
@@ -64,6 +64,17 @@ usersRouter.patch('/telegram/:telegramId/role', (req, res) => {
     res.status(400).json({ error: 'نقش نامعتبر است' });
     return;
   }
+
+  if (primaryOnly) {
+    const user = dbService.setUserPrimaryRoleByTelegramId(req.params.telegramId, role);
+    if (!user) {
+      res.status(400).json({ error: 'این نقش جزو نقش‌های کاربر نیست' });
+      return;
+    }
+    res.json(user);
+    return;
+  }
+
   const user = dbService.setUserRoleByTelegramId(req.params.telegramId, role);
   if (!user) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
@@ -73,7 +84,7 @@ usersRouter.patch('/telegram/:telegramId/role', (req, res) => {
 });
 
 usersRouter.patch('/:id/role', (req, res) => {
-  const { role, roles } = req.body ?? {};
+  const { role, roles, primaryOnly } = req.body ?? {};
 
   if (Array.isArray(roles)) {
     const parsed = roles.filter(isUserRole) as UserRole[];
@@ -94,6 +105,17 @@ usersRouter.patch('/:id/role', (req, res) => {
     res.status(400).json({ error: 'نقش نامعتبر است' });
     return;
   }
+
+  if (primaryOnly) {
+    const user = dbService.setUserPrimaryRole(Number(req.params.id), role);
+    if (!user) {
+      res.status(400).json({ error: 'این نقش جزو نقش‌های کاربر نیست' });
+      return;
+    }
+    res.json(user);
+    return;
+  }
+
   const user = dbService.setUserRole(Number(req.params.id), role);
   if (!user) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });

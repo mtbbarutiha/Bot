@@ -874,13 +874,47 @@ export const dbService = {
   },
 
   setUserRole(userId: number, role: UserRole): User | null {
+    const existing = this.getUserById(userId);
+    if (!existing) return null;
+    const current = existing.roles?.length
+      ? existing.roles
+      : existing.role
+        ? [existing.role]
+        : [];
+    // سوییچ نقش فعال بدون حذف نقش‌های دیگر
+    if (current.includes(role) && current.length > 0) {
+      return this.setUserPrimaryRole(userId, role);
+    }
     return this.setUserRoles(userId, [role]);
+  },
+
+  /** فقط نقش فعال را عوض می‌کند؛ لیست roles حفظ می‌شود */
+  setUserPrimaryRole(userId: number, role: UserRole): User | null {
+    const existing = this.getUserById(userId);
+    if (!existing) return null;
+    const current = existing.roles?.length
+      ? existing.roles
+      : existing.role
+        ? [existing.role]
+        : [];
+    if (!current.includes(role)) return null;
+    const reordered = [role, ...current.filter((r) => r !== role)];
+    db.prepare('UPDATE users SET role = ?, roles = ? WHERE id = ?').run(
+      role,
+      JSON.stringify(reordered),
+      userId
+    );
+    return this.getUserById(userId);
   },
 
   setUserRoles(userId: number, roles: UserRole[]): User | null {
     const normalized = [...new Set(roles.filter(Boolean))];
     if (normalized.length === 0) return null;
-    const primary = normalized.includes('pet_owner') ? 'pet_owner' : normalized[0]!;
+    const existing = this.getUserById(userId);
+    const keepPrimary =
+      existing?.role && normalized.includes(existing.role) ? existing.role : undefined;
+    const primary =
+      keepPrimary ?? (normalized.includes('pet_owner') ? 'pet_owner' : normalized[0]!);
     db.prepare(
       "UPDATE users SET role = ?, roles = ?, onboarding = 'role_selected' WHERE id = ?"
     ).run(primary, JSON.stringify(normalized), userId);
@@ -901,7 +935,13 @@ export const dbService = {
   setUserRoleByTelegramId(telegramId: string, role: UserRole): User | null {
     const user = this.getUserByTelegramId(telegramId);
     if (!user) return null;
-    return this.setUserRoles(user.id, [role]);
+    return this.setUserRole(user.id, role);
+  },
+
+  setUserPrimaryRoleByTelegramId(telegramId: string, role: UserRole): User | null {
+    const user = this.getUserByTelegramId(telegramId);
+    if (!user) return null;
+    return this.setUserPrimaryRole(user.id, role);
   },
 
   setUserRolesByTelegramId(telegramId: string, roles: UserRole[]): User | null {

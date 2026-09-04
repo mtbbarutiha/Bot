@@ -18,7 +18,7 @@ import {
   playdateActionKeyboard,
 } from '../keyboards';
 import { upsertSession } from '../session';
-import { getCtxUser } from './helpers';
+import { getCtxUser, menuKeyboardFor } from './helpers';
 
 export async function handleMyPets(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
@@ -173,7 +173,7 @@ export async function handleRequests(ctx: Context): Promise<void> {
   const requests = await listPlaydates({ userId: user.id });
   if (requests.length === 0) {
     await ctx.reply('📬 درخواستی نداری.\nاز «🔍 پیدا کردن همبازی» شروع کن!', {
-      reply_markup: mainMenuKeyboard(user.role, user.roles),
+      reply_markup: menuKeyboardFor(ctx, user),
     });
     return;
   }
@@ -256,7 +256,7 @@ async function sendPlaydateNow(
 
   const u = await getCtxUser(ctx);
   await ctx.reply('منتظر پاسخ بمون یا همبازی‌های دیگه رو ببین.', {
-    reply_markup: mainMenuKeyboard(u?.role, u?.roles),
+    reply_markup: menuKeyboardFor(ctx, u),
   });
 }
 
@@ -293,5 +293,5 @@ export async function handlePlaydateCancel(ctx: Context): Promise<void> {
   await upsertSession(String(ctx.from!.id), { step: 'ready', selectedPetId: undefined, selectedToPetId: undefined });
   await ctx.editMessageText('انصراف دادی.');
   const u = await getCtxUser(ctx);
-  await ctx.reply('منوی اصلی:', { reply_markup: mainMenuKeyboard(u?.role, u?.roles) });
+  await ctx.reply('منوی اصلی:', { reply_markup: menuKeyboardFor(ctx, u) });
 }

@@ -209,6 +209,8 @@ export interface BotSession {
   role?: UserRole;
   /** نقش‌های در حال انتخاب در مرحله role_select */
   draftRoles?: UserRole[];
+  /** true = افزودن/ویرایش نقش از منوی «نقش‌های من» (نه آنبوردینگ اولیه) */
+  addingRoles?: boolean;
   step: BotStep;
   locale: string;
   draftPet?: PetDraft;
@@ -233,6 +235,8 @@ export interface BotSession {
   earnPendingCoins?: number;
   /** ادمین — رد احراز هویت برای این userId */
   adminRejectUserId?: number;
+  /** ادمین — ورود با رمز (وقتی ADMIN_IDS خالی است) */
+  adminAuthed?: boolean;
   /**
    * ویرایش تک‌فیلدی پروفایل (نه ویزارد کامل).
    * بعد از ذخیرهٔ همان فیلد به منوی بخش‌ها برمی‌گردیم.
@@ -280,6 +284,7 @@ export type BotStep =
   | 'phone_verify_ask'
   | 'phone_verify_otp'
   | 'admin_reject_reason'
+  | 'admin_password'
   | 'ready';
 
 export interface PetDraft {
@@ -328,10 +333,18 @@ export const USER_ROLE_LABELS: Record<UserRole, string> = {
 };
 
 export const ROLE_CONFIRM_LABEL = '✅ ثبت نقش‌ها';
+export const MY_ROLES_LABEL = '🎭 نقش‌های من';
+export const ROLE_ADD_LABEL = '➕ افزودن نقش';
 
-/** نقش اصلی برای سازگاری با کد قدیمی — صاحب پت اولویت دارد */
+/**
+ * نقش فعال/اصلی.
+ * اگر fallback (ستون role) بین نقش‌های کاربر باشد، همان اولویت دارد؛
+ * وگرنه صاحب پت، وگرنه اولین نقش.
+ */
 export function primaryRole(roles: UserRole[] | undefined | null, fallback?: UserRole | null): UserRole | undefined {
-  const list = roles?.length ? roles : fallback ? [fallback] : [];
+  const list = normalizeRoles(roles, fallback);
+  if (!list.length) return undefined;
+  if (fallback && list.includes(fallback)) return fallback;
   if (list.includes('pet_owner')) return 'pet_owner';
   return list[0];
 }

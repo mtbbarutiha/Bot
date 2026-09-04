@@ -1,3 +1,4 @@
+import { menuKeyboardFor } from './helpers';
 import type { Context } from 'grammy';
 import type { BotStep, PetDraft, PetGender, PetSize, PetSpecies } from '@petdate/shared';
 import {
@@ -76,7 +77,7 @@ async function cancelWizard(ctx: Context, telegramId: string): Promise<void> {
     draftPet: undefined,
     breedPage: undefined,
   });
-  await ctx.reply('ثبت پت لغو شد.', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
+  await ctx.reply('ثبت پت لغو شد.', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 export async function startPetWizard(ctx: Context, telegramId: string): Promise<void> {
@@ -124,7 +125,7 @@ async function askSpecies(ctx: Context): Promise<void> {
   } catch (err) {
     console.error('askSpecies failed:', err);
     await ctx.reply('خطا در دریافت نوع پت. دوباره «➕ ثبت پت» رو بزن.', {
-      reply_markup: mainMenuKeyboard('pet_owner'),
+      reply_markup: mainMenuKeyboard('pet_owner', undefined, ctx.from?.id),
     });
   }
 }
@@ -374,7 +375,7 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
     });
     const u = await getUserByTelegramId(telegramId);
     await ctx.reply('برای پیدا کردن همبازی از منو «🔍 پیدا کردن همبازی» رو بزن.', {
-      reply_markup: mainMenuKeyboard(u?.role, u?.roles),
+      reply_markup: menuKeyboardFor(ctx, u),
     });
     return true;
   }

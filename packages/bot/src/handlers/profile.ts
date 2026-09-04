@@ -39,7 +39,7 @@ import {
   textStepKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
-import { getCtxUser } from './helpers';
+import { getCtxUser, menuKeyboardFor } from './helpers';
 
 const PROFILE_TOTAL = 10;
 
@@ -194,7 +194,7 @@ async function cancelWizard(ctx: Context, telegramId: string): Promise<void> {
     breedPage: undefined,
   });
   await ctx.reply('انصراف دادی. هر وقت خواستی از منو «پروفایل خودم» دوباره شروع کن.', {
-    reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+    reply_markup: menuKeyboardFor(ctx, user),
   });
 }
 
@@ -221,7 +221,7 @@ async function skipProfileWizardLater(ctx: Context, telegramId: string): Promise
   });
   await ctx.reply(
     'باشه، پروفایل رو فعلاً رد کردی.\nهر وقت خواستی از منو «👤 پروفایل خودم» تکمیلش کن.',
-    { reply_markup: mainMenuKeyboard(user?.role, user?.roles) }
+    { reply_markup: menuKeyboardFor(ctx, user) }
   );
 }
 
@@ -290,7 +290,7 @@ export async function handleProfile(ctx: Context): Promise<void> {
   }
 
   await sendOwnProfileCard(ctx, user, pets.length, card);
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 export async function startProfileWizard(ctx: Context): Promise<void> {
@@ -487,7 +487,7 @@ async function finishVetCredentialUpload(
     await upsertSession(telegramId, { step: 'ready' });
     await ctx.reply(
       `✅ مدرکت ثبت شد و در صف بررسی است.\nوضعیت: ${VET_CREDENTIAL_STATUS_LABELS[user.vetCredentialStatus ?? 'pending']}`,
-      { reply_markup: mainMenuKeyboard(user.role, user.roles) }
+      { reply_markup: menuKeyboardFor(ctx, user) }
     );
   } catch (err) {
     console.error('submitVetCredential failed:', err);
@@ -506,7 +506,7 @@ export async function handleVetCredentialText(ctx: Context, text: string): Promi
     const user = await getCtxUser(ctx);
     await upsertSession(telegramId, { step: 'ready' });
     await ctx.reply('آپلود مدرک لغو شد.', {
-      reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+      reply_markup: menuKeyboardFor(ctx, user),
     });
     return true;
   }
@@ -1103,7 +1103,7 @@ export async function handleProfileDeactivateConfirm(ctx: Context, yes: boolean)
   if (!yes) {
     const user = await getCtxUser(ctx);
     await ctx.reply('باشه، حسابت همون‌طور موند.', {
-      reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+      reply_markup: menuKeyboardFor(ctx, user),
     });
     return;
   }
@@ -1111,7 +1111,7 @@ export async function handleProfileDeactivateConfirm(ctx: Context, yes: boolean)
   const user = await getCtxUser(ctx);
   await ctx.reply(
     '⏸ حسابت غیرفعال شد.\nبرای فعال‌سازی دوباره از پروفایل «فعال‌سازی» رو بزن.',
-    { reply_markup: mainMenuKeyboard(user?.role, user?.roles) }
+    { reply_markup: menuKeyboardFor(ctx, user) }
   );
 }
 
@@ -1130,7 +1130,7 @@ export async function handleProfileDeleteConfirm(ctx: Context, yes: boolean): Pr
   if (!yes) {
     const user = await getCtxUser(ctx);
     await ctx.reply('حذف لغو شد.', {
-      reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+      reply_markup: menuKeyboardFor(ctx, user),
     });
     return;
   }
@@ -1189,7 +1189,7 @@ async function finishProfileWizard(
       pets.map((p) => p.name)
     )}`;
     await sendOwnProfileCard(ctx, user, pets.length, text);
-    await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
+    await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
   } catch (err) {
     console.error('finishProfileWizard failed:', err);
     await ctx.reply('ثبت پروفایل با خطا مواجه شد. یک بار دیگه «✅ ثبت علایق» رو بزن یا از /profile دوباره شروع کن.');

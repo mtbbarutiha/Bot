@@ -13,7 +13,7 @@ import {
   playdateActionKeyboard,
 } from '../keyboards';
 import { upsertSession } from '../session';
-import { getCtxUser } from './helpers';
+import { getCtxUser, menuKeyboardFor } from './helpers';
 
 const MAX_AUTO_REQUESTS = 30;
 
@@ -34,7 +34,7 @@ export async function handleExplorePickPet(ctx: Context): Promise<void> {
     await ctx.reply('اول باید حداقل یک پت ثبت کنی تا برات همبازی پیدا کنیم.', {
       reply_markup: myPetsActionKeyboard(),
     });
-    await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
+    await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
     return;
   }
 
@@ -197,7 +197,7 @@ export async function handleExploreForPet(ctx: Context, petId: number | 'all'): 
   } catch {
     await ctx.reply(summary, { parse_mode: 'Markdown' });
   }
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user.role, user.roles) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 /** سازگاری با callbackهای قدیمی صفحه‌بندی — برمی‌گرداند به انتخاب پت */

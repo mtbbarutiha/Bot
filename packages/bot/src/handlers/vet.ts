@@ -3,7 +3,7 @@ import type { VetConsultation } from '@petdate/shared';
 import { userHasRole } from '@petdate/shared';
 import { listVetConsultations } from '../api-client';
 import { mainMenuKeyboard } from '../keyboards';
-import { getCtxUser } from './helpers';
+import { getCtxUser, menuKeyboardFor } from './helpers';
 
 const STATUS_FA: Record<string, string> = {
   requested: 'درخواست‌شده',
@@ -32,7 +32,7 @@ export async function handleVetPatients(ctx: Context): Promise<void> {
 
   if (!userHasRole(user, 'vet')) {
     await ctx.reply('این بخش مخصوص دامپزشکان است.', {
-      reply_markup: mainMenuKeyboard(user.role, user.roles),
+      reply_markup: menuKeyboardFor(ctx, user),
     });
     return;
   }
@@ -49,7 +49,7 @@ export async function handleVetPatients(ctx: Context): Promise<void> {
         ].join('\n'),
         {
           parse_mode: 'Markdown',
-          reply_markup: mainMenuKeyboard(user.role, user.roles),
+          reply_markup: menuKeyboardFor(ctx, user),
         }
       );
       return;
@@ -72,12 +72,12 @@ export async function handleVetPatients(ctx: Context): Promise<void> {
 
     await ctx.reply(lines.join('\n'), {
       parse_mode: 'Markdown',
-      reply_markup: mainMenuKeyboard(user.role, user.roles),
+      reply_markup: menuKeyboardFor(ctx, user),
     });
   } catch (err) {
     console.error('vet patients list failed:', err);
     await ctx.reply('فعلاً لیست بیماران در دسترس نیست. کمی بعد دوباره امتحان کن.', {
-      reply_markup: mainMenuKeyboard(user.role, user.roles),
+      reply_markup: menuKeyboardFor(ctx, user),
     });
   }
 }

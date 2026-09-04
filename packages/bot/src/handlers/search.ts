@@ -17,7 +17,7 @@ import {
   textStepKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
-import { getCtxUser } from './helpers';
+import { getCtxUser, menuKeyboardFor } from './helpers';
 
 const PAGE_SIZE = 8;
 
@@ -63,7 +63,7 @@ export async function handleNearbyPets(ctx: Context): Promise<void> {
       ].join('\n'),
       {
         parse_mode: 'HTML',
-        reply_markup: mainMenuKeyboard(user.role, user.roles),
+        reply_markup: menuKeyboardFor(ctx, user),
       }
     );
     return;
@@ -225,7 +225,7 @@ export async function handleSearchHomeCallback(ctx: Context): Promise<void> {
     });
   }
   await ctx.reply('منوی اصلی 👇', {
-    reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+    reply_markup: menuKeyboardFor(ctx, user),
   });
 }
 
@@ -361,7 +361,7 @@ async function showSearchResults(
     ].join('\n');
     const emptyKb =
       mode === 'nearby'
-        ? mainMenuKeyboard(user.role, user.roles)
+        ? menuKeyboardFor(ctx, user)
         : searchPetsMenuKeyboard();
 
     if (opts?.edit && ctx.callbackQuery) {
@@ -414,7 +414,7 @@ async function showSearchResults(
   if (!opts?.edit) {
     if (mode === 'nearby') {
       await ctx.reply('منوی اصلی 👇', {
-        reply_markup: mainMenuKeyboard(user.role, user.roles),
+        reply_markup: menuKeyboardFor(ctx, user),
       });
     } else {
       await ctx.reply('جستجوی پت 👇', { reply_markup: searchPetsMenuKeyboard() });

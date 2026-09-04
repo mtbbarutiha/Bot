@@ -1,3 +1,4 @@
+import { getCtxUser, menuKeyboardFor } from './helpers';
 import type { Context } from 'grammy';
 import { VERIFIED_BADGE, VERIFICATION_STATUS_LABELS, faceVerifyIntroText } from '@petdate/shared';
 import {
@@ -6,28 +7,22 @@ import {
   rejectVerification,
   submitVerification,
 } from '../api-client';
-import { isTelegramAdmin } from '../config';
+import { isAdminAuthorized } from './admin-auth';
 import { FACE_VERIFY_REWARD, formatNum } from '../economy';
 import {
   adminRejectSkipKeyboard,
   adminVerificationKeyboard,
-  mainMenuKeyboard,
   verificationSubmitKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
-import { getCtxUser } from './helpers';
-
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 async function requireAdmin(ctx: Context): Promise<boolean> {
-  const from = ctx.from;
-  if (!from || !isTelegramAdmin(from.id)) {
-    await ctx.reply('این بخش فقط برای ادمین است.');
-    return false;
-  }
-  return true;
+  if (await isAdminAuthorized(ctx)) return true;
+  await ctx.reply('این بخش فقط برای ادمین است.');
+  return false;
 }
 
 export async function handleVerifyStatus(ctx: Context): Promise<void> {
@@ -45,14 +40,14 @@ export async function handleVerifyStatus(ctx: Context): Promise<void> {
         'احراز چهره‌ات تأیید شده.',
         'بج احراز روی پروفایلت نمایش داده می‌شه.',
       ].join('\n'),
-      { reply_markup: mainMenuKeyboard(user.role, user.roles) }
+      { reply_markup: menuKeyboardFor(ctx, user) }
     );
     return;
   }
   if (status === 'pending') {
     await ctx.reply(
       '⏳ درخواست احراز چهره‌ات در صف بررسی ادمینه.\nبه‌محض تأیید یا رد، همین‌جا خبرت می‌کنیم.',
-      { reply_markup: mainMenuKeyboard(user.role, user.roles) }
+      { reply_markup: menuKeyboardFor(ctx, user) }
     );
     return;
   }
@@ -107,7 +102,7 @@ export async function handleVerifyCancel(ctx: Context): Promise<void> {
     adminRejectUserId: undefined,
   });
   await ctx.reply('احراز چهره لغو شد.', {
-    reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+    reply_markup: menuKeyboardFor(ctx, user),
   });
 }
 
@@ -177,7 +172,7 @@ async function finishSubmit(ctx: Context, telegramId: string, photoFileId: strin
       `بعد از تأیید، بج احراز + ${formatNum(FACE_VERIFY_REWARD)} سکه جایزه می‌گیری.`,
       'نتیجه همین‌جا برات پیام میاد.',
     ].join('\n'),
-    { reply_markup: mainMenuKeyboard(user?.role, user?.roles) }
+    { reply_markup: menuKeyboardFor(ctx, user) }
   );
 }
 
@@ -337,7 +332,7 @@ export async function handleAdminRejectSkip(ctx: Context): Promise<void> {
 
 export async function handleAdminRejectReasonText(ctx: Context, text: string): Promise<boolean> {
   const from = ctx.from;
-  if (!from || !isTelegramAdmin(from.id)) return false;
+  if (!from || !(await isAdminAuthorized(ctx))) return false;
   const session = await getSession(String(from.id));
   if (!session || session.step !== 'admin_reject_reason' || !session.adminRejectUserId) {
     return false;

@@ -11,17 +11,23 @@ import {
 import {
   registerTelegramUser,
   setUserOnboarding,
+  setUserPrimaryRole,
   setUserRoles,
 } from '../api-client';
 import { sendWelcomeLogo } from '../branding';
 import { roleWelcomeHint } from '../format';
-import { mainMenuKeyboard, roleKeyboard, roleReplyKeyboard } from '../keyboards';
+import {
+  mainMenuKeyboard,
+  myRolesSwitchKeyboard,
+  roleKeyboard,
+  roleReplyKeyboard,
+} from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { webLinkHint } from '../urls';
-import { displayName, getCtxUser } from './helpers';
+import { displayName, getCtxUser, menuKeyboardFor } from './helpers';
 import { startProfileWizard } from './profile';
 
-export { displayName, getCtxUser } from './helpers';
+export { displayName, getCtxUser, menuKeyboardFor } from './helpers';
 
 function roleLabels(user: User): string {
   const roles = normalizeRoles(user.roles, user.role);
@@ -116,11 +122,11 @@ export async function sendWelcomeBack(ctx: Context, user: User, name: string): P
   }
 
   const sent = await sendWelcomeLogo(ctx, caption, {
-    reply_markup: mainMenuKeyboard(user.role, user.roles),
+    reply_markup: menuKeyboardFor(ctx, user),
   });
   if (!sent) {
     await ctx.reply(caption, {
-      reply_markup: mainMenuKeyboard(user.role, user.roles),
+      reply_markup: menuKeyboardFor(ctx, user),
     });
   }
 }
@@ -188,6 +194,10 @@ export async function handleRolesSelect(ctx: Context, roles: UserRole[]): Promis
   if (!from) return;
 
   const telegramId = String(from.id);
+  const session = await getSession(telegramId);
+  const isAddingRoles = Boolean(session?.addingRoles);
+  const previousPrimary = session?.role;
+
   const normalized = normalizeRoles(roles);
   if (!normalized.length) {
     await ctx.reply('حداقل یک نقش انتخاب کن.', { reply_markup: roleReplyKeyboard([]) });
@@ -195,24 +205,55 @@ export async function handleRolesSelect(ctx: Context, roles: UserRole[]): Promis
   }
 
   const user = await setUserRoles(telegramId, normalized);
-  const primary = primaryRole(user.roles, user.role)!;
+  // اگر نقش فعال قبلی هنوز هست، همان را نگه دار؛ وگرنه primary پیش‌فرض
+  let active =
+    previousPrimary && normalized.includes(previousPrimary)
+      ? previousPrimary
+      : primaryRole(user.roles, user.role)!;
+  if (active !== user.role) {
+    try {
+      const switched = await setUserPrimaryRole(telegramId, active);
+      active = primaryRole(switched.roles, switched.role)!;
+      Object.assign(user, switched);
+    } catch {
+      active = primaryRole(user.roles, user.role)!;
+    }
+  }
+
   const labels = normalizeRoles(user.roles, user.role)
     .map((r) => USER_ROLE_LABELS[r])
     .join(' · ');
-  const hint = roleWelcomeHint(primary);
+  const hint = roleWelcomeHint(active);
 
   await upsertSession(telegramId, {
     userId: user.id,
-    role: primary,
+    role: active,
     draftRoles: undefined,
+    addingRoles: undefined,
     step: 'ready',
   });
 
-  await setUserOnboarding(telegramId, 'profile_incomplete');
-
   if (ctx.callbackQuery) {
-    await ctx.answerCallbackQuery({ text: 'نقش‌ها ثبت شد' });
+    await ctx.answerCallbackQuery({ text: isAddingRoles ? 'نقش‌ها به‌روز شد' : 'نقش‌ها ثبت شد' });
   }
+
+  // افزودن نقش از منوی «نقش‌های من» — بدون ویزارد آنبوردینگ
+  if (isAddingRoles) {
+    const addText = [
+      'نقش‌هات به‌روز شد ✅',
+      '',
+      `<b>${escapeHtml(labels)}</b>`,
+      '',
+      `نقش فعال: <b>${escapeHtml(USER_ROLE_LABELS[active])}</b>`,
+    ].join('\n');
+    await ctx.reply(addText, {
+      parse_mode: 'HTML',
+      reply_markup: menuKeyboardFor(ctx, { role: active, roles: user.roles }),
+    });
+    return;
+  }
+
+  await setUserOnboarding(telegramId, 'profile_incomplete');
 
   const text = [
     `عالی! نقش‌هات ثبت شد 🎉`,
@@ -267,6 +308,147 @@ function escapeHtml(value: string): string {
 /** سازگاری با انتخاب تکی قدیمی — الان تاگل می‌کند */
 export async function handleRoleSelect(ctx: Context, role: UserRole): Promise<void> {
   await handleRoleToggle(ctx, role);
+}
+
+/** صفحهٔ نقش‌های من — سوییچ نقش فعال (ورود به پنل نقش) */
+export async function handleMyRoles(ctx: Context): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+
+  const user = await getCtxUser(ctx);
+  if (!user) {
+    await ctx.reply('اول /start بزن.');
+    return;
+  }
+
+  const roles = normalizeRoles(user.roles, user.role);
+  if (!roles.length) {
+    await upsertSession(String(from.id), {
+      step: 'role_select',
+      draftRoles: [],
+      addingRoles: false,
+    });
+    await ctx.reply('هنوز نقشی نداری. نقش‌هات رو انتخاب کن:', {
+      reply_markup: roleReplyKeyboard([]),
+    });
+    return;
+  }
+
+  const active = primaryRole(roles, user.role);
+  const lines =
+    roles.length === 1
+      ? [
+          '🎭 <b>نقش‌های من</b>',
+          '',
+          `نقش فعال: <b>${escapeHtml(USER_ROLE_LABELS[roles[0]!])}</b>`,
+          '',
+          'فقط یک نقش داری. برای افزودن نقش جدید «➕ افزودن نقش» رو بزن.',
+        ]
+      : [
+          '🎭 <b>نقش‌های من</b>',
+          '',
+          `نقش فعال: <b>${escapeHtml(USER_ROLE_LABELS[active!])}</b>`,
+          '',
+          'برای رفتن به پنل هر نقش، روی نقش موردنظر بزن:',
+        ];
+
+  await ctx.reply(lines.join('\n'), {
+    parse_mode: 'HTML',
+    reply_markup: myRolesSwitchKeyboard(roles, active),
+  });
+}
+
+/** سوییچ نقش فعال بین نقش‌های موجود — منوی همان پنل را نشان می‌دهد */
+export async function handleMyRolesSwitch(ctx: Context, role: UserRole): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+
+  const telegramId = String(from.id);
+  const user = await getCtxUser(ctx);
+  if (!user) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+
+  const roles = normalizeRoles(user.roles, user.role);
+  if (!roles.includes(role)) {
+    await ctx.answerCallbackQuery({ text: 'این نقش مال تو نیست', show_alert: true });
+    return;
+  }
+
+  const current = primaryRole(roles, user.role);
+  if (current === role) {
+    await ctx.answerCallbackQuery({ text: 'همین الان فعاله' });
+    await ctx.reply(`منوی ${USER_ROLE_LABELS[role]} 👇`, {
+      reply_markup: menuKeyboardFor(ctx, user),
+    });
+    return;
+  }
+
+  const updated = await setUserPrimaryRole(telegramId, role);
+  const active = primaryRole(updated.roles, updated.role)!;
+
+  await upsertSession(telegramId, {
+    userId: updated.id,
+    role: active,
+    step: 'ready',
+    addingRoles: undefined,
+  });
+
+  await ctx.answerCallbackQuery({ text: `نقش فعال: ${USER_ROLE_LABELS[active]}` });
+
+  const confirm = `نقش فعال: <b>${escapeHtml(USER_ROLE_LABELS[active])}</b>`;
+  try {
+    await ctx.editMessageText(
+      [
+        '🎭 <b>نقش‌های من</b>',
+        '',
+        confirm,
+        '',
+        'منوی پنل بر اساس نقش فعال به‌روز شد 👇',
+      ].join('\n'),
+      {
+        parse_mode: 'HTML',
+        reply_markup: myRolesSwitchKeyboard(normalizeRoles(updated.roles, updated.role), active),
+      }
+    );
+  } catch {
+    /* ignore edit failures */
+  }
+
+  await ctx.reply(confirm, {
+    parse_mode: 'HTML',
+    reply_markup: menuKeyboardFor(ctx, updated),
+  });
+}
+
+/** شروع جریان افزودن نقش (همان multi-role select) */
+export async function handleMyRolesAdd(ctx: Context): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+
+  const telegramId = String(from.id);
+  const user = await getCtxUser(ctx);
+  const roles = normalizeRoles(user?.roles, user?.role);
+
+  await upsertSession(telegramId, {
+    step: 'role_select',
+    draftRoles: roles,
+    addingRoles: true,
+    userId: user?.id,
+  });
+
+  if (ctx.callbackQuery) {
+    await ctx.answerCallbackQuery();
+  }
+
+  await ctx.reply(
+    [
+      'نقش‌های جدید رو تیک بزن (نقش‌های فعلی هم هستن).',
+      `بعد «${ROLE_CONFIRM_LABEL}» رو بزن:`,
+    ].join('\n'),
+    { reply_markup: roleReplyKeyboard(roles) }
+  );
 }
 
 export async function handleHelp(ctx: Context): Promise<void> {
@@ -324,7 +506,7 @@ export async function handleHelp(ctx: Context): Promise<void> {
 
   await ctx.reply(lines.join('\n'), {
     parse_mode: 'Markdown',
-    reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+    reply_markup: menuKeyboardFor(ctx, user),
   });
 }
 
@@ -338,6 +520,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
     draftPet: undefined,
     draftProfile: undefined,
     draftRoles: undefined,
+    addingRoles: undefined,
     profileSectionEdit: false,
     pendingPhone: undefined,
     selectedPetId: undefined,
@@ -352,13 +535,13 @@ export async function handleCancel(ctx: Context): Promise<void> {
     adminRejectUserId: undefined,
   });
   await ctx.reply('عملیات لغو شد.', {
-    reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+    reply_markup: menuKeyboardFor(ctx, user),
   });
 }
 
 export async function handleMenu(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
   await ctx.reply(`منوی ${BRAND.name} 👇`, {
-    reply_markup: mainMenuKeyboard(user?.role, user?.roles),
+    reply_markup: menuKeyboardFor(ctx, user),
   });
 }

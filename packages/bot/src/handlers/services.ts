@@ -10,7 +10,7 @@ import {
 } from '../api-client';
 import { QUICK_VET_COST, formatNum } from '../economy';
 import { mainMenuKeyboard } from '../keyboards';
-import { getCtxUser } from './helpers';
+import { getCtxUser, menuKeyboardFor } from './helpers';
 
 export async function handleCoins(ctx: Context): Promise<void> {
   const { handleCoins: coinsHandler } = await import('./coins');
@@ -47,7 +47,7 @@ export async function handleMedical(ctx: Context): Promise<void> {
         .success(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 export async function handleInviteFriends(ctx: Context): Promise<void> {
@@ -76,7 +76,7 @@ export async function handleInviteFriends(ctx: Context): Promise<void> {
         .success(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 export async function handleQuickVet(ctx: Context): Promise<void> {
@@ -106,7 +106,7 @@ export async function handleQuickVet(ctx: Context): Promise<void> {
         .primary(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 /** اتصال فوری: کسر سکه و ارسال درخواست به همه دامپزشک‌های واجد شرایط */
@@ -128,7 +128,7 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
     });
     await ctx.reply(
       `برای اتصال سریع حداقل ${formatNum(QUICK_VET_COST)} سکه لازم داری.\nموجودی: ${formatNum(balance)} — از منو «🪙 سکه» بگیر.`,
-      { reply_markup: mainMenuKeyboard(user.role, user.roles) }
+      { reply_markup: menuKeyboardFor(ctx, user) }
     );
     return;
   }
@@ -149,7 +149,7 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
     await ctx.answerCallbackQuery({ text: 'پزشک آنلاینی نیست', show_alert: true });
     await ctx.reply(
       'فعلاً دامپزشک آنلاینی برای اتصال پیدا نشد.\nکمی بعد دوباره امتحان کن.',
-      { reply_markup: mainMenuKeyboard(user.role, user.roles) }
+      { reply_markup: menuKeyboardFor(ctx, user) }
     );
     return;
   }
@@ -215,7 +215,7 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
     }
     await ctx.reply(
       'ارسال به پزشک‌ها ناموفق بود؛ سکه‌ات برگشت داده شد.',
-      { reply_markup: mainMenuKeyboard(user.role, user.roles) }
+      { reply_markup: menuKeyboardFor(ctx, user) }
     );
     return;
   }
@@ -229,7 +229,7 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
       '',
       'به‌زودی یکی از دامپزشک‌ها باهات هماهنگ می‌کنه.',
     ].join('\n'),
-    { reply_markup: mainMenuKeyboard(user.role, user.roles) }
+    { reply_markup: menuKeyboardFor(ctx, user) }
   );
 }
 
@@ -343,7 +343,7 @@ export async function handlePetShop(ctx: Context): Promise<void> {
         .primary(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 export async function handleServices(ctx: Context): Promise<void> {
@@ -374,7 +374,7 @@ export async function handleServices(ctx: Context): Promise<void> {
         .primary(),
     }
   );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: mainMenuKeyboard(user?.role, user?.roles) });
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
 }
 
 export async function handleComingSoon(ctx: Context, feature: string): Promise<void> {
