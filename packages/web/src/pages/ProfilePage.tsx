@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ChevronLeft, Globe, MapPin, Send, Shield, Smartphone } from 'lucide-react';
-import type { UserRole } from '@petdate/shared';
+import { Link, useNavigate } from 'react-router-dom';
+import { ChevronLeft, Globe, LogOut, MapPin, Send, Shield, Smartphone } from 'lucide-react';
 import {
   ONBOARDING_STATUS_LABELS,
   USER_ROLE_LABELS,
@@ -12,50 +11,61 @@ import {
 import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
+import { useAuthStore } from '../hooks/useAuthStore';
 import { usePetStore } from '../hooks/usePetStore';
-import { useUserStore } from '../hooks/useUserStore';
 
-const WIZARD_LINKS: Partial<Record<UserRole, string>> = {
-  pet_owner: '/onboarding/pet',
-  vet: '/onboarding/wizard/vet',
-  no_pet: '/onboarding/wizard/no_pet',
-  pet_seeker: '/onboarding/wizard/pet_seeker',
-  community_seeker: '/onboarding/wizard/community_seeker',
-  trainer: '/onboarding/wizard/trainer',
-  pet_sitter: '/onboarding/wizard/pet_sitter',
-};
 
 export function ProfilePage() {
-  const { myPet, owners } = usePetStore();
-  const { user } = useUserStore();
-  const owner = owners.find((o) => o.id === myPet.ownerId) ?? owners[0];
+  const navigate = useNavigate();
+  const { myPet } = usePetStore();
+  const { user, logout, isProfileComplete } = useAuthStore();
   const [showToast, setShowToast] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  if (!user) {
+    return null;
+  }
 
   const onboardingLabel =
-    user.onboarding === 'none'
+    !user.onboarding
       ? 'شروع نشده'
-      : ONBOARDING_STATUS_LABELS[user.onboarding as keyof typeof ONBOARDING_STATUS_LABELS] ?? user.onboarding;
+      : ONBOARDING_STATUS_LABELS[user.onboarding] ?? user.onboarding;
 
   const roles = normalizeRoles(user.roles, user.role);
   const mainRole = primaryRole(roles, user.role);
-  const wizardLink = mainRole ? WIZARD_LINKS[mainRole] : '/onboarding/role';
-  const needsWizard = user.onboarding !== 'profile_complete';
+  const wizardLink = isProfileComplete
+    ? mainRole === 'pet_owner'
+      ? '/onboarding/pet'
+      : '/onboarding/profile'
+    : '/onboarding/profile';
+  const needsWizard = !isProfileComplete;
   const isPetOwner = userHasRole(user, 'pet_owner');
   const roleLabel = roles.length
     ? roles.map((r) => USER_ROLE_LABELS[r]).join(' · ')
     : 'انتخاب نشده';
+  const locationLabel = [user.city, user.province, user.country].filter(Boolean).join('، ') || '—';
+
+  async function onLogout() {
+    setBusy(true);
+    await logout();
+    navigate('/auth/login', { replace: true });
+  }
 
   return (
     <>
       <div className="profile-hero">
         <BrandMark className="profile-brand" iconSize={26} />
         <div className="profile-hero-photo">
-          <img src={myPet.imageUrl} alt={myPet.name} />
+          {user.avatarUrl || (isPetOwner && myPet.imageUrl) ? (
+            <img src={user.avatarUrl || myPet.imageUrl} alt={user.name} />
+          ) : (
+            <div className="profile-hero-fallback">{user.name.slice(0, 1)}</div>
+          )}
         </div>
-        <div className="profile-name">{owner.name}</div>
+        <div className="profile-name">{user.name}</div>
         <div className="profile-city">
           <MapPin size={14} strokeWidth={2} />
-          {owner.city}
+          {locationLabel}
         </div>
       </div>
 
@@ -71,19 +81,35 @@ export function ProfilePage() {
               {onboardingLabel}
             </span>
           </div>
+          {user.phone && (
+            <div className="profile-status-row">
+              <span className="profile-status-label">موبایل</span>
+              <span className="profile-status-value" dir="ltr">{user.phone}</span>
+            </div>
+          )}
+          {user.email && (
+            <div className="profile-status-row">
+              <span className="profile-status-label">ایمیل</span>
+              <span className="profile-status-value" dir="ltr">{user.email}</span>
+            </div>
+          )}
           {user.telegramId && (
             <div className="profile-status-row">
               <span className="profile-status-label">تلگرام</span>
               <span className="profile-status-value">متصل (@Petdatebot)</span>
             </div>
           )}
-          {needsWizard && wizardLink && (
+          {(needsWizard || isPetOwner) && (
             <Link to={wizardLink} className="profile-wizard-link">
-              تکمیل پروفایل
+              {needsWizard ? 'تکمیل پروفایل' : 'ویرایش / ثبت پت'}
               <ChevronLeft size={16} strokeWidth={2} />
             </Link>
           )}
         </div>
+
+        {user.bio ? (
+          <p className="profile-bio">{user.bio}</p>
+        ) : null}
 
         {isPetOwner && (
           <>
@@ -96,7 +122,9 @@ export function ProfilePage() {
               <PetAvatar type={myPet.type} size="sm" imageUrl={myPet.imageUrl} name={myPet.name} />
               <div>
                 <h3>{myPet.name}</h3>
-                <p>{myPet.breed} · {formatAge(myPet)} · {myPet.neighborhood}</p>
+                <p>
+                  {myPet.breed} · {formatAge(myPet)} · {myPet.neighborhood}
+                </p>
               </div>
             </div>
           </>
@@ -105,24 +133,39 @@ export function ProfilePage() {
         <div className="profile-services">
           <h2>خدمات</h2>
           <div className="service-links">
-            <Link to="/clinics" className="service-link-card">🩺 کلینیک‌های نزدیک</Link>
-            <Link to="/shop" className="service-link-card">🛒 فروشگاه پت</Link>
-            <Link to="/vet-consult" className="service-link-card">💬 مشاوره دامپزشک</Link>
+            <Link to="/clinics" className="service-link-card">
+              کلینیک‌های نزدیک
+            </Link>
+            <Link to="/shop" className="service-link-card">
+              فروشگاه پت
+            </Link>
+            <Link to="/vet-consult" className="service-link-card">
+              مشاوره دامپزشک
+            </Link>
             {isPetOwner && (
-              <Link to="/explore" className="service-link-card">🐾 کشف همبازی</Link>
+              <Link to="/explore" className="service-link-card">
+                کشف همبازی
+              </Link>
             )}
           </div>
         </div>
 
         <button
           className="cta-btn cta-btn--spaced"
-          onClick={() => { setShowToast(true); setTimeout(() => setShowToast(false), 2500); }}
+          type="button"
+          onClick={() => {
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 2500);
+            navigate('/onboarding/profile');
+          }}
         >
-          💾 ذخیره تغییرات
+          ویرایش پروفایل
         </button>
 
         <div className="menu-item">
-          <div className="menu-icon"><Send size={18} strokeWidth={2} /></div>
+          <div className="menu-icon">
+            <Send size={18} strokeWidth={2} />
+          </div>
           <div className="menu-text">
             <strong>ربات تلگرام</strong>
             <small>@Petdatebot — هم‌تراز با وب</small>
@@ -130,23 +173,48 @@ export function ProfilePage() {
         </div>
 
         <div className="menu-item">
-          <div className="menu-icon"><Globe size={18} strokeWidth={2} /></div>
-          <div className="menu-text"><strong>وب</strong><small>فعال</small></div>
+          <div className="menu-icon">
+            <Globe size={18} strokeWidth={2} />
+          </div>
+          <div className="menu-text">
+            <strong>وب دسکتاپ</strong>
+            <small>ورود با OTP</small>
+          </div>
         </div>
         <div className="menu-item">
-          <div className="menu-icon"><Smartphone size={18} strokeWidth={2} /></div>
-          <div className="menu-text"><strong>PWA</strong><small>قابل نصب</small></div>
+          <div className="menu-icon">
+            <Smartphone size={18} strokeWidth={2} />
+          </div>
+          <div className="menu-text">
+            <strong>PWA</strong>
+            <small>قابل نصب</small>
+          </div>
         </div>
         <Link to="/admin/login" className="menu-item">
-          <div className="menu-icon"><Shield size={18} strokeWidth={2} /></div>
+          <div className="menu-icon">
+            <Shield size={18} strokeWidth={2} />
+          </div>
           <div className="menu-text">
             <strong>پنل ادمین</strong>
             <small>مدیریت پت‌ها و درخواست‌ها</small>
           </div>
         </Link>
+
+        <button
+          type="button"
+          className="cta-btn cta-btn--spaced profile-logout-btn"
+          onClick={() => void onLogout()}
+          disabled={busy}
+        >
+          <LogOut size={18} /> {busy ? 'خروج…' : 'خروج از حساب'}
+        </button>
       </div>
 
-      {showToast && <div className="toast" role="status">ذخیره شد (نمایشی)</div>}
+      {showToast && (
+        <div className="toast" role="status">
+          انتقال به ویرایش پروفایل
+        </div>
+      )}
     </>
   );
 }

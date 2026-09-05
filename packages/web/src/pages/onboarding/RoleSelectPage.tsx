@@ -9,7 +9,7 @@ import {
   USER_ROLES,
   primaryRole,
 } from '@petdate/shared';
-import { useUserStore } from '../../hooks/useUserStore';
+import { useAuthStore } from '../../hooks/useAuthStore';
 
 const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   pet_owner: 'پت داری و دنبال همبازی برایش هستی',
@@ -23,10 +23,15 @@ const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
 
 export function RoleSelectPage() {
   const navigate = useNavigate();
-  const { saveRolesToApi } = useUserStore();
+  const { saveRoles, isLoggedIn } = useAuthStore();
   const [selected, setSelected] = useState<UserRole[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  if (!isLoggedIn) {
+    navigate('/auth/login', { replace: true });
+    return null;
+  }
 
   const toggleRole = (role: UserRole) => {
     setSelected((prev) =>
@@ -43,9 +48,13 @@ export function RoleSelectPage() {
     setSaving(true);
     setError(null);
     try {
-      await saveRolesToApi(selected);
+      await saveRoles(selected);
       const next = primaryRole(selected) ?? selected[0]!;
-      navigate(`/onboarding/wizard/${next}`);
+      if (next === 'pet_owner') {
+        navigate('/onboarding/profile');
+      } else {
+        navigate('/onboarding/profile');
+      }
     } catch {
       setError('ثبت نقش‌ها ناموفق بود. دوباره امتحان کن.');
     } finally {
@@ -58,9 +67,7 @@ export function RoleSelectPage() {
       <header className="onboarding-header">
         <BrandMark iconSize={32} />
         <h1>نقش‌هات رو انتخاب کن</h1>
-        <p>
-          می‌تونی چند نقش داشته باشی · {BRAND.taglineFa}
-        </p>
+        <p>می‌تونی چند نقش داشته باشی · {BRAND.taglineFa}</p>
       </header>
 
       <div className="role-grid">

@@ -23,9 +23,9 @@ export function WelcomePage() {
           <button
             type="button"
             className="welcome-cta welcome-cta--neon"
-            onClick={() => navigate('/onboarding/role')}
+            onClick={() => navigate('/auth/login')}
           >
-            🚀 شروع کن
+            📱 ورود با موبایل / ایمیل
           </button>
         </footer>
       </div>

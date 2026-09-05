@@ -375,7 +375,38 @@ function migrateSchema() {
       UNIQUE(user_id, contact_user_id)
     )
   `);
+  
   db.exec(`CREATE INDEX IF NOT EXISTS idx_user_contacts_user ON user_contacts (user_id);`);
+
+  const userCols2 = db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
+  const userNames2 = new Set(userCols2.map((c) => c.name));
+  if (!userNames2.has('email')) db.exec('ALTER TABLE users ADD COLUMN email TEXT');
+  if (!userNames2.has('email_verified')) db.exec('ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0');
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS web_otps (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      channel TEXT NOT NULL,
+      target TEXT NOT NULL,
+      code_hash TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(channel, target)
+    )
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_web_otps_target ON web_otps (channel, target);`);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS web_sessions (
+      token TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_web_sessions_user ON web_sessions (user_id);`);
+
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS phone_otps (
@@ -916,6 +947,8 @@ function mapUser(row: Record<string, unknown>): User {
     city: row.city as string | undefined,
     province: row.province as string | undefined,
     phone: row.phone as string | undefined,
+    email: (row.email as string | undefined) ?? undefined,
+    emailVerified: row.email_verified == null ? false : Boolean(row.email_verified),
     phoneVerified: row.phone_verified == null ? false : Boolean(row.phone_verified),
     phoneVerifiedAt: (row.phone_verified_at as string | undefined) ?? undefined,
     bio: row.bio as string | undefined,
@@ -1242,6 +1275,7 @@ export const dbService = {
       city: string;
       province: string;
       phone: string;
+      email: string;
       bio: string;
       interests: string[];
       avatarUrl: string;
@@ -1271,6 +1305,10 @@ export const dbService = {
         fields.push('phone_verified_at = ?');
         values.push(null);
       }
+    }
+    if (patch.email !== undefined) {
+      fields.push('email = ?');
+      values.push(patch.email);
     }
     if (patch.bio !== undefined) { fields.push('bio = ?'); values.push(patch.bio); }
     if (patch.interests !== undefined) {
@@ -3029,6 +3067,101 @@ export const dbService = {
       contactUsername: row.contact_username || undefined,
     }));
   },
+
+  getUserByPhone(phone: string): User | null {
+    const row = db.prepare('SELECT * FROM users WHERE phone = ? ORDER BY id DESC LIMIT 1').get(phone) as Record<string, unknown> | undefined;
+    return row ? mapUser(row) : null;
+  },
+
+  getUserByEmail(email: string): User | null {
+    const row = db
+      .prepare('SELECT * FROM users WHERE lower(email) = lower(?) ORDER BY id DESC LIMIT 1')
+      .get(email) as Record<string, unknown> | undefined;
+    return row ? mapUser(row) : null;
+  },
+
+  findOrCreateWebUser(opts: { phone?: string; email?: string; name?: string }): User {
+    if (opts.phone) {
+      const existing = this.getUserByPhone(opts.phone);
+      if (existing) return existing;
+    }
+    if (opts.email) {
+      const existing = this.getUserByEmail(opts.email);
+      if (existing) return existing;
+    }
+    const name = (opts.name && opts.name.trim()) || 'کاربر petdate';
+    const result = db
+      .prepare(
+        `INSERT INTO users (name, phone, email, phone_verified, email_verified, onboarding, roles, role)
+         VALUES (?, ?, ?, ?, ?, 'profile_incomplete', '[]', NULL)`
+      )
+      .run(
+        name,
+        opts.phone ?? null,
+        opts.email ?? null,
+        opts.phone ? 1 : 0,
+        opts.email ? 1 : 0
+      );
+    const user = this.getUserById(Number(result.lastInsertRowid));
+    if (!user) throw new Error('failed to create web user');
+    return user;
+  },
+
+  markEmailVerified(userId: number, email: string): User | null {
+    db.prepare('UPDATE users SET email = ?, email_verified = 1 WHERE id = ?').run(email, userId);
+    return this.getUserById(userId);
+  },
+
+  upsertWebOtp(data: { channel: string; target: string; codeHash: string; expiresAt: string }) {
+    db.prepare('DELETE FROM web_otps WHERE channel = ? AND target = ?').run(data.channel, data.target);
+    db.prepare(
+      `INSERT INTO web_otps (channel, target, code_hash, expires_at, attempts) VALUES (?, ?, ?, ?, 0)`
+    ).run(data.channel, data.target, data.codeHash, data.expiresAt);
+  },
+
+  getWebOtp(channel: string, target: string): { channel: string; target: string; codeHash: string; expiresAt: string; attempts: number; createdAt: string } | null {
+    const row = db
+      .prepare('SELECT * FROM web_otps WHERE channel = ? AND target = ?')
+      .get(channel, target) as Record<string, unknown> | undefined;
+    if (!row) return null;
+    return {
+      channel: String(row.channel),
+      target: String(row.target),
+      codeHash: String(row.code_hash),
+      expiresAt: String(row.expires_at),
+      attempts: Number(row.attempts ?? 0),
+      createdAt: String(row.created_at),
+    };
+  },
+
+  bumpWebOtpAttempts(channel: string, target: string): number {
+    db.prepare('UPDATE web_otps SET attempts = attempts + 1 WHERE channel = ? AND target = ?').run(channel, target);
+    const row = this.getWebOtp(channel, target);
+    return row?.attempts ?? 99;
+  },
+
+  deleteWebOtp(channel: string, target: string) {
+    db.prepare('DELETE FROM web_otps WHERE channel = ? AND target = ?').run(channel, target);
+  },
+
+  createWebSession(userId: number, token: string, expiresAt: string) {
+    db.prepare('INSERT INTO web_sessions (token, user_id, expires_at) VALUES (?, ?, ?)').run(token, userId, expiresAt);
+  },
+
+  getWebSession(token: string): { token: string; userId: number; expiresAt: string } | null {
+    const row = db.prepare('SELECT * FROM web_sessions WHERE token = ?').get(token) as Record<string, unknown> | undefined;
+    if (!row) return null;
+    return { token: String(row.token), userId: Number(row.user_id), expiresAt: String(row.expires_at) };
+  },
+
+  deleteWebSession(token: string) {
+    db.prepare('DELETE FROM web_sessions WHERE token = ?').run(token);
+  },
+
+  deleteWebSessionsForUser(userId: number) {
+    db.prepare('DELETE FROM web_sessions WHERE user_id = ?').run(userId);
+  },
+
 };
 
 function mapPrescription(row: Record<string, unknown>): Prescription {

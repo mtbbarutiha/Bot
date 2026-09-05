@@ -3162,3 +3162,199 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   position:absolute; inset:auto -20% -40% auto; width:160px; height:160px; border-radius:50%;
   background:rgba(255,255,255,.12);
 }
+
+/* ── Web auth + profile wizard ── */
+.auth-page {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  position: relative;
+  overflow: hidden;
+}
+.auth-hero {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(900px 420px at 10% 0%, rgba(91,168,210,.35), transparent 55%),
+    radial-gradient(700px 380px at 100% 100%, rgba(61,127,168,.22), transparent 50%),
+    linear-gradient(160deg, #eaf6fc, #f7fbfe 45%, #d9eef8);
+  z-index: 0;
+}
+.auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(440px, 100%);
+  background: rgba(255,255,255,.88);
+  border: 1px solid rgba(91,168,210,.18);
+  border-radius: 28px;
+  padding: 28px 22px;
+  box-shadow: 0 24px 60px rgba(23,50,74,.12);
+  backdrop-filter: blur(10px);
+}
+.auth-card--wide { width: min(560px, 100%); }
+.auth-brand { margin-bottom: 12px; }
+.auth-card h1 {
+  margin: 0 0 8px;
+  font-size: 1.55rem;
+  color: #17324a;
+}
+.auth-lead {
+  margin: 0 0 18px;
+  color: #5f7d93;
+  line-height: 1.7;
+  font-size: .92rem;
+}
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+.auth-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  border-radius: 14px;
+  border: 1px solid rgba(91,168,210,.22);
+  background: #fff;
+  color: #17324a;
+  font-weight: 700;
+  cursor: pointer;
+}
+.auth-tab.is-on {
+  background: linear-gradient(135deg, #5ba8d2, #3d7fa8);
+  color: #fff;
+  border-color: transparent;
+}
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+.auth-form label {
+  display: grid;
+  gap: 6px;
+  font-size: .86rem;
+  font-weight: 700;
+  color: #45657a;
+}
+.auth-form input,
+.auth-form select,
+.auth-form textarea {
+  width: 100%;
+  border: 1px solid rgba(91,168,210,.25);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fff;
+  font: inherit;
+  color: #17324a;
+}
+.auth-form input:focus,
+.auth-form select:focus,
+.auth-form textarea:focus {
+  outline: none;
+  border-color: #5ba8d2;
+  box-shadow: 0 0 0 3px rgba(91,168,210,.18);
+}
+.auth-submit {
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #5ba8d2, #3d7fa8);
+  color: #fff;
+  font-weight: 800;
+  cursor: pointer;
+}
+.auth-submit:disabled { opacity: .5; cursor: not-allowed; }
+.auth-error { color: #b42318; font-size: .86rem; margin: 0; }
+.auth-dev {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(16,185,129,.12);
+  color: #0f6b4c;
+  font-size: .84rem;
+  font-weight: 700;
+}
+.auth-foot {
+  margin-top: 16px;
+  color: #5f7d93;
+  font-size: .82rem;
+  line-height: 1.7;
+  text-align: center;
+}
+.auth-secondary-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: .86rem;
+}
+.auth-link-btn {
+  border: 0;
+  background: transparent;
+  color: #3d7fa8;
+  font-weight: 700;
+  cursor: pointer;
+}
+.wizard-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(91,168,210,.15);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.wizard-progress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #5ba8d2, #3d7fa8);
+  border-radius: inherit;
+  transition: width .25s ease;
+}
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip {
+  border: 1px solid rgba(91,168,210,.22);
+  background: #fff;
+  color: #17324a;
+  border-radius: 999px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.chip.is-on {
+  background: linear-gradient(135deg, #5ba8d2, #3d7fa8);
+  color: #fff;
+  border-color: transparent;
+}
+.wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.desktop-sidebar-user {
+  margin: 0 8px 14px;
+  color: #5f7d93;
+  font-size: .82rem;
+  font-weight: 600;
+}
+.desktop-logout {
+  margin-top: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 0;
+  background: rgba(180,35,24,.08);
+  color: #b42318;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}

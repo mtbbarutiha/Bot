@@ -121,6 +121,8 @@ export interface User {
   city?: string;
   province?: string;
   phone?: string;
+  email?: string;
+  emailVerified?: boolean;
   /** تأیید OTP پیامکی (Candoo) */
   phoneVerified?: boolean;
   phoneVerifiedAt?: string;

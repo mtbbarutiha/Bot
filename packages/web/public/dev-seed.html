@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<meta charset="utf-8" />
+<title>petdate local seed</title>
+<body style="font-family:sans-serif;padding:24px">
+<p>در حال آماده‌سازی نسخه لوکال…</p>
+<script>
+localStorage.setItem('petdate_user_v1', JSON.stringify({
+  id: 1,
+  name: 'محمد',
+  role: 'pet_owner',
+  roles: ['pet_owner'],
+  onboarding: 'profile_complete',
+  telegramId: '1001'
+}));
+location.replace('/chats/5');
+</script>
+</body>
+</html>

@@ -22,6 +22,7 @@ import { petsRouter } from './routes/pets';
 import { playdatesRouter } from './routes/playdates';
 import { sectionsRouter } from './routes/sections';
 import { usersRouter } from './routes/users';
+import { authRouter } from './routes/auth';
 
 getDb();
 
@@ -93,6 +94,7 @@ app.use('/api/games', gamesRouter);
 app.use('/api/pets', petsRouter);
 app.use('/api/playdate-requests', playdatesRouter);
 app.use('/api/sections', sectionsRouter);
+app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
 
 app.get('/api/games-for-section/:sectionId', (req, res) => {

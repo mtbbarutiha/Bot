@@ -128,3 +128,58 @@ export async function updatePlaydateStatus(
     body: JSON.stringify({ status }),
   });
 }
+
+export type WebOtpChannel = 'phone' | 'email';
+
+export async function requestWebOtp(channel: WebOtpChannel, target: string) {
+  return request<{
+    ok: true;
+    channel: WebOtpChannel;
+    target: string;
+    expiresAt: string;
+    devCode?: string;
+  }>('/api/auth/otp/request', {
+    method: 'POST',
+    body: JSON.stringify({ channel, target }),
+  });
+}
+
+export async function verifyWebOtp(
+  channel: WebOtpChannel,
+  target: string,
+  code: string
+) {
+  return request<{ ok: true; token: string; user: User }>('/api/auth/otp/verify', {
+    method: 'POST',
+    body: JSON.stringify({ channel, target, code }),
+  });
+}
+
+export async function fetchMe(token: string) {
+  return request<{ ok: true; user: User }>('/api/auth/me', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function logoutWebSession(token: string) {
+  return request<{ ok: true }>('/api/auth/logout', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function patchWebProfile(token: string, patch: Record<string, unknown>) {
+  return request<{ ok: true; user: User }>('/api/auth/profile', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(patch),
+  });
+}
+
+export async function patchWebRoles(token: string, roles: UserRole[]) {
+  return request<{ ok: true; user: User }>('/api/auth/roles', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ roles }),
+  });
+}
