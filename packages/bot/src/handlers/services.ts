@@ -1,17 +1,66 @@
 import type { Context } from 'grammy';
 import { InlineKeyboard } from 'grammy';
+import type { User } from '@petdate/shared';
 import {
   createVetConsultation,
   creditUserCoins,
   debitUserCoins,
   getUserById,
+  listPets,
   listVerifiedVets,
   updateVetConsultationStatus,
 } from '../api-client';
 import { QUICK_VET_COST, formatNum } from '../economy';
-import { mainMenuKeyboard } from '../keyboards';
+import { myPetsActionKeyboard } from '../keyboards';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 import { startVetChat } from './vet-chat';
+import { handleAddPetCommand } from './wizard';
+
+/**
+ * بیمار بدون پت نمی‌تواند درخواست ارتباط با پزشک بدهد.
+ * در صورت نبود پت، راهنمایی و هدایت به ثبت پت.
+ */
+async function ensurePatientHasPetForVet(
+  ctx: Context,
+  user: User
+): Promise<boolean> {
+  let pets;
+  try {
+    pets = await listPets({ ownerId: user.id });
+  } catch (err) {
+    console.error('listPets for vet connect failed:', err);
+    if (ctx.callbackQuery) {
+      await ctx.answerCallbackQuery({ text: 'خطا در دریافت پت‌ها', show_alert: true });
+    } else {
+      await ctx.reply('خطا در دریافت لیست پت‌ها. کمی بعد دوباره امتحان کن.', {
+        reply_markup: menuKeyboardFor(ctx, user),
+      });
+    }
+    return false;
+  }
+
+  if (pets.length > 0) return true;
+
+  if (ctx.callbackQuery) {
+    await ctx.answerCallbackQuery({
+      text: 'اول باید پت ثبت کنی',
+      show_alert: true,
+    });
+  }
+
+  await ctx.reply(
+    [
+      '🐾 هنوز پتی ثبت نکردی.',
+      '',
+      'برای درخواست ارتباط با پزشک، اول باید حداقل یک پت ثبت کنی.',
+      'از دکمه زیر وارد ثبت پت شو:',
+    ].join('\n'),
+    { reply_markup: myPetsActionKeyboard() }
+  );
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
+  await handleAddPetCommand(ctx);
+  return false;
+}
 
 export async function handleCoins(ctx: Context): Promise<void> {
   const { handleCoins: coinsHandler } = await import('./coins');
@@ -82,6 +131,12 @@ export async function handleInviteFriends(ctx: Context): Promise<void> {
 
 export async function handleQuickVet(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
+  if (!user) {
+    await ctx.reply('اول /start بزن.');
+    return;
+  }
+  if (!(await ensurePatientHasPetForVet(ctx, user))) return;
+
   await ctx.reply(
     [
       '⚡ <b>ارتباط سریع با پزشک</b>',
@@ -124,6 +179,8 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
     await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
     return;
   }
+
+  if (!(await ensurePatientHasPetForVet(ctx, user))) return;
 
   const telegramId = String(from.id);
   const balance = user.coins ?? 0;
