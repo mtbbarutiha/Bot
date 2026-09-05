@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -7,9 +7,7 @@ import {
   PawPrint,
   ShieldCheck,
   ShoppingBag,
-  Sparkles,
   Stethoscope,
-  Users,
 } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
@@ -23,42 +21,36 @@ const SERVICES = [
     title: 'پیدا کردن همبازی',
     desc: 'پت‌های نزدیک را ببین و درخواست بازی بفرست — داده با ربات یکی است.',
     icon: Heart,
-    tone: 'coral',
   },
   {
     to: '/vet-consult',
     title: 'ارتباط با دامپزشک',
-    desc: 'مشاوره سریع، پرونده و نسخه روی همان صف ربات.',
+    desc: 'مشاوره سریع، پرونده و نسخه روی همان حساب ربات.',
     icon: Stethoscope,
-    tone: 'mint',
   },
   {
     to: '/add-pet',
     title: 'ثبت پت',
     desc: 'پروفایل پت بساز؛ در تلگرام همان پروفایل را می‌بینی.',
     icon: PawPrint,
-    tone: 'sky',
   },
   {
     to: '/matches',
     title: 'درخواست‌ها و چت',
     desc: 'حتی اگر طرف مقابل فقط ربات باشد، مکالمه مشترک می‌ماند.',
     icon: MessageCircle,
-    tone: 'sand',
   },
   {
     to: '/clinics',
     title: 'کلینیک‌ها',
     desc: 'کلینیک نزدیک و پیگیری خدمات از دسکتاپ.',
     icon: ShieldCheck,
-    tone: 'sky',
   },
   {
     to: '/shop',
     title: 'پت‌شاپ',
     desc: 'لوازم و خوراک منتخب برای مراقبت روزانه.',
     icon: ShoppingBag,
-    tone: 'coral',
   },
 ] as const;
 
@@ -80,7 +72,7 @@ const REVIEWS = [
   { handle: '@سارا', text: 'همبازی برای سگم پیدا شد؛ چت وب و ربات یکی بود.' },
   { handle: '@مینا', text: 'دامپزشک آنلاین جواب داد و نسخه را همان لحظه دیدم.' },
   { handle: '@علی', text: 'پت را تو وب ثبت کردم، تو ربات همان پروفایل آمد.' },
-  { handle: '@نگار', text: 'دکمه‌ها و صفحه دسکتاپ خیلی روان‌تر از کیبورد ربات است.' },
+  { handle: '@نگار', text: 'صفحه دسکتاپ خیلی روان‌تر و زیباتر از کیبورد ربات است.' },
 ];
 
 const FAQS = [
@@ -135,11 +127,6 @@ export function WelcomePage() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  function startExplore(e: FormEvent) {
-    e.preventDefault();
-    navigate(loginPath('/explore'));
-  }
-
   return (
     <div className="landing">
       <header className={`landing-nav${scrolled ? ' is-scrolled' : ''}`}>
@@ -147,58 +134,40 @@ export function WelcomePage() {
         <nav className="landing-nav-links" aria-label="بخش‌های صفحه">
           <a href="#services">خدمات</a>
           <a href="#pets">پت‌ها</a>
-          <a href="#sync">وب و ربات</a>
+          <a href="#team">تیم</a>
           <a href="#faq">سؤالات</a>
         </nav>
         <div className="landing-nav-actions">
-          <Link to={loginPath('/home')} className="btn-text">
+          <Link to={loginPath('/home')} className="landing-nav-login">
             ورود
           </Link>
-          <GatedLink to="/explore" className="btn-primary">
+          <GatedLink to="/explore" className="landing-nav-cta">
             شروع رایگان
           </GatedLink>
         </div>
       </header>
 
       <section className="landing-hero">
-        <div className="landing-hero-copy">
-          <p className="landing-kicker">
-            <Sparkles size={16} /> {BRAND.taglineEn}
-          </p>
-          <h1>
-            <span className="landing-brand-word">{BRAND.displayName}</span>
-            <span className="landing-hero-line">{BRAND.taglineFa}</span>
-          </h1>
+        <img className="landing-hero-media" src={WELCOME_HERO} alt="" />
+        <div className="landing-hero-wash" aria-hidden />
+        <div className="landing-hero-inner">
+          <div className="landing-brand-mark">
+            <span className="landing-brand-en">{BRAND.displayName}</span>
+            <span className="landing-brand-tag">{BRAND.taglineEn}</span>
+          </div>
+          <h1 className="landing-hero-title">{BRAND.taglineFa}</h1>
           <p className="landing-hero-lead">
-            همبازی، دامپزشک و خدمات پت — روی دسکتاپ با طراحی آزاد و زیبا، و هم‌زمان با ربات تلگرام روی یک حساب.
+            همبازی، دامپزشک و خدمات پت روی دسکتاپ — با طراحی آزاد وب، و همان حساب مشترک با ربات تلگرام.
           </p>
-          <form className="landing-hero-cta" onSubmit={startExplore}>
-            <button type="submit" className="btn-primary btn-primary--lg">
+          <div className="landing-hero-cta">
+            <GatedLink to="/explore" className="landing-btn landing-btn--primary">
               پیدا کردن همبازی
               <ArrowLeft size={18} />
-            </button>
-            <GatedLink to="/vet-consult" className="btn-ghost btn-ghost--lg">
+            </GatedLink>
+            <GatedLink to="/vet-consult" className="landing-btn landing-btn--ghost">
               مشاوره دامپزشک
             </GatedLink>
-          </form>
-          <ul className="landing-hero-stats">
-            <li>
-              <strong>یک حساب</strong>
-              <span>وب + ربات</span>
-            </li>
-            <li>
-              <strong>چت مشترک</strong>
-              <span>بین کانال‌ها</span>
-            </li>
-            <li>
-              <strong>OTP امن</strong>
-              <span>موبایل یا ایمیل</span>
-            </li>
-          </ul>
-        </div>
-        <div className="landing-hero-visual">
-          <img src={WELCOME_HERO} alt={BRAND.displayName} />
-          <div className="landing-hero-orb" aria-hidden />
+          </div>
         </div>
       </section>
 
@@ -208,96 +177,78 @@ export function WelcomePage() {
           <h2>امکانات ربات، تجربهٔ دسکتاپ</h2>
           <p>برای هر بخش وارد حساب شو؛ داده همان لحظه با تلگرام سینک می‌ماند.</p>
         </div>
-        <div className="landing-services">
+        <ul className="landing-service-grid">
           {SERVICES.map((s) => (
-            <GatedLink key={s.to} to={s.to} className={`landing-service tone-${s.tone}`}>
-              <span className="landing-service-icon">
-                <s.icon size={22} strokeWidth={2} />
-              </span>
-              <strong>{s.title}</strong>
-              <span>{s.desc}</span>
-              <em className="landing-service-cta">
-                ادامه
-                <ArrowLeft size={16} />
-              </em>
-            </GatedLink>
+            <li key={s.to}>
+              <GatedLink to={s.to} className="landing-service">
+                <span className="landing-service-icon">
+                  <s.icon size={22} strokeWidth={2} />
+                </span>
+                <strong>{s.title}</strong>
+                <span>{s.desc}</span>
+                <em className="landing-service-cta">
+                  ادامه
+                  <ArrowLeft size={16} />
+                </em>
+              </GatedLink>
+            </li>
           ))}
-        </div>
+        </ul>
       </section>
 
-      <section className="landing-section landing-section--soft" id="pets">
+      <section className="landing-section landing-pets" id="pets">
         <div className="landing-section-head">
           <p className="landing-kicker">همبازی‌ها</p>
           <h2>پت‌هایی که منتظر بازی‌اند</h2>
-          <p>پیش‌نمایش عمومی؛ برای درخواست واقعی وارد شو.</p>
+          <p>پیش‌نمایش عمومی؛ برای درخواست واقعی با OTP وارد شو.</p>
         </div>
-        <div className="landing-pets">
+        <div className="landing-pet-rail">
           {PETS.map((p) => (
             <article key={p.name} className="landing-pet">
               <img src={imageForType(p.type, p.idx)} alt={p.name} loading="lazy" />
               <div>
                 <h3>{p.name}</h3>
                 <p>{p.meta}</p>
+                <GatedLink to="/explore" className="landing-pet-cta">
+                  درخواست همبازی
+                </GatedLink>
               </div>
-              <GatedLink to="/explore" className="btn-soft">
-                درخواست همبازی
-              </GatedLink>
             </article>
           ))}
         </div>
       </section>
 
-      <section className="landing-band" id="sync">
-        <div className="landing-band-inner">
-          <Users size={28} />
-          <div>
-            <h2>وب و ربات، یک زندگی‌نامه</h2>
-            <p>
-              شماره یا ایمیل مشترک = یک کاربر. پت، مچ و پیام‌ها بین دسکتاپ و تلگرام جابه‌جا می‌شوند تا صاحب پت وب
-              و طرف مقابل ربات بتوانند با هم حرف بزنند.
-            </p>
-          </div>
-          <Link to={loginPath('/home')} className="btn-primary">
-            اتصال حساب
-          </Link>
-        </div>
-      </section>
-
-      <section className="landing-section">
+      <section className="landing-section" id="team">
         <div className="landing-section-head">
           <p className="landing-kicker">تیم دامپزشکی</p>
           <h2>پزشک‌های آمادهٔ مشاوره</h2>
         </div>
-        <div className="landing-reviews">
+        <div className="landing-team-grid">
           {TEAM.map((m) => (
-            <article key={m.name} className="landing-review">
-              <img
-                src={m.img}
-                alt=""
-                style={{ width: '100%', height: 140, objectFit: 'cover', borderRadius: 14, marginBottom: 12 }}
-              />
-              <p style={{ fontWeight: 800, margin: 0 }}>{m.name}</p>
-              <cite>{m.role}</cite>
+            <article key={m.name} className="landing-member">
+              <img src={m.img} alt="" loading="lazy" />
+              <h3>{m.name}</h3>
+              <p>{m.role}</p>
             </article>
           ))}
         </div>
-        <div style={{ marginTop: 20 }}>
-          <GatedLink to="/vet-consult" className="btn-primary">
+        <div className="landing-section-cta">
+          <GatedLink to="/vet-consult" className="landing-btn landing-btn--primary">
             ارتباط با پزشک
           </GatedLink>
         </div>
       </section>
 
-      <section className="landing-section landing-section--soft">
+      <section className="landing-section">
         <div className="landing-section-head">
           <p className="landing-kicker">نظر پت‌دوست‌ها</p>
           <h2>از دسکتاپ تا تلگرام</h2>
         </div>
-        <div className="landing-reviews">
+        <div className="landing-review-grid">
           {REVIEWS.map((r) => (
             <blockquote key={r.handle} className="landing-review">
               <p>{r.text}</p>
-              <cite>{r.handle}</cite>
+              <footer>{r.handle}</footer>
             </blockquote>
           ))}
         </div>
@@ -308,42 +259,38 @@ export function WelcomePage() {
           <p className="landing-kicker">سؤالات پرتکرار</p>
           <h2>قبل از ورود بدانی</h2>
         </div>
-        <div className="landing-faq">
+        <div className="landing-faq-list">
           {FAQS.map((item, i) => {
             const open = openFaq === i;
             return (
-              <div key={item.q} className="landing-faq-item">
+              <div key={item.q} className={`landing-faq-item${open ? ' is-open' : ''}`}>
                 <button
                   type="button"
                   className="landing-faq-q"
                   aria-expanded={open}
                   onClick={() => setOpenFaq(open ? null : i)}
-                  style={{
-                    width: '100%',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    gap: 12,
-                    fontWeight: 800,
-                    color: 'inherit',
-                  }}
                 >
                   <span>{item.q}</span>
                   <span aria-hidden>{open ? '−' : '+'}</span>
                 </button>
-                {open ? <p>{item.a}</p> : null}
+                {open ? <p className="landing-faq-a">{item.a}</p> : null}
               </div>
             );
           })}
         </div>
       </section>
 
-      <section className="landing-finale">
-        <h2>آماده‌ای همبازی پیدا کنی؟</h2>
-        <p>لندینگ آزاد است؛ برای امکانات اصلی با یک کد یکبارمصرف وارد دنیای مشترک وب و ربات شو.</p>
-        <Link to={loginPath('/explore')} className="btn-primary btn-primary--lg">
-          ورود و شروع
-          <ArrowLeft size={18} />
-        </Link>
+      <section className="landing-cta-band">
+        <div className="landing-cta-band-inner">
+          <h2>آماده‌ای همبازی پیدا کنی؟</h2>
+          <p>
+            لندینگ آزاد است؛ برای امکانات اصلی با یک کد یکبارمصرف وارد دنیای مشترک وب و ربات شو — یک حساب، یک دیتابیس.
+          </p>
+          <Link to={loginPath('/explore')} className="landing-btn landing-btn--primary">
+            ورود و شروع
+            <ArrowLeft size={18} />
+          </Link>
+        </div>
       </section>
 
       <footer className="landing-footer">

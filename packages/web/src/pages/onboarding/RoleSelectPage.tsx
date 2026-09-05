@@ -78,10 +78,7 @@ export function RoleSelectPage() {
               onClick={() => toggleRole(role)}
               aria-pressed={active}
             >
-              <span className="role-card-label">
-                {active ? '✓ ' : ''}
-                {USER_ROLE_LABELS[role]}
-              </span>
+              <span className="role-card-label">{USER_ROLE_LABELS[role]}</span>
               <span className="role-card-desc">{ROLE_DESCRIPTIONS[role]}</span>
             </button>
           );

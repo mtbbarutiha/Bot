@@ -27,7 +27,7 @@ export function MatchesPage() {
           <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
           <h3>همبازی برای صاحبان پت</h3>
           <p>این بخش برای نقش «صاحب پت» فعاله. از پروفایل نقشت رو تغییر بده یا خدمات دیگه رو امتحان کن.</p>
-          <Link to="/profile" className="cta-btn cta-btn--inline">👤 پروفایل</Link>
+          <Link to="/profile" className="cta-btn cta-btn--inline">پروفایل</Link>
         </div>
       </>
     );
@@ -103,18 +103,18 @@ export function MatchesPage() {
                   <div className="match-actions">
                     <button className="btn-accept" onClick={() => updateMatchStatus(match.id, 'accepted')}>
                       <Check size={16} strokeWidth={2.5} />
-                      ✅ قبول
+                      قبول
                     </button>
-                    <button className="btn-reject" onClick={() => deleteMatch(match.id)}>❌ رد</button>
-                    <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">👤 پروفایل</Link>
+                    <button className="btn-reject" onClick={() => deleteMatch(match.id)}>رد</button>
+                    <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">پروفایل</Link>
                   </div>
                 ) : (
                   <div className="match-actions">
                     <Link to={`/chats/${match.id}`} className="btn-accept">
                       <MessageCircle size={16} strokeWidth={2} />
-                      💬 باز کردن چت
+                      باز کردن چت
                     </Link>
-                    <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">👤 پروفایل</Link>
+                    <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">پروفایل</Link>
                   </div>
                 )}
               </div>

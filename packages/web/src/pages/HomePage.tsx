@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, ChevronDown, Mail, MapPin, Search } from 'lucide-react';
+import { Bell, ChevronDown, Mail, MapPin, Search, ShoppingBag, Stethoscope, Zap } from 'lucide-react';
 import { userHasRole } from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
@@ -95,9 +95,18 @@ export function HomePage() {
 
       <div className="home-body">
         <div className="home-services">
-          <Link to="/clinics" className="home-service-chip">🩺 کلینیک</Link>
-          <Link to="/shop" className="home-service-chip">🛒 فروشگاه</Link>
-          <Link to="/vet-consult" className="home-service-chip">💬 مشاوره</Link>
+          <Link to="/clinics" className="home-service-chip">
+            <Stethoscope size={16} strokeWidth={2} />
+            کلینیک
+          </Link>
+          <Link to="/shop" className="home-service-chip">
+            <ShoppingBag size={16} strokeWidth={2} />
+            فروشگاه
+          </Link>
+          <Link to="/vet-consult" className="home-service-chip">
+            <Zap size={16} strokeWidth={2} />
+            مشاوره
+          </Link>
         </div>
 
         {isPetOwner ? (
@@ -107,7 +116,7 @@ export function HomePage() {
             <span className="section-label">فیلتر</span>
             <h2>دسته‌بندی</h2>
           </div>
-          <Link to="/explore" className="link-arrow">👀 مشاهده همه</Link>
+          <Link to="/explore" className="link-arrow">مشاهده همه</Link>
         </div>
 
         <div className="categories">
