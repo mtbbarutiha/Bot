@@ -126,9 +126,8 @@ export function vetChatReplyKeyboard(isVet: boolean): Keyboard {
       .text(VET_CHAT_BTNS.addNote)
       .row()
       .text(VET_CHAT_BTNS.prescription);
-  } else {
-    kb.text(VET_CHAT_BTNS.medical);
   }
+  // Patient keyboard: end-chat only (no medical-record / prescription tools).
   return kb.resized().persistent();
 }
 
@@ -461,6 +460,11 @@ export async function handleVetChatMedicalView(ctx: Context): Promise<boolean> {
   if (!session?.vetChatConsultId) return false;
   if (!CHAT_STEPS.has(session.step)) return false;
 
+  if (session.vetChatRole !== 'vet') {
+    await ctx.reply('این دکمه فقط برای دامپزشک است.');
+    return true;
+  }
+
   const user = await getCtxUser(ctx);
   if (!user) return true;
 
@@ -480,6 +484,13 @@ export async function handleVetChatMedicalView(ctx: Context): Promise<boolean> {
 }
 
 export async function handleVetChatMedicalPetPick(ctx: Context, petId: number): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const session = await getSession(String(from.id));
+  if (!session || session.vetChatRole !== 'vet') {
+    await ctx.answerCallbackQuery({ text: 'فقط دامپزشک', show_alert: true });
+    return;
+  }
   const user = await getCtxUser(ctx);
   if (!user) {
     await ctx.answerCallbackQuery({ text: 'اول /start', show_alert: true });
