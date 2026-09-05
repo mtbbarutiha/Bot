@@ -152,6 +152,76 @@ const FAQS = [
   },
 ] as const;
 
+/** Pepito “Why rely on us?” — two-column checklist + pet3.png */
+const RELY_ITEMS_LEFT = ['عاشق سگ‌ها', 'راحتی', 'شفافیت', 'آرایشگر تأییدشده'] as const;
+const RELY_ITEMS_RIGHT = ['مراقبت شخصی', 'آرامش خیال', 'کار تیمی', 'بیش از ۲۰ سال تجربه'] as const;
+
+/** Pepito “Our featured products” — shop grid */
+const PRODUCTS = [
+  { name: 'ظرف غذای سگ کوچک', price: '$25.00', badge: 'Hot', img: `${P}/01-1.png`, to: '/shop' },
+  { name: 'توپ گربه', price: '$35.00', badge: 'Hot', img: `${P}/1-1.jpg`, to: '/shop' },
+  { name: 'بیلچه شن', price: '$40.00', badge: 'Hot', img: `${P}/03-1.png`, to: '/shop' },
+  { name: '۳ استخوان اسباب‌بازی', price: '$45.00', badge: 'Hot', img: `${P}/06-1.png`, to: '/shop' },
+] as const;
+
+/** Pepito “Latest News” / blog1 carousel */
+const NEWS = [
+  {
+    title: 'مراقبت از دندان پت',
+    excerpt: 'نکات ساده برای سلامت دهان و دندان پت‌تان در خانه.',
+    date: '۱۳ اسفند ۱۴۰۳',
+    author: 'لیلی دورو',
+    tag: 'مراقبت',
+    img: `${P}/01.jpg`,
+    to: '/explore',
+  },
+  {
+    title: 'سبک‌های آرایش سگ',
+    excerpt: 'انتخاب کوتاهی مو متناسب با نژاد و فصل.',
+    date: '۱۳ اسفند ۱۴۰۳',
+    author: 'فرانک وایت',
+    tag: 'پت',
+    img: `${P}/06.jpg`,
+    to: '/explore',
+  },
+  {
+    title: 'نکات ایمنی پت',
+    excerpt: 'چطور خانه را برای پت‌ها امن‌تر کنیم.',
+    date: '۱۳ اسفند ۱۴۰۳',
+    author: 'اولیویا دان',
+    tag: 'دندان',
+    img: `${P}/03.jpg`,
+    to: '/explore',
+  },
+  {
+    title: 'انگل‌های پت',
+    excerpt: 'پیشگیری و درمان به‌موقع انگل‌های رایج.',
+    date: '۱۳ اسفند ۱۴۰۳',
+    author: 'فرانک وایت',
+    tag: 'جراحی',
+    img: `${P}/04.jpg`,
+    to: '/explore',
+  },
+  {
+    title: 'خواب توله‌ها',
+    excerpt: 'عادت‌های سالم خواب برای توله‌های پرانرژی.',
+    date: '۱۳ اسفند ۱۴۰۳',
+    author: 'لیلی دورو',
+    tag: 'تشخیص',
+    img: `${P}/05.jpg`,
+    to: '/explore',
+  },
+  {
+    title: 'میکروچیپ گربه',
+    excerpt: 'شناسایی دائمی برای امنیت بیشتر در گم‌شدن.',
+    date: '۱۲ اسفند ۱۴۰۳',
+    author: 'اولیویا دان',
+    tag: 'ایمنی',
+    img: `${P}/02.jpg`,
+    to: '/explore',
+  },
+] as const;
+
 function GatedLink({
   to,
   className,
@@ -190,6 +260,8 @@ export function WelcomePage() {
   const [svcIndex, setSvcIndex] = useState(0);
   const [svcPaused, setSvcPaused] = useState(false);
   const svcTrackRef = useRef<HTMLDivElement>(null);
+  const [newsIndex, setNewsIndex] = useState(0);
+  const newsTrackRef = useRef<HTMLDivElement>(null);
 
   const goToSlide = (index: number) => {
     const len = HERO_SLIDES.length;
@@ -238,6 +310,22 @@ export function WelcomePage() {
     track.scrollTo({ left: rtl ? -svcIndex * step : svcIndex * step, behavior: 'smooth' });
   }, [svcIndex]);
 
+  const newsPages = Math.max(1, NEWS.length - 2); // 3 visible on desktop → pages = n-2
+  const goNews = (index: number) => {
+    setNewsIndex(((index % newsPages) + newsPages) % newsPages);
+  };
+
+  useEffect(() => {
+    const track = newsTrackRef.current;
+    if (!track) return;
+    const card = track.querySelector<HTMLElement>('.pepito-news-card');
+    if (!card) return;
+    const gap = 20;
+    const step = card.getBoundingClientRect().width + gap;
+    const rtl = getComputedStyle(track).direction === 'rtl';
+    track.scrollTo({ left: rtl ? -newsIndex * step : newsIndex * step, behavior: 'smooth' });
+  }, [newsIndex]);
+
 
   const current = HERO_SLIDES[slide]!;
 
@@ -249,9 +337,10 @@ export function WelcomePage() {
         </Link>
         <nav className="pepito-nav-links" aria-label="بخش‌ها">
           <a href="#services">خدمات</a>
+          <a href="#rely">اعتماد</a>
           <a href="#pets">پذیرش</a>
-          <a href="#team">تیم</a>
-          <a href="#reviews">نظرات</a>
+          <a href="#shop">فروشگاه</a>
+          <a href="#news">اخبار</a>
           <a href="#faq">سؤالات</a>
         </nav>
         <div className="pepito-nav-actions">
@@ -423,6 +512,49 @@ export function WelcomePage() {
         </div>
       </section>
 
+      {/* Pepito “Why rely on us?” — after services */}
+      <section className="pepito-section pepito-rely" id="rely">
+        <div className="pepito-rely-grid">
+          <div className="pepito-rely-copy">
+            <p className="pepito-eyebrow">
+              <span className="pepito-eyebrow-icon" aria-hidden>
+                <PawPrint size={18} />
+              </span>
+              عاشق حیواناتیم
+            </p>
+            <h2>چرا به ما اعتماد کنید؟</h2>
+            <p>
+              تیم petdate با تجربهٔ مراقبت از پت، شفافیت در خدمات و همراهی مداوم کنار شماست تا خیالتان از پت‌تان راحت باشد.
+            </p>
+            <div className="pepito-rely-lists">
+              <ul className="pepito-listext">
+                {RELY_ITEMS_LEFT.map((t) => (
+                  <li key={t}>
+                    <span className="pepito-listext-icon" aria-hidden>
+                      <PawPrint size={18} />
+                    </span>
+                    <span className="pepito-listext-text">{t}</span>
+                  </li>
+                ))}
+              </ul>
+              <ul className="pepito-listext">
+                {RELY_ITEMS_RIGHT.map((t) => (
+                  <li key={t}>
+                    <span className="pepito-listext-icon" aria-hidden>
+                      <PawPrint size={18} />
+                    </span>
+                    <span className="pepito-listext-text">{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+          <div className="pepito-rely-media">
+            <img src={`${P}/pet3.png`} alt="" loading="lazy" />
+          </div>
+        </div>
+      </section>
+
       <section className="pepito-section pepito-adoption" id="pets">
         <div className="pepito-section-head pepito-section-head--center">
           <p className="pepito-eyebrow">
@@ -534,6 +666,41 @@ export function WelcomePage() {
         </div>
       </section>
 
+      {/* Pepito “Our featured products” — after reviews / before FAQ */}
+      <section className="pepito-section pepito-shop" id="shop">
+        <div className="pepito-section-head pepito-section-head--center">
+          <p className="pepito-eyebrow">
+            <span className="pepito-eyebrow-icon" aria-hidden>
+              <PawPrint size={18} />
+            </span>
+            فروشگاه پت
+          </p>
+          <h2>محصولات ویژه ما</h2>
+        </div>
+        <div className="pepito-shop-grid">
+          {PRODUCTS.map((p) => (
+            <article key={p.name} className="pepito-shop-item">
+              <GatedLink to={p.to} className="pepito-shop-wrap">
+                <div className="pepito-shop-img">
+                  <img src={p.img} alt={p.name} loading="lazy" />
+                </div>
+                <div className="pepito-shop-price" aria-hidden>
+                  <h4>
+                    <span>{p.badge}</span>
+                    <span className="pepito-shop-amount">{p.price}</span>
+                  </h4>
+                </div>
+              </GatedLink>
+              <div className="pepito-shop-text">
+                <h3>
+                  <GatedLink to={p.to}>{p.name}</GatedLink>
+                </h3>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section className="pepito-section" id="faq">
         <div className="pepito-faq-layout">
           <div className="pepito-faq-intro">
@@ -567,6 +734,81 @@ export function WelcomePage() {
               );
             })}
           </div>
+        </div>
+      </section>
+
+      {/* Pepito “Latest News” / blog1 — after FAQ */}
+      <section className="pepito-section pepito-news" id="news">
+        <div className="pepito-section-head pepito-section-head--center pepito-news-head">
+          <p className="pepito-eyebrow">
+            <span className="pepito-eyebrow-icon" aria-hidden>
+              <PawPrint size={18} />
+            </span>
+            آخرین اخبار
+          </p>
+          <h2>
+            مقالات و اخبار را ببینید<span className="pepito-news-dot">.</span>
+          </h2>
+        </div>
+        <div className="pepito-news-viewport">
+          <div className="pepito-news-nav" aria-label="جابجایی اخبار">
+            <button
+              type="button"
+              className="pepito-news-arrow pepito-news-arrow--prev"
+              onClick={() => goNews(newsIndex - 1)}
+              aria-label="قبلی"
+            >
+              <ChevronRight size={16} strokeWidth={1.75} aria-hidden />
+            </button>
+            <button
+              type="button"
+              className="pepito-news-arrow pepito-news-arrow--next"
+              onClick={() => goNews(newsIndex + 1)}
+              aria-label="بعدی"
+            >
+              <ChevronLeft size={16} strokeWidth={1.75} aria-hidden />
+            </button>
+          </div>
+          <div className="pepito-news-track" ref={newsTrackRef}>
+            {NEWS.map((n) => (
+              <article key={n.title} className="pepito-news-card">
+                <div className="pepito-news-img">
+                  <GatedLink to={n.to}>
+                    <img src={n.img} alt="" loading="lazy" />
+                  </GatedLink>
+                  <span className="pepito-news-cat">{n.tag}</span>
+                </div>
+                <div className="pepito-news-cont">
+                  <h3>
+                    <GatedLink to={n.to}>{n.title}</GatedLink>
+                  </h3>
+                  <p>{n.excerpt}</p>
+                  <div className="pepito-news-author">
+                    <div>
+                      <h5>{n.date}</h5>
+                      <h5>
+                        توسط{' '}
+                        <span className="pepito-news-author-name">{n.author}</span>
+                      </h5>
+                    </div>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+        <div className="pepito-news-dots" role="tablist" aria-label="صفحات اخبار">
+          {Array.from({ length: newsPages }, (_, i) => (
+            <button
+              key={i}
+              type="button"
+              role="tab"
+              aria-selected={i === newsIndex}
+              className={`pepito-news-dot${i === newsIndex ? ' is-active' : ''}`}
+              onClick={() => goNews(i)}
+              aria-label={`صفحه ${i + 1}`}
+            />
+          ))}
         </div>
       </section>
 

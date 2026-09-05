@@ -1238,6 +1238,402 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   line-height: 1.5;
 }
 
+/* ========== Pepito “Why rely on us?” (banner / chose-us) ========== */
+.pepito-rely {
+  background: #fff;
+  padding-block: 120px;
+  overflow: hidden;
+}
+.pepito-rely-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: center;
+}
+.pepito-rely-copy .pepito-eyebrow {
+  margin: 0 0 0.55rem;
+  color: var(--pepito-dark);
+  font-weight: 500;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  letter-spacing: 0;
+}
+.pepito-rely-copy h2 {
+  margin: 0 0 0.85rem;
+  font-size: clamp(2rem, 3.6vw, 2.8rem);
+  font-weight: 600;
+  color: var(--pepito-dark);
+  line-height: 1.2;
+}
+.pepito-rely-copy > p {
+  margin: 0 0 1.5rem;
+  max-width: 34rem;
+  color: var(--pepito-muted);
+  font-size: 17px;
+  line-height: 1.75;
+}
+.pepito-rely-lists {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem 1.5rem;
+}
+.pepito-listext {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pepito-listext li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pepito-listext li + li {
+  margin-top: 10px;
+}
+.pepito-listext-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--pepito-pink);
+  flex-shrink: 0;
+  transform: rotate(30deg);
+}
+.pepito-listext-text {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--pepito-dark);
+  line-height: 1.4;
+}
+.pepito-rely-media {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 280px;
+}
+.pepito-rely-media img {
+  display: block;
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  object-fit: contain;
+}
+
+/* ========== Pepito shop / featured products ========== */
+.pepito-shop {
+  background: #fff;
+  padding-block: 120px;
+  overflow: hidden;
+}
+.pepito-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px 1.35rem;
+}
+.pepito-shop-item {
+  margin: 0;
+  min-width: 0;
+}
+.pepito-shop-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  color: inherit;
+}
+.pepito-shop-img {
+  position: relative;
+  width: 100%;
+  background-color: var(--pepito-base);
+  border-radius: 20px;
+  overflow: hidden;
+  transition: transform 700ms cubic-bezier(0.17, 0.67, 0, 1.01);
+}
+.pepito-shop-img img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+  border-radius: 20px;
+  transition: transform 700ms cubic-bezier(0.17, 0.67, 0, 1.01);
+}
+.pepito-shop-wrap:hover .pepito-shop-img {
+  transform: scale(0.95);
+}
+.pepito-shop-price {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 120px;
+  height: 120px;
+  margin: 0;
+  padding: 10px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  opacity: 0;
+  transform: translate(-50%, -50%) translateX(-20px);
+  transition: 700ms cubic-bezier(0.17, 0.67, 0, 1.01);
+  pointer-events: none;
+  z-index: 2;
+}
+.pepito-shop-wrap:hover .pepito-shop-price {
+  opacity: 1;
+  transform: translate(-50%, -50%) translateX(0);
+}
+.pepito-shop-price h4 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--pepito-dark);
+  font-family: var(--font-display);
+  line-height: 1.15;
+}
+.pepito-shop-price h4 span {
+  display: block;
+  font-size: 16px;
+  color: var(--pepito-pink);
+  text-transform: uppercase;
+}
+.pepito-shop-price .pepito-shop-amount {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--pepito-dark);
+  text-transform: none;
+  margin-top: 2px;
+}
+.pepito-shop-text {
+  padding: 15px;
+  text-align: center;
+}
+.pepito-shop-text h3 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  color: var(--pepito-dark);
+  font-family: var(--font-display);
+}
+.pepito-shop-text a {
+  color: inherit;
+  text-decoration: none;
+}
+.pepito-shop-text a:hover {
+  color: var(--pepito-pink);
+}
+
+/* ========== Pepito blog1 / Latest News ========== */
+.pepito-news {
+  background-color: #f4f4f7;
+  background-image: linear-gradient(
+    to bottom,
+    #f4f4f7,
+    #f5f5f7,
+    #f6f6f8,
+    #f7f7f9,
+    #f8f8fa,
+    #f9f9fb,
+    #fafafb,
+    #fbfbfc,
+    #fcfcfd,
+    #fdfdfe,
+    #ffffff
+  );
+  padding-block: 120px;
+  overflow: hidden;
+}
+.pepito-news-head {
+  margin-bottom: 1.25rem;
+}
+.pepito-news-dot {
+  color: var(--pepito-pink);
+}
+.pepito-news-viewport {
+  position: relative;
+}
+.pepito-news-track {
+  display: flex;
+  gap: 20px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-block: 10px 30px;
+  box-sizing: border-box;
+}
+.pepito-news-track::-webkit-scrollbar {
+  display: none;
+}
+.pepito-news-card {
+  scroll-snap-align: start;
+  flex: 0 0 calc((100% - 40px) / 3);
+  min-width: 0;
+  position: relative;
+  border-radius: 20px;
+  background: #fff;
+  transition: transform 350ms cubic-bezier(0.37, 0, 0.63, 1);
+}
+.pepito-news-card:hover {
+  transform: translateY(-10px);
+}
+.pepito-news-card * {
+  transition: all 0.45s ease-out;
+}
+.pepito-news-img {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px 20px 0 0;
+}
+.pepito-news-img img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 900 / 600;
+  object-fit: cover;
+}
+.pepito-news-cat {
+  position: absolute;
+  top: 20px;
+  inset-inline-end: 20px;
+  padding: 4px 20px;
+  border-radius: 5px;
+  font-size: 15px;
+  font-weight: 400;
+  background: var(--pepito-base);
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+}
+.pepito-news-card:hover .pepito-news-cat {
+  background: var(--pepito-pink);
+  opacity: 1;
+}
+.pepito-news-cont {
+  padding: 40px;
+  position: relative;
+  z-index: 2;
+  border-radius: 0 0 10px 10px;
+}
+.pepito-news-cont h3 {
+  margin: 0 0 15px;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--pepito-dark);
+  font-family: var(--font-display);
+  line-height: 1.3;
+}
+.pepito-news-cont h3 a {
+  color: inherit;
+  text-decoration: none;
+}
+.pepito-news-cont h3 a:hover {
+  color: var(--pepito-pink);
+}
+.pepito-news-cont > p {
+  margin: 0 0 15px;
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--pepito-muted);
+  line-height: 1.6;
+}
+.pepito-news-author > div {
+  position: relative;
+  height: 25px;
+  overflow: hidden;
+}
+.pepito-news-author h5 {
+  position: absolute;
+  inset-inline-start: 0;
+  margin: 0;
+  bottom: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  font-weight: 400;
+  color: var(--pepito-dark);
+}
+.pepito-news-author h5:nth-of-type(2) {
+  opacity: 0;
+  transform: translateY(150%);
+}
+.pepito-news-card:hover .pepito-news-author h5:first-of-type {
+  transform: translateY(150%);
+  opacity: 0;
+}
+.pepito-news-card:hover .pepito-news-author h5:nth-of-type(2) {
+  opacity: 1;
+  transform: translateY(0);
+}
+.pepito-news-author-name {
+  border-bottom: 1px solid var(--pepito-pink);
+}
+.pepito-news-nav {
+  position: absolute;
+  inset-inline: 0;
+  top: 35%;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  padding-inline: 0;
+}
+.pepito-news-arrow {
+  pointer-events: auto;
+  width: 50px;
+  height: 50px;
+  border-radius: 100%;
+  border: 1px solid var(--pepito-base);
+  background: var(--pepito-base);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease-in-out, transform 0.2s ease;
+  box-shadow: 0 8px 24px rgba(25, 6, 61, 0.12);
+}
+.pepito-news-viewport:hover .pepito-news-arrow {
+  opacity: 1;
+}
+.pepito-news-arrow:hover {
+  transform: scale(1.05);
+}
+.pepito-news-arrow--prev {
+  margin-inline-start: -10px;
+}
+.pepito-news-arrow--next {
+  margin-inline-end: -10px;
+}
+.pepito-news-dots {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 0.5rem;
+}
+.pepito-news-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 0;
+  padding: 0;
+  background: var(--pepito-lilac);
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.pepito-news-dot.is-active {
+  background: var(--pepito-base);
+  transform: scale(1.15);
+}
+
 .pepito-faq {
   display: grid;
   gap: 0.8rem;
@@ -1329,7 +1725,25 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   .pepito-team,
   .pepito-reviews { grid-template-columns: 1fr 1fr; }
   .pepito-about,
-  .pepito-faq-layout { grid-template-columns: 1fr; }
+  .pepito-faq-layout,
+  .pepito-rely-grid { grid-template-columns: 1fr; }
+  .pepito-rely-media {
+    order: -1;
+    min-height: 0;
+  }
+  .pepito-rely-media img {
+    max-width: 320px;
+    margin-inline: auto;
+  }
+  .pepito-shop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pepito-news-card {
+    flex-basis: calc((100% - 20px) / 2);
+  }
+  .pepito-news-arrow {
+    opacity: 1;
+  }
 }
 @media (max-width: 900px) {
   .pepito-service-card {
@@ -1376,6 +1790,27 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   .pepito-adoption-grid,
   .pepito-team,
   .pepito-reviews { grid-template-columns: 1fr; }
+
+  .pepito-rely,
+  .pepito-shop,
+  .pepito-news {
+    padding-block: 4.5rem;
+  }
+  .pepito-rely-lists {
+    grid-template-columns: 1fr;
+  }
+  .pepito-shop-grid {
+    grid-template-columns: 1fr;
+  }
+  .pepito-news-card {
+    flex-basis: 100%;
+  }
+  .pepito-news-cont {
+    padding: 40px 20px;
+  }
+  .pepito-news-nav {
+    display: none;
+  }
 }
 @media (min-width: 860px) {
   .pepito-nav-links { display: flex; }
