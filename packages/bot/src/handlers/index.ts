@@ -88,6 +88,7 @@ import {
 import {
   handleVetChatMedicalPetPick,
   handleVetChatNotePetPick,
+  handleVetChatPetProfilePetPick,
   handleVetChatPrescriptionPetPick,
   handleVetChatRelay,
   handleVetChatRxCategory,
@@ -459,6 +460,9 @@ export function registerHandlers(bot: Bot): void {
   });
   bot.callbackQuery(/^vchat:med:(\d+)$/, (ctx) =>
     handleVetChatMedicalPetPick(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery(/^vchat:prof:(\d+)$/, (ctx) =>
+    handleVetChatPetProfilePetPick(ctx, Number(ctx.match![1]))
   );
   bot.callbackQuery(/^vchat:note:(\d+)$/, (ctx) =>
     handleVetChatNotePetPick(ctx, Number(ctx.match![1]))

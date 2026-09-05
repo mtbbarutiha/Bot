@@ -2,8 +2,12 @@ import { InlineKeyboard, InputFile, Keyboard } from 'grammy';
 import type { Context } from 'grammy';
 import type { PetMedicalEntry, PetMedicalRecord, PetProfile, User } from '@petdate/shared';
 import {
+  PET_GENDER_LABELS,
+  PET_SIZE_LABELS,
+  PET_SPECIES_LABELS,
   RX_CONDITION_CATEGORIES,
   formatMedicalEntryAttribution,
+  formatPetAge,
   formatRxMedicationTemplate,
   formatVetAuthorName,
   getRxCategoryById,
@@ -13,6 +17,7 @@ import {
   addPetMedicalEntry,
   createConsultationPrescription,
   fetchPrescriptionPdfBuffer,
+  getPet,
   getPetMedical,
   getVetConsultation,
   listPets,
@@ -23,6 +28,7 @@ import { getCtxUser, menuKeyboardFor } from './helpers';
 
 export const VET_CHAT_BTNS = {
   end: '🔌 قطع چت',
+  petProfile: '🐾 پروفایل پت',
   medical: '📋 پرونده پزشکی پت',
   addNote: '✍️ ثبت در پرونده',
   prescription: '💊 نوشتن نسخه',
@@ -112,7 +118,14 @@ async function promptPrescriptionComposer(
 export function vetChatReplyKeyboard(isVet: boolean): Keyboard {
   const kb = new Keyboard().text(VET_CHAT_BTNS.end).row();
   if (isVet) {
-    kb.text(VET_CHAT_BTNS.medical).row().text(VET_CHAT_BTNS.addNote).row().text(VET_CHAT_BTNS.prescription);
+    kb
+      .text(VET_CHAT_BTNS.petProfile)
+      .row()
+      .text(VET_CHAT_BTNS.medical)
+      .row()
+      .text(VET_CHAT_BTNS.addNote)
+      .row()
+      .text(VET_CHAT_BTNS.prescription);
   } else {
     kb.text(VET_CHAT_BTNS.medical);
   }
@@ -193,6 +206,7 @@ export async function startVetChat(
     `صاحب پت: <b>${escapeHtml(patient.name)}</b>`,
     'هر پیامی بفرستی مستقیم به صاحب پت می‌رسد.',
     '',
+    `• ${VET_CHAT_BTNS.petProfile}`,
     `• ${VET_CHAT_BTNS.medical}`,
     `• ${VET_CHAT_BTNS.addNote}`,
     `• ${VET_CHAT_BTNS.prescription}`,
@@ -274,6 +288,127 @@ export async function handleVetChatEnd(ctx: Context): Promise<boolean> {
     reply_markup: menuKeyboardFor(ctx, user),
   });
   return true;
+}
+
+function formatVetPetProfileCard(pet: PetProfile): string {
+  const species =
+    PET_SPECIES_LABELS[pet.species] ?? pet.species;
+  const city =
+    [pet.ownerProvince, pet.ownerCity || pet.city].filter(Boolean).join('، ') ||
+    pet.city ||
+    null;
+  const lines = [
+    `🐾 <b>پروفایل پت — ${escapeHtml(pet.name)}</b>`,
+    '',
+    `گونه: ${escapeHtml(species)}`,
+    pet.breed ? `نژاد: ${escapeHtml(pet.breed)}` : 'نژاد: —',
+    pet.ageMonths != null ? `سن: ${escapeHtml(formatPetAge(pet.ageMonths))}` : 'سن: —',
+    pet.gender
+      ? `جنسیت: ${escapeHtml(PET_GENDER_LABELS[pet.gender] ?? pet.gender)}`
+      : 'جنسیت: —',
+    pet.size
+      ? `جثه: ${escapeHtml(PET_SIZE_LABELS[pet.size] ?? pet.size)}`
+      : 'جثه: —',
+    city ? `شهر: ${escapeHtml(city)}` : 'شهر: —',
+    `واکسن: ${pet.vaccinated ? '✅ زده' : '❌ نزده'}`,
+    `عقیم‌سازی: ${pet.neutered ? '✅ شده' : '❌ نشده'}`,
+    pet.bio ? `بیو: ${escapeHtml(pet.bio)}` : 'بیو: —',
+  ];
+  return lines.join('\n');
+}
+
+async function showPetProfile(ctx: Context, petId: number): Promise<void> {
+  const pet = await getPet(petId);
+  if (!pet) {
+    await ctx.reply('پروفایل پت پیدا نشد.');
+    return;
+  }
+
+  const text = formatVetPetProfileCard(pet);
+  if (pet.imageUrl) {
+    try {
+      await ctx.replyWithPhoto(pet.imageUrl, {
+        caption: text,
+        parse_mode: 'HTML',
+      });
+      return;
+    } catch (err) {
+      console.warn('vet pet profile photo failed:', (err as Error).message);
+    }
+  }
+
+  await ctx.reply(text, { parse_mode: 'HTML' });
+}
+
+async function showProfileForPatientPets(
+  ctx: Context,
+  patientUserId: number
+): Promise<void> {
+  let pets: PetProfile[] = [];
+  try {
+    pets = await listPets({ ownerId: patientUserId });
+  } catch (err) {
+    console.error('list pets for profile failed:', err);
+    await ctx.reply('خطا در دریافت لیست پت‌ها.');
+    return;
+  }
+
+  if (!pets.length) {
+    await ctx.reply('این بیمار هنوز پتی ثبت نکرده.');
+    return;
+  }
+
+  if (pets.length === 1) {
+    await showPetProfile(ctx, pets[0]!.id);
+    return;
+  }
+
+  const kb = new InlineKeyboard();
+  for (const pet of pets.slice(0, 12)) {
+    kb.text(`🐾 ${pet.name}`, `vchat:prof:${pet.id}`).row();
+  }
+  await ctx.reply('پروفایل کدام پت؟', { reply_markup: kb });
+}
+
+export async function handleVetChatPetProfileView(ctx: Context): Promise<boolean> {
+  const from = ctx.from;
+  if (!from) return false;
+  const session = await getSession(String(from.id));
+  if (!session?.vetChatConsultId) return false;
+  if (!CHAT_STEPS.has(session.step)) return false;
+  if (session.vetChatRole !== 'vet') {
+    await ctx.reply('این دکمه فقط برای دامپزشک است.');
+    return true;
+  }
+
+  const consult = await getVetConsultation(session.vetChatConsultId);
+  if (!consult) {
+    await ctx.reply('مشاوره پیدا نشد.');
+    return true;
+  }
+
+  if (consult.petId) {
+    await showPetProfile(ctx, consult.petId);
+    return true;
+  }
+
+  await showProfileForPatientPets(ctx, consult.patientUserId);
+  return true;
+}
+
+export async function handleVetChatPetProfilePetPick(
+  ctx: Context,
+  petId: number
+): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const session = await getSession(String(from.id));
+  if (!session || session.vetChatRole !== 'vet') {
+    await ctx.answerCallbackQuery({ text: 'فقط دامپزشک', show_alert: true });
+    return;
+  }
+  await ctx.answerCallbackQuery();
+  await showPetProfile(ctx, petId);
 }
 
 async function showPetMedical(ctx: Context, petId: number, viewerId: number): Promise<void> {
@@ -845,6 +980,7 @@ export async function handleVetChatRelay(ctx: Context): Promise<boolean> {
   const text = ctx.message?.text?.trim();
   if (text) {
     if (text === VET_CHAT_BTNS.end) return handleVetChatEnd(ctx);
+    if (text === VET_CHAT_BTNS.petProfile) return handleVetChatPetProfileView(ctx);
     if (text === VET_CHAT_BTNS.medical) return handleVetChatMedicalView(ctx);
     if (text === VET_CHAT_BTNS.addNote) return handleVetChatAddNoteStart(ctx);
     if (text === VET_CHAT_BTNS.prescription) return handleVetChatPrescriptionStart(ctx);
