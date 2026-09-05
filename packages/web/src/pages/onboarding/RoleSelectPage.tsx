@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { UserRole } from '@petdate/shared';
 import {
@@ -62,6 +63,24 @@ export function RoleSelectPage() {
     }
   };
 
+  const actions = (
+    <div className="role-select-actions">
+      {error && <p className="role-select-error">{error}</p>}
+      <button
+        type="button"
+        className="pepito-btn button-1 auth-submit"
+        onClick={handleConfirm}
+        disabled={saving || selected.length === 0}
+      >
+        {saving
+          ? 'در حال ثبت…'
+          : selected.length
+            ? ROLE_CONFIRM_LABEL
+            : 'اول یک نقش انتخاب کن'}
+      </button>
+    </div>
+  );
+
   return (
     <AuthShell wide>
       <div className="role-select">
@@ -88,23 +107,8 @@ export function RoleSelectPage() {
             );
           })}
         </div>
-
-        <div className="role-select-actions">
-          {error && <p className="role-select-error">{error}</p>}
-          <button
-            type="button"
-            className="pepito-btn button-1 auth-submit"
-            onClick={handleConfirm}
-            disabled={saving || selected.length === 0}
-          >
-            {saving
-              ? 'در حال ثبت…'
-              : selected.length
-                ? ROLE_CONFIRM_LABEL
-                : 'اول یک نقش انتخاب کن'}
-          </button>
-        </div>
       </div>
+      {createPortal(actions, document.body)}
     </AuthShell>
   );
 }
