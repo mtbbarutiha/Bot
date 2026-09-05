@@ -693,3 +693,35 @@ usersRouter.post('/payments/:id/stars/complete', (req, res) => {
     credited: result.credited,
   });
 });
+
+usersRouter.get('/:id/contacts', (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isFinite(userId) || !dbService.getUserById(userId)) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(dbService.listUserContacts(userId));
+});
+
+usersRouter.post('/:id/contacts', (req, res) => {
+  const userId = Number(req.params.id);
+  const contactUserId = Number(req.body?.contactUserId);
+  if (!Number.isFinite(userId) || !Number.isFinite(contactUserId)) {
+    res.status(400).json({ error: 'شناسه کاربر نامعتبر است' });
+    return;
+  }
+  const result = dbService.addUserContact(userId, contactUserId);
+  if (!result.ok) {
+    const status =
+      result.reason === 'self' ? 400 : result.reason === 'missing_user' ? 404 : 404;
+    const message =
+      result.reason === 'self'
+        ? 'نمی‌توانید خودتان را به مخاطبین اضافه کنید'
+        : result.reason === 'missing_user'
+          ? 'کاربر پیدا نشد'
+          : 'مخاطب پیدا نشد';
+    res.status(status).json({ error: message, reason: result.reason });
+    return;
+  }
+  res.status(result.created ? 201 : 200).json(result);
+});

@@ -30,12 +30,14 @@ export {
   PET_AGE_OPTIONS,
   PET_COLOR_CUSTOM_LABEL,
   PET_COLOR_OPTIONS,
+  PET_PUBLIC_ID_PREFIX,
   PLAYDATE_STATUS_LABELS,
   PROFILE_INTEREST_OPTIONS,
   ROLE_CONFIRM_LABEL,
   MY_ROLES_LABEL,
   ROLE_ADD_LABEL,
   USER_GENDER_LABELS,
+  USER_PUBLIC_ID_PREFIX,
   USER_ROLE_LABELS,
   USER_ROLES,
   VET_CREDENTIAL_STATUSES,
@@ -47,17 +49,21 @@ export {
   formatPetAge,
   formatVetAuthorName,
   formatVetRatingLine,
+  makePetPublicId,
+  makeUserPublicId,
   normalizeIranMobile,
   normalizeRoles,
   parsePetAgeInput,
   PET_MEDICAL_FIELD_LABELS,
   PET_MEDICAL_FIELDS,
+  petPublicIdOf,
   phoneVerifyIntroText,
   primaryRole,
   rankPlaymateMatches,
   toEnglishDigits,
   toPersianDigits,
   userHasRole,
+  userPublicIdOf,
   VERIFIED_BADGE,
 } from './petdate';
 export type { PlaymateMatchScore } from './petdate';
@@ -100,6 +106,8 @@ export type { Prescription } from './petdate';
 
 export interface User {
   id: number;
+  /** شناسه عمومی پایدار نمایشی (مثلاً PD-U00014) — یک نفر = یک آیدی، نقش‌ها جدا نیستند */
+  publicId?: string;
   telegramId?: string;
   name: string;
   username?: string;

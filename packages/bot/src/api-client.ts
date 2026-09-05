@@ -792,3 +792,21 @@ export async function fetchPrescriptionPdfBuffer(prescriptionId: number): Promis
   const ab = await res.arrayBuffer();
   return Buffer.from(ab);
 }
+
+/** افزودن مخاطب (مالک↔مالک) */
+export async function addUserContact(
+  userId: number,
+  contactUserId: number
+): Promise<{ ok: true; created: boolean }> {
+  const res = await fetch(`${config.apiUrl}/api/users/${userId}/contacts`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contactUserId }),
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`add contact ${res.status}: ${body}`);
+  }
+  const data = (await res.json()) as { ok: true; created: boolean };
+  return data;
+}

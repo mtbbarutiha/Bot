@@ -415,6 +415,8 @@ export async function handlePlaydateAction(
   await startOwnerChat(ctx, updated.id, user, requester, {
     fromPetName: updated.fromPet?.name,
     toPetName: updated.toPet?.name,
+    fromPetId: updated.fromPetId,
+    toPetId: updated.toPetId,
   });
 }
 

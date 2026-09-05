@@ -366,6 +366,14 @@ export interface BotSession {
   ownerChatPlaydateId?: number;
   /** تلگرام طرف مقابل در چت همبازی */
   ownerChatPeerTelegramId?: string;
+  /** شناسه کاربر طرف مقابل در چت همبازی */
+  ownerChatPeerUserId?: number;
+  /** پت خودم در این چت همبازی */
+  ownerChatMyPetId?: number;
+  /** پت طرف مقابل در این چت همبازی */
+  ownerChatPeerPetId?: number;
+  /** چت امن — پیام‌ها با protect_content و غیرقابل ذخیره */
+  ownerChatSecure?: boolean;
   /** ثبت مورد در پرونده پزشکی (پت انتخاب‌شده) */
   medicalNotePetId?: number;
   /** نوشتن نسخه — پت انتخاب‌شده */

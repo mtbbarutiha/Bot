@@ -367,6 +367,17 @@ function migrateSchema() {
   `);
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS user_contacts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      contact_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, contact_user_id)
+    )
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_user_contacts_user ON user_contacts (user_id);`);
+
+  db.exec(`
     CREATE TABLE IF NOT EXISTS phone_otps (
       user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
       phone TEXT NOT NULL,
@@ -2925,6 +2936,98 @@ export const dbService = {
       )
       .all(petId, limit) as Record<string, unknown>[];
     return rows.map(mapPrescription);
+  },
+
+  addUserContact(
+    userId: number,
+    contactUserId: number
+  ): { ok: true; created: boolean; contact: { id: number; userId: number; contactUserId: number; createdAt: string } } | { ok: false; reason: 'self' | 'missing_user' | 'missing_contact' } {
+    if (userId === contactUserId) return { ok: false, reason: 'self' };
+    if (!this.getUserById(userId)) return { ok: false, reason: 'missing_user' };
+    if (!this.getUserById(contactUserId)) return { ok: false, reason: 'missing_contact' };
+
+    const existing = db
+      .prepare(
+        `SELECT id, user_id, contact_user_id, created_at
+         FROM user_contacts
+         WHERE user_id = ? AND contact_user_id = ?`
+      )
+      .get(userId, contactUserId) as
+      | { id: number; user_id: number; contact_user_id: number; created_at: string }
+      | undefined;
+    if (existing) {
+      return {
+        ok: true,
+        created: false,
+        contact: {
+          id: existing.id,
+          userId: existing.user_id,
+          contactUserId: existing.contact_user_id,
+          createdAt: existing.created_at,
+        },
+      };
+    }
+
+    const result = db
+      .prepare(
+        `INSERT INTO user_contacts (user_id, contact_user_id) VALUES (?, ?)`
+      )
+      .run(userId, contactUserId);
+    const row = db
+      .prepare(
+        `SELECT id, user_id, contact_user_id, created_at FROM user_contacts WHERE id = ?`
+      )
+      .get(Number(result.lastInsertRowid)) as {
+      id: number;
+      user_id: number;
+      contact_user_id: number;
+      created_at: string;
+    };
+    return {
+      ok: true,
+      created: true,
+      contact: {
+        id: row.id,
+        userId: row.user_id,
+        contactUserId: row.contact_user_id,
+        createdAt: row.created_at,
+      },
+    };
+  },
+
+  listUserContacts(userId: number): Array<{
+    id: number;
+    userId: number;
+    contactUserId: number;
+    createdAt: string;
+    contactName?: string;
+    contactUsername?: string;
+  }> {
+    const rows = db
+      .prepare(
+        `SELECT c.id, c.user_id, c.contact_user_id, c.created_at,
+                u.name AS contact_name, u.username AS contact_username
+         FROM user_contacts c
+         LEFT JOIN users u ON u.id = c.contact_user_id
+         WHERE c.user_id = ?
+         ORDER BY c.created_at DESC, c.id DESC`
+      )
+      .all(userId) as Array<{
+      id: number;
+      user_id: number;
+      contact_user_id: number;
+      created_at: string;
+      contact_name: string | null;
+      contact_username: string | null;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      contactUserId: row.contact_user_id,
+      createdAt: row.created_at,
+      contactName: row.contact_name || undefined,
+      contactUsername: row.contact_username || undefined,
+    }));
   },
 };
 
