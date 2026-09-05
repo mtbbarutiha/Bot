@@ -188,16 +188,7 @@ export function ChatPage() {
     setInfoCard('none');
     if (!ended) {
       setMessages([
-        systemMessage(
-          [
-            '💬 چت با صاحب پت فعال شد',
-            '',
-            `• ${TG_BTNS.secureOn} — پیام‌ها غیرقابل ذخیره/فوروارد`,
-            `• ${TG_BTNS.peerProfile} / ${TG_BTNS.petProfile}`,
-            `• ${TG_BTNS.addContact}`,
-            `• ${TG_BTNS.end}`,
-          ].join('\n'),
-        ),
+        systemMessage('💬 چت همبازی فعال شد — از دکمه‌های پایین مثل تلگرام استفاده کن'),
       ]);
     }
   }, [match?.id, ended]);
