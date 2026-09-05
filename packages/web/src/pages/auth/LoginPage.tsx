@@ -41,7 +41,12 @@ export function LoginPage() {
         state: res.devCode ? { devCode: res.devCode, next } : { next },
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'ارسال کد ناموفق بود');
+      const msg = err instanceof Error ? err.message : 'ارسال کد ناموفق بود';
+      setError(
+        channel === 'phone'
+          ? `${msg} اگر پیامک نرسید، از تب ایمیل استفاده کن.`
+          : msg
+      );
     } finally {
       setBusy(false);
     }

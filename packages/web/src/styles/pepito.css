@@ -1976,6 +1976,25 @@ button.chip.is-on {
 .pepito-auth .role-grid {
   margin: 0 0 1.25rem;
 }
+.pepito-auth .role-select {
+  display: flex;
+  flex-direction: column;
+  min-height: min(70dvh, 640px);
+}
+.pepito-auth .role-select-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  margin-top: auto;
+  padding-top: 12px;
+  padding-bottom: max(4px, env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.92) 28%,
+    rgba(255, 255, 255, 0.98) 100%
+  );
+}
 .pepito-auth .role-select-error {
   color: #b42318;
   font-size: 0.86rem;

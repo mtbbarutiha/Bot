@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { UserRole } from '@petdate/shared';
 import {
@@ -30,10 +30,13 @@ export function RoleSelectPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  if (!isLoggedIn) {
-    navigate(`/auth/login?next=${encodeURIComponent(next)}`, { replace: true });
-    return null;
-  }
+  useEffect(() => {
+    if (!isLoggedIn) {
+      navigate(`/auth/login?next=${encodeURIComponent(next)}`, { replace: true });
+    }
+  }, [isLoggedIn, navigate, next]);
+
+  if (!isLoggedIn) return null;
 
   const toggleRole = (role: UserRole) => {
     setSelected((prev) =>
@@ -61,38 +64,47 @@ export function RoleSelectPage() {
 
   return (
     <AuthShell wide>
-      <p className="pepito-auth-kicker">شروع</p>
-      <h1>نقش‌هات رو انتخاب کن</h1>
-      <p className="auth-lead">می‌تونی چند نقش داشته باشی · {BRAND.taglineFa}</p>
+      <div className="role-select">
+        <p className="pepito-auth-kicker">شروع</p>
+        <h1>نقش‌هات رو انتخاب کن</h1>
+        <p className="auth-lead">
+          یک یا چند نقش انتخاب کن، بعد «{ROLE_CONFIRM_LABEL}» رو بزن · {BRAND.taglineFa}
+        </p>
 
-      <div className="role-grid">
-        {USER_ROLES.map((role) => {
-          const active = selected.includes(role);
-          return (
-            <button
-              key={role}
-              type="button"
-              className={`role-card${active ? ' role-card--selected' : ''}`}
-              onClick={() => toggleRole(role)}
-              aria-pressed={active}
-            >
-              <span className="role-card-label">{USER_ROLE_LABELS[role]}</span>
-              <span className="role-card-desc">{ROLE_DESCRIPTIONS[role]}</span>
-            </button>
-          );
-        })}
+        <div className="role-grid">
+          {USER_ROLES.map((role) => {
+            const active = selected.includes(role);
+            return (
+              <button
+                key={role}
+                type="button"
+                className={`role-card${active ? ' role-card--selected' : ''}`}
+                onClick={() => toggleRole(role)}
+                aria-pressed={active}
+              >
+                <span className="role-card-label">{USER_ROLE_LABELS[role]}</span>
+                <span className="role-card-desc">{ROLE_DESCRIPTIONS[role]}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="role-select-actions">
+          {error && <p className="role-select-error">{error}</p>}
+          <button
+            type="button"
+            className="pepito-btn button-1 auth-submit"
+            onClick={handleConfirm}
+            disabled={saving || selected.length === 0}
+          >
+            {saving
+              ? 'در حال ثبت…'
+              : selected.length
+                ? ROLE_CONFIRM_LABEL
+                : 'اول یک نقش انتخاب کن'}
+          </button>
+        </div>
       </div>
-
-      {error && <p className="role-select-error">{error}</p>}
-
-      <button
-        type="button"
-        className="pepito-btn button-1 auth-submit cta-btn--spaced"
-        onClick={handleConfirm}
-        disabled={saving || selected.length === 0}
-      >
-        {saving ? 'در حال ثبت…' : ROLE_CONFIRM_LABEL}
-      </button>
     </AuthShell>
   );
 }
