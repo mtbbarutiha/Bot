@@ -267,20 +267,22 @@ export function WelcomePage() {
         </div>
         <div className="pepito-hero-wash" aria-hidden />
         <div className="pepito-hero-inner" key={slide}>
-          <p className="pepito-kicker">
-            <span className="pepito-kicker-dot">
-              <PawPrint size={16} />
-            </span>
-            {current.kicker}
-          </p>
-          <h1>{current.title}</h1>
-          <p className="pepito-hero-lead">{current.lead}</p>
-          {/* Pepito: Discover only → service pages */}
-          <div className="pepito-hero-cta">
-            <a href="#services" className="pepito-btn button-1 pepito-btn--lg">
-              <PawIcon />
-              کشف کن
-            </a>
+          <div className="pepito-hero-copy">
+            <p className="pepito-kicker">
+              <span className="pepito-kicker-dot">
+                <PawPrint size={18} />
+              </span>
+              {current.kicker}
+            </p>
+            <h1>{current.title}</h1>
+            <p className="pepito-hero-lead">{current.lead}</p>
+            {/* Pepito: Discover only → button-1 */}
+            <div className="pepito-hero-cta">
+              <a href="#services" className="pepito-btn button-1">
+                <PawIcon />
+                کشف کن
+              </a>
+            </div>
           </div>
         </div>
         <div className="pepito-hero-dots" role="tablist" aria-label="اسلایدها">
