@@ -1,4 +1,5 @@
-import type { Context } from 'grammy';
+import type { Api, Context } from 'grammy';
+import type { PetProfile } from '@petdate/shared';
 import {
   createPlaydate,
   deletePet,
@@ -22,6 +23,66 @@ import {
 import { upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 import { startOwnerChat } from './owner-chat';
+
+export function defaultPetPhoto(pet: { species?: string; id: number }): string {
+  const dogs = [
+    'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
+  ];
+  const cats = [
+    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80',
+  ];
+  const pool = pet.species === 'cat' ? cats : dogs;
+  return pool[pet.id % pool.length]!;
+}
+
+/** اطلاع درخواست همبازی به صاحب پت مقصد — با عکس پروفایل پت فرستنده */
+export async function notifyIncomingPlaydateRequest(
+  api: Api,
+  toTelegramId: string,
+  opts: {
+    requestId: number;
+    fromPet: Pick<PetProfile, 'id' | 'name' | 'species' | 'breed' | 'imageUrl' | 'city' | 'ownerCity' | 'ownerProvince' | 'ownerVerified'>;
+    toPetName: string;
+    speciesLabel?: string;
+  }
+): Promise<void> {
+  const caption = [
+    '📬 <b>درخواست همبازی جدید</b>',
+    '',
+    `از طرف <b>${escapeHtml(opts.fromPet.name)}</b> برای <b>${escapeHtml(opts.toPetName)}</b>`,
+    opts.speciesLabel ? `دسته: ${escapeHtml(opts.speciesLabel)}` : null,
+    '',
+    formatPet(opts.fromPet as PetProfile, true),
+  ]
+    .filter((l) => l !== null)
+    .join('\n')
+    .slice(0, 1024);
+
+  const photo = opts.fromPet.imageUrl || defaultPetPhoto(opts.fromPet);
+  const kb = playdateActionKeyboard(opts.requestId);
+
+  try {
+    await api.sendPhoto(toTelegramId, photo, {
+      caption,
+      parse_mode: 'HTML',
+      reply_markup: kb,
+    });
+    return;
+  } catch (err) {
+    console.warn('playdate notify photo failed:', (err as Error).message);
+  }
+
+  await api.sendMessage(toTelegramId, caption, {
+    parse_mode: 'HTML',
+    reply_markup: kb,
+  });
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
 
 export async function handleMyPets(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
@@ -80,19 +141,6 @@ export async function handleMyPetView(ctx: Context, petId: number): Promise<void
   }
 
   await ctx.reply(text, { parse_mode: 'HTML', reply_markup: kb });
-}
-
-function defaultPetPhoto(pet: { species?: string; id: number }): string {
-  const dogs = [
-    'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1587300003388-59208cc962cb?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
-  ];
-  const cats = [
-    'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=800&q=80',
-  ];
-  const pool = pet.species === 'cat' ? cats : dogs;
-  return pool[pet.id % pool.length]!;
 }
 
 export async function handleMyPetDeleteAsk(ctx: Context, petId: number): Promise<void> {
@@ -253,23 +301,16 @@ async function sendPlaydateNow(
   const fromPet = await getPet(fromPetId);
   const toPet = await getPet(toPetId);
 
-  // اطلاع به صاحب پت مقصد
-  if (req.toUserId) {
+  // اطلاع به صاحب پت مقصد — همراه عکس پروفایل پت فرستنده
+  if (req.toUserId && fromPet) {
     const owner = await getUserById(req.toUserId);
     if (owner?.telegramId) {
       try {
-        await ctx.api.sendMessage(
-          owner.telegramId,
-          [
-            '📬 **درخواست همبازی جدید**',
-            '',
-            `از طرف **${fromPet?.name ?? 'پت'}** برای **${toPet?.name ?? 'پت'}**`,
-          ].join('\n'),
-          {
-            parse_mode: 'Markdown',
-            reply_markup: playdateActionKeyboard(req.id),
-          }
-        );
+        await notifyIncomingPlaydateRequest(ctx.api, owner.telegramId, {
+          requestId: req.id,
+          fromPet,
+          toPetName: toPet?.name ?? 'پت',
+        });
       } catch {
         /* کاربر بلاک کرده یا در دسترس نیست */
       }

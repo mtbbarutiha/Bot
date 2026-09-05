@@ -10,10 +10,10 @@ import {
   explorePickMyPetKeyboard,
   mainMenuKeyboard,
   myPetsActionKeyboard,
-  playdateActionKeyboard,
 } from '../keyboards';
 import { upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
+import { notifyIncomingPlaydateRequest } from './playdates';
 
 const MAX_AUTO_REQUESTS = 30;
 
@@ -147,24 +147,17 @@ export async function handleExploreForPet(ctx: Context, petId: number | 'all'): 
         preferredSample = line;
       }
 
-      // اطلاع به صاحب پت مقصد
+      // اطلاع به صاحب پت مقصد — همراه عکس پروفایل پت فرستنده
       if (req.toUserId) {
         const owner = await getUserById(req.toUserId);
         if (owner?.telegramId) {
           try {
-            await ctx.api.sendMessage(
-              owner.telegramId,
-              [
-                '📬 **درخواست همبازی جدید**',
-                '',
-                `از طرف **${source.name}** برای **${match.pet.name}**`,
-                `دسته: ${speciesLabel}`,
-              ].join('\n'),
-              {
-                parse_mode: 'Markdown',
-                reply_markup: playdateActionKeyboard(req.id),
-              }
-            );
+            await notifyIncomingPlaydateRequest(ctx.api, owner.telegramId, {
+              requestId: req.id,
+              fromPet: source,
+              toPetName: match.pet.name,
+              speciesLabel,
+            });
           } catch {
             /* کاربر بلاک کرده یا در دسترس نیست */
           }
