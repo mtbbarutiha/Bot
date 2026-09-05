@@ -84,12 +84,19 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 }
 .pepito-btn .pepito-btn-icon,
 .button-1 .pepito-btn-icon,
-.button-3 .pepito-btn-icon,
-.pepito-btn svg.pepito-btn-icon {
-  display: inline-block;
+.button-3 .pepito-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  line-height: 0;
   transform: rotate(30deg);
   transition: transform 0.4s ease, color 0.4s ease;
+}
+.pepito-btn .pepito-btn-icon svg,
+.button-1 .pepito-btn-icon svg,
+.button-3 .pepito-btn-icon svg {
+  display: block;
 }
 .pepito-btn:hover,
 .button-1:hover,
@@ -165,7 +172,19 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   color: #fff !important;
 }
 
+@media (max-width: 900px) {
+  .pepito-service-card {
+    flex-basis: calc((100% - 1.35rem) / 2);
+  }
+}
 @media (max-width: 720px) {
+  .pepito-service-card {
+    flex-basis: 100%;
+  }
+  .pepito-services-section {
+    padding-block: 4.5rem;
+  }
+
   .pepito-btn,
   .button-1,
   .button-3 {
@@ -209,8 +228,9 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   font-size: 1.25rem;
 }
 .pepito-nav-logo img {
-  height: 36px;
+  height: 42px;
   width: auto;
+  display: block;
 }
 .pepito-nav-links {
   display: none;
@@ -467,48 +487,166 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   line-height: 1.75;
 }
 
+.pepito-services-section {
+  background: var(--pepito-soft);
+  padding-block: 7.5rem;
+}
+.pepito-section-head--center {
+  text-align: center;
+  max-width: 720px;
+  margin-inline: auto;
+  margin-bottom: 2.5rem;
+}
+.pepito-section-head--center .pepito-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  justify-content: center;
+}
+.pepito-eyebrow-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--pepito-pink);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pepito-services-viewport {
+  overflow: hidden;
+  margin-inline: calc(-1 * clamp(0.5rem, 2vw, 1rem));
+  padding-block: 1.25rem 0.5rem;
+}
+.pepito-services-track {
+  display: flex;
+  gap: 1.35rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-inline: clamp(1rem, 4vw, 2.75rem);
+  padding-block: 0.35rem 1rem;
+}
+.pepito-services-track::-webkit-scrollbar {
+  display: none;
+}
+.pepito-service-card {
+  scroll-snap-align: start;
+}
+.pepito-service-card {
+  flex: 0 0 calc((100% - 2.7rem) / 3);
+  min-width: 0;
+}
 .pepito-services {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 1.15rem;
 }
 .pepito-service {
-  display: grid;
-  gap: 0.65rem;
-  justify-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   text-align: center;
-  padding: 1.5rem 1.15rem 1.35rem;
-  border-radius: 28px;
+  gap: 0.85rem;
+  padding: 3.5rem 1.75rem 2.75rem;
+  border-radius: 20px;
   background: #fff;
-  border: 1px solid rgba(92, 77, 145, 0.08);
-  box-shadow: 0 12px 32px rgba(25, 6, 61, 0.05);
   text-decoration: none;
   color: inherit;
-  transition: transform 0.22s ease, box-shadow 0.22s ease;
   min-height: 100%;
+  line-height: 1.35;
+  transition:
+    background-color 300ms ease,
+    transform 300ms ease,
+    color 300ms ease;
+  transform: translate3d(0, 0, 0);
 }
 .pepito-service:hover {
-  transform: translateY(-5px);
-  box-shadow: 0 20px 44px rgba(25, 6, 61, 0.1);
+  background: var(--pepito-base);
+  transform: translate3d(0, -15px, 0.01px);
+  box-shadow: none;
 }
-.pepito-service img {
-  width: 84px;
-  height: 84px;
-  object-fit: contain;
-}
-.pepito-service strong {
+.pepito-service-icon {
+  position: relative;
+  width: 80px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 0.35rem;
   color: var(--pepito-dark);
-  font-size: 1.08rem;
+  transition: color 0.45s ease;
+}
+.pepito-service:hover .pepito-service-icon {
+  color: #fff;
+}
+.pepito-service-blob {
+  position: absolute;
+  inset: 0;
+  width: 80px;
+  height: 72px;
+  z-index: 0;
+  opacity: 0.7;
+  transition: fill 0.45s ease, opacity 0.45s ease;
+}
+.pepito-service-blob.fill-1 { fill: var(--pepito-pink); }
+.pepito-service-blob.fill-2 { fill: #fec53a; }
+.pepito-service-blob.fill-3 { fill: var(--pepito-mint); }
+.pepito-service-blob.fill-4 { fill: var(--pepito-sky); }
+.pepito-service:hover .pepito-service-blob {
+  fill: rgba(255, 255, 255, 0.28);
+  opacity: 1;
+}
+.pepito-service-icon > svg:not(.pepito-service-blob) {
+  position: relative;
+  z-index: 1;
+}
+.pepito-service h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--pepito-dark);
   font-family: var(--font-display);
+  line-height: 1.25;
+  transition: color 0.45s ease;
 }
-.pepito-service span {
+.pepito-service:hover h3 {
+  color: #fff;
+}
+.pepito-service p {
+  margin: 0;
   color: var(--pepito-muted);
-  font-size: 0.92rem;
+  font-size: 0.98rem;
   line-height: 1.7;
+  max-width: 16rem;
+  transition: color 0.45s ease;
 }
+.pepito-service:hover p {
+  color: rgba(255, 255, 255, 0.92);
+}
+.pepito-services-dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: 1.75rem;
+}
+.pepito-services-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--pepito-base);
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
+  transition: background 0.25s ease, transform 0.25s ease;
+}
+.pepito-services-dot.is-active {
+  background: var(--pepito-base);
+  transform: scale(1.15);
+}
+
 
 .pepito-pets {
   display: grid;
@@ -696,7 +834,19 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   .pepito-about,
   .pepito-faq-layout { grid-template-columns: 1fr; }
 }
+@media (max-width: 900px) {
+  .pepito-service-card {
+    flex-basis: calc((100% - 1.35rem) / 2);
+  }
+}
 @media (max-width: 720px) {
+  .pepito-service-card {
+    flex-basis: 100%;
+  }
+  .pepito-services-section {
+    padding-block: 4.5rem;
+  }
+
   .pepito-services,
   .pepito-pets,
   .pepito-team,

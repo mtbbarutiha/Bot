@@ -1,6 +1,22 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PawPrint, Phone } from 'lucide-react';
+import {
+  Bone,
+  Cross,
+  Dog,
+  Footprints,
+  GraduationCap,
+  Home,
+  Microscope,
+  Moon,
+  PartyPopper,
+  PawPrint,
+  Phone,
+  Scissors,
+  Syringe,
+  Utensils,
+  type LucideIcon,
+} from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
@@ -10,6 +26,31 @@ const P = '/pepito/uploads';
 /** Display + tel: for Pepito-style “Call us” band */
 const CONTACT_PHONE_DISPLAY = '۰۲۱-۸۸۷۷۶۶۵۵';
 const CONTACT_PHONE_TEL = '+982188776655';
+
+const BLOB_PATH =
+  'M30,16C46.588,6.484,54.481-2.058,64.3,1.452c3.145,1.125,6.861,3.657,10.212,9.426A40.611,40.611,0,0,1,59.5,66.544,41.151,41.151,0,0,1,3.482,51.629C0.134,45.865-.2,41.289.375,38.125,2.228,27.979,13.544,25.436,30,16Z';
+
+/** Pepito “Our pet care services” — 12 cards, rotating blob colors */
+const SERVICES: {
+  to: string;
+  title: string;
+  desc: string;
+  Icon: LucideIcon;
+  fill: 1 | 2 | 3 | 4;
+}[] = [
+  { to: '/explore', title: 'نگهداری پت', desc: 'مراقبت روزانه در خانه با خیال راحت برای پت‌های خاص شما.', Icon: Home, fill: 1 },
+  { to: '/explore', title: 'پیاده‌روی سگ', desc: 'پیاده‌روی منظم و امن برای سگ‌ها در محله و پارک‌های نزدیک.', Icon: Footprints, fill: 2 },
+  { to: '/vet-consult', title: 'دندان‌پزشکی پت', desc: 'بررسی و مراقبت از دندان و لثه با دامپزشکان مجرب.', Icon: Bone, fill: 3 },
+  { to: '/clinics', title: 'واکسیناسیون', desc: 'برنامه واکسن به‌موقع برای سلامت و ایمنی پت شما.', Icon: Syringe, fill: 4 },
+  { to: '/shop', title: 'آرایش پت', desc: 'شست‌وشو، کوتاهی مو و نظافت حرفه‌ای برای ظاهر درخشان.', Icon: Scissors, fill: 2 },
+  { to: '/add-pet', title: 'برنامه توله', desc: 'آموزش پایه و مراقبت ویژه برای توله‌ها و گربه‌های جوان.', Icon: Dog, fill: 1 },
+  { to: '/vet-consult', title: 'خدمات دامپزشکی', desc: 'ویزیت، مشاوره و پیگیری درمان روی همان حساب مشترک.', Icon: Cross, fill: 4 },
+  { to: '/explore', title: 'مراقبت شبانه', desc: 'اقامت شبانه امن وقتی نمی‌توانید کنار پت‌تان باشید.', Icon: Moon, fill: 3 },
+  { to: '/shop', title: 'وعده‌های سالم', desc: 'تغذیه متعادل و وعده‌های مناسب سن و نژاد پت.', Icon: Utensils, fill: 1 },
+  { to: '/explore', title: 'فعالیت‌های سرگرم‌کننده', desc: 'بازی و همبازی برای انرژی و شادی روزانه پت‌ها.', Icon: PartyPopper, fill: 2 },
+  { to: '/explore', title: 'خدمات آموزش', desc: 'تربیت رفتاری و فرمان‌پذیری با مربیان باتجربه.', Icon: GraduationCap, fill: 3 },
+  { to: '/clinics', title: 'میکروچیپ', desc: 'شناسایی دائمی پت برای امنیت بیشتر در گم‌شدن.', Icon: Microscope, fill: 4 },
+];
 
 const HERO_SLIDES = [
   {
@@ -30,15 +71,6 @@ const HERO_SLIDES = [
     title: 'آماده‌ایم از پت‌تان مراقبت کنیم',
     lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
   },
-] as const;
-
-const SERVICES = [
-  { to: '/explore', title: 'پیدا کردن همبازی', desc: 'پت نزدیک را پیدا کن و درخواست بازی بفرست.', icon: `${P}/01.png` },
-  { to: '/vet-consult', title: 'مشاوره دامپزشک', desc: 'ارتباط سریع با دامپزشک روی همان حساب ربات.', icon: `${P}/02.png` },
-  { to: '/add-pet', title: 'ثبت پت', desc: 'پروفایل پت بساز؛ در تلگرام همان را می‌بینی.', icon: `${P}/03.png` },
-  { to: '/matches', title: 'درخواست و چت', desc: 'حتی اگر طرف فقط ربات باشد، مکالمه مشترک می‌ماند.', icon: `${P}/04.png` },
-  { to: '/clinics', title: 'کلینیک‌ها', desc: 'کلینیک نزدیک و پیگیری خدمات از دسکتاپ.', icon: `${P}/05.png` },
-  { to: '/shop', title: 'پت‌شاپ', desc: 'لوازم و خوراک منتخب برای مراقبت روزانه.', icon: `${P}/06.png` },
 ] as const;
 
 const PETS = [
@@ -84,23 +116,29 @@ const FAQS = [
 function GatedLink({
   to,
   className,
+  style,
   children,
 }: {
   to: string;
   className?: string;
+  style?: CSSProperties;
   children: ReactNode;
 }) {
   const { isLoggedIn, hasRole, isProfileComplete } = useAuthStore();
   const ready = isLoggedIn && hasRole && isProfileComplete;
   return (
-    <Link to={ready ? to : loginPath(to)} className={className}>
+    <Link to={ready ? to : loginPath(to)} className={className} style={style}>
       {children}
     </Link>
   );
 }
 
 function PawIcon({ size = 16 }: { size?: number }) {
-  return <PawPrint size={size} className="pepito-btn-icon" aria-hidden />;
+  return (
+    <span className="pepito-btn-icon" aria-hidden>
+      <PawPrint size={size} />
+    </span>
+  );
 }
 
 export function WelcomePage() {
@@ -109,6 +147,9 @@ export function WelcomePage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [scrolled, setScrolled] = useState(false);
   const [slide, setSlide] = useState(0);
+  const [svcIndex, setSvcIndex] = useState(0);
+  const [svcPaused, setSvcPaused] = useState(false);
+  const svcTrackRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (isLoggedIn && hasRole && isProfileComplete) {
@@ -130,14 +171,33 @@ export function WelcomePage() {
     return () => window.clearInterval(id);
   }, []);
 
+  useEffect(() => {
+    if (svcPaused) return;
+    const id = window.setInterval(() => {
+      setSvcIndex((i) => (i + 1) % SERVICES.length);
+    }, 4200);
+    return () => window.clearInterval(id);
+  }, [svcPaused]);
+
+  useEffect(() => {
+    const track = svcTrackRef.current;
+    if (!track) return;
+    const card = track.querySelector<HTMLElement>('.pepito-service-card');
+    if (!card) return;
+    const gap = 21.6; // 1.35rem
+    const step = card.getBoundingClientRect().width + gap;
+    const rtl = getComputedStyle(track).direction === 'rtl';
+    track.scrollTo({ left: rtl ? -svcIndex * step : svcIndex * step, behavior: 'smooth' });
+  }, [svcIndex]);
+
+
   const current = HERO_SLIDES[slide]!;
 
   return (
     <div className="pepito-landing">
       <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}`}>
-        <Link to="/" className="pepito-nav-logo">
-          <img src="/pepito/img/logo.png" alt="" />
-          <span>{BRAND.displayName}</span>
+        <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
+          <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
         <nav className="pepito-nav-links" aria-label="بخش‌ها">
           <a href="#services">خدمات</a>
@@ -222,26 +282,61 @@ export function WelcomePage() {
         </div>
       </section>
 
-      <section className="pepito-section" id="services">
-        <div className="pepito-section-head">
-          <p className="pepito-eyebrow">عاشق حیواناتیم</p>
-          <h2>خدمات مراقبت از پت</h2>
-          <p>امکانات ربات، با تجربهٔ دسکتاپ قالب Pepito — داده همان لحظه سینک می‌ماند.</p>
+            <section className="pepito-section pepito-services-section" id="services">
+        <div className="pepito-section-head pepito-section-head--center">
+          <p className="pepito-eyebrow">
+            <span className="pepito-eyebrow-icon" aria-hidden>
+              <PawPrint size={18} />
+            </span>
+            عاشق حیواناتیم
+          </p>
+          <h2>خدمات مراقبت از پت ما</h2>
         </div>
-        <ul className="pepito-services">
-          {SERVICES.map((s) => (
-            <li key={s.to}>
-              <GatedLink to={s.to} className="pepito-service">
-                <img src={s.icon} alt="" />
-                <strong>{s.title}</strong>
-                <span>{s.desc}</span>
-              </GatedLink>
-            </li>
+        <div
+          className="pepito-services-viewport"
+          onMouseEnter={() => setSvcPaused(true)}
+          onMouseLeave={() => setSvcPaused(false)}
+        >
+          <div className="pepito-services-track" ref={svcTrackRef}>
+            {SERVICES.map((s) => {
+              const Icon = s.Icon;
+              return (
+                <article key={s.title} className="pepito-service-card">
+                  <GatedLink to={s.to} className="pepito-service">
+                    <span className="pepito-service-icon">
+                      <svg
+                        className={`pepito-service-blob fill-${s.fill}`}
+                        viewBox="0 0 80 72"
+                        aria-hidden
+                      >
+                        <path d={BLOB_PATH} />
+                      </svg>
+                      <Icon size={34} strokeWidth={1.6} />
+                    </span>
+                    <h3>{s.title}</h3>
+                    <p>{s.desc}</p>
+                  </GatedLink>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+        <div className="pepito-services-dots" role="tablist" aria-label="خدمات">
+          {SERVICES.map((s, i) => (
+            <button
+              key={s.title}
+              type="button"
+              role="tab"
+              aria-selected={i === svcIndex}
+              className={`pepito-services-dot${i === svcIndex ? ' is-active' : ''}`}
+              onClick={() => setSvcIndex(i)}
+              aria-label={s.title}
+            />
           ))}
-        </ul>
+        </div>
       </section>
 
-      <section className="pepito-section pepito-section--soft" id="pets">
+<section className="pepito-section pepito-section--soft" id="pets">
         <div className="pepito-section-head">
           <p className="pepito-eyebrow">پذیرش پت</p>
           <h2>یک دوست پشمالوی جدید پیدا کن</h2>
@@ -368,12 +463,11 @@ export function WelcomePage() {
       </section>
 
       <footer className="pepito-footer">
-        <Link to="/" className="pepito-nav-logo">
-          <img src="/pepito/img/logo.png" alt="" />
-          <span>{BRAND.displayName}</span>
+        <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
+          <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
         <p>
-          ظاهر الهام‌گرفته از قالب Pepito · داده مشترک API با ربات تلگرام
+          داده مشترک API با ربات تلگرام
           <br />
           {BRAND.taglineEn}
         </p>
