@@ -236,6 +236,7 @@ export function ExplorePage() {
             <button
               type="button"
               className="cta-btn"
+              data-testid="find-playmate-primary"
               disabled={sending || petsLoading}
               onClick={() => void onPrimaryClick()}
             >
