@@ -3,6 +3,8 @@ import {
   createPlaydate,
   deletePet,
   getPet,
+  getPlaydate,
+  getUserById,
   listPets,
   listPlaydates,
   updatePlaydateStatus,
@@ -19,6 +21,7 @@ import {
 } from '../keyboards';
 import { upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
+import { startOwnerChat } from './owner-chat';
 
 export async function handleMyPets(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
@@ -240,12 +243,38 @@ async function sendPlaydateNow(
   toPetId: number,
   fromUserId: number
 ): Promise<void> {
-  await createPlaydate({ fromPetId, toPetId, fromUserId });
+  const req = await createPlaydate({ fromPetId, toPetId, fromUserId });
   await upsertSession(String(ctx.from!.id), {
     step: 'ready',
     selectedPetId: undefined,
     selectedToPetId: undefined,
   });
+
+  const fromPet = await getPet(fromPetId);
+  const toPet = await getPet(toPetId);
+
+  // اطلاع به صاحب پت مقصد
+  if (req.toUserId) {
+    const owner = await getUserById(req.toUserId);
+    if (owner?.telegramId) {
+      try {
+        await ctx.api.sendMessage(
+          owner.telegramId,
+          [
+            '📬 **درخواست همبازی جدید**',
+            '',
+            `از طرف **${fromPet?.name ?? 'پت'}** برای **${toPet?.name ?? 'پت'}**`,
+          ].join('\n'),
+          {
+            parse_mode: 'Markdown',
+            reply_markup: playdateActionKeyboard(req.id),
+          }
+        );
+      } catch {
+        /* کاربر بلاک کرده یا در دسترس نیست */
+      }
+    }
+  }
 
   const done = '✅ درخواست همبازی ارسال شد!';
   if (ctx.callbackQuery) {
@@ -282,14 +311,70 @@ export async function handlePlaydateAction(
   requestId: number,
   action: 'accept' | 'reject'
 ): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user?.id) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+
+  const { getPlaydate } = await import('../api-client');
+  const existing = await getPlaydate(requestId);
+  if (!existing) {
+    await ctx.answerCallbackQuery({ text: 'درخواست پیدا نشد', show_alert: true });
+    return;
+  }
+  if (existing.toUserId !== user.id) {
+    await ctx.answerCallbackQuery({ text: 'این درخواست مال تو نیست', show_alert: true });
+    return;
+  }
+  if (existing.status !== 'pending') {
+    await ctx.answerCallbackQuery({ text: 'قبلاً پاسخ داده شده', show_alert: true });
+    return;
+  }
+
   const status = action === 'accept' ? 'accepted' : 'rejected';
   await ctx.answerCallbackQuery({ text: action === 'accept' ? 'پذیرفته شد ✅' : 'رد شد' });
   const updated = await updatePlaydateStatus(requestId, status);
-  if (updated) {
-    await ctx.editMessageText(`${formatPlaydate(updated)}\n\n${action === 'accept' ? '✅ توافق شد!' : '❌ رد شد.'}`, {
-      parse_mode: 'Markdown',
-    });
+  if (!updated) {
+    await ctx.reply('به‌روزرسانی درخواست ناموفق بود.');
+    return;
   }
+
+  try {
+    await ctx.editMessageText(
+      `${formatPlaydate(updated)}\n\n${action === 'accept' ? '✅ توافق شد!' : '❌ رد شد.'}`,
+      { parse_mode: 'Markdown' }
+    );
+  } catch {
+    /* message may already be edited */
+  }
+
+  const requester = await getUserById(updated.fromUserId);
+
+  if (action === 'reject') {
+    if (requester?.telegramId) {
+      try {
+        await ctx.api.sendMessage(
+          requester.telegramId,
+          ['❌ درخواست همبازی رد شد.', '', formatPlaydate(updated)].join('\n'),
+          { parse_mode: 'Markdown' }
+        );
+      } catch {
+        /* ignore */
+      }
+    }
+    return;
+  }
+
+  if (!requester) {
+    await ctx.reply('صاحب پت مبدأ پیدا نشد؛ چت باز نشد.');
+    return;
+  }
+
+  await startOwnerChat(ctx, updated.id, user, requester, {
+    fromPetName: updated.fromPet?.name,
+    toPetName: updated.toPet?.name,
+  });
 }
 
 export async function handlePlaydateCancel(ctx: Context): Promise<void> {

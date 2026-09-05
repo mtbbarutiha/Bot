@@ -547,6 +547,11 @@ export async function handleCancel(ctx: Context): Promise<void> {
     earnPendingCoins: undefined,
     paymentPendingOrderId: undefined,
     adminRejectUserId: undefined,
+    ownerChatPlaydateId: undefined,
+    ownerChatPeerTelegramId: undefined,
+    vetChatConsultId: undefined,
+    vetChatPeerTelegramId: undefined,
+    vetChatRole: undefined,
   });
   await ctx.reply('عملیات لغو شد.', {
     reply_markup: menuKeyboardFor(ctx, user),

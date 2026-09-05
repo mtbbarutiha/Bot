@@ -330,6 +330,10 @@ export interface BotSession {
   vetChatPeerTelegramId?: string;
   /** نقش در چت: دامپزشک یا بیمار */
   vetChatRole?: 'vet' | 'patient';
+  /** چت مالک↔مالک بعد از قبول همبازی — شناسه درخواست */
+  ownerChatPlaydateId?: number;
+  /** تلگرام طرف مقابل در چت همبازی */
+  ownerChatPeerTelegramId?: string;
   /** ثبت مورد در پرونده پزشکی (پت انتخاب‌شده) */
   medicalNotePetId?: number;
   /** نوشتن نسخه — پت انتخاب‌شده */
@@ -484,6 +488,7 @@ export type BotStep =
   | 'vet_chat'
   | 'vet_medical_note'
   | 'vet_prescription'
+  | 'owner_chat'
   | 'ready';
 
 export interface PetDraft {

@@ -289,6 +289,14 @@ export async function updatePlaydateStatus(id: number, status: PlaydateStatus): 
   });
 }
 
+export async function getPlaydate(id: number): Promise<PlaydateRequest | null> {
+  try {
+    return await request<PlaydateRequest>(`/api/playdate-requests/${id}`);
+  } catch {
+    return null;
+  }
+}
+
 export async function listVetConsultations(vetUserId: number): Promise<VetConsultation[]> {
   const params = new URLSearchParams({ vetUserId: String(vetUserId) });
   return request<VetConsultation[]>(`/api/consultations?${params.toString()}`);

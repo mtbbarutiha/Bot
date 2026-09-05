@@ -104,6 +104,7 @@ import {
   handleVetChatRxMedPick,
   handleVetChatRxMore,
 } from './vet-chat';
+import { handleOwnerChatRelay } from './owner-chat';
 import {
   handlePatientChatInvite,
   handleVetOnlineToggle,
@@ -569,6 +570,7 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:photo', async (ctx) => {
+    if (await handleOwnerChatRelay(ctx)) return;
     if (await handleVetChatRelay(ctx)) return;
     // اول بر اساس session.step مسیریابی کن تا handler اشتباه عکس را نبلعد
     const step = ctx.from ? (await getSession(String(ctx.from.id)))?.step : undefined;
@@ -606,6 +608,7 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:document', async (ctx) => {
+    if (await handleOwnerChatRelay(ctx)) return;
     if (await handleVetChatRelay(ctx)) return;
     const step = ctx.from ? (await getSession(String(ctx.from.id)))?.step : undefined;
     if (step === 'payment_receipt') {
@@ -623,6 +626,7 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:voice', async (ctx) => {
+    if (await handleOwnerChatRelay(ctx)) return;
     if (await handleVetChatRelay(ctx)) return;
   });
 
@@ -633,7 +637,8 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   const text = ctx.message?.text?.trim();
   if (!text || text.startsWith('/')) return;
 
-  // چت مشاوره دامپزشک — اولویت بالا
+  // چت همبازی مالک↔مالک و چت مشاوره دامپزشک — اولویت بالا
+  if (await handleOwnerChatRelay(ctx)) return;
   if (await handleVetChatRelay(ctx)) return;
 
   // Global cancel from reply keyboard while in any flow
