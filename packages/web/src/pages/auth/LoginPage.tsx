@@ -1,12 +1,19 @@
 import { FormEvent, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Smartphone } from 'lucide-react';
 import { BrandMark } from '../../components/BrandMark';
 import { useAuthStore } from '../../hooks/useAuthStore';
+import { postAuthPath, sanitizeNext } from '../../lib/authRedirect';
 import type { WebOtpChannel } from '../../lib/api';
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const next = sanitizeNext(
+    searchParams.get('next') || (location.state as { from?: string } | null)?.from,
+    '/home'
+  );
   const { requestOtp, isLoggedIn, isProfileComplete, hasRole } = useAuthStore();
   const [channel, setChannel] = useState<WebOtpChannel>('phone');
   const [target, setTarget] = useState('');
@@ -16,10 +23,11 @@ export function LoginPage() {
 
   useEffect(() => {
     if (!isLoggedIn) return;
-    if (!hasRole) navigate('/onboarding/role', { replace: true });
-    else if (!isProfileComplete) navigate('/onboarding/profile', { replace: true });
-    else navigate('/', { replace: true });
-  }, [isLoggedIn, hasRole, isProfileComplete, navigate]);
+    navigate(
+      postAuthPath({ hasRole, isProfileComplete, next }),
+      { replace: true }
+    );
+  }, [isLoggedIn, hasRole, isProfileComplete, navigate, next]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -29,9 +37,8 @@ export function LoginPage() {
     try {
       const res = await requestOtp(channel, target.trim());
       if (res.devCode) setDevHint(`کد توسعه: ${res.devCode}`);
-      // Always go to OTP step; code is also kept in authStore for the next page.
-      navigate('/auth/otp', {
-        state: res.devCode ? { devCode: res.devCode } : undefined,
+      navigate(`/auth/otp?next=${encodeURIComponent(next)}`, {
+        state: res.devCode ? { devCode: res.devCode, next } : { next },
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ارسال کد ناموفق بود');
@@ -47,7 +54,7 @@ export function LoginPage() {
         <BrandMark iconSize={36} className="auth-brand" />
         <h1>ورود به petdate</h1>
         <p className="auth-lead">
-          مثل ربات تلگرام، با شماره موبایل یا ایمیل وارد شو و پروفایلت را بساز.
+          مثل ربات تلگرام، با شماره موبایل یا ایمیل وارد شو — همان حساب، همان پت‌ها و چت‌ها.
         </p>
 
         <div className="auth-tabs" role="tablist">
@@ -87,9 +94,9 @@ export function LoginPage() {
         </form>
 
         <p className="auth-foot">
-          هنوز حساب نداری؟ با همان شماره/ایمیل کد بگیر — حساب خودکار ساخته می‌شود.
+          هنوز حساب نداری؟ با همان شماره/ایمیل کد بگیر — حساب خودکار ساخته می‌شود و با ربات همگام است.
           <br />
-          <Link to="/welcome">بازگشت</Link>
+          <Link to="/">بازگشت به صفحه اصلی</Link>
         </p>
       </div>
     </div>

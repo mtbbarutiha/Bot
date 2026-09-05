@@ -93,7 +93,7 @@ export function PetOnboardingPage() {
     setShowToast(true);
     setTimeout(() => {
       setShowToast(false);
-      navigate('/', { replace: true });
+      navigate('/home', { replace: true });
     }, 1500);
   };
 

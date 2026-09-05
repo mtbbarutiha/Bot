@@ -8,24 +8,26 @@ import {
   ShoppingBag,
   Stethoscope,
   User,
+  Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { BrandMark } from './BrandMark';
 import { useAuthStore } from '../hooks/useAuthStore';
 
+/** Bot-parity destinations — web labels stay clean (icons carry the cue). */
 const navItems: { to: string; icon: LucideIcon; label: string }[] = [
-  { to: '/', icon: Home, label: '🏠 خانه' },
-  { to: '/explore', icon: LayoutGrid, label: '🔍 پیدا کردن همبازی' },
-  { to: '/matches', icon: Mail, label: '💌 درخواست‌ها' },
-  { to: '/add-pet', icon: PawPrint, label: '🐾 پت‌های من' },
-  { to: '/vet-consult', icon: Stethoscope, label: '⚡ ارتباط با پزشک' },
-  { to: '/clinics', icon: Stethoscope, label: '🩺 کلینیک‌ها' },
-  { to: '/shop', icon: ShoppingBag, label: '🛒 پت‌شاپ' },
-  { to: '/profile', icon: User, label: '👤 پروفایل' },
+  { to: '/home', icon: Home, label: 'خانه' },
+  { to: '/explore', icon: LayoutGrid, label: 'پیدا کردن همبازی' },
+  { to: '/matches', icon: Mail, label: 'درخواست‌ها' },
+  { to: '/add-pet', icon: PawPrint, label: 'پت‌های من' },
+  { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
+  { to: '/clinics', icon: Stethoscope, label: 'کلینیک‌ها' },
+  { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
+  { to: '/profile', icon: User, label: 'پروفایل' },
 ];
 
 const mobileNav = navItems.filter((i) =>
-  ['/', '/explore', '/matches', '/profile'].includes(i.to)
+  ['/home', '/explore', '/matches', '/profile'].includes(i.to)
 );
 
 export function Layout() {
@@ -34,7 +36,7 @@ export function Layout() {
 
   async function onLogout() {
     await logout();
-    navigate('/auth/login', { replace: true });
+    navigate('/', { replace: true });
   }
 
   return (
@@ -47,7 +49,7 @@ export function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/'}
+              end={item.to === '/home'}
               className={({ isActive }) => `desktop-nav-item${isActive ? ' active' : ''}`}
             >
               <item.icon size={20} strokeWidth={2} />
@@ -69,7 +71,7 @@ export function Layout() {
           <NavLink
             key={item.to}
             to={item.to}
-            end={item.to === '/'}
+            end={item.to === '/home'}
             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
             aria-label={item.label}
           >

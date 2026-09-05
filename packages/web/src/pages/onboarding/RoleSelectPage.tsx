@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { BrandMark } from '../../components/BrandMark';
 import type { UserRole } from '@petdate/shared';
 import {
@@ -7,9 +7,9 @@ import {
   ROLE_CONFIRM_LABEL,
   USER_ROLE_LABELS,
   USER_ROLES,
-  primaryRole,
 } from '@petdate/shared';
 import { useAuthStore } from '../../hooks/useAuthStore';
+import { sanitizeNext } from '../../lib/authRedirect';
 
 const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   pet_owner: 'پت داری و دنبال همبازی برایش هستی',
@@ -23,13 +23,15 @@ const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
 
 export function RoleSelectPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const next = sanitizeNext((location.state as { next?: string } | null)?.next, '/home');
   const { saveRoles, isLoggedIn } = useAuthStore();
   const [selected, setSelected] = useState<UserRole[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isLoggedIn) {
-    navigate('/auth/login', { replace: true });
+    navigate(`/auth/login?next=${encodeURIComponent(next)}`, { replace: true });
     return null;
   }
 
@@ -49,12 +51,7 @@ export function RoleSelectPage() {
     setError(null);
     try {
       await saveRoles(selected);
-      const next = primaryRole(selected) ?? selected[0]!;
-      if (next === 'pet_owner') {
-        navigate('/onboarding/profile');
-      } else {
-        navigate('/onboarding/profile');
-      }
+      navigate('/onboarding/profile', { state: { next } });
     } catch {
       setError('ثبت نقش‌ها ناموفق بود. دوباره امتحان کن.');
     } finally {

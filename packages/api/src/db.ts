@@ -1439,14 +1439,7 @@ export const dbService = {
   },
 
   markPhoneVerified(userId: number, phone: string): User | null {
-    db.prepare(
-      `UPDATE users SET
-         phone = ?,
-         phone_verified = 1,
-         phone_verified_at = datetime('now')
-       WHERE id = ?`
-    ).run(phone, userId);
-    return this.getUserById(userId);
+    return this.linkPhoneIdentity(userId, phone);
   },
 
   listPendingVerifications(): User[] {
@@ -3080,15 +3073,158 @@ export const dbService = {
     return row ? mapUser(row) : null;
   },
 
+  /**
+   * Merge bot↔web identity onto one users row so pets/chats/matches stay shared.
+   * Prefer the account that already has telegramId; otherwise keep the older id.
+   */
+  mergeUsers(survivorId: number, absorbedId: number): User | null {
+    if (survivorId === absorbedId) return this.getUserById(survivorId);
+    const survivor = this.getUserById(survivorId);
+    const absorbed = this.getUserById(absorbedId);
+    if (!survivor || !absorbed) return survivor ?? absorbed ?? null;
+
+    const patch: Record<string, unknown> = {};
+    if (!survivor.telegramId && absorbed.telegramId) patch.telegram_id = absorbed.telegramId;
+    if (!survivor.phone && absorbed.phone) {
+      patch.phone = absorbed.phone;
+      patch.phone_verified = absorbed.phoneVerified ? 1 : 0;
+      patch.phone_verified_at = absorbed.phoneVerifiedAt ?? null;
+    }
+    if (!survivor.email && absorbed.email) {
+      patch.email = absorbed.email;
+      patch.email_verified = absorbed.emailVerified ? 1 : 0;
+    }
+    if ((!survivor.name || survivor.name === 'کاربر petdate') && absorbed.name) {
+      patch.name = absorbed.name;
+    }
+    if (!survivor.age && absorbed.age) patch.age = absorbed.age;
+    if (!survivor.gender && absorbed.gender) patch.gender = absorbed.gender;
+    if (!survivor.city && absorbed.city) patch.city = absorbed.city;
+    if (!survivor.province && absorbed.province) patch.province = absorbed.province;
+    if (!survivor.country && absorbed.country) patch.country = absorbed.country;
+    if (!survivor.bio && absorbed.bio) patch.bio = absorbed.bio;
+    if (
+      (!survivor.roles || survivor.roles.length === 0) &&
+      absorbed.roles &&
+      absorbed.roles.length
+    ) {
+      patch.roles = JSON.stringify(absorbed.roles);
+      patch.role = absorbed.role ?? absorbed.roles[0] ?? null;
+    }
+    if (
+      survivor.onboarding !== 'profile_complete' &&
+      absorbed.onboarding === 'profile_complete'
+    ) {
+      patch.onboarding = 'profile_complete';
+    }
+
+    const fields = Object.keys(patch);
+    if (fields.length) {
+      db.prepare(
+        `UPDATE users SET ${fields.map((f) => `${f} = ?`).join(', ')} WHERE id = ?`
+      ).run(...fields.map((f) => patch[f]), survivorId);
+    }
+
+    // Reassign owned data so web + bot share the same pets / requests / sessions.
+    db.prepare('UPDATE pets SET owner_id = ? WHERE owner_id = ?').run(survivorId, absorbedId);
+    try {
+      db.prepare('UPDATE playdate_requests SET from_user_id = ? WHERE from_user_id = ?').run(
+        survivorId,
+        absorbedId
+      );
+      db.prepare('UPDATE playdate_requests SET to_user_id = ? WHERE to_user_id = ?').run(
+        survivorId,
+        absorbedId
+      );
+    } catch {
+      /* older schemas */
+    }
+    try {
+      db.prepare('UPDATE web_sessions SET user_id = ? WHERE user_id = ?').run(survivorId, absorbedId);
+    } catch {
+      /* ignore */
+    }
+
+    // Free unique identity fields on absorbed row and deactivate.
+    db.prepare(
+      `UPDATE users SET
+         telegram_id = CASE WHEN telegram_id IS NOT NULL THEN telegram_id || '_merged_' || id ELSE NULL END,
+         phone = NULL,
+         email = NULL,
+         phone_verified = 0,
+         email_verified = 0,
+         is_active = 0
+       WHERE id = ?`
+    ).run(absorbedId);
+
+    return this.getUserById(survivorId);
+  },
+
+  pickIdentitySurvivor(a: User, b: User): { survivor: User; absorbed: User } {
+    if (a.telegramId && !b.telegramId) return { survivor: a, absorbed: b };
+    if (b.telegramId && !a.telegramId) return { survivor: b, absorbed: a };
+    if (a.id <= b.id) return { survivor: a, absorbed: b };
+    return { survivor: b, absorbed: a };
+  },
+
+  /** Attach phone to userId; merge if another row already owns that phone. */
+  linkPhoneIdentity(userId: number, phone: string): User | null {
+    const other = this.getUserByPhone(phone);
+    if (other && other.id !== userId) {
+      const me = this.getUserById(userId);
+      if (!me) return null;
+      const { survivor, absorbed } = this.pickIdentitySurvivor(me, other);
+      const merged = this.mergeUsers(survivor.id, absorbed.id);
+      if (!merged) return null;
+      db.prepare(
+        `UPDATE users SET phone = ?, phone_verified = 1, phone_verified_at = datetime('now') WHERE id = ?`
+      ).run(phone, merged.id);
+      return this.getUserById(merged.id);
+    }
+    db.prepare(
+      `UPDATE users SET phone = ?, phone_verified = 1, phone_verified_at = datetime('now') WHERE id = ?`
+    ).run(phone, userId);
+    return this.getUserById(userId);
+  },
+
+  /** Attach email to userId; merge if another row already owns that email. */
+  linkEmailIdentity(userId: number, email: string): User | null {
+    const other = this.getUserByEmail(email);
+    if (other && other.id !== userId) {
+      const me = this.getUserById(userId);
+      if (!me) return null;
+      const { survivor, absorbed } = this.pickIdentitySurvivor(me, other);
+      const merged = this.mergeUsers(survivor.id, absorbed.id);
+      if (!merged) return null;
+      db.prepare(`UPDATE users SET email = ?, email_verified = 1 WHERE id = ?`).run(email, merged.id);
+      return this.getUserById(merged.id);
+    }
+    db.prepare(`UPDATE users SET email = ?, email_verified = 1 WHERE id = ?`).run(email, userId);
+    return this.getUserById(userId);
+  },
+
   findOrCreateWebUser(opts: { phone?: string; email?: string; name?: string }): User {
-    if (opts.phone) {
-      const existing = this.getUserByPhone(opts.phone);
-      if (existing) return existing;
+    let byPhone = opts.phone ? this.getUserByPhone(opts.phone) : null;
+    let byEmail = opts.email ? this.getUserByEmail(opts.email) : null;
+
+    if (byPhone && byEmail && byPhone.id !== byEmail.id) {
+      const { survivor, absorbed } = this.pickIdentitySurvivor(byPhone, byEmail);
+      const merged = this.mergeUsers(survivor.id, absorbed.id);
+      byPhone = merged;
+      byEmail = merged;
     }
-    if (opts.email) {
-      const existing = this.getUserByEmail(opts.email);
-      if (existing) return existing;
+
+    const existing = byPhone ?? byEmail;
+    if (existing) {
+      if (opts.phone && existing.phone !== opts.phone) {
+        return this.linkPhoneIdentity(existing.id, opts.phone) ?? existing;
+      }
+      if (opts.email && existing.email !== opts.email) {
+        return this.linkEmailIdentity(existing.id, opts.email) ?? existing;
+      }
+      return existing;
     }
+
     const name = (opts.name && opts.name.trim()) || 'کاربر petdate';
     const result = db
       .prepare(
@@ -3108,8 +3244,7 @@ export const dbService = {
   },
 
   markEmailVerified(userId: number, email: string): User | null {
-    db.prepare('UPDATE users SET email = ?, email_verified = 1 WHERE id = ?').run(email, userId);
-    return this.getUserById(userId);
+    return this.linkEmailIdentity(userId, email);
   },
 
   upsertWebOtp(data: { channel: string; target: string; codeHash: string; expiresAt: string }) {

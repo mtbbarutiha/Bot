@@ -32,6 +32,7 @@ export default function App() {
   return (
     <AppGuards>
       <Routes>
+        <Route index element={<WelcomePage />} />
         <Route path="welcome" element={<WelcomePage />} />
         <Route path="auth/login" element={<LoginPage />} />
         <Route path="auth/otp" element={<OtpPage />} />
@@ -41,7 +42,7 @@ export default function App() {
         <Route path="onboarding/pet" element={<PetOnboardingPage />} />
 
         <Route element={<Layout />}>
-          <Route index element={<HomePage />} />
+          <Route path="home" element={<HomePage />} />
           <Route path="explore" element={<ExplorePage />} />
           <Route path="pets/:id" element={<PetDetailPage />} />
           <Route path="add-pet" element={<AddPetPage />} />
@@ -67,7 +68,7 @@ export default function App() {
           </Route>
         </Route>
 
-        <Route path="*" element={<Navigate to="/welcome" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppGuards>
   );

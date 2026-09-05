@@ -1,5 +1,5 @@
 import { FormEvent, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   IRAN_PROVINCES,
   PROFILE_INTEREST_OPTIONS,
@@ -9,6 +9,7 @@ import {
 } from '@petdate/shared';
 import { BrandMark } from '../../components/BrandMark';
 import { useAuthStore } from '../../hooks/useAuthStore';
+import { sanitizeNext } from '../../lib/authRedirect';
 
 const STEPS = [
   'name',
@@ -24,6 +25,8 @@ const STEPS = [
 
 export function ProfileWizardPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnTo = sanitizeNext((location.state as { next?: string } | null)?.next, '/home');
   const { user, saveProfile, isLoggedIn } = useAuthStore();
   const [stepIdx, setStepIdx] = useState(0);
   const step = STEPS[stepIdx]!;
@@ -45,7 +48,7 @@ export function ProfileWizardPage() {
   );
 
   if (!isLoggedIn) {
-    navigate('/auth/login', { replace: true });
+    navigate(`/auth/login?next=${encodeURIComponent(returnTo)}`, { replace: true });
     return null;
   }
 
@@ -73,7 +76,10 @@ export function ProfileWizardPage() {
       const isOwner =
         saved.role === 'pet_owner' ||
         (saved.roles ?? []).includes('pet_owner');
-      navigate(isOwner ? '/onboarding/pet' : '/', { replace: true });
+      navigate(isOwner ? '/onboarding/pet' : returnTo, {
+        replace: true,
+        state: { next: returnTo },
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ذخیره پروفایل ناموفق بود');
     } finally {
@@ -81,7 +87,7 @@ export function ProfileWizardPage() {
     }
   }
 
-  function next(e?: FormEvent) {
+  function goNext(e?: FormEvent) {
     e?.preventDefault();
     if (step === 'name' && name.trim().length < 2) return setError('نام را درست وارد کن');
     if (step === 'age') {
@@ -125,7 +131,7 @@ export function ProfileWizardPage() {
           <span style={{ width: `${((stepIdx + 1) / STEPS.length) * 100}%` }} />
         </div>
 
-        <form className="auth-form" onSubmit={next}>
+        <form className="auth-form" onSubmit={goNext}>
           {step === 'name' && (
             <label>
               نام نمایشی

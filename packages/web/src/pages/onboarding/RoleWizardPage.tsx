@@ -98,7 +98,7 @@ export function RoleWizardPage() {
         return;
       }
       await saveOnboardingToApi('profile_complete');
-      navigate('/', { replace: true });
+      navigate('/home', { replace: true });
     } finally {
       setSaving(false);
     }
@@ -108,7 +108,7 @@ export function RoleWizardPage() {
     setSaving(true);
     try {
       await saveOnboardingToApi('profile_incomplete');
-      navigate('/', { replace: true });
+      navigate('/home', { replace: true });
     } finally {
       setSaving(false);
     }
