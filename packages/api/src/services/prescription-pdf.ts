@@ -1,11 +1,30 @@
 /**
- * Persian RTL prescription PDF (pdfkit + Vazirmatn + arabic-persian-reshaper).
+ * Persian RTL veterinary prescription PDF (pdfkit + Vazirmatn).
+ *
+ * pdfkit 0.20 layouts each whitespace-separated token via fontkit, which
+ * already shapes + reverses Arabic/Persian *within* a token. Feeding
+ * pre-reversed/reshaped strings therefore double-flips glyphs (garbled text).
+ *
+ * Correct approach for multi-word RTL:
+ * 1. Convert Persian/Arabic digits → ASCII (fontkit wrongly mirrors Eastern digits)
+ * 2. Reverse token order so right-aligned LTR paint reads correctly RTL
+ * 3. Leave Latin-only lines alone
+ * 4. Never pass align tricks that fight fontkit — use align:'right' on logical tokens
  */
 import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
-import { PersianShaper } from 'arabic-persian-reshaper';
 import { BRAND, PET_SPECIES_LABELS } from '@petdate/shared';
+
+/** Brand sky-blue — همبازی / petdate */
+const BRAND_BLUE = '#5ba8d2';
+const BRAND_BLUE_SOFT = '#e8f4fa';
+const BRAND_BLUE_MID = '#b8dceb';
+const INK = '#1e293b';
+const MUTED = '#64748b';
+const RULE = '#d4e6f0';
+const PAPER = '#ffffff';
+const BODY_BG = '#f7fafc';
 
 export type PrescriptionPdfInput = {
   vetName: string;
@@ -23,38 +42,79 @@ function speciesLabel(species?: string): string | undefined {
   return PET_SPECIES_LABELS[species] || species;
 }
 
-function fontPath(): string {
+function resolveFont(fileName: string): string | null {
   const candidates = [
-    path.join(__dirname, '..', 'assets', 'fonts', 'Vazirmatn-Regular.ttf'),
-    path.join(__dirname, '..', '..', 'assets', 'fonts', 'Vazirmatn-Regular.ttf'),
-    path.join(process.cwd(), 'assets', 'fonts', 'Vazirmatn-Regular.ttf'),
-    path.join(process.cwd(), 'packages', 'api', 'assets', 'fonts', 'Vazirmatn-Regular.ttf'),
+    path.join(__dirname, '..', 'assets', 'fonts', fileName),
+    path.join(__dirname, '..', '..', 'assets', 'fonts', fileName),
+    path.join(process.cwd(), 'assets', 'fonts', fileName),
+    path.join(process.cwd(), 'packages', 'api', 'assets', 'fonts', fileName),
   ];
   for (const p of candidates) {
     if (fs.existsSync(p)) return p;
   }
-  throw new Error('فونت Vazirmatn پیدا نشد — packages/api/assets/fonts/Vazirmatn-Regular.ttf');
+  return null;
 }
 
-/** شکل‌دهی و معکوس برای رسم RTL در pdfkit (LTR) */
+function fontPaths(): { regular: string; bold: string } {
+  const regular = resolveFont('Vazirmatn-Regular.ttf');
+  if (!regular) {
+    throw new Error('فونت Vazirmatn پیدا نشد — packages/api/assets/fonts/Vazirmatn-Regular.ttf');
+  }
+  const bold = resolveFont('Vazirmatn-Bold.ttf') || regular;
+  return { regular, bold };
+}
+
+/** Eastern Arabic-Indic / Persian digits → ASCII (avoids fontkit mirroring). */
+export function toAsciiDigits(text: string): string {
+  return String(text ?? '')
+    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
+    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+}
+
+function hasArabicScript(text: string): boolean {
+  return /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/.test(text);
+}
+
+/**
+ * Prepare a line for pdfkit+fontkit RTL painting.
+ * Reverse whitespace-separated tokens for Arabic-script lines; keep Latin-only lines as-is.
+ */
 export function rtlLine(text: string): string {
-  const shaped = PersianShaper.convertArabic(String(text ?? ''));
-  return [...shaped].reverse().join('');
+  const s = toAsciiDigits(String(text ?? ''));
+  if (!s || !hasArabicScript(s)) return s;
+
+  const tokens = s.split(/(\s+)/);
+  const words = tokens.filter((t) => t.length > 0 && !/^\s+$/.test(t)).reverse();
+  let i = 0;
+  return tokens.map((t) => (/^\s+$/.test(t) ? t : words[i++])).join('');
 }
 
 function formatFaDate(iso?: string): string {
   const d = iso ? new Date(iso) : new Date();
   if (!Number.isFinite(d.getTime())) {
-    return new Date().toLocaleDateString('fa-IR');
+    return toAsciiDigits(new Date().toLocaleDateString('fa-IR'));
   }
   try {
-    return d.toLocaleDateString('fa-IR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
+    return toAsciiDigits(
+      d.toLocaleDateString('fa-IR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    );
   } catch {
     return d.toISOString().slice(0, 10);
+  }
+}
+
+function jalaliYear(iso?: string): string {
+  const d = iso ? new Date(iso) : new Date();
+  try {
+    return toAsciiDigits(
+      new Intl.DateTimeFormat('fa-IR-u-ca-persian', { year: 'numeric' }).format(d)
+    );
+  } catch {
+    return String(d.getFullYear());
   }
 }
 
@@ -64,17 +124,72 @@ export function prescriptionsDir(): string {
   return dir;
 }
 
+/** Absolute glyph paint — never advances flow / never auto-pages. */
+function paint(
+  doc: PDFKit.PDFDocument,
+  text: string,
+  x: number,
+  y: number,
+  opts: {
+    width?: number;
+    align?: 'left' | 'center' | 'right';
+    size: number;
+    color: string;
+    bold?: boolean;
+  }
+): void {
+  doc.font(opts.bold ? 'VazirBold' : 'Vazir').fontSize(opts.size).fillColor(opts.color);
+  doc.text(rtlLine(text), x, y, {
+    width: opts.width,
+    align: opts.align ?? 'left',
+    lineBreak: false,
+    continued: false,
+  });
+}
+
+/** مهر همبازی — circular seal at current origin. */
+function drawHambaziStamp(doc: PDFKit.PDFDocument, radius: number, year: string): void {
+  const R = radius;
+  doc.save();
+  doc.opacity(0.48);
+
+  doc.circle(0, 0, R).fillOpacity(0.1).fill(BRAND_BLUE);
+  doc.fillOpacity(1);
+
+  doc.lineWidth(2.5).strokeColor(BRAND_BLUE).circle(0, 0, R).stroke();
+  doc.lineWidth(1.2).circle(0, 0, R - 9).stroke();
+  doc.lineWidth(0.8).circle(0, 0, R * 0.48).stroke();
+
+  const brand = rtlLine('همبازی');
+  doc.font('VazirBold').fontSize(15).fillColor(BRAND_BLUE);
+  doc.text(brand, -doc.widthOfString(brand) / 2, -12, { lineBreak: false });
+
+  const conf = rtlLine('نسخه تأییدشده');
+  doc.font('Vazir').fontSize(7).fillColor(BRAND_BLUE);
+  doc.text(conf, -doc.widthOfString(conf) / 2, 6, { lineBreak: false });
+
+  const yr = rtlLine(year);
+  doc.font('Vazir').fontSize(7.5).fillColor(BRAND_BLUE);
+  doc.text(yr, -doc.widthOfString(yr) / 2, R - 21, { lineBreak: false });
+
+  const en = BRAND.name;
+  doc.font('Vazir').fontSize(6.5).fillColor(BRAND_BLUE);
+  doc.text(en, -doc.widthOfString(en) / 2, -(R - 19), { lineBreak: false });
+
+  doc.restore();
+}
+
 export async function generatePrescriptionPdf(
   input: PrescriptionPdfInput,
   outPath: string
 ): Promise<string> {
-  const font = fontPath();
+  const fonts = fontPaths();
   const dir = path.dirname(outPath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
   const brandFa = 'همبازی';
-  const brandEn = BRAND.name;
   const dateFa = formatFaDate(input.dateIso);
+  const yearFa = jalaliYear(input.dateIso);
   const petBits = [input.petName, speciesLabel(input.petSpecies), input.petBreed]
     .filter(Boolean)
     .join(' — ');
@@ -82,13 +197,15 @@ export async function generatePrescriptionPdf(
     'این نسخه صرفاً جهت اطلاع صاحب حیوان خانگی است و جایگزین معاینه حضوری نیست. در صورت بروز عارضه با دامپزشک خود تماس بگیرید.';
 
   await new Promise<void>((resolve, reject) => {
+    // Zero margins — we position everything absolutely to avoid auto page-breaks
     const doc = new PDFDocument({
       size: 'A4',
-      margins: { top: 48, bottom: 48, left: 48, right: 48 },
+      margin: 0,
+      autoFirstPage: true,
       info: {
         Title: `نسخه دارویی — ${input.petName}`,
         Author: brandFa,
-        Subject: 'Prescription',
+        Subject: 'Veterinary Prescription',
       },
     });
     const stream = fs.createWriteStream(outPath);
@@ -97,106 +214,145 @@ export async function generatePrescriptionPdf(
     stream.on('error', reject);
     stream.on('finish', () => resolve());
 
-    doc.font(font);
+    doc.registerFont('Vazir', fonts.regular);
+    doc.registerFont('VazirBold', fonts.bold);
+    doc.font('Vazir');
 
-    const pageW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-    const rightX = doc.page.margins.left;
+    const pageW = 595.28;
+    const pageH = 841.89;
+    const left = 44;
+    const contentW = pageW - left * 2;
 
-    const drawRtl = (text: string, y: number, opts?: { size?: number; color?: string }) => {
-      const size = opts?.size ?? 12;
-      const color = opts?.color ?? '#1a1a1a';
-      doc.fillColor(color).fontSize(size);
-      doc.text(rtlLine(text), rightX, y, {
-        width: pageW,
+    // Soft wash + brand top bar
+    doc.rect(0, 0, pageW, 92).fill(BRAND_BLUE_SOFT);
+    doc.rect(0, 0, pageW, 5).fill(BRAND_BLUE);
+
+    // Hero brand
+    paint(doc, brandFa, left, 20, {
+      width: contentW,
+      align: 'right',
+      size: 30,
+      color: BRAND_BLUE,
+      bold: true,
+    });
+    paint(doc, 'نسخه دامپزشکی  ·  کلینیک آنلاین', left, 54, {
+      width: contentW,
+      align: 'right',
+      size: 11,
+      color: MUTED,
+    });
+    doc
+      .moveTo(left + contentW - 150, 72)
+      .lineTo(left + contentW, 72)
+      .strokeColor(BRAND_BLUE)
+      .lineWidth(1.6)
+      .stroke();
+
+    // Meta card
+    let y = 88;
+    const metaRows: string[] = [
+      ...(input.prescriptionId ? [`شماره نسخه: ${input.prescriptionId}`] : []),
+      `تاریخ: ${dateFa}`,
+      `دامپزشک: ${input.vetName}`,
+      `صاحب پت: ${input.patientName}`,
+      `حیوان: ${petBits || '—'}`,
+    ];
+    const metaLineH = 20;
+    const metaPad = 12;
+    const metaH = metaRows.length * metaLineH + metaPad * 2;
+    doc.roundedRect(left, y, contentW, metaH, 6).fillAndStroke(PAPER, RULE);
+    doc.roundedRect(left + contentW - 4, y + 8, 3, metaH - 16, 1.5).fill(BRAND_BLUE);
+
+    let my = y + metaPad;
+    for (const row of metaRows) {
+      paint(doc, row, left + 14, my + 2, {
+        width: contentW - 30,
         align: 'right',
-        lineGap: 4,
+        size: 11,
+        color: INK,
+        bold: true,
       });
-      return doc.y;
-    };
-
-    // Header band
-    doc.rect(0, 0, doc.page.width, 72).fill('#0f766e');
-    doc.fillColor('#ffffff').fontSize(22);
-    doc.text(rtlLine(`${brandFa}  ·  ${brandEn}`), rightX, 22, {
-      width: pageW,
-      align: 'right',
-    });
-    doc.fillColor('#ccfbf1').fontSize(11);
-    doc.text(rtlLine('نسخه دارویی دامپزشکی'), rightX, 48, {
-      width: pageW,
-      align: 'right',
-    });
-
-    let y = 96;
-    y = drawRtl(`تاریخ: ${dateFa}`, y, { size: 11, color: '#334155' }) + 8;
-    if (input.prescriptionId) {
-      y = drawRtl(`شماره نسخه: ${input.prescriptionId}`, y, { size: 10, color: '#64748b' }) + 10;
+      my += metaLineH;
     }
+    y = y + metaH + 16;
 
-    doc
-      .moveTo(rightX, y)
-      .lineTo(rightX + pageW, y)
-      .strokeColor('#99f6e4')
-      .lineWidth(1)
-      .stroke();
-    y += 16;
+    // Medications heading
+    paint(doc, 'دستور دارویی', left, y, {
+      width: contentW,
+      align: 'right',
+      size: 13,
+      color: BRAND_BLUE,
+      bold: true,
+    });
+    y += 20;
 
-    y = drawRtl(`دامپزشک: ${input.vetName}`, y, { size: 13 }) + 6;
-    y = drawRtl(`صاحب پت: ${input.patientName}`, y, { size: 13 }) + 6;
-    y = drawRtl(`حیوان: ${petBits}`, y, { size: 13 }) + 14;
-
-    doc
-      .moveTo(rightX, y)
-      .lineTo(rightX + pageW, y)
-      .strokeColor('#e2e8f0')
-      .stroke();
-    y += 14;
-
-    y = drawRtl('💊 دستور دارویی', y, { size: 14, color: '#0f766e' }) + 10;
-
-    // Medication body — box
     const medLines = String(input.medicationText || '')
       .split(/\r?\n/)
       .map((l) => l.trim())
       .filter(Boolean);
-    const bodyText = medLines.length ? medLines.join('\n') : '—';
 
-    const bodyStartY = y;
-    doc.fontSize(12).fillColor('#1e293b');
-    // Measure height with shaped lines
-    const shapedBody = medLines.length
-      ? medLines.map((l) => rtlLine(l)).join('\n')
-      : rtlLine('—');
-    const bodyHeight = Math.max(
-      80,
-      doc.heightOfString(shapedBody, { width: pageW - 24, lineGap: 6 }) + 24
-    );
-    doc
-      .roundedRect(rightX, bodyStartY, pageW, bodyHeight, 8)
-      .fillAndStroke('#f8fafc', '#cbd5e1');
-    doc.fillColor('#1e293b').fontSize(12);
-    doc.text(shapedBody, rightX + 12, bodyStartY + 12, {
-      width: pageW - 24,
-      align: 'right',
-      lineGap: 6,
-    });
-    y = bodyStartY + bodyHeight + 24;
+    // Draw body panel; paint each med line absolutely (no flow text → no page 2)
+    const lineH = 18;
+    const bodyPad = 14;
+    const bodyLines = medLines.length ? medLines : ['—'];
+    const bodyH = Math.max(110, bodyLines.length * lineH + bodyPad * 2);
+    doc.roundedRect(left, y, contentW, bodyH, 6).fillAndStroke(BODY_BG, RULE);
+    doc.rect(left, y + 8, 3, bodyH - 16).fill(BRAND_BLUE_MID);
 
+    let ly = y + bodyPad;
+    for (const line of bodyLines) {
+      paint(doc, line, left + 14, ly, {
+        width: contentW - 28,
+        align: 'right',
+        size: 12,
+        color: INK,
+      });
+      ly += lineH;
+    }
+    y = y + bodyH + 16;
+
+    // Divider + disclaimer (wrap manually into ≤2 short lines)
     doc
-      .moveTo(rightX, y)
-      .lineTo(rightX + pageW, y)
-      .strokeColor('#e2e8f0')
+      .moveTo(left, y)
+      .lineTo(left + contentW, y)
+      .strokeColor(RULE)
+      .lineWidth(0.8)
       .stroke();
-    y += 14;
+    y += 10;
 
-    drawRtl(disclaimer, y, { size: 9, color: '#64748b' });
+    // Split disclaimer roughly in half for two absolute lines
+    const mid = Math.floor(disclaimer.length / 2);
+    let splitAt = disclaimer.indexOf(' ', mid);
+    if (splitAt < 0) splitAt = mid;
+    const d1 = disclaimer.slice(0, splitAt).trim();
+    const d2 = disclaimer.slice(splitAt).trim();
+    paint(doc, d1, left, y, {
+      width: contentW,
+      align: 'right',
+      size: 8.5,
+      color: MUTED,
+    });
+    paint(doc, d2, left, y + 12, {
+      width: contentW,
+      align: 'right',
+      size: 8.5,
+      color: MUTED,
+    });
 
-    // Footer
-    const footerY = doc.page.height - 40;
-    doc.fillColor('#94a3b8').fontSize(9);
-    doc.text(rtlLine(`${brandFa} — همبازی برای پت`), rightX, footerY, {
-      width: pageW,
-      align: 'center',
+    // مهر همبازی — lower-left, rotated ~-12°, semi-transparent
+    const stampR = 46;
+    doc.save();
+    doc.translate(left + stampR + 4, pageH - 70);
+    doc.rotate(-12);
+    drawHambaziStamp(doc, stampR, yearFa);
+    doc.restore();
+
+    // Footer brand (right of stamp)
+    paint(doc, `${brandFa} — ${BRAND.taglineFa}`, left + 110, pageH - 28, {
+      width: contentW - 110,
+      align: 'right',
+      size: 8.5,
+      color: MUTED,
     });
 
     doc.end();

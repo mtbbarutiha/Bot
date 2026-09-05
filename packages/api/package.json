@@ -4,13 +4,12 @@
   "private": true,
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && mkdir -p dist/assets/fonts && cp -f assets/fonts/*.ttf dist/assets/fonts/",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js"
   },
   "dependencies": {
     "@petdate/shared": "*",
-    "arabic-persian-reshaper": "^1.0.1",
     "better-sqlite3": "^11.8.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
