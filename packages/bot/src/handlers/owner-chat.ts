@@ -14,13 +14,11 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+/** فقط قطع چت — دکمه منو وسط گفتگو بی‌معناست */
 export function ownerChatReplyKeyboard(): Keyboard {
   return new Keyboard()
     .text(OWNER_CHAT_BTNS.end)
     .danger()
-    .row()
-    .text(MAIN_MENU_BTN)
-    .primary()
     .resized()
     .persistent();
 }
