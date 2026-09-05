@@ -23,6 +23,7 @@ import {
   adminPanelKeyboard,
   adminPaymentKeyboard,
   adminVetCredentialKeyboard,
+  adminVetListKeyboard,
   adminVetToggleKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
@@ -30,8 +31,17 @@ import { getCtxUser, menuKeyboardFor } from './helpers';
 import { handleAdminVerifyQueue } from './verification';
 import type { User } from '@petdate/shared';
 
+const ADMIN_VET_LIST_PAGE_SIZE = 10;
+
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/** شناسهٔ نمایشی پزشک — publicId ذخیره‌شده یا PD-U##### */
+function adminVetPublicId(user: User): string {
+  const stored = (user as User & { publicId?: string | null }).publicId;
+  if (stored && String(stored).trim()) return String(stored).trim();
+  return `PD-U${String(Math.trunc(user.id)).padStart(5, '0')}`;
 }
 
 export async function showAdminPanel(ctx: Context): Promise<void> {
@@ -325,7 +335,7 @@ function formatAdminVetCard(user: User): string {
   return [
     `🩺 <b>${escapeHtml(user.name)}</b>`,
     user.username ? `@${escapeHtml(user.username)}` : null,
-    `<b>آیدی:</b> <code>${user.id}</code>`,
+    `<b>آیدی:</b> <code>${escapeHtml(adminVetPublicId(user))}</code>`,
     user.telegramId ? `<b>تلگرام:</b> <code>${escapeHtml(user.telegramId)}</code>` : null,
     `<b>وضعیت:</b> ${enabled ? '✅ فعال' : '⏸ غیرفعال'}`,
     `<b>آنلاین:</b> ${online ? '🟢 بله' : '🔴 خیر'}`,
@@ -337,48 +347,130 @@ function formatAdminVetCard(user: User): string {
     .join('\n');
 }
 
-/** لیست پزشک‌ها برای فعال/غیرفعال کردن توسط ادمین */
-export async function handleAdminVetList(ctx: Context): Promise<void> {
-  if (!(await requireAdminAuth(ctx))) return;
+function formatAdminVetListLine(user: User, index: number): string {
+  const enabled = user.vetEnabled !== false;
+  const online = Boolean(user.vetOnline);
+  const phone = user.phone ? escapeHtml(user.phone) : null;
+  const parts = [
+    `${index}. <b>${escapeHtml(user.name)}</b>`,
+    `<code>${escapeHtml(adminVetPublicId(user))}</code>`,
+    enabled ? '✅ فعال' : '⏸ غیرفعال',
+    online ? '🟢 آنلاین' : '🔴 آفلاین',
+  ];
+  if (phone) parts.push(phone);
+  return parts.join(' · ');
+}
 
-  let vets: User[];
+function formatAdminVetListPage(vets: User[], page: number): string {
+  const enabledCount = vets.filter((v) => v.vetEnabled !== false).length;
+  const totalPages = Math.max(1, Math.ceil(vets.length / ADMIN_VET_LIST_PAGE_SIZE));
+  const safePage = Math.min(Math.max(0, page), totalPages - 1);
+  const start = safePage * ADMIN_VET_LIST_PAGE_SIZE;
+  const slice = vets.slice(start, start + ADMIN_VET_LIST_PAGE_SIZE);
+  const lines = slice.map((v, i) => formatAdminVetListLine(v, start + i + 1));
+  return [
+    '🩺 <b>مدیریت پزشک‌ها</b>',
+    `کل: <b>${vets.length}</b> · فعال: <b>${enabledCount}</b> · غیرفعال: <b>${vets.length - enabledCount}</b>`,
+    totalPages > 1 ? `صفحه <b>${safePage + 1}</b> از <b>${totalPages}</b>` : null,
+    '',
+    ...lines,
+    '',
+    'برای فعال/غیرفعال کردن، پزشک را از دکمه‌های زیر انتخاب کن.',
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+}
+
+async function loadAdminVets(ctx: Context): Promise<User[] | null> {
   try {
-    vets = await listAllVets();
+    return await listAllVets();
   } catch (err) {
     console.error('listAllVets failed:', err);
     await ctx.reply('خطا در دریافت لیست پزشک‌ها.', { reply_markup: adminPanelKeyboard() });
-    return;
+    return null;
   }
+}
+
+/** لیست پزشک‌ها — یک پیام خلاصه + دکمه‌های انتخاب/صفحه‌بندی */
+export async function handleAdminVetList(ctx: Context, page = 0): Promise<void> {
+  if (!(await requireAdminAuth(ctx))) return;
+
+  const vets = await loadAdminVets(ctx);
+  if (!vets) return;
 
   if (vets.length === 0) {
-    await ctx.reply('📭 هنوز دامپزشکی ثبت نشده.', { reply_markup: adminPanelKeyboard() });
+    const empty = '📭 هنوز دامپزشکی ثبت نشده.';
+    if (ctx.callbackQuery) {
+      await ctx.answerCallbackQuery().catch(() => undefined);
+      try {
+        await ctx.editMessageText(empty);
+      } catch {
+        await ctx.reply(empty, { reply_markup: adminPanelKeyboard() });
+      }
+    } else {
+      await ctx.reply(empty, { reply_markup: adminPanelKeyboard() });
+    }
     return;
   }
 
-  const enabledCount = vets.filter((v) => v.vetEnabled !== false).length;
-  await ctx.reply(
-    `🩺 <b>مدیریت پزشک‌ها</b>\nکل: <b>${vets.length}</b> · فعال: <b>${enabledCount}</b> · غیرفعال: <b>${vets.length - enabledCount}</b>`,
-    { parse_mode: 'HTML', reply_markup: adminPanelKeyboard() }
-  );
+  const totalPages = Math.max(1, Math.ceil(vets.length / ADMIN_VET_LIST_PAGE_SIZE));
+  const safePage = Math.min(Math.max(0, page), totalPages - 1);
+  const text = formatAdminVetListPage(vets, safePage);
+  const kb = adminVetListKeyboard(vets, safePage, ADMIN_VET_LIST_PAGE_SIZE);
 
-  const limit = Math.min(vets.length, 15);
-  for (let i = 0; i < limit; i++) {
-    const vet = vets[i]!;
-    const enabled = vet.vetEnabled !== false;
+  if (ctx.callbackQuery) {
+    await ctx.answerCallbackQuery().catch(() => undefined);
+    try {
+      await ctx.editMessageText(text, { parse_mode: 'HTML', reply_markup: kb });
+      return;
+    } catch {
+      /* fall through to reply */
+    }
+  }
+
+  await ctx.reply(text, {
+    parse_mode: 'HTML',
+    reply_markup: kb,
+  });
+}
+
+/** جزئیات یک پزشک از لیست ادمین */
+export async function handleAdminVetView(
+  ctx: Context,
+  userId: number,
+  listPage = 0
+): Promise<void> {
+  if (!(await requireAdminAuth(ctx))) return;
+
+  const vets = await loadAdminVets(ctx);
+  if (!vets) return;
+
+  const vet = vets.find((v) => v.id === userId);
+  if (!vet) {
+    await ctx.answerCallbackQuery({ text: 'پزشک پیدا نشد', show_alert: true }).catch(() => undefined);
+    return;
+  }
+
+  await ctx.answerCallbackQuery().catch(() => undefined);
+  const enabled = vet.vetEnabled !== false;
+  try {
+    await ctx.editMessageText(formatAdminVetCard(vet), {
+      parse_mode: 'HTML',
+      reply_markup: adminVetToggleKeyboard(vet.id, enabled, listPage),
+    });
+  } catch {
     await ctx.reply(formatAdminVetCard(vet), {
       parse_mode: 'HTML',
-      reply_markup: adminVetToggleKeyboard(vet.id, enabled),
+      reply_markup: adminVetToggleKeyboard(vet.id, enabled, listPage),
     });
-  }
-  if (vets.length > limit) {
-    await ctx.reply(`+ ${vets.length - limit} پزشک دیگر در لیست هستند.`);
   }
 }
 
 export async function handleAdminVetToggle(
   ctx: Context,
   userId: number,
-  enabled: boolean
+  enabled: boolean,
+  listPage = 0
 ): Promise<void> {
   if (!(await requireAdminAuth(ctx))) return;
 
@@ -406,7 +498,7 @@ export async function handleAdminVetToggle(
       `${formatAdminVetCard(user)}\n\n${enabled ? '✅ فعال شد.' : '⏸ غیرفعال شد.'}\n${escapeHtml(smsLine)}`,
       {
         parse_mode: 'HTML',
-        reply_markup: adminVetToggleKeyboard(user.id, user.vetEnabled !== false),
+        reply_markup: adminVetToggleKeyboard(user.id, user.vetEnabled !== false, listPage),
       }
     );
   } catch {
@@ -414,7 +506,7 @@ export async function handleAdminVetToggle(
       `${formatAdminVetCard(user)}\n\n${enabled ? '✅ فعال شد.' : '⏸ غیرفعال شد.'}\n${escapeHtml(smsLine)}`,
       {
         parse_mode: 'HTML',
-        reply_markup: adminVetToggleKeyboard(user.id, user.vetEnabled !== false),
+        reply_markup: adminVetToggleKeyboard(user.id, user.vetEnabled !== false, listPage),
       }
     );
   }

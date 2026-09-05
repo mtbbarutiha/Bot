@@ -171,6 +171,7 @@ import {
   handleAdminVetCredentialReject,
   handleAdminVetList,
   handleAdminVetToggle,
+  handleAdminVetView,
 } from './admin';
 import {
   ensureVetPhoneVerified,
@@ -478,11 +479,27 @@ export function registerHandlers(bot: Bot): void {
     handleAdminVetCredentialReject(ctx, Number(ctx.match![1]))
   );
 
-  bot.callbackQuery(/^admin:vet:enable:(\d+)$/, async (ctx) => {
-    await handleAdminVetToggle(ctx, Number(ctx.match![1]), true);
+  bot.callbackQuery(/^admin:vet:list:(\d+)$/, async (ctx) => {
+    await handleAdminVetList(ctx, Number(ctx.match![1]));
   });
-  bot.callbackQuery(/^admin:vet:disable:(\d+)$/, async (ctx) => {
-    await handleAdminVetToggle(ctx, Number(ctx.match![1]), false);
+  bot.callbackQuery(/^admin:vet:view:(\d+):(\d+)$/, async (ctx) => {
+    await handleAdminVetView(ctx, Number(ctx.match![1]), Number(ctx.match![2]));
+  });
+  bot.callbackQuery(/^admin:vet:enable:(\d+)(?::(\d+))?$/, async (ctx) => {
+    await handleAdminVetToggle(
+      ctx,
+      Number(ctx.match![1]),
+      true,
+      ctx.match![2] != null ? Number(ctx.match![2]) : 0
+    );
+  });
+  bot.callbackQuery(/^admin:vet:disable:(\d+)(?::(\d+))?$/, async (ctx) => {
+    await handleAdminVetToggle(
+      ctx,
+      Number(ctx.match![1]),
+      false,
+      ctx.match![2] != null ? Number(ctx.match![2]) : 0
+    );
   });
 
   bot.callbackQuery('phone:verify:start', async (ctx) => {

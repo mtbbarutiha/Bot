@@ -561,14 +561,48 @@ export function adminVetCredentialKeyboard(userId: number): InlineKeyboard {
     .text('📋 صف', 'vetcred:admin:queue');
 }
 
+/** لیست فشردهٔ پزشک‌ها با انتخاب جزئیات + صفحه‌بندی */
+export function adminVetListKeyboard(
+  vets: Array<{ id: number; name: string; vetEnabled?: boolean }>,
+  page: number,
+  pageSize: number
+): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  const totalPages = Math.max(1, Math.ceil(vets.length / pageSize));
+  const safePage = Math.min(Math.max(0, page), totalPages - 1);
+  const start = safePage * pageSize;
+  const slice = vets.slice(start, start + pageSize);
+
+  slice.forEach((vet, i) => {
+    const n = start + i + 1;
+    const enabled = vet.vetEnabled !== false;
+    const mark = enabled ? '✅' : '⏸';
+    const name = vet.name.length > 28 ? `${vet.name.slice(0, 27)}…` : vet.name;
+    kb.text(`${n}. ${mark} ${name}`, `admin:vet:view:${vet.id}:${safePage}`).row();
+  });
+
+  if (totalPages > 1) {
+    if (safePage > 0) kb.text('◀️ قبلی', `admin:vet:list:${safePage - 1}`);
+    kb.text(`${safePage + 1}/${totalPages}`, 'noop');
+    if (safePage < totalPages - 1) kb.text('بعدی ▶️', `admin:vet:list:${safePage + 1}`);
+    kb.row();
+  }
+  return kb;
+}
+
 /** فعال/غیرفعال کردن دامپزشک در لیست ادمین */
-export function adminVetToggleKeyboard(userId: number, enabled: boolean): InlineKeyboard {
+export function adminVetToggleKeyboard(
+  userId: number,
+  enabled: boolean,
+  listPage = 0
+): InlineKeyboard {
   const kb = new InlineKeyboard();
   if (enabled) {
-    kb.text('⏸ غیرفعال کردن', `admin:vet:disable:${userId}`).danger();
+    kb.text('⏸ غیرفعال کردن', `admin:vet:disable:${userId}:${listPage}`).danger();
   } else {
-    kb.text('▶️ فعال کردن', `admin:vet:enable:${userId}`).success();
+    kb.text('▶️ فعال کردن', `admin:vet:enable:${userId}:${listPage}`).success();
   }
+  kb.row().text('🔙 بازگشت به لیست', `admin:vet:list:${listPage}`);
   return kb;
 }
 
