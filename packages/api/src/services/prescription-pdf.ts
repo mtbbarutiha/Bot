@@ -14,17 +14,23 @@
 import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
-import { BRAND, PET_SPECIES_LABELS } from '@petdate/shared';
+import { PET_SPECIES_LABELS } from '@petdate/shared';
 
-/** Brand sky-blue — همبازی / petdate */
+/** Brand sky-blue — Pet Date Dr / petdate */
 const BRAND_BLUE = '#5ba8d2';
 const BRAND_BLUE_SOFT = '#e8f4fa';
 const BRAND_BLUE_MID = '#b8dceb';
+const BRAND_INK = '#0f172a';
+const BRAND_INK_MID = '#1e293b';
 const INK = '#1e293b';
 const MUTED = '#64748b';
 const RULE = '#d4e6f0';
 const PAPER = '#ffffff';
 const BODY_BG = '#f7fafc';
+
+/** Prescription product branding (not the playmate "همبازی" surface). */
+const RX_BRAND_FA = 'پت دیت دکتر';
+const RX_BRAND_EN = 'Pet Date Dr';
 
 export type PrescriptionPdfInput = {
   vetName: string;
@@ -147,8 +153,102 @@ function paint(
   });
 }
 
-/** مهر همبازی — circular seal at current origin. */
-function drawHambaziStamp(doc: PDFKit.PDFDocument, radius: number, year: string): void {
+/** Brand dual-paw mark (matches web LogoIcon mood) at top-left of a size×size box. */
+function drawPawMark(doc: PDFKit.PDFDocument, x: number, y: number, size: number): void {
+  const s = size / 48;
+  doc.save();
+  doc.translate(x, y);
+  doc.scale(s);
+
+  // Rounded dark badge
+  doc.roundedRect(0, 0, 48, 48, 13).fill(BRAND_INK);
+  doc
+    .roundedRect(0.5, 0.5, 47, 47, 12.5)
+    .lineWidth(1)
+    .strokeColor('#334155')
+    .stroke();
+
+  // Soft link glow
+  doc.circle(24, 24, 9).fillOpacity(0.14).fill(BRAND_BLUE);
+  doc.fillOpacity(1);
+
+  const drawPaw = () => {
+    doc.circle(-5.4, -6.2, 2.35).fill('#ffffff');
+    doc.circle(-1.7, -8.6, 2.55).fill('#ffffff');
+    doc.circle(1.7, -8.6, 2.55).fill('#ffffff');
+    doc.circle(5.4, -6.2, 2.35).fill('#ffffff');
+    doc.ellipse(0, 1.8, 7, 6).fill('#ffffff');
+  };
+
+  doc.save();
+  doc.translate(15, 28);
+  doc.rotate(-22);
+  drawPaw();
+  doc.restore();
+
+  doc.save();
+  doc.translate(33, 28);
+  doc.rotate(22);
+  doc.scale(-1, 1);
+  drawPaw();
+  doc.restore();
+
+  // Link node
+  doc.circle(24, 23.5, 2.6).fill(BRAND_BLUE);
+  doc.circle(24, 23.5, 1).fillOpacity(0.35).fill(BRAND_INK);
+  doc.fillOpacity(1);
+
+  doc.restore();
+}
+
+/**
+ * Header logo: dual-paw badge + "پت دیت دکتر" / "Pet Date Dr"
+ * Drawn from the right edge (RTL header).
+ */
+function drawPetDateDrLogo(
+  doc: PDFKit.PDFDocument,
+  right: number,
+  top: number,
+  contentW: number
+): void {
+  const markSize = 44;
+  const markX = right - markSize;
+  drawPawMark(doc, markX, top + 2, markSize);
+
+  const textRight = markX - 12;
+  const textW = Math.min(280, contentW - markSize - 16);
+  const textX = textRight - textW;
+
+  paint(doc, RX_BRAND_FA, textX, top + 4, {
+    width: textW,
+    align: 'right',
+    size: 22,
+    color: BRAND_BLUE,
+    bold: true,
+  });
+  // Latin wordmark — left-to-right under Persian title
+  doc.font('VazirBold').fontSize(11).fillColor(BRAND_INK_MID);
+  const en = RX_BRAND_EN;
+  const enW = doc.widthOfString(en);
+  doc.text(en, textRight - enW, top + 30, { lineBreak: false });
+
+  paint(doc, 'نسخه دامپزشکی  ·  کلینیک آنلاین', textX, top + 48, {
+    width: textW,
+    align: 'right',
+    size: 10,
+    color: MUTED,
+  });
+
+  doc
+    .moveTo(textRight - 140, top + 66)
+    .lineTo(textRight, top + 66)
+    .strokeColor(BRAND_BLUE)
+    .lineWidth(1.6)
+    .stroke();
+}
+
+/** مهر پت دیت دکتر — circular seal at current origin. */
+function drawPetDateDrStamp(doc: PDFKit.PDFDocument, radius: number, year: string): void {
   const R = radius;
   doc.save();
   doc.opacity(0.48);
@@ -160,21 +260,21 @@ function drawHambaziStamp(doc: PDFKit.PDFDocument, radius: number, year: string)
   doc.lineWidth(1.2).circle(0, 0, R - 9).stroke();
   doc.lineWidth(0.8).circle(0, 0, R * 0.48).stroke();
 
-  const brand = rtlLine('همبازی');
-  doc.font('VazirBold').fontSize(15).fillColor(BRAND_BLUE);
-  doc.text(brand, -doc.widthOfString(brand) / 2, -12, { lineBreak: false });
+  const brand = rtlLine(RX_BRAND_FA);
+  doc.font('VazirBold').fontSize(9.5).fillColor(BRAND_BLUE);
+  doc.text(brand, -doc.widthOfString(brand) / 2, -14, { lineBreak: false });
 
   const conf = rtlLine('نسخه تأییدشده');
   doc.font('Vazir').fontSize(7).fillColor(BRAND_BLUE);
-  doc.text(conf, -doc.widthOfString(conf) / 2, 6, { lineBreak: false });
+  doc.text(conf, -doc.widthOfString(conf) / 2, 2, { lineBreak: false });
 
   const yr = rtlLine(year);
   doc.font('Vazir').fontSize(7.5).fillColor(BRAND_BLUE);
   doc.text(yr, -doc.widthOfString(yr) / 2, R - 21, { lineBreak: false });
 
-  const en = BRAND.name;
+  const en = RX_BRAND_EN;
   doc.font('Vazir').fontSize(6.5).fillColor(BRAND_BLUE);
-  doc.text(en, -doc.widthOfString(en) / 2, -(R - 19), { lineBreak: false });
+  doc.text(en, -doc.widthOfString(en) / 2, -(R - 17), { lineBreak: false });
 
   doc.restore();
 }
@@ -187,7 +287,6 @@ export async function generatePrescriptionPdf(
   const dir = path.dirname(outPath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
-  const brandFa = 'همبازی';
   const dateFa = formatFaDate(input.dateIso);
   const yearFa = jalaliYear(input.dateIso);
   const petBits = [input.petName, speciesLabel(input.petSpecies), input.petBreed]
@@ -204,8 +303,8 @@ export async function generatePrescriptionPdf(
       autoFirstPage: true,
       info: {
         Title: `نسخه دارویی — ${input.petName}`,
-        Author: brandFa,
-        Subject: 'Veterinary Prescription',
+        Author: RX_BRAND_FA,
+        Subject: 'Veterinary Prescription — Pet Date Dr',
       },
     });
     const stream = fs.createWriteStream(outPath);
@@ -222,31 +321,14 @@ export async function generatePrescriptionPdf(
     const pageH = 841.89;
     const left = 44;
     const contentW = pageW - left * 2;
+    const right = left + contentW;
 
     // Soft wash + brand top bar
     doc.rect(0, 0, pageW, 92).fill(BRAND_BLUE_SOFT);
     doc.rect(0, 0, pageW, 5).fill(BRAND_BLUE);
 
-    // Hero brand
-    paint(doc, brandFa, left, 20, {
-      width: contentW,
-      align: 'right',
-      size: 30,
-      color: BRAND_BLUE,
-      bold: true,
-    });
-    paint(doc, 'نسخه دامپزشکی  ·  کلینیک آنلاین', left, 54, {
-      width: contentW,
-      align: 'right',
-      size: 11,
-      color: MUTED,
-    });
-    doc
-      .moveTo(left + contentW - 150, 72)
-      .lineTo(left + contentW, 72)
-      .strokeColor(BRAND_BLUE)
-      .lineWidth(1.6)
-      .stroke();
+    // Hero brand logo (paw mark + Pet Date Dr)
+    drawPetDateDrLogo(doc, right, 14, contentW);
 
     // Meta card
     let y = 88;
@@ -339,16 +421,16 @@ export async function generatePrescriptionPdf(
       color: MUTED,
     });
 
-    // مهر همبازی — lower-left, rotated ~-12°, semi-transparent
+    // مهر پت دیت دکتر — lower-left, rotated ~-12°, semi-transparent
     const stampR = 46;
     doc.save();
     doc.translate(left + stampR + 4, pageH - 70);
     doc.rotate(-12);
-    drawHambaziStamp(doc, stampR, yearFa);
+    drawPetDateDrStamp(doc, stampR, yearFa);
     doc.restore();
 
     // Footer brand (right of stamp)
-    paint(doc, `${brandFa} — ${BRAND.taglineFa}`, left + 110, pageH - 28, {
+    paint(doc, `${RX_BRAND_FA} — ${RX_BRAND_EN}`, left + 110, pageH - 28, {
       width: contentW - 110,
       align: 'right',
       size: 8.5,

@@ -918,9 +918,9 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
     return;
   }
 
-  const fileName = `hambazi-rx-${created.prescription.id}.pdf`;
+  const fileName = `petdate-dr-rx-${created.prescription.id}.pdf`;
   const captionPatient = [
-    '💊 <b>نسخه دارویی همبازی</b>',
+    '💊 <b>نسخه دارویی پت دیت دکتر</b>',
     `پت: <b>${escapeHtml(created.pet.name)}</b>`,
     `پزشک: ${escapeHtml(created.vet.name)}`,
     '',

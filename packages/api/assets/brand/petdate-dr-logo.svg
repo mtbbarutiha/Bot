@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 56" fill="none" role="img" aria-label="Pet Date Dr">
+  <title>Pet Date Dr</title>
+  <defs>
+    <linearGradient id="surface" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+  </defs>
+  <rect width="48" height="48" y="4" rx="13" fill="url(#surface)" stroke="#334155" stroke-width="1"/>
+  <circle cx="24" cy="28" r="9" fill="#5ba8d2" opacity="0.14"/>
+  <g fill="#fff" transform="translate(15 32) rotate(-22)">
+    <circle cx="-5.4" cy="-6.2" r="2.35"/><circle cx="-1.7" cy="-8.6" r="2.55"/><circle cx="1.7" cy="-8.6" r="2.55"/><circle cx="5.4" cy="-6.2" r="2.35"/>
+    <ellipse cx="0" cy="1.8" rx="7" ry="6"/>
+  </g>
+  <g fill="#fff" transform="translate(33 32) rotate(22) scale(-1 1)">
+    <circle cx="-5.4" cy="-6.2" r="2.35"/><circle cx="-1.7" cy="-8.6" r="2.55"/><circle cx="1.7" cy="-8.6" r="2.55"/><circle cx="5.4" cy="-6.2" r="2.35"/>
+    <ellipse cx="0" cy="1.8" rx="7" ry="6"/>
+  </g>
+  <circle cx="24" cy="27.5" r="2.6" fill="#5ba8d2"/>
+  <text x="62" y="28" font-family="Vazirmatn, Tahoma, sans-serif" font-size="20" font-weight="700" fill="#5ba8d2">پت دیت دکتر</text>
+  <text x="62" y="48" font-family="Inter, system-ui, sans-serif" font-size="13" font-weight="700" letter-spacing="-0.02em" fill="#1e293b">Pet Date Dr</text>
+</svg>

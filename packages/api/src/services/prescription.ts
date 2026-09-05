@@ -34,9 +34,9 @@ function buildSmsBody(opts: {
 }): string {
   const abbrev = opts.text.replace(/\s+/g, ' ').trim().slice(0, 280);
   const parts = [
-    'همبازی',
+    'پت دیت دکتر',
     `نسخه دارویی برای «${opts.petName}» توسط دکتر ${opts.vetName} صادر شد.`,
-    'فایل PDF را در تلگرام ربات همبازی دریافت کنید.',
+    'فایل PDF را در تلگرام ربات پت دیت دریافت کنید.',
   ];
   if (abbrev.length <= 120) {
     parts.push(`دارو: ${abbrev}`);
