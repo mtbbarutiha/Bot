@@ -355,6 +355,26 @@ export async function postPlaydateChatMessage(
   }
 }
 
+/** Record bot-delivered Telegram message ids for later web wipe. */
+export async function postPlaydateChatTgRefs(
+  playdateId: number,
+  refs: Array<{ telegramChatId: string; messageId: number }>,
+  userId?: number
+): Promise<void> {
+  if (!playdateId || refs.length === 0) return;
+  try {
+    await request(`/api/playdate-requests/${playdateId}/telegram-message-refs`, {
+      method: 'POST',
+      body: JSON.stringify({
+        ...(Number.isFinite(userId) ? { userId } : {}),
+        refs,
+      }),
+    });
+  } catch (err) {
+    console.error('Failed to record playdate chat tg refs:', err);
+  }
+}
+
 export async function endPlaydateChatViaApi(playdateId: number, userId: number): Promise<void> {
   try {
     await request(`/api/playdate-requests/${playdateId}/end-chat`, {

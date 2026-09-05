@@ -3,45 +3,59 @@ import fs from 'fs';
 import path from 'path';
 import type { PlaydateChatMediaKind } from '@petdate/shared';
 import { resolveStoragePath } from './chat-upload-store';
+import { dbService } from '../db';
 
-async function telegramCall(method: string, body: Record<string, unknown>): Promise<boolean> {
+type TelegramSendResult = { ok: boolean; messageId?: number };
+
+async function telegramCall(
+  method: string,
+  body: Record<string, unknown>
+): Promise<TelegramSendResult> {
   const token = infra.telegram.botToken;
-  if (!token) return false;
+  if (!token) return { ok: false };
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    const data = (await res.json()) as { ok?: boolean; description?: string };
+    const data = (await res.json()) as {
+      ok?: boolean;
+      description?: string;
+      result?: { message_id?: number };
+    };
     if (!data.ok) {
       console.warn(`telegram ${method} failed:`, data.description ?? res.status);
-      return false;
+      return { ok: false };
     }
-    return true;
+    return { ok: true, messageId: data.result?.message_id };
   } catch (err) {
     console.warn(`telegram ${method} error:`, (err as Error).message);
-    return false;
+    return { ok: false };
   }
 }
 
-async function telegramCallForm(method: string, form: FormData): Promise<boolean> {
+async function telegramCallForm(method: string, form: FormData): Promise<TelegramSendResult> {
   const token = infra.telegram.botToken;
-  if (!token) return false;
+  if (!token) return { ok: false };
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
       method: 'POST',
       body: form,
     });
-    const data = (await res.json()) as { ok?: boolean; description?: string };
+    const data = (await res.json()) as {
+      ok?: boolean;
+      description?: string;
+      result?: { message_id?: number };
+    };
     if (!data.ok) {
       console.warn(`telegram ${method} failed:`, data.description ?? res.status);
-      return false;
+      return { ok: false };
     }
-    return true;
+    return { ok: true, messageId: data.result?.message_id };
   } catch (err) {
     console.warn(`telegram ${method} error:`, (err as Error).message);
-    return false;
+    return { ok: false };
   }
 }
 
@@ -87,6 +101,19 @@ function formFieldForKind(kind: PlaydateChatMediaKind | null | undefined): strin
   }
 }
 
+function rememberDelivery(
+  playdateId: number | undefined,
+  telegramChatId: string,
+  messageId?: number
+): void {
+  if (!playdateId || !messageId) return;
+  try {
+    dbService.recordPlaydateChatTgRef(playdateId, telegramChatId, messageId);
+  } catch (err) {
+    console.warn('record tg ref failed:', (err as Error).message);
+  }
+}
+
 /** Deliver a playdate chat line from web/API to the peer's Telegram. */
 export async function notifyPlaydateChatTelegram(opts: {
   toTelegramId: string;
@@ -122,18 +149,23 @@ export async function notifyPlaydateChatTelegram(opts: {
       const caption = bodyText ? `${header}\n\n${bodyText}` : header;
       form.append('caption', caption.slice(0, 1024));
       if (opts.protectContent) form.append('protect_content', 'true');
-      const ok = await telegramCallForm(telegramMethodForKind(opts.mediaKind), form);
-      if (ok) return true;
+      const sent = await telegramCallForm(telegramMethodForKind(opts.mediaKind), form);
+      if (sent.ok) {
+        rememberDelivery(opts.playdateId, opts.toTelegramId, sent.messageId);
+        return true;
+      }
       // fall through to text notice if media send fails
     }
   }
 
   const body = (bodyText || captionText || '[رسانه]').slice(0, 3500);
-  return telegramCall('sendMessage', {
+  const sent = await telegramCall('sendMessage', {
     chat_id: opts.toTelegramId,
     text: `${header}\n\n${body}`,
     ...(opts.protectContent ? { protect_content: true } : {}),
   });
+  if (sent.ok) rememberDelivery(opts.playdateId, opts.toTelegramId, sent.messageId);
+  return sent.ok;
 }
 
 export async function notifyPlaydateChatSecureTelegram(opts: {
@@ -144,21 +176,73 @@ export async function notifyPlaydateChatSecureTelegram(opts: {
   const text = opts.secure
     ? '🔒 طرف مقابل چت امن را در وب فعال کرد.\nپیام‌های این گفتگو قابل ذخیره یا فوروارد نیستند.'
     : '🔓 طرف مقابل چت امن را در وب خاموش کرد.';
-  return telegramCall('sendMessage', {
-    chat_id: opts.toTelegramId,
-    text,
-  });
+  return (await telegramCall('sendMessage', { chat_id: opts.toTelegramId, text })).ok;
 }
 
 export async function notifyPlaydateChatEndedTelegram(opts: {
   toTelegramId: string;
 }): Promise<boolean> {
   if (!infra.telegram.botToken || !usableTelegramId(opts.toTelegramId)) return false;
-  return telegramCall('sendMessage', {
-    chat_id: opts.toTelegramId,
-    text:
-      '🔌 چت همبازی از وب قطع شد.\n🗑 لطفاً کل این گفتگو را از تلگرام پاک کنید تا اثری نماند.',
-  });
+  return (
+    await telegramCall('sendMessage', {
+      chat_id: opts.toTelegramId,
+      text:
+        '🔌 چت همبازی از وب قطع شد.\n🗑 لطفاً کل این گفتگو را از تلگرام پاک کنید تا اثری نماند.',
+    })
+  ).ok;
+}
+
+/**
+ * Delete bot-delivered playdate messages from Telegram (best-effort).
+ * Bots can only delete messages they themselves sent — not the peer's own typed lines.
+ */
+export async function wipePlaydateChatTelegram(opts: {
+  playdateId: number;
+  notifyTelegramIds?: string[];
+}): Promise<{ deleted: number }> {
+  const refs = dbService.listPlaydateChatTgRefs(opts.playdateId);
+  const byChat = new Map<string, number[]>();
+  for (const ref of refs) {
+    if (!usableTelegramId(ref.telegramChatId)) continue;
+    const list = byChat.get(ref.telegramChatId) ?? [];
+    list.push(ref.messageId);
+    byChat.set(ref.telegramChatId, list);
+  }
+
+  let deleted = 0;
+  for (const [chatId, messageIds] of byChat) {
+    for (let i = 0; i < messageIds.length; i += 100) {
+      const chunk = [...new Set(messageIds.slice(i, i + 100))];
+      const bulk = await telegramCall('deleteMessages', {
+        chat_id: chatId,
+        message_ids: chunk,
+      });
+      if (bulk.ok) {
+        deleted += chunk.length;
+        continue;
+      }
+      for (const messageId of chunk) {
+        const one = await telegramCall('deleteMessage', {
+          chat_id: chatId,
+          message_id: messageId,
+        });
+        if (one.ok) deleted += 1;
+      }
+    }
+  }
+
+  dbService.clearPlaydateChatTgRefs(opts.playdateId);
+
+  for (const telegramId of opts.notifyTelegramIds ?? []) {
+    if (!usableTelegramId(telegramId)) continue;
+    await telegramCall('sendMessage', {
+      chat_id: telegramId,
+      text:
+        '🗑 طرف مقابل گفتگوی همبازی را از وب پاک کرد.\nپیام‌های ربات از این چت حذف شدند. اگر چیزی از پیام‌های خودت ماند، دستی پاکش کن.',
+    });
+  }
+
+  return { deleted };
 }
 
 /** Resolve a Telegram file_id to a downloadable file path on Telegram servers. */

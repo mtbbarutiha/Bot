@@ -9,6 +9,7 @@ import {
   notifyPlaydateChatSecureTelegram,
   notifyPlaydateChatTelegram,
   resolveTelegramFile,
+  wipePlaydateChatTelegram,
 } from '../services/telegram-chat-notify';
 import {
   MAX_UPLOAD_BYTES,
@@ -528,7 +529,7 @@ playdatesRouter.patch('/:id/chat-secure', async (req, res) => {
   res.json(enrichPlaydate(updated));
 });
 
-playdatesRouter.delete('/:id/messages', (req, res) => {
+playdatesRouter.delete('/:id/messages', async (req, res) => {
   const playdateId = Number(req.params.id);
   const userId = Number(req.query.userId ?? req.body?.userId);
   if (!Number.isFinite(playdateId) || !Number.isFinite(userId)) {
@@ -546,9 +547,63 @@ playdatesRouter.delete('/:id/messages', (req, res) => {
     return;
   }
 
+  // Wipe bot-delivered Telegram copies for both participants before clearing web DB.
+  const notifyIds = peerTelegramIds(gate.playdate, userId);
+  let telegramDeleted = 0;
+  try {
+    const wipe = await wipePlaydateChatTelegram({
+      playdateId,
+      notifyTelegramIds: notifyIds,
+    });
+    telegramDeleted = wipe.deleted;
+  } catch (err) {
+    console.warn('wipePlaydateChatTelegram failed:', (err as Error).message);
+  }
+
   purgePlaydateUploads(playdateId);
   const cleared = dbService.clearPlaydateChatMessages(playdateId);
-  res.json({ ok: true, cleared });
+  res.json({ ok: true, cleared, telegramDeleted });
+});
+
+/** Record bot-delivered Telegram message ids so web wipe can delete them. */
+playdatesRouter.post('/:id/telegram-message-refs', (req, res) => {
+  const playdateId = Number(req.params.id);
+  const userId = Number(req.body?.userId);
+  const rawRefs = Array.isArray(req.body?.refs) ? req.body.refs : [];
+  if (!Number.isFinite(playdateId)) {
+    res.status(400).json({ error: 'شناسه درخواست الزامی است' });
+    return;
+  }
+
+  const playdate = dbService.getPlaydateRequest(playdateId);
+  if (!playdate) {
+    res.status(404).json({ error: 'درخواست پیدا نشد' });
+    return;
+  }
+
+  // Allow either a participant userId, or omit userId when called from bot with valid playdate.
+  if (Number.isFinite(userId)) {
+    if (!dbService.isPlaydateParticipant(playdate, userId)) {
+      res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+      return;
+    }
+  }
+
+  const refs: Array<{ telegramChatId: string; messageId: number }> = [];
+  for (const row of rawRefs) {
+    const telegramChatId = String(row?.telegramChatId ?? row?.telegram_chat_id ?? '').trim();
+    const messageId = Number(row?.messageId ?? row?.message_id);
+    if (!telegramChatId || !Number.isFinite(messageId) || messageId <= 0) continue;
+    refs.push({ telegramChatId, messageId: Math.trunc(messageId) });
+  }
+
+  if (refs.length === 0) {
+    res.status(400).json({ error: 'refs خالی است' });
+    return;
+  }
+
+  const recorded = dbService.recordPlaydateChatTgRefs(playdateId, refs);
+  res.json({ ok: true, recorded });
 });
 
 playdatesRouter.get('/:id', (req, res) => {

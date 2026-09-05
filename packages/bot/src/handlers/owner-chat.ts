@@ -13,6 +13,7 @@ import {
   getUserById,
   getUserByTelegramId,
   postPlaydateChatMessage,
+  postPlaydateChatTgRefs,
   endPlaydateChatViaApi,
   setPlaydateChatSecureViaApi,
 } from '../api-client';
@@ -539,21 +540,30 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
     });
   }
 
+  async function rememberPeerDelivery(messageId?: number) {
+    if (!playdateId || !messageId) return;
+    await postPlaydateChatTgRefs(playdateId, [
+      { telegramChatId: String(peer), messageId },
+    ]);
+  }
+
   try {
     if (ctx.message?.photo?.length) {
       const fileId = ctx.message.photo[ctx.message.photo.length - 1]!.file_id;
-      await ctx.api.sendPhoto(peer, fileId, {
+      const sent = await ctx.api.sendPhoto(peer, fileId, {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await rememberPeerDelivery(sent.message_id);
       await persistMedia('photo', fileId, ctx.message.caption || undefined, 'image/jpeg');
       return true;
     }
     if (ctx.message?.video) {
-      await ctx.api.sendVideo(peer, ctx.message.video.file_id, {
+      const sent = await ctx.api.sendVideo(peer, ctx.message.video.file_id, {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await rememberPeerDelivery(sent.message_id);
       await persistMedia(
         'video',
         ctx.message.video.file_id,
@@ -564,10 +574,11 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
       return true;
     }
     if (ctx.message?.animation) {
-      await ctx.api.sendAnimation(peer, ctx.message.animation.file_id, {
+      const sent = await ctx.api.sendAnimation(peer, ctx.message.animation.file_id, {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await rememberPeerDelivery(sent.message_id);
       await persistMedia(
         'animation',
         ctx.message.animation.file_id,
@@ -578,15 +589,17 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
       return true;
     }
     if (ctx.message?.video_note) {
-      await ctx.api.sendVideoNote(peer, ctx.message.video_note.file_id, protect);
+      const sent = await ctx.api.sendVideoNote(peer, ctx.message.video_note.file_id, protect);
+      await rememberPeerDelivery(sent.message_id);
       await persistMedia('video_note', ctx.message.video_note.file_id, undefined, 'video/mp4');
       return true;
     }
     if (ctx.message?.document) {
-      await ctx.api.sendDocument(peer, ctx.message.document.file_id, {
+      const sent = await ctx.api.sendDocument(peer, ctx.message.document.file_id, {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await rememberPeerDelivery(sent.message_id);
       await persistMedia(
         'document',
         ctx.message.document.file_id,
@@ -597,15 +610,17 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
       return true;
     }
     if (ctx.message?.voice) {
-      await ctx.api.sendVoice(peer, ctx.message.voice.file_id, protect);
+      const sent = await ctx.api.sendVoice(peer, ctx.message.voice.file_id, protect);
+      await rememberPeerDelivery(sent.message_id);
       await persistMedia('voice', ctx.message.voice.file_id, undefined, ctx.message.voice.mime_type);
       return true;
     }
     if (ctx.message?.audio) {
-      await ctx.api.sendAudio(peer, ctx.message.audio.file_id, {
+      const sent = await ctx.api.sendAudio(peer, ctx.message.audio.file_id, {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await rememberPeerDelivery(sent.message_id);
       await persistMedia(
         'audio',
         ctx.message.audio.file_id,
@@ -616,7 +631,8 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
       return true;
     }
     if (ctx.message?.sticker) {
-      await ctx.api.sendSticker(peer, ctx.message.sticker.file_id, protect);
+      const sent = await ctx.api.sendSticker(peer, ctx.message.sticker.file_id, protect);
+      await rememberPeerDelivery(sent.message_id);
       await persistMedia(
         'sticker',
         ctx.message.sticker.file_id,
@@ -626,7 +642,8 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
       return true;
     }
     if (text) {
-      await ctx.api.sendMessage(peer, text, protect);
+      const sent = await ctx.api.sendMessage(peer, text, protect);
+      await rememberPeerDelivery(sent.message_id);
       // Persist so web ChatPage polling sees Telegram → web
       if (playdateId) {
         const me = await getCtxUser(ctx);

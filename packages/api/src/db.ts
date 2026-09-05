@@ -430,6 +430,22 @@ function migrateSchema() {
       ON playdate_chat_messages (playdate_id, id)`
   );
 
+  /** Bot-delivered Telegram message ids — used to wipe peer chats from web. */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS playdate_chat_tg_refs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playdate_id INTEGER NOT NULL REFERENCES playdate_requests(id) ON DELETE CASCADE,
+      telegram_chat_id TEXT NOT NULL,
+      message_id INTEGER NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(telegram_chat_id, message_id)
+    )
+  `);
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_playdate_chat_tg_refs_playdate
+      ON playdate_chat_tg_refs (playdate_id)`
+  );
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS phone_otps (
       user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -2502,6 +2518,59 @@ export const dbService = {
   clearPlaydateChatMessages(playdateId: number): number {
     const result = db
       .prepare('DELETE FROM playdate_chat_messages WHERE playdate_id = ?')
+      .run(playdateId);
+    return Number(result.changes ?? 0);
+  },
+
+  recordPlaydateChatTgRef(
+    playdateId: number,
+    telegramChatId: string,
+    messageId: number
+  ): void {
+    if (!telegramChatId || !Number.isFinite(messageId) || messageId <= 0) return;
+    db.prepare(
+      `INSERT OR IGNORE INTO playdate_chat_tg_refs (playdate_id, telegram_chat_id, message_id)
+       VALUES (?, ?, ?)`
+    ).run(playdateId, String(telegramChatId), Math.trunc(messageId));
+  },
+
+  recordPlaydateChatTgRefs(
+    playdateId: number,
+    refs: Array<{ telegramChatId: string; messageId: number }>
+  ): number {
+    let n = 0;
+    const insert = db.prepare(
+      `INSERT OR IGNORE INTO playdate_chat_tg_refs (playdate_id, telegram_chat_id, message_id)
+       VALUES (?, ?, ?)`
+    );
+    const tx = db.transaction((rows: Array<{ telegramChatId: string; messageId: number }>) => {
+      for (const row of rows) {
+        if (!row.telegramChatId || !Number.isFinite(row.messageId) || row.messageId <= 0) continue;
+        const r = insert.run(playdateId, String(row.telegramChatId), Math.trunc(row.messageId));
+        n += Number(r.changes ?? 0);
+      }
+    });
+    tx(refs);
+    return n;
+  },
+
+  listPlaydateChatTgRefs(
+    playdateId: number
+  ): Array<{ telegramChatId: string; messageId: number }> {
+    const rows = db
+      .prepare(
+        `SELECT telegram_chat_id, message_id FROM playdate_chat_tg_refs WHERE playdate_id = ?`
+      )
+      .all(playdateId) as { telegram_chat_id: string; message_id: number }[];
+    return rows.map((r) => ({
+      telegramChatId: r.telegram_chat_id,
+      messageId: Number(r.message_id),
+    }));
+  },
+
+  clearPlaydateChatTgRefs(playdateId: number): number {
+    const result = db
+      .prepare('DELETE FROM playdate_chat_tg_refs WHERE playdate_id = ?')
       .run(playdateId);
     return Number(result.changes ?? 0);
   },
