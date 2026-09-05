@@ -1,9 +1,11 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import {
+  Activity,
   LayoutDashboard,
   LogOut,
   Mail,
   PawPrint,
+  ScrollText,
   ShieldCheck,
   Users,
 } from 'lucide-react';
@@ -17,6 +19,8 @@ const NAV = [
   { to: '/admin/matches', icon: Mail, label: 'درخواست‌ها' },
   { to: '/admin/users', icon: Users, label: 'کاربران' },
   { to: '/admin/verification', icon: ShieldCheck, label: 'احراز هویت' },
+  { to: '/admin/logs', icon: ScrollText, label: 'لاگ خطاها' },
+  { to: '/admin/monitoring', icon: Activity, label: 'مانیتورینگ' },
 ];
 
 export function AdminLayout() {

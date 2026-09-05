@@ -446,6 +446,30 @@ function migrateSchema() {
       ON playdate_chat_tg_refs (playdate_id)`
   );
 
+  /** App error / warning log for admin panel. */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_error_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      level TEXT NOT NULL DEFAULT 'error',
+      source TEXT NOT NULL DEFAULT 'api',
+      message TEXT NOT NULL,
+      stack TEXT,
+      path TEXT,
+      method TEXT,
+      status_code INTEGER,
+      meta TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_app_error_logs_created
+      ON app_error_logs (created_at DESC)`
+  );
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_app_error_logs_level
+      ON app_error_logs (level, created_at DESC)`
+  );
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS phone_otps (
       user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -2573,6 +2597,171 @@ export const dbService = {
       .prepare('DELETE FROM playdate_chat_tg_refs WHERE playdate_id = ?')
       .run(playdateId);
     return Number(result.changes ?? 0);
+  },
+
+  createAppErrorLog(data: {
+    level?: 'error' | 'warn' | 'info';
+    source?: string;
+    message: string;
+    stack?: string | null;
+    path?: string | null;
+    method?: string | null;
+    statusCode?: number | null;
+    meta?: Record<string, unknown> | null;
+  }): { id: number } {
+    const result = db
+      .prepare(
+        `INSERT INTO app_error_logs (
+          level, source, message, stack, path, method, status_code, meta
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        data.level ?? 'error',
+        data.source ?? 'api',
+        data.message.slice(0, 4000),
+        data.stack?.slice(0, 8000) ?? null,
+        data.path ?? null,
+        data.method ?? null,
+        data.statusCode ?? null,
+        data.meta ? JSON.stringify(data.meta).slice(0, 4000) : null
+      );
+    return { id: Number(result.lastInsertRowid) };
+  },
+
+  listAppErrorLogs(opts?: {
+    level?: string;
+    source?: string;
+    limit?: number;
+    beforeId?: number;
+  }): Array<{
+    id: number;
+    level: string;
+    source: string;
+    message: string;
+    stack: string | null;
+    path: string | null;
+    method: string | null;
+    statusCode: number | null;
+    meta: Record<string, unknown> | null;
+    createdAt: string;
+  }> {
+    const limit = Math.min(Math.max(opts?.limit ?? 100, 1), 500);
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (opts?.level) {
+      clauses.push('level = ?');
+      params.push(opts.level);
+    }
+    if (opts?.source) {
+      clauses.push('source = ?');
+      params.push(opts.source);
+    }
+    if (opts?.beforeId && Number.isFinite(opts.beforeId)) {
+      clauses.push('id < ?');
+      params.push(opts.beforeId);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    params.push(limit);
+    const rows = db
+      .prepare(
+        `SELECT * FROM app_error_logs ${where} ORDER BY id DESC LIMIT ?`
+      )
+      .all(...params) as Record<string, unknown>[];
+    return rows.map((row) => {
+      let meta: Record<string, unknown> | null = null;
+      if (typeof row.meta === 'string' && row.meta) {
+        try {
+          meta = JSON.parse(row.meta) as Record<string, unknown>;
+        } catch {
+          meta = { raw: row.meta };
+        }
+      }
+      return {
+        id: row.id as number,
+        level: row.level as string,
+        source: row.source as string,
+        message: row.message as string,
+        stack: (row.stack as string | null) ?? null,
+        path: (row.path as string | null) ?? null,
+        method: (row.method as string | null) ?? null,
+        statusCode: (row.status_code as number | null) ?? null,
+        meta,
+        createdAt: row.created_at as string,
+      };
+    });
+  },
+
+  getAppErrorLogStats(): {
+    total: number;
+    errors24h: number;
+    warns24h: number;
+    lastErrorAt: string | null;
+  } {
+    const total = (
+      db.prepare('SELECT COUNT(*) as c FROM app_error_logs').get() as { c: number }
+    ).c;
+    const errors24h = (
+      db
+        .prepare(
+          `SELECT COUNT(*) as c FROM app_error_logs
+           WHERE level = 'error' AND created_at >= datetime('now', '-1 day')`
+        )
+        .get() as { c: number }
+    ).c;
+    const warns24h = (
+      db
+        .prepare(
+          `SELECT COUNT(*) as c FROM app_error_logs
+           WHERE level = 'warn' AND created_at >= datetime('now', '-1 day')`
+        )
+        .get() as { c: number }
+    ).c;
+    const last = db
+      .prepare(
+        `SELECT created_at FROM app_error_logs WHERE level = 'error' ORDER BY id DESC LIMIT 1`
+      )
+      .get() as { created_at: string } | undefined;
+    return {
+      total: Number(total ?? 0),
+      errors24h: Number(errors24h ?? 0),
+      warns24h: Number(warns24h ?? 0),
+      lastErrorAt: last?.created_at ?? null,
+    };
+  },
+
+  clearAppErrorLogs(olderThanDays?: number): number {
+    if (olderThanDays && olderThanDays > 0) {
+      const result = db
+        .prepare(
+          `DELETE FROM app_error_logs WHERE created_at < datetime('now', ?)`
+        )
+        .run(`-${Math.trunc(olderThanDays)} days`);
+      return Number(result.changes ?? 0);
+    }
+    const result = db.prepare('DELETE FROM app_error_logs').run();
+    return Number(result.changes ?? 0);
+  },
+
+  getOpsCounts(): {
+    users: number;
+    pets: number;
+    playdates: number;
+    playdatesAccepted: number;
+    chatMessages: number;
+    openGames: number;
+  } {
+    const q = (sql: string) =>
+      Number((db.prepare(sql).get() as { c: number } | undefined)?.c ?? 0);
+    return {
+      users: q('SELECT COUNT(*) as c FROM users'),
+      pets: q('SELECT COUNT(*) as c FROM pets'),
+      playdates: q('SELECT COUNT(*) as c FROM playdate_requests'),
+      playdatesAccepted: q(
+        `SELECT COUNT(*) as c FROM playdate_requests WHERE status = 'accepted'`
+      ),
+      chatMessages: q('SELECT COUNT(*) as c FROM playdate_chat_messages'),
+      openGames: q(`SELECT COUNT(*) as c FROM games WHERE status = 'open'`),
+    };
   },
 
   /** سکه روزانه — یک‌بار در هر روز UTC */

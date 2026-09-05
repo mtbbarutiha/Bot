@@ -10,6 +10,8 @@ import { AdminPetFormPage } from './admin/pages/AdminPetFormPage';
 import { AdminPetsPage } from './admin/pages/AdminPetsPage';
 import { AdminUsersPage } from './admin/pages/AdminUsersPage';
 import { AdminVerificationPage } from './admin/pages/AdminVerificationPage';
+import { AdminLogsPage } from './admin/pages/AdminLogsPage';
+import { AdminMonitoringPage } from './admin/pages/AdminMonitoringPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { OtpPage } from './pages/auth/OtpPage';
 import { AddPetPage } from './pages/AddPetPage';
@@ -67,6 +69,8 @@ export default function App() {
             <Route path="matches" element={<AdminMatchesPage />} />
             <Route path="users" element={<AdminUsersPage />} />
             <Route path="verification" element={<AdminVerificationPage />} />
+            <Route path="logs" element={<AdminLogsPage />} />
+            <Route path="monitoring" element={<AdminMonitoringPage />} />
           </Route>
         </Route>
 

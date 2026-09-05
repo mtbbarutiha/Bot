@@ -23,14 +23,22 @@ import { playdatesRouter } from './routes/playdates';
 import { sectionsRouter } from './routes/sections';
 import { usersRouter } from './routes/users';
 import { authRouter } from './routes/auth';
+import { adminRouter } from './routes/admin';
+import {
+  expressErrorHandler,
+  installProcessErrorLogging,
+  responseErrorLogger,
+} from './services/app-logger';
 
 getDb();
+installProcessErrorLogging('api');
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '2mb' }));
+app.use(responseErrorLogger);
 
 // Brand assets (transparent logo for web Rx)
 app.use(
@@ -96,6 +104,7 @@ app.use('/api/playdate-requests', playdatesRouter);
 app.use('/api/sections', sectionsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/admin', adminRouter);
 
 app.get('/api/games-for-section/:sectionId', (req, res) => {
   const sectionId = Number(req.params.sectionId);
@@ -132,6 +141,8 @@ app.get('/api/my-section-games', (req, res) => {
   const games = dbService.listGames({ sectionId: user.sectionId, status: 'open' });
   res.json({ user, section, games });
 });
+
+app.use(expressErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`🐾 petdate API روی پورت ${PORT} اجرا شد`);
