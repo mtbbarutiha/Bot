@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import PDFDocument from 'pdfkit';
 import { PersianShaper } from 'arabic-persian-reshaper';
-import { BRAND } from '@petdate/shared';
+import { BRAND, PET_SPECIES_LABELS } from '@petdate/shared';
 
 export type PrescriptionPdfInput = {
   vetName: string;
@@ -17,6 +17,11 @@ export type PrescriptionPdfInput = {
   dateIso?: string;
   prescriptionId?: number;
 };
+
+function speciesLabel(species?: string): string | undefined {
+  if (!species) return undefined;
+  return PET_SPECIES_LABELS[species] || species;
+}
 
 function fontPath(): string {
   const candidates = [
@@ -70,7 +75,9 @@ export async function generatePrescriptionPdf(
   const brandFa = 'همبازی';
   const brandEn = BRAND.name;
   const dateFa = formatFaDate(input.dateIso);
-  const petBits = [input.petName, input.petSpecies, input.petBreed].filter(Boolean).join(' — ');
+  const petBits = [input.petName, speciesLabel(input.petSpecies), input.petBreed]
+    .filter(Boolean)
+    .join(' — ');
   const disclaimer =
     'این نسخه صرفاً جهت اطلاع صاحب حیوان خانگی است و جایگزین معاینه حضوری نیست. در صورت بروز عارضه با دامپزشک خود تماس بگیرید.';
 
