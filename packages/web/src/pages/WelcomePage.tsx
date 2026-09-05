@@ -119,7 +119,7 @@ export function WelcomePage() {
       </header>
 
       <section className="pepito-hero">
-        <img className="pepito-hero-media" src={`${P}/01.jpg`} alt="" />
+        <img className="pepito-hero-media" src={`${P}/3.jpg`} alt="" />
         <div className="pepito-hero-wash" aria-hidden />
         <div className="pepito-hero-inner">
           <p className="pepito-kicker">
