@@ -990,10 +990,13 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   color: var(--pepito-pink);
 }
 
+/* Pepito `.team .owl-carousel`: 4 items, margin 20, inside `.container` max 1220 (pad 15) */
 .pepito-team {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.15rem;
+  gap: 20px;
+  width: min(1190px, 100%);
+  margin-inline: auto;
 }
 .pepito-member {
   text-align: center;
@@ -1020,12 +1023,13 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   box-shadow: none;
   transition: transform 700ms cubic-bezier(0.17, 0.67, 0, 1.01);
 }
+/* Pepito `.team .item .info` */
 .pepito-member-info {
-  padding: 1.5rem 0.85rem 0.25rem;
+  padding: 30px 15px;
 }
 .pepito-member h3 {
-  margin: 0 0 0.3rem;
-  font-size: 1.25rem;
+  margin: 0 0 5px;
+  font-size: 21px;
   font-weight: 700;
   color: var(--pepito-dark);
   font-family: var(--font-display);
@@ -1034,7 +1038,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   margin: 0;
   color: var(--pepito-muted);
   font-weight: 500;
-  font-size: 1.05rem;
+  font-size: 18px;
 }
 
 /* Pepito testimonial / reviews — photo tilt + stars + trust band */
