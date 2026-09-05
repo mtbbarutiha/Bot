@@ -1,26 +1,27 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
-  <defs>
-    <linearGradient id="surface" x1="6" y1="4" x2="42" y2="44" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#0f172a"/>
-      <stop offset="1" stop-color="#1e293b"/>
-    </linearGradient>
-  </defs>
-  <rect width="48" height="48" rx="13" fill="url(#surface)" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
-  <circle cx="24" cy="24" r="9" fill="#6fbddd" opacity="0.14"/>
-  <g fill="#fff" transform="translate(15 28) rotate(-22)">
-    <circle cx="-5.4" cy="-6.2" r="2.35"/>
-    <circle cx="-1.7" cy="-8.6" r="2.55"/>
-    <circle cx="1.7" cy="-8.6" r="2.55"/>
-    <circle cx="5.4" cy="-6.2" r="2.35"/>
-    <ellipse cx="0" cy="1.8" rx="7" ry="6"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="Pet Date">
+  <!-- Dog + cat heart mark — matches packages/web/public/pepito/img/logo.svg -->
+  <g transform="translate(32 34) scale(0.36) translate(-88 -58)">
+    <g fill="none" stroke="#db89ca" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M88 72
+               C78 58, 58 52, 46 62
+               C34 74, 42 90, 58 90
+               C70 90, 80 82, 88 72
+               C96 82, 106 90, 118 90
+               C134 90, 142 74, 130 62
+               C118 52, 98 58, 88 72Z"/>
+      <path d="M46 62
+               C28 52, 22 34, 34 24
+               C42 18, 54 22, 58 34
+               C50 40, 48 52, 46 62"/>
+      <path d="M30 28 C18 34, 16 52, 28 58"/>
+      <path d="M130 62
+               C148 52, 154 34, 142 24
+               C134 18, 122 22, 118 34
+               C126 40, 128 52, 130 62"/>
+      <path d="M136 22 L148 8 L152 28"/>
+      <path d="M128 22 L118 10 L122 30"/>
+    </g>
+    <circle cx="42" cy="36" r="2.8" fill="#db89ca"/>
+    <circle cx="134" cy="36" r="2.8" fill="#db89ca"/>
   </g>
-  <g fill="#fff" transform="translate(33 28) rotate(22) scale(-1 1)">
-    <circle cx="-5.4" cy="-6.2" r="2.35"/>
-    <circle cx="-1.7" cy="-8.6" r="2.55"/>
-    <circle cx="1.7" cy="-8.6" r="2.55"/>
-    <circle cx="5.4" cy="-6.2" r="2.35"/>
-    <ellipse cx="0" cy="1.8" rx="7" ry="6"/>
-  </g>
-  <circle cx="24" cy="23.5" r="2.6" fill="#5ba8d2"/>
-  <circle cx="24" cy="23.5" r="1" fill="#0f172a" opacity="0.35"/>
 </svg>

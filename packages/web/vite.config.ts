@@ -13,7 +13,16 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.png', 'favicon.svg', 'logo.svg', 'logotype.svg', 'brand/**/*', 'pets/**/*'],
+      includeAssets: [
+        'favicon.ico',
+        'favicon.png',
+        'favicon.svg',
+        'apple-touch-icon.png',
+        'logo.svg',
+        'logotype.svg',
+        'brand/**/*',
+        'pets/**/*',
+      ],
       manifest: {
         name: 'petdate',
         short_name: 'petdate',
