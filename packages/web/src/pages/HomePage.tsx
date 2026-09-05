@@ -107,7 +107,7 @@ export function HomePage() {
             <span className="section-label">فیلتر</span>
             <h2>دسته‌بندی</h2>
           </div>
-          <Link to="/explore" className="link-arrow">مشاهده همه</Link>
+          <Link to="/explore" className="link-arrow">👀 مشاهده همه</Link>
         </div>
 
         <div className="categories">
@@ -153,7 +153,7 @@ export function HomePage() {
             <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
             <h3>خوش اومدی به petdate!</h3>
             <p>از منوی پروفایل خدمات کلینیک، فروشگاه و مشاوره رو امتحان کن.</p>
-            <Link to="/profile" className="cta-btn cta-btn--inline">پروفایل</Link>
+            <Link to="/profile" className="cta-btn cta-btn--inline">👤 پروفایل</Link>
           </div>
         )}
       </div>
@@ -165,7 +165,7 @@ export function HomePage() {
           )}
           <div className="promo-banner-icon"><Mail size={16} strokeWidth={2} /></div>
           <p><strong>{pendingCount} درخواست جدید</strong> برای {myPet.name}</p>
-          <Link to="/matches" className="promo-btn">مشاهده</Link>
+          <Link to="/matches" className="promo-btn">👀 مشاهده</Link>
         </div>
       )}
 

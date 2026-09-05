@@ -39,7 +39,7 @@ export function PetDetailPage() {
         <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
         <h3>پت پیدا نشد</h3>
         <button className="cta-btn cta-btn--inline" onClick={() => navigate('/explore')}>
-          بازگشت
+          ↩️ بازگشت
         </button>
       </div>
     );
@@ -63,7 +63,7 @@ export function PetDetailPage() {
         <img src={pet.imageUrl} alt={pet.name} className="detail-hero-img" />
         <div className="detail-hero-overlay" />
         <div className="detail-header detail-header--overlay">
-          <button className="icon-btn icon-btn--glass" onClick={() => navigate(-1)} aria-label="بازگشت">
+          <button className="icon-btn icon-btn--glass" onClick={() => navigate(-1)} aria-label="↩️ بازگشت">
             <ArrowRight size={20} strokeWidth={2} />
           </button>
           <h1>{pet.name}</h1>
@@ -191,7 +191,7 @@ export function PetDetailPage() {
             </div>
 
             <button type="button" className="cta-btn" onClick={handleSendRequest}>
-              ارسال درخواست
+              📨 ارسال درخواست
             </button>
           </div>
         </div>

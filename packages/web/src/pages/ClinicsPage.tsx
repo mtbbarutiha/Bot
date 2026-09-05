@@ -72,7 +72,7 @@ export function ClinicsPage() {
             <Phone size={18} strokeWidth={2} />
             تماس با {selected.name}
           </a>
-          <Link to="/vet-consult" className="link-btn">مشاوره آنلاین</Link>
+          <Link to="/vet-consult" className="link-btn">💬 مشاوره آنلاین</Link>
         </div>
       )}
     </div>

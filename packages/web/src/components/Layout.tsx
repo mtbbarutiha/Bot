@@ -4,10 +4,10 @@ import type { LucideIcon } from 'lucide-react';
 import { BrandMark } from './BrandMark';
 
 const navItems: { to: string; icon: LucideIcon; label: string }[] = [
-  { to: '/', icon: Home, label: 'خانه' },
-  { to: '/explore', icon: LayoutGrid, label: 'جستجو' },
-  { to: '/matches', icon: Mail, label: 'درخواست‌ها' },
-  { to: '/profile', icon: User, label: 'پروفایل' },
+  { to: '/', icon: Home, label: '🏠 خانه' },
+  { to: '/explore', icon: LayoutGrid, label: '🔍 جستجو' },
+  { to: '/matches', icon: Mail, label: '💌 درخواست‌ها' },
+  { to: '/profile', icon: User, label: '👤 پروفایل' },
 ];
 
 export function Layout() {

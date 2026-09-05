@@ -265,7 +265,7 @@ export function AddPetPage() {
         </div>
 
         <button type="submit" className="cta-btn" disabled={!isValid}>
-          ثبت پت
+          ➕ ثبت پت
         </button>
       </form>
 

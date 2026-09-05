@@ -25,7 +25,7 @@ export function WelcomePage() {
             className="welcome-cta welcome-cta--neon"
             onClick={() => navigate('/onboarding/role')}
           >
-            شروع کن
+            🚀 شروع کن
           </button>
         </footer>
       </div>

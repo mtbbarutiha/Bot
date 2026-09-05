@@ -118,7 +118,7 @@ export function ProfilePage() {
           className="cta-btn cta-btn--spaced"
           onClick={() => { setShowToast(true); setTimeout(() => setShowToast(false), 2500); }}
         >
-          ذخیره تغییرات
+          💾 ذخیره تغییرات
         </button>
 
         <div className="menu-item">

@@ -64,7 +64,7 @@ export function AdminVerificationPage() {
   };
 
   const onReject = async (id: number) => {
-    const note = window.prompt('علت رد (اختیاری):') ?? undefined;
+    const note = window.prompt('علت ❌ رد (اختیاری):') ?? undefined;
     setBusyId(id);
     try {
       await reject(id, note?.trim() || undefined);
@@ -88,7 +88,7 @@ export function AdminVerificationPage() {
         </div>
         <button type="button" className="admin-btn" onClick={() => void load()} disabled={loading}>
           <RefreshCw size={16} />
-          بروزرسانی
+          🔄 بروزرسانی
         </button>
       </header>
 
@@ -125,7 +125,7 @@ export function AdminVerificationPage() {
                 disabled={busyId === user.id}
                 onClick={() => void onApprove(user.id)}
               >
-                تأیید
+                ✅ تأیید
               </button>
               <button
                 type="button"
@@ -133,7 +133,7 @@ export function AdminVerificationPage() {
                 disabled={busyId === user.id}
                 onClick={() => void onReject(user.id)}
               >
-                رد
+                ❌ رد
               </button>
             </div>
           </article>

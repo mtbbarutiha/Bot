@@ -40,7 +40,7 @@ export function AdminLoginPage() {
 
         {error && <p className="admin-error">{error}</p>}
 
-        <button type="submit" className="cta-btn">ورود</button>
+        <button type="submit" className="cta-btn">🔐 ورود</button>
         <p className="admin-login-hint">رمز پیش‌فرض: <code>petdate</code></p>
       </form>
     </div>

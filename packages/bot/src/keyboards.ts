@@ -144,12 +144,12 @@ export const NEUTERED_YES_LABEL = '✂️ عقیم شده';
 export const NEUTERED_NO_LABEL = '➖ عقیم نشده';
 export const LOOKING_YES_LABEL = '🤝 دنبال همبازی';
 export const LOOKING_NO_LABEL = '⏸ فعلاً نه';
-export const USER_MALE_LABEL = `👨 ${USER_GENDER_LABELS.male}`;
-export const USER_FEMALE_LABEL = `👩 ${USER_GENDER_LABELS.female}`;
-export const PET_MALE_LABEL = `♂ ${PET_GENDER_LABELS.male}`;
-export const PET_FEMALE_LABEL = `♀ ${PET_GENDER_LABELS.female}`;
+export const USER_MALE_LABEL = USER_GENDER_LABELS.male;
+export const USER_FEMALE_LABEL = USER_GENDER_LABELS.female;
+export const PET_MALE_LABEL = PET_GENDER_LABELS.male;
+export const PET_FEMALE_LABEL = PET_GENDER_LABELS.female;
 
-export const PROFILE_AGE_CHIPS = ['18', '22', '25', '28', '30', '35', '40', '45'];
+export const PROFILE_AGE_CHIPS = ['🎂 18', '🎂 22', '🎂 25', '🎂 28', '🎂 30', '🎂 35', '🎂 40', '🎂 45'];
 /** @deprecated use PET_AGE_OPTIONS / petAgeReplyKeyboard */
 export const PET_AGE_CHIPS = PET_AGE_OPTIONS.map((o) => String(o.months));
 export const COMMON_CITIES = [
@@ -249,7 +249,10 @@ export function cityReplyKeyboard(opts?: { skip?: boolean; province?: string; sk
 }
 
 export function countryReplyKeyboard(): Keyboard {
-  return choiceReplyKeyboard([...PROFILE_COUNTRIES], { columns: 1, ...profileNavOpts() });
+  return choiceReplyKeyboard(['🇮🇷 ایران', '🌍 سایر کشورها'], {
+    columns: 1,
+    ...profileNavOpts(),
+  });
 }
 
 export function provinceReplyKeyboard(): Keyboard {
@@ -649,9 +652,9 @@ export function breedKeyboard(breeds: PetBreed[]): InlineKeyboard {
 
 export function petGenderKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
-    .text(`♂ ${PET_GENDER_LABELS.male}`, 'pet:gender:male')
+    .text(PET_GENDER_LABELS.male, 'pet:gender:male')
     .primary()
-    .text(`♀ ${PET_GENDER_LABELS.female}`, 'pet:gender:female')
+    .text(PET_GENDER_LABELS.female, 'pet:gender:female')
     .primary();
 }
 
@@ -745,9 +748,9 @@ export function webLinksKeyboard(telegramId: string): InlineKeyboard | undefined
 
 export function genderKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
-    .text('👨 آقا', 'profile:gender:male')
+    .text(USER_GENDER_LABELS.male, 'profile:gender:male')
     .primary()
-    .text('👩 خانم', 'profile:gender:female')
+    .text(USER_GENDER_LABELS.female, 'profile:gender:female')
     .primary();
 }
 
@@ -992,7 +995,7 @@ export function earnKeyboard(canSell: boolean): InlineKeyboard {
   if (canSell) {
     kb.text('💵 فروش سکه', 'earn:sell').success().row();
   }
-  kb.text('بستن', 'earn:close');
+  kb.text('✖️ بستن', 'earn:close');
   return kb;
 }
 

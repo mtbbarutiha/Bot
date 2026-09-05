@@ -47,7 +47,7 @@ export function AdminDashboardPage() {
       <section className="admin-card">
         <div className="admin-card-head">
           <h2>آخرین پت‌های ثبت‌شده</h2>
-          <Link to="/admin/pets">مشاهده همه</Link>
+          <Link to="/admin/pets">👀 مشاهده همه</Link>
         </div>
         <div className="admin-table-wrap">
           <table className="admin-table">

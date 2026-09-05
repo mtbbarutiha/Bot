@@ -58,7 +58,7 @@ export function ShopPage() {
       {cartCount > 0 && (
         <div className="service-action-bar">
           <button type="button" className="cta-btn" disabled>
-            پرداخت (فاز بعدی) — {cartCount} قلم
+            💳 پرداخت (فاز بعدی) — {cartCount} قلم
           </button>
         </div>
       )}

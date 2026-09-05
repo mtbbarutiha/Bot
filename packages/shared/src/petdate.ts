@@ -78,6 +78,32 @@ export interface PaymentOrder {
 /** بج نمایشی برای پروفایل‌های تأییدشده */
 export const VERIFIED_BADGE = '✅ احراز شده';
 
+/**
+ * شناسهٔ عمومی پایدار (نمایشی) — جدا از id داخلی DB.
+ * فرمت: PD-U##### برای کاربر، PD-P##### برای پت.
+ * پس از تخصیص تغییر نمی‌کند.
+ */
+export const USER_PUBLIC_ID_PREFIX = 'PD-U';
+export const PET_PUBLIC_ID_PREFIX = 'PD-P';
+
+export function makeUserPublicId(internalId: number): string {
+  return `${USER_PUBLIC_ID_PREFIX}${String(Math.trunc(internalId)).padStart(5, '0')}`;
+}
+
+export function makePetPublicId(internalId: number): string {
+  return `${PET_PUBLIC_ID_PREFIX}${String(Math.trunc(internalId)).padStart(5, '0')}`;
+}
+
+/** شناسهٔ نمایشی کاربر — publicId ذخیره‌شده یا مشتق از id */
+export function userPublicIdOf(user: { id: number; publicId?: string | null }): string {
+  return (user.publicId && String(user.publicId).trim()) || makeUserPublicId(user.id);
+}
+
+/** شناسهٔ نمایشی پت — publicId ذخیره‌شده یا مشتق از id */
+export function petPublicIdOf(pet: { id: number; publicId?: string | null }): string {
+  return (pet.publicId && String(pet.publicId).trim()) || makePetPublicId(pet.id);
+}
+
 /** متن معرفی احراز چهره — سبک دوردوریا */
 export function faceVerifyIntroText(rewardCoins: number): string {
   const reward = new Intl.NumberFormat('fa-IR').format(rewardCoins);
@@ -115,6 +141,8 @@ export const VET_CREDENTIAL_STATUS_LABELS: Record<VetCredentialStatus, string> =
 
 export interface PetdateUser {
   id: number;
+  /** شناسه عمومی پایدار نمایشی (مثلاً PD-U00014) */
+  publicId?: string;
   telegramId?: string;
   phone?: string;
   /** موبایل با OTP تأیید شده (Candoo) */
@@ -185,6 +213,8 @@ export type PetSize = 'small' | 'medium' | 'large';
 
 export interface PetProfile {
   id: number;
+  /** شناسه عمومی پایدار نمایشی (مثلاً PD-P00025) */
+  publicId?: string;
   ownerId: number;
   name: string;
   species: string;
@@ -575,8 +605,8 @@ export function userHasRole(
 }
 
 export const USER_GENDER_LABELS: Record<UserGender, string> = {
-  male: 'آقا',
-  female: 'خانم',
+  male: '👨 آقا',
+  female: '👩 خانم',
 };
 
 export const ONBOARDING_STATUS_LABELS: Record<OnboardingStatus, string> = {
@@ -587,39 +617,39 @@ export const ONBOARDING_STATUS_LABELS: Record<OnboardingStatus, string> = {
 
 /** گزینه‌های سن پت با برچسب خوانا (ذخیره به‌صورت ماه) */
 export const PET_AGE_OPTIONS: ReadonlyArray<{ label: string; months: number }> = [
-  { label: 'زیر ۲ ماه', months: 1 },
-  { label: '۲ ماهه', months: 2 },
-  { label: '۳ ماهه', months: 3 },
-  { label: '۴ ماهه', months: 4 },
-  { label: '۶ ماهه', months: 6 },
-  { label: '۹ ماهه', months: 9 },
-  { label: '۱ ساله', months: 12 },
-  { label: '۱٫۵ ساله', months: 18 },
-  { label: '۲ ساله', months: 24 },
-  { label: '۳ ساله', months: 36 },
-  { label: '۴ ساله', months: 48 },
-  { label: '۵ ساله', months: 60 },
-  { label: '۷ ساله', months: 84 },
-  { label: '۱۰ ساله', months: 120 },
-  { label: '۱۲ ساله+', months: 144 },
+  { label: '🎂 زیر ۲ ماه', months: 1 },
+  { label: '🎂 ۲ ماهه', months: 2 },
+  { label: '🎂 ۳ ماهه', months: 3 },
+  { label: '🎂 ۴ ماهه', months: 4 },
+  { label: '🎂 ۶ ماهه', months: 6 },
+  { label: '🎂 ۹ ماهه', months: 9 },
+  { label: '🎂 ۱ ساله', months: 12 },
+  { label: '🎂 ۱٫۵ ساله', months: 18 },
+  { label: '🎂 ۲ ساله', months: 24 },
+  { label: '🎂 ۳ ساله', months: 36 },
+  { label: '🎂 ۴ ساله', months: 48 },
+  { label: '🎂 ۵ ساله', months: 60 },
+  { label: '🎂 ۷ ساله', months: 84 },
+  { label: '🎂 ۱۰ ساله', months: 120 },
+  { label: '🎂 ۱۲ ساله+', months: 144 },
 ] as const;
 
 export const PET_AGE_CUSTOM_LABEL = '✏️ سن دقیق';
 
 /** رنگ‌های رایج پت برای انتخاب دکمه‌ای */
 export const PET_COLOR_OPTIONS = [
-  'مشکی',
-  'سفید',
-  'قهوه‌ای',
-  'طلایی',
-  'کرم',
-  'خاکستری',
-  'نارنجی',
-  'سه‌رنگ',
-  'دو‌رنگ',
-  'مشکی-سفید',
-  'مشکی-قهوه‌ای',
-  'قهوه‌ای-سفید',
+  '⬛ مشکی',
+  '⬜ سفید',
+  '🟫 قهوه‌ای',
+  '🟨 طلایی',
+  '🟡 کرم',
+  '🩶 خاکستری',
+  '🟧 نارنجی',
+  '🌈 سه‌رنگ',
+  '🎨 دو‌رنگ',
+  '⬛⬜ مشکی-سفید',
+  '⬛🟫 مشکی-قهوه‌ای',
+  '🟫⬜ قهوه‌ای-سفید',
 ] as const;
 
 export const PET_COLOR_CUSTOM_LABEL = '✏️ رنگ دیگر';

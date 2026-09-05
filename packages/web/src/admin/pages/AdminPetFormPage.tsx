@@ -71,7 +71,7 @@ export function AdminPetFormPage() {
     return (
       <div className="admin-page">
         <p>پت پیدا نشد</p>
-        <button className="admin-btn" onClick={() => navigate('/admin/pets')}>بازگشت</button>
+        <button className="admin-btn" onClick={() => navigate('/admin/pets')}>↩️ بازگشت</button>
       </div>
     );
   }
@@ -161,8 +161,8 @@ export function AdminPetFormPage() {
         </div>
 
         <div className="admin-form-actions">
-          <button type="submit" className="cta-btn">{isEdit ? 'ذخیره تغییرات' : 'ثبت پت'}</button>
-          <button type="button" className="admin-btn admin-btn--ghost" onClick={() => navigate('/admin/pets')}>انصراف</button>
+          <button type="submit" className="cta-btn">{isEdit ? '💾 ذخیره تغییرات' : '➕ ثبت پت'}</button>
+          <button type="button" className="admin-btn admin-btn--ghost" onClick={() => navigate('/admin/pets')}>✖️ انصراف</button>
         </div>
       </form>
     </div>

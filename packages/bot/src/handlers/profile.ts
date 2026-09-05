@@ -825,13 +825,19 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
   }
 
   if (session.step === 'profile_country') {
-    if (text === 'سایر کشورها') {
+    if (text === 'سایر کشورها' || text === '🌍 سایر کشورها') {
       await ctx.reply('نام کشور رو بنویس:', {
         reply_markup: textStepKeyboard(profileNavOpts({ skipLater: !section })),
       });
       return true;
     }
-    const country = text.trim();
+    let country = text.trim();
+    if (country === '🇮🇷 ایران' || country === COUNTRY_IRAN) {
+      country = COUNTRY_IRAN;
+    }
+    if (country.startsWith('🌍 ')) {
+      country = country.slice(2).trim();
+    }
     if (country.length < 2) {
       await ctx.reply('کشور رو از منو انتخاب کن یا بنویس.', {
         reply_markup: countryReplyKeyboard(),

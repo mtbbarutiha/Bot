@@ -162,12 +162,12 @@ export const PET_SPECIES_LABELS: Record<string, string> = Object.fromEntries(
 );
 
 export const PET_GENDER_LABELS: Record<'male' | 'female', string> = {
-  male: 'نر',
-  female: 'ماده',
+  male: '♂ نر',
+  female: '♀ ماده',
 };
 
 export const PET_SIZE_LABELS: Record<'small' | 'medium' | 'large', string> = {
-  small: 'کوچک',
-  medium: 'متوسط',
-  large: 'بزرگ',
+  small: '🐁 کوچک',
+  medium: '🐕 متوسط',
+  large: '🦮 بزرگ',
 };

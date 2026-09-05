@@ -240,7 +240,7 @@ export function PetOnboardingPage() {
         </div>
 
         <button type="submit" className="cta-btn" disabled={!isValid}>
-          تکمیل پروفایل
+          ✨ تکمیل پروفایل
         </button>
       </form>
 

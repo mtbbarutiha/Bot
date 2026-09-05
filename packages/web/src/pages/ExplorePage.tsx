@@ -18,19 +18,19 @@ const ROLE_EMPTY_MESSAGES: Record<string, { title: string; desc: string; cta?: s
   vet: {
     title: 'حالت دامپزشک',
     desc: 'برای مشاهده همبازی‌ها به عنوان صاحب پت وارد شو یا از مشاوره آنلاین استفاده کن.',
-    cta: 'مشاوره دامپزشک',
+    cta: '🩺 مشاوره دامپزشک',
     to: '/vet-consult',
   },
   no_pet: {
     title: 'هنوز پتی نداری؟',
     desc: 'می‌تونی فروشگاه و کلینیک‌ها رو ببینی یا دنبال پت بگردی.',
-    cta: 'فروشگاه پت',
+    cta: '🛒 فروشگاه پت',
     to: '/shop',
   },
   pet_seeker: {
     title: 'دنبال پت می‌گردی؟',
     desc: 'به زودی آگهی‌های پت‌های قابل‌انتخاب اضافه می‌شه. فعلاً جامعه رو کشف کن.',
-    cta: 'کلینیک‌های نزدیک',
+    cta: '🏥 کلینیک‌های نزدیک',
     to: '/clinics',
   },
   community_seeker: {
@@ -40,13 +40,13 @@ const ROLE_EMPTY_MESSAGES: Record<string, { title: string; desc: string; cta?: s
   trainer: {
     title: 'حالت مربی',
     desc: 'به زودی درخواست‌های آموزشی نمایش داده می‌شه.',
-    cta: 'پروفایل',
+    cta: '👤 پروفایل',
     to: '/profile',
   },
   pet_sitter: {
     title: 'حالت نگهبان پت',
     desc: 'به زودی درخواست‌های نگهبانی نمایش داده می‌شه.',
-    cta: 'پروفایل',
+    cta: '👤 پروفایل',
     to: '/profile',
   },
 };

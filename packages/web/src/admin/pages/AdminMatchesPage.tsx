@@ -52,7 +52,7 @@ export function AdminMatchesPage() {
                           type="button"
                           className="admin-btn admin-btn--success"
                           onClick={() => updateMatchStatus(m.id, 'accepted')}
-                          title="قبول"
+                          title="✅ قبول"
                         >
                           <Check size={14} />
                         </button>
@@ -60,7 +60,7 @@ export function AdminMatchesPage() {
                           type="button"
                           className="admin-btn admin-btn--danger"
                           onClick={() => updateMatchStatus(m.id, 'rejected')}
-                          title="رد"
+                          title="❌ رد"
                         >
                           <X size={14} />
                         </button>
@@ -70,7 +70,7 @@ export function AdminMatchesPage() {
                       type="button"
                       className="admin-btn admin-btn--danger"
                       onClick={() => deleteMatch(m.id)}
-                      title="حذف"
+                      title="🗑 حذف"
                     >
                       <Trash2 size={14} />
                     </button>

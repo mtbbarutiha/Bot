@@ -128,7 +128,7 @@ export function RoleWizardPage() {
       <header className="onboarding-header">
         <span className="role-badge">{USER_ROLE_LABELS[role]}</span>
         <h1>{step.title}</h1>
-        <p>اطلاعات پایه رو وارد کن — می‌تونی فعلاً رد کنی و بعداً تکمیل کنی</p>
+        <p>اطلاعات پایه رو وارد کن — می‌تونی ⏭ فعلاً رد کنی و بعداً تکمیل کنی</p>
       </header>
 
       <form
@@ -151,7 +151,7 @@ export function RoleWizardPage() {
         ))}
 
         <button type="submit" className="cta-btn" disabled={saving}>
-          {role === 'pet_owner' ? 'مرحله بعد — ثبت پت' : 'شروع استفاده از petdate'}
+          {role === 'pet_owner' ? '➡️ مرحله بعد — ثبت پت' : '🚀 شروع استفاده از petdate'}
         </button>
         <button
           type="button"
@@ -159,7 +159,7 @@ export function RoleWizardPage() {
           onClick={() => void handleSkip()}
           disabled={saving}
         >
-          فعلاً رد کن
+          ⏭ فعلاً رد کن
         </button>
       </form>
     </div>

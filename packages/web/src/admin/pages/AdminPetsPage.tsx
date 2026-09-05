@@ -69,13 +69,13 @@ export function AdminPetsPage() {
               <p className="muted">{pet.ownerName}</p>
               <div className="admin-pet-card-actions">
                 <Link to={`/admin/pets/${pet.id}/edit`} className="admin-btn admin-btn--ghost">
-                  ویرایش
+                  ✏️ ویرایش
                 </Link>
                 <button
                   type="button"
                   className="admin-btn admin-btn--danger"
                   onClick={() => {
-                    if (confirm(`حذف ${pet.name}؟`)) deletePet(pet.id);
+                    if (confirm(`🗑 حذف ${pet.name}؟`)) deletePet(pet.id);
                   }}
                 >
                   <Trash2 size={14} />

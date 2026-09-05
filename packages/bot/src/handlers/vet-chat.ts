@@ -28,11 +28,11 @@ import { getCtxUser, menuKeyboardFor } from './helpers';
 
 /** Reply-keyboard labels for vet chat (short so buttons stay compact). */
 export const VET_CHAT_BTNS = {
-  end: 'قطع چت',
-  petProfile: 'پروفایل پت',
-  medical: 'پرونده',
-  addNote: 'ثبت پرونده',
-  prescription: 'نسخه',
+  end: '🔌 قطع چت',
+  petProfile: '🐾 پروفایل پت',
+  medical: '📋 پرونده',
+  addNote: '📝 ثبت پرونده',
+  prescription: '💊 نسخه',
 } as const;
 
 const RX_NOTE =
@@ -73,7 +73,7 @@ function rxMedsKeyboard(categoryId: string, hasDraft: boolean): InlineKeyboard |
   if (!cat) return null;
   const kb = new InlineKeyboard();
   for (const med of cat.medications) {
-    kb.text(med.nameFa, `vchat:rxmed:${cat.id}:${med.id}`).row();
+    kb.text(`💊 ${med.nameFa}`, `vchat:rxmed:${cat.id}:${med.id}`).row();
   }
   kb.text('◀️ بازگشت به بیماری‌ها', 'vchat:rxmore').row();
   kb.text('✏️ نوشتن دستی', 'vchat:rxmanual');

@@ -69,7 +69,7 @@ export function VetConsultPage() {
           className="cta-btn"
           onClick={() => setScheduled(true)}
         >
-          رزرو و پرداخت {formatPrice(type.price)}
+          💳 رزرو و پرداخت {formatPrice(type.price)}
         </button>
       </div>
 
