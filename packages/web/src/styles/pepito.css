@@ -454,6 +454,13 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   }
 }
 
+@media screen and (max-width: 767px) {
+  .pepito-hero-cta .pepito-btn,
+  .pepito-hero-cta .button-1 {
+    padding: 12px 18px;
+  }
+}
+
 @media screen and (max-width: 720px) {
   .pepito-hero {
     min-height: calc(85vh - 60px);
