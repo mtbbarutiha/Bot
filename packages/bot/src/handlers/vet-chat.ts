@@ -26,12 +26,13 @@ import {
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 
+/** Reply-keyboard labels for vet chat (short so buttons stay compact). */
 export const VET_CHAT_BTNS = {
-  end: '🔌 قطع چت',
-  petProfile: '🐾 پروفایل پت',
-  medical: '📋 پرونده پزشکی پت',
-  addNote: '✍️ ثبت در پرونده',
-  prescription: '💊 نوشتن نسخه',
+  end: 'قطع چت',
+  petProfile: 'پروفایل پت',
+  medical: 'پرونده',
+  addNote: 'ثبت پرونده',
+  prescription: 'نسخه',
 } as const;
 
 const RX_NOTE =
@@ -115,20 +116,34 @@ async function promptPrescriptionComposer(
   });
 }
 
+/**
+ * Vet chat reply keyboard.
+ * Doctor: pet info → medical → prescription → end (colored, compact 2-col rows).
+ * Patient: end-chat only (no medical / prescription tools).
+ */
 export function vetChatReplyKeyboard(isVet: boolean): Keyboard {
-  const kb = new Keyboard().text(VET_CHAT_BTNS.end).row();
-  if (isVet) {
-    kb
-      .text(VET_CHAT_BTNS.petProfile)
-      .row()
-      .text(VET_CHAT_BTNS.medical)
-      .row()
-      .text(VET_CHAT_BTNS.addNote)
-      .row()
-      .text(VET_CHAT_BTNS.prescription);
+  if (!isVet) {
+    return new Keyboard()
+      .text(VET_CHAT_BTNS.end)
+      .danger()
+      .resized()
+      .persistent();
   }
-  // Patient keyboard: end-chat only (no medical-record / prescription tools).
-  return kb.resized().persistent();
+  return new Keyboard()
+    .text(VET_CHAT_BTNS.petProfile)
+    .primary()
+    .text(VET_CHAT_BTNS.medical)
+    .primary()
+    .row()
+    .text(VET_CHAT_BTNS.addNote)
+    .success()
+    .text(VET_CHAT_BTNS.prescription)
+    .success()
+    .row()
+    .text(VET_CHAT_BTNS.end)
+    .danger()
+    .resized()
+    .persistent();
 }
 
 function escapeHtml(value: string): string {
