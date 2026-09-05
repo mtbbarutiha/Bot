@@ -18,6 +18,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
+import { ADOPTION_PETS } from '../data/adoptionPets';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
 
@@ -91,48 +92,13 @@ const HERO_SLIDES = [
   },
 ] as const;
 
-const PETS = [
-  {
-    name: 'میسی',
-    img: `${P}/01-2.jpg`,
-    to: '/explore',
-    details: [
-      { label: 'جنسیت', value: 'ماده' },
-      { label: 'عقیم‌شده', value: 'خیر' },
-      { label: 'سن', value: '۵ سال' },
-    ],
-  },
-  {
-    name: 'بلا',
-    img: `${P}/02-2.jpg`,
-    to: '/explore',
-    details: [
-      { label: 'جنسیت', value: 'نر' },
-      { label: 'عقیم‌شده', value: 'خیر' },
-      { label: 'سن', value: '۳ سال' },
-    ],
-  },
-  {
-    name: 'کیتی',
-    img: `${P}/03-2.jpg`,
-    to: '/explore',
-    details: [
-      { label: 'جنسیت', value: 'ماده' },
-      { label: 'عقیم‌شده', value: 'بله' },
-      { label: 'سن', value: '۲ سال' },
-    ],
-  },
-  {
-    name: 'پنی',
-    img: `${P}/04-2.jpg`,
-    to: '/explore',
-    details: [
-      { label: 'جنسیت', value: 'نر' },
-      { label: 'عقیم‌شده', value: 'خیر' },
-      { label: 'سن', value: '۱ سال' },
-    ],
-  },
-] as const;
+/** Landing cards → Pepito adoption single pages (`/adoption/:slug`) */
+const PETS = ADOPTION_PETS.map((p) => ({
+  name: p.name,
+  img: p.img,
+  to: `/adoption/${p.slug}`,
+  details: p.details.slice(0, 3),
+}));
 
 const TEAM = [
   { name: 'دکتر سارا نوری', role: 'دامپزشک', img: `${P}/01-3.jpg` },
@@ -429,7 +395,7 @@ export function WelcomePage() {
               <div className="pepito-adoption-front">
                 <h3>{p.name}</h3>
               </div>
-              <GatedLink to={p.to} className="pepito-adoption-back">
+              <Link to={p.to} className="pepito-adoption-back">
                 <h3>{p.name}</h3>
                 <ul>
                   {p.details.map((d) => (
@@ -438,7 +404,7 @@ export function WelcomePage() {
                     </li>
                   ))}
                 </ul>
-              </GatedLink>
+              </Link>
             </article>
           ))}
         </div>

@@ -1516,3 +1516,207 @@ button.chip.is-on {
 .auth-tab {
   border-radius: 30px !important;
 }
+
+/* —— Pepito adoption single / detail page —— */
+.pepito-adoption-page {
+  min-height: 100vh;
+  background: #fff;
+}
+.pepito-adopt-banner {
+  position: relative;
+  min-height: calc(65vh - 100px);
+  margin-top: 72px;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: center;
+  isolation: isolate;
+}
+.pepito-adopt-banner-wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(25, 6, 61, 0.55) 0%,
+    rgba(25, 6, 61, 0.28) 42%,
+    rgba(25, 6, 61, 0.08) 70%,
+    transparent 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+[dir='rtl'] .pepito-adopt-banner-wash {
+  background: linear-gradient(
+    270deg,
+    rgba(25, 6, 61, 0.55) 0%,
+    rgba(25, 6, 61, 0.28) 42%,
+    rgba(25, 6, 61, 0.08) 70%,
+    transparent 100%
+  );
+}
+.pepito-adopt-banner-inner {
+  position: relative;
+  z-index: 1;
+  width: min(1220px, calc(100% - 2.5rem));
+  margin-inline: auto;
+  padding-block: 4rem;
+}
+.pepito-adopt-banner-inner h1 {
+  margin: 0 0 0.5rem;
+  font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #fff;
+  font-family: var(--font-display);
+}
+.pepito-adopt-banner-inner p {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 400;
+  color: #fff;
+}
+.pepito-adopt-single {
+  padding: 90px 0 60px;
+  background: #fff;
+}
+.pepito-adopt-single-grid {
+  width: min(1220px, calc(100% - 2.5rem));
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 2.5rem;
+  align-items: start;
+}
+.pepito-adopt-gallery-main,
+.pepito-adopt-gallery-item {
+  border-radius: 20px;
+  overflow: hidden;
+  isolation: isolate;
+  margin-bottom: 1.5rem;
+}
+.pepito-adopt-gallery-main img,
+.pepito-adopt-gallery-item img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  transition: transform 500ms ease;
+}
+.pepito-adopt-gallery-main:hover img,
+.pepito-adopt-gallery-item:hover img {
+  transform: scale(1.05);
+}
+.pepito-adopt-gallery-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+.pepito-adopt-gallery-row .pepito-adopt-gallery-item {
+  margin-bottom: 0;
+}
+.pepito-adopt-cont {
+  padding-inline-start: 1.25rem;
+}
+.pepito-adopt-cont h2 {
+  margin: 0 0 1.25rem;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--pepito-dark);
+  font-family: var(--font-display);
+}
+.pepito-adopt-cont h3 {
+  margin: 1.75rem 0 0.75rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--pepito-dark);
+  font-family: var(--font-display);
+}
+.pepito-adopt-list {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+}
+.pepito-adopt-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid #eceaf2;
+}
+.pepito-adopt-list li:last-child {
+  border-bottom: 0;
+}
+.pepito-adopt-list-label {
+  color: var(--pepito-muted);
+  font-weight: 500;
+  min-width: 7rem;
+}
+.pepito-adopt-list-value {
+  color: var(--pepito-dark);
+  font-weight: 600;
+}
+.pepito-adopt-about,
+.pepito-adopt-rules {
+  margin: 0 0 1rem;
+  color: var(--pepito-muted);
+  font-size: 1.05rem;
+  line-height: 1.75;
+}
+.pepito-adopt-traits {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.pepito-adopt-traits li {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--pepito-dark);
+  font-weight: 500;
+  font-size: 1.05rem;
+}
+.pepito-adopt-traits i {
+  color: var(--pepito-pink);
+  font-size: 1.1rem;
+  transform: rotate(30deg);
+  line-height: 1;
+}
+.pepito-adopt-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  margin-top: 1.75rem;
+}
+.pepito-adopt-related {
+  background: var(--pepito-soft);
+}
+@media (max-width: 991px) {
+  .pepito-adopt-banner {
+    min-height: 42vh;
+  }
+  .pepito-adopt-single {
+    padding: 50px 0 30px;
+  }
+  .pepito-adopt-single-grid {
+    grid-template-columns: 1fr;
+    gap: 1.75rem;
+  }
+  .pepito-adopt-cont {
+    padding-inline-start: 0;
+  }
+}
+@media (max-width: 640px) {
+  .pepito-adopt-banner-inner h1 {
+    font-size: 1.65rem;
+  }
+  .pepito-adopt-gallery-row {
+    gap: 0.85rem;
+  }
+  .pepito-adopt-ctas .pepito-btn {
+    width: 100%;
+  }
+}

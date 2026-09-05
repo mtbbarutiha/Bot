@@ -23,6 +23,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { ShopPage } from './pages/ShopPage';
 import { VetConsultPage } from './pages/VetConsultPage';
 import { WelcomePage } from './pages/WelcomePage';
+import { AdoptionDetailPage } from './pages/AdoptionDetailPage';
 import { PetOnboardingPage } from './pages/onboarding/PetOnboardingPage';
 import { ProfileWizardPage } from './pages/onboarding/ProfileWizardPage';
 import { RoleSelectPage } from './pages/onboarding/RoleSelectPage';
@@ -34,6 +35,7 @@ export default function App() {
       <Routes>
         <Route index element={<WelcomePage />} />
         <Route path="welcome" element={<WelcomePage />} />
+        <Route path="adoption/:slug" element={<AdoptionDetailPage />} />
         <Route path="auth/login" element={<LoginPage />} />
         <Route path="auth/otp" element={<OtpPage />} />
         <Route path="onboarding/role" element={<RoleSelectPage />} />

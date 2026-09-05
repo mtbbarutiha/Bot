@@ -5,7 +5,7 @@ import { useAuthStore } from '../hooks/useAuthStore';
 import { TelegramSync } from './OnboardingGuard';
 
 const PUBLIC_EXACT = new Set(['/', '/welcome']);
-const PUBLIC_PREFIXES = ['/auth', '/admin'];
+const PUBLIC_PREFIXES = ['/auth', '/admin', '/adoption'];
 
 function isPublic(pathname: string) {
   if (PUBLIC_EXACT.has(pathname)) return true;
