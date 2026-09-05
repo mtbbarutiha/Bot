@@ -11,7 +11,6 @@ import {
   Moon,
   PartyPopper,
   PawPrint,
-  Phone,
   Scissors,
   Syringe,
   Utensils,
@@ -74,10 +73,46 @@ const HERO_SLIDES = [
 ] as const;
 
 const PETS = [
-  { name: 'میسی', meta: 'سگ · ۵ سال · ماده', img: `${P}/01-2.jpg`, to: '/explore' },
-  { name: 'بلا', meta: 'سگ · ۳ سال · نر', img: `${P}/02-2.jpg`, to: '/explore' },
-  { name: 'کیتی', meta: 'گربه · ۲ سال · ماده', img: `${P}/03-2.jpg`, to: '/explore' },
-  { name: 'پنی', meta: 'سگ · ۱ سال · نر', img: `${P}/04-2.jpg`, to: '/explore' },
+  {
+    name: 'میسی',
+    img: `${P}/01-2.jpg`,
+    to: '/explore',
+    details: [
+      { label: 'جنسیت', value: 'ماده' },
+      { label: 'عقیم‌شده', value: 'خیر' },
+      { label: 'سن', value: '۵ سال' },
+    ],
+  },
+  {
+    name: 'بلا',
+    img: `${P}/02-2.jpg`,
+    to: '/explore',
+    details: [
+      { label: 'جنسیت', value: 'نر' },
+      { label: 'عقیم‌شده', value: 'خیر' },
+      { label: 'سن', value: '۳ سال' },
+    ],
+  },
+  {
+    name: 'کیتی',
+    img: `${P}/03-2.jpg`,
+    to: '/explore',
+    details: [
+      { label: 'جنسیت', value: 'ماده' },
+      { label: 'عقیم‌شده', value: 'بله' },
+      { label: 'سن', value: '۲ سال' },
+    ],
+  },
+  {
+    name: 'پنی',
+    img: `${P}/04-2.jpg`,
+    to: '/explore',
+    details: [
+      { label: 'جنسیت', value: 'نر' },
+      { label: 'عقیم‌شده', value: 'خیر' },
+      { label: 'سن', value: '۱ سال' },
+    ],
+  },
 ] as const;
 
 const TEAM = [
@@ -282,7 +317,7 @@ export function WelcomePage() {
         </div>
       </section>
 
-            <section className="pepito-section pepito-services-section" id="services">
+      <section className="pepito-section pepito-services-section" id="services">
         <div className="pepito-section-head pepito-section-head--center">
           <p className="pepito-eyebrow">
             <span className="pepito-eyebrow-icon" aria-hidden>
@@ -311,7 +346,7 @@ export function WelcomePage() {
                       >
                         <path d={BLOB_PATH} />
                       </svg>
-                      <Icon size={34} strokeWidth={1.6} />
+                      <Icon size={48} strokeWidth={1.35} />
                     </span>
                     <h3>{s.title}</h3>
                     <p>{s.desc}</p>
@@ -336,38 +371,44 @@ export function WelcomePage() {
         </div>
       </section>
 
-<section className="pepito-section pepito-section--soft" id="pets">
-        <div className="pepito-section-head">
-          <p className="pepito-eyebrow">پذیرش پت</p>
-          <h2>یک دوست پشمالوی جدید پیدا کن</h2>
-          <p>پیش‌نمایش عمومی؛ برای درخواست واقعی با OTP وارد شو.</p>
-          {/* Pepito: Adopt a pet → gated explore */}
-          <GatedLink to="/explore" className="pepito-btn button-1" style={{ marginTop: '1.1rem' }}>
-            <PawIcon />
+      <section className="pepito-section pepito-adoption" id="pets">
+        <div className="pepito-section-head pepito-section-head--center">
+          <p className="pepito-eyebrow">
+            <span className="pepito-eyebrow-icon" aria-hidden>
+              <PawPrint size={18} />
+            </span>
             پذیرش یک پت
-          </GatedLink>
+          </p>
+          <h2>یک دوست پشمالوی جدید پیدا کن</h2>
         </div>
-        <div className="pepito-pets">
+        <div className="pepito-adoption-grid">
           {PETS.map((p) => (
-            <article key={p.name} className="pepito-pet">
-              <img src={p.img} alt={p.name} loading="lazy" />
-              <div>
-                <h3>{p.name}</h3>
-                <p>{p.meta}</p>
-                <GatedLink to={p.to} className="pepito-pet-cta">
-                  درخواست همبازی
-                </GatedLink>
+            <article key={p.name} className="pepito-adoption-card">
+              <div className="pepito-adoption-media">
+                <img src={p.img} alt={p.name} loading="lazy" />
+                <div className="pepito-adoption-shade" aria-hidden />
               </div>
+              <div className="pepito-adoption-front">
+                <h3>{p.name}</h3>
+              </div>
+              <GatedLink to={p.to} className="pepito-adoption-back">
+                <h3>{p.name}</h3>
+                <ul>
+                  {p.details.map((d) => (
+                    <li key={d.label}>
+                      {d.label}: {d.value}
+                    </li>
+                  ))}
+                </ul>
+              </GatedLink>
             </article>
           ))}
         </div>
-        {/* Pepito: Call us tel: band */}
-        <div className="pepito-call-band">
-          <span className="pepito-call-tag">پذیرش پت</span>
+        <div className="pepito-adoption-info">
+          <span className="pepito-adoption-tag">پذیرش یک پت</span>
           <p>
             با ما تماس بگیرید{' '}
-            <a href={`tel:${CONTACT_PHONE_TEL}`} dir="ltr">
-              <Phone size={16} aria-hidden />
+            <a href={`tel:${CONTACT_PHONE_TEL}`} dir="ltr" className="pepito-adoption-phone">
               {CONTACT_PHONE_DISPLAY}
             </a>{' '}
             برای اطلاعات بیشتر!
@@ -375,7 +416,7 @@ export function WelcomePage() {
         </div>
       </section>
 
-      <section className="pepito-section" id="team">
+<section className="pepito-section" id="team">
         <div className="pepito-section-head">
           <p className="pepito-eyebrow">متخصصان واجد شرایط</p>
           <h2>با تیم ما آشنا شو</h2>

@@ -177,7 +177,25 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     flex-basis: calc((100% - 1.35rem) / 2);
   }
 }
+@media (max-width: 980px) {
+  .pepito-adoption-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 @media (max-width: 720px) {
+  .pepito-adoption {
+    padding-block: 4.5rem;
+  }
+  .pepito-adoption-grid {
+    grid-template-columns: 1fr;
+  }
+  .pepito-adoption-card {
+    aspect-ratio: 4 / 5;
+  }
+  .pepito-adoption-back {
+    padding: 1.75rem;
+  }
+
   .pepito-service-card {
     flex-basis: 100%;
   }
@@ -351,6 +369,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   place-items: center;
   color: #fff;
   flex-shrink: 0;
+  transform: rotate(30deg);
 }
 .pepito-hero h1 {
   margin: 0;
@@ -489,7 +508,8 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 
 .pepito-services-section {
   background: var(--pepito-soft);
-  padding-block: 7.5rem;
+  padding-block: 120px;
+  overflow: hidden;
 }
 .pepito-section-head--center {
   text-align: center;
@@ -502,6 +522,16 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   align-items: center;
   gap: 0.65rem;
   justify-content: center;
+  color: var(--pepito-dark);
+  font-weight: 500;
+  font-size: 1.05rem;
+  letter-spacing: 0;
+  margin-bottom: 0.65rem;
+}
+.pepito-section-head--center h2 {
+  font-size: clamp(2rem, 3.6vw, 2.8rem);
+  font-weight: 600;
+  margin: 0;
 }
 .pepito-eyebrow-icon {
   width: 40px;
@@ -513,6 +543,8 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transform: rotate(30deg);
+  font-size: 21px;
 }
 .pepito-services-viewport {
   overflow: hidden;
@@ -528,15 +560,13 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   scrollbar-width: none;
   -ms-overflow-style: none;
   padding-inline: clamp(1rem, 4vw, 2.75rem);
-  padding-block: 0.35rem 1rem;
+  padding-block: 1.75rem 1.25rem; /* room for -15px hover lift */
 }
 .pepito-services-track::-webkit-scrollbar {
   display: none;
 }
 .pepito-service-card {
   scroll-snap-align: start;
-}
-.pepito-service-card {
   flex: 0 0 calc((100% - 2.7rem) / 3);
   min-width: 0;
 }
@@ -551,13 +581,15 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   align-items: center;
   text-align: center;
   gap: 0.85rem;
-  padding: 3.5rem 1.75rem 2.75rem;
+  padding: 60px 30px;
   border-radius: 20px;
   background: #fff;
   text-decoration: none;
   color: inherit;
   min-height: 100%;
-  line-height: 1.35;
+  line-height: 1;
+  overflow: hidden;
+  transform-style: preserve-3d;
   transition:
     background-color 300ms ease,
     transform 300ms ease,
@@ -572,12 +604,13 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 .pepito-service-icon {
   position: relative;
   width: 80px;
+  min-height: 80px;
   height: 72px;
   display: grid;
   place-items: center;
-  margin-bottom: 0.35rem;
+  margin-bottom: 1.15rem;
   color: var(--pepito-dark);
-  transition: color 0.45s ease;
+  transition: color 0.5s ease;
 }
 .pepito-service:hover .pepito-service-icon {
   color: #fff;
@@ -589,12 +622,13 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   height: 72px;
   z-index: 0;
   opacity: 0.7;
+  fill-rule: evenodd;
   transition: fill 0.45s ease, opacity 0.45s ease;
 }
 .pepito-service-blob.fill-1 { fill: var(--pepito-pink); }
 .pepito-service-blob.fill-2 { fill: #fec53a; }
-.pepito-service-blob.fill-3 { fill: var(--pepito-mint); }
-.pepito-service-blob.fill-4 { fill: var(--pepito-sky); }
+.pepito-service-blob.fill-3 { fill: #15cca0; }
+.pepito-service-blob.fill-4 { fill: #0ba5f2; }
 .pepito-service:hover .pepito-service-blob {
   fill: rgba(255, 255, 255, 0.28);
   opacity: 1;
@@ -605,12 +639,12 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 }
 .pepito-service h3 {
   margin: 0;
-  font-size: 1.35rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 600;
   color: var(--pepito-dark);
   font-family: var(--font-display);
-  line-height: 1.25;
-  transition: color 0.45s ease;
+  line-height: 1.2;
+  transition: color 0.5s ease;
 }
 .pepito-service:hover h3 {
   color: #fff;
@@ -648,50 +682,204 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 }
 
 
-.pepito-pets {
+.pepito-adoption {
+  background: var(--pepito-soft);
+  padding-block: 7.5rem;
+}
+.pepito-adoption-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 1.15rem;
+  gap: 1.5rem;
 }
-.pepito-pet {
-  background: #fff;
-  border-radius: 28px;
+.pepito-adoption-card {
+  position: relative;
   overflow: hidden;
-  border: 1px solid rgba(92, 77, 145, 0.08);
-  box-shadow: 0 12px 30px rgba(25, 6, 61, 0.05);
-  animation: pepito-rise 0.7s ease both;
+  border-radius: 20px;
+  isolation: isolate;
+  aspect-ratio: 3 / 4;
+  background: #fff;
 }
-.pepito-pet:nth-child(2) { animation-delay: 0.08s; }
-.pepito-pet:nth-child(3) { animation-delay: 0.16s; }
-.pepito-pet:nth-child(4) { animation-delay: 0.24s; }
-.pepito-pet img {
+.pepito-adoption-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.pepito-adoption-media img {
   width: 100%;
-  height: 220px;
+  height: 100%;
   object-fit: cover;
   display: block;
 }
-.pepito-pet > div { padding: 1rem 1.05rem 1.2rem; }
-.pepito-pet h3 {
-  margin: 0 0 0.35rem;
-  font-size: 1.15rem;
+.pepito-adoption-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(25, 6, 61, 0.55) 0%, transparent 55%);
+  pointer-events: none;
 }
-.pepito-pet p {
-  margin: 0 0 0.85rem;
-  font-size: 0.88rem;
+.pepito-adoption-front {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: grid;
+  align-items: end;
+  padding: 1.75rem;
+  transition: transform 0.4s ease, opacity 0.4s ease, visibility 0.4s ease;
+  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
 }
-.pepito-pet-cta {
-  display: inline-flex;
-  min-height: 38px;
-  padding: 0 1rem;
+.pepito-adoption-front h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.25;
+  font-family: var(--font-display);
+  text-shadow: 0 2px 12px rgba(25, 6, 61, 0.35);
+}
+.pepito-adoption-back {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 2.75rem 2rem;
+  background: #fff;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: start;
+  box-shadow: 0 10px 10px rgba(5, 179, 238, 0.02);
+  transition: transform 0.7s ease, opacity 0.7s ease, visibility 0.7s ease;
+  transform: translateX(110%);
+  opacity: 0;
+  visibility: hidden;
+}
+.pepito-adoption-back h3 {
+  margin: 0 0 0.65rem;
+  color: var(--pepito-dark);
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.25;
+  font-family: var(--font-display);
+  transform: translateX(100px);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.4s ease 0.2s, opacity 0.4s ease 0.2s, visibility 0.4s ease 0.2s;
+}
+.pepito-adoption-back ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  transform: translateX(100px);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.4s ease 0.3s, opacity 0.4s ease 0.3s, visibility 0.4s ease 0.3s;
+}
+.pepito-adoption-back li {
+  position: relative;
+  margin: 0 0 0.4rem;
+  padding-inline-start: 1.35rem;
+  color: var(--pepito-muted);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+.pepito-adoption-back li:last-child {
+  margin-bottom: 0;
+}
+.pepito-adoption-back li::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  top: 0.45em;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--pepito-pink);
+  box-shadow: 0 0 0 3px rgba(219, 137, 202, 0.22);
+}
+.pepito-adoption-card:hover .pepito-adoption-front {
+  transform: translateX(-150%);
+  opacity: 0;
+  visibility: hidden;
+}
+.pepito-adoption-card:hover .pepito-adoption-back,
+.pepito-adoption-card:hover .pepito-adoption-back h3,
+.pepito-adoption-card:hover .pepito-adoption-back ul {
+  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+}
+.pepito-adoption-info {
+  margin-top: 2.5rem;
+  text-align: center;
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  justify-content: center;
+  gap: 0.65rem 0.85rem;
+}
+.pepito-adoption-tag {
+  display: inline-block;
+  padding: 0.2rem 1.15rem;
   border-radius: 30px;
+  background: var(--pepito-base);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.pepito-adoption-info p {
+  margin: 0;
+  color: var(--pepito-dark);
+  font-weight: 400;
+  font-size: 1.05rem;
+}
+.pepito-adoption-phone {
+  color: var(--pepito-dark);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  text-decoration-thickness: 1.5px;
+}
+.pepito-adoption-phone:hover {
+  color: var(--pepito-base);
+}
+
+/* legacy call-band kept for other uses */
+.pepito-call-band {
+  margin-top: 2.25rem;
+  text-align: center;
+}
+.pepito-call-tag {
+  display: inline-block;
+  margin-bottom: 0.55rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
   background: var(--pepito-lilac);
   color: var(--pepito-base);
   font-weight: 800;
   font-size: 0.88rem;
-  text-decoration: none;
 }
-.pepito-pet-cta:hover { background: #d7cff4; }
+.pepito-call-band p {
+  margin: 0;
+  color: var(--pepito-dark);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.pepito-call-band a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pepito-base);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.pepito-call-band a:hover {
+  color: var(--pepito-pink);
+}
 
 .pepito-team {
   display: grid;
@@ -828,7 +1016,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 
 @media (max-width: 980px) {
   .pepito-services,
-  .pepito-pets,
+  .pepito-adoption-grid,
   .pepito-team,
   .pepito-reviews { grid-template-columns: 1fr 1fr; }
   .pepito-about,
@@ -839,7 +1027,25 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     flex-basis: calc((100% - 1.35rem) / 2);
   }
 }
+@media (max-width: 980px) {
+  .pepito-adoption-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 @media (max-width: 720px) {
+  .pepito-adoption {
+    padding-block: 4.5rem;
+  }
+  .pepito-adoption-grid {
+    grid-template-columns: 1fr;
+  }
+  .pepito-adoption-card {
+    aspect-ratio: 4 / 5;
+  }
+  .pepito-adoption-back {
+    padding: 1.75rem;
+  }
+
   .pepito-service-card {
     flex-basis: 100%;
   }
@@ -848,7 +1054,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   }
 
   .pepito-services,
-  .pepito-pets,
+  .pepito-adoption-grid,
   .pepito-team,
   .pepito-reviews { grid-template-columns: 1fr; }
   .pepito-member img { width: 120px; height: 120px; }
