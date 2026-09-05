@@ -3,6 +3,11 @@ import fs from 'fs';
 import type { VetConsultStatus } from '@petdate/shared';
 import { dbService } from '../db';
 import { createPrescriptionWithDelivery } from '../services/prescription';
+import {
+  publicApiBaseUrl,
+  prescriptionWebPath,
+  renderPrescriptionHtml,
+} from '../services/prescription-html';
 
 const VALID_STATUSES: VetConsultStatus[] = ['requested', 'active', 'completed', 'cancelled'];
 
@@ -206,10 +211,15 @@ consultationsRouter.post('/:id/prescription', async (req, res) => {
   }
 
   const { result } = created;
+  const id = result.prescription.id;
+  const host = req.get('host') || undefined;
+  const base = publicApiBaseUrl(host);
   res.status(201).json({
     prescription: result.prescription,
     pdfPath: result.pdfPath,
-    pdfUrl: `/api/prescriptions/${result.prescription.id}/pdf`,
+    pdfUrl: `/api/prescriptions/${id}/pdf`,
+    webPath: prescriptionWebPath(id),
+    webUrl: `${base}${prescriptionWebPath(id)}`,
     sms: result.sms,
     patient: {
       id: result.patient.id,
@@ -231,8 +241,31 @@ consultationsRouter.post('/:id/prescription', async (req, res) => {
   });
 });
 
-/** دانلود PDF نسخه */
+/** دانلود PDF / مشاهده وب نسخه */
 export const prescriptionsFileRouter = Router();
+
+function sendPrescriptionHtml(req: { get(name: string): string | undefined }, res: import('express').Response, id: number) {
+  const rx = dbService.getPrescription(id);
+  if (!rx) {
+    res.status(404).json({ error: 'نسخه پیدا نشد' });
+    return;
+  }
+  const html = renderPrescriptionHtml({
+    prescriptionId: rx.id,
+    vetName: rx.vetName || '—',
+    patientName: rx.patientName || '—',
+    petName: rx.petName || '—',
+    petSpecies: rx.petSpecies,
+    petBreed: rx.petBreed,
+    medicationText: rx.text,
+    dateIso: rx.createdAt,
+    pdfUrl: `/api/prescriptions/${rx.id}/pdf`,
+    logoUrl: '/assets/brand/petdate-dr-logo.png',
+  });
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.setHeader('Cache-Control', 'private, max-age=60');
+  res.send(html);
+}
 
 prescriptionsFileRouter.get('/:id/pdf', (req, res) => {
   const id = Number(req.params.id);
@@ -248,7 +281,27 @@ prescriptionsFileRouter.get('/:id/pdf', (req, res) => {
   res.setHeader('Content-Type', 'application/pdf');
   res.setHeader(
     'Content-Disposition',
-    `inline; filename="hambazi-prescription-${id}.pdf"`
+    `inline; filename="petdate-dr-prescription-${id}.pdf"`
   );
   fs.createReadStream(rx.pdfPath).pipe(res);
+});
+
+prescriptionsFileRouter.get('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+  sendPrescriptionHtml(req, res, id);
+});
+
+/** Short public URL: /rx/:id */
+export const prescriptionWebRouter = Router();
+prescriptionWebRouter.get('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).type('html').send('<h1>شناسه نامعتبر</h1>');
+    return;
+  }
+  sendPrescriptionHtml(req, res, id);
 });

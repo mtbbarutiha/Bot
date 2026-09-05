@@ -757,6 +757,8 @@ export type CreatePrescriptionResponse = {
   prescription: import('@petdate/shared').Prescription;
   pdfPath: string;
   pdfUrl: string;
+  webPath?: string;
+  webUrl?: string;
   sms:
     | { sent: true; phone: string }
     | { sent: false; skipped: true; reason: string };

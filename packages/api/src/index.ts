@@ -11,7 +11,12 @@ import {
   infra,
 } from './config/infra';
 import { catalogRouter } from './routes/catalog';
-import { consultationsRouter, prescriptionsFileRouter } from './routes/consultations';
+import {
+  consultationsRouter,
+  prescriptionsFileRouter,
+  prescriptionWebRouter,
+} from './routes/consultations';
+import path from 'path';
 import { gamesRouter } from './routes/games';
 import { petsRouter } from './routes/pets';
 import { playdatesRouter } from './routes/playdates';
@@ -25,6 +30,21 @@ const PORT = Number(process.env.PORT) || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Brand assets (transparent logo for web Rx)
+app.use(
+  '/assets/brand',
+  express.static(path.join(__dirname, 'assets', 'brand'), {
+    maxAge: '1d',
+    fallthrough: true,
+  })
+);
+app.use(
+  '/assets/brand',
+  express.static(path.join(__dirname, '..', 'assets', 'brand'), {
+    maxAge: '1d',
+  })
+);
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'petdate-api' });
@@ -68,6 +88,7 @@ app.get('/api/health/infra', (_req, res) => {
 app.use('/api/catalog', catalogRouter);
 app.use('/api/consultations', consultationsRouter);
 app.use('/api/prescriptions', prescriptionsFileRouter);
+app.use('/rx', prescriptionWebRouter);
 app.use('/api/games', gamesRouter);
 app.use('/api/pets', petsRouter);
 app.use('/api/playdate-requests', playdatesRouter);

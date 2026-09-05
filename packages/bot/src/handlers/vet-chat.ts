@@ -945,13 +945,19 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
   }
 
   const fileName = `petdate-dr-rx-${created.prescription.id}.pdf`;
+  const webLink =
+    created.webUrl ||
+    (created.webPath ? `${process.env.PUBLIC_API_URL || ''}${created.webPath}` : '');
   const captionPatient = [
-    '💊 <b>نسخه دارویی پت دیت دکتر</b>',
+    '💊 <b>نسخه دارویی Pet Date Dr</b>',
     `پت: <b>${escapeHtml(created.pet.name)}</b>`,
     `پزشک: ${escapeHtml(created.vet.name)}`,
+    webLink ? `\n🌐 مشاهده وب:\n${webLink}` : '',
     '',
     escapeHtml(text.slice(0, 500)),
-  ].join('\n');
+  ]
+    .filter((line) => line !== '')
+    .join('\n');
 
   const peerId = session.vetChatPeerTelegramId || created.patient.telegramId;
   let telegramOk = false;
@@ -990,6 +996,7 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
       '✅ نسخه صادر شد.',
       telegramOk ? '✉️ PDF در تلگرام برای بیمار ارسال شد.' : '⚠️ ارسال تلگرام به بیمار ناموفق بود.',
       smsLine,
+      webLink ? `🌐 ${webLink}` : '',
       'می‌تونی ادامه چت بدی.',
     ].join('\n'),
     { reply_markup: vetChatReplyKeyboard(true) }
