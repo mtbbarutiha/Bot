@@ -71,7 +71,36 @@ export function buildSendPayload(items: CandooSendItem[]): CandooSendItem[] {
   }));
 }
 
+function describeStatusCode(code: number): string | null {
+  // Candoo docs / observed: negative codes are provider-side rejects
+  if (code === -4) return 'شماره فرستنده پیامک نامعتبر یا غیرفعال است';
+  if (code === -1) return 'اعتبار پیامک کافی نیست';
+  if (code < 0) return `سرویس پیامک ارسال را رد کرد (کد ${code})`;
+  return null;
+}
+
+function firstSendRow(raw: unknown): { status?: string; statusCode?: number; message?: string } | null {
+  if (Array.isArray(raw) && raw.length > 0 && raw[0] && typeof raw[0] === 'object') {
+    return raw[0] as { status?: string; statusCode?: number; message?: string };
+  }
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    return raw as { status?: string; statusCode?: number; message?: string };
+  }
+  return null;
+}
+
 function extractCandooErrorMessage(raw: unknown, fallback: string): string {
+  const row = firstSendRow(raw);
+  if (row) {
+    if (typeof row.message === 'string' && row.message.trim()) return row.message.trim();
+    if (typeof row.statusCode === 'number') {
+      const mapped = describeStatusCode(row.statusCode);
+      if (mapped) return mapped;
+    }
+    if (typeof row.status === 'string' && row.status.toUpperCase() === 'REJECTED') {
+      return 'سرویس پیامک ارسال را رد کرد';
+    }
+  }
   if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
     const msg = (raw as { message?: unknown }).message;
     if (typeof msg === 'string' && msg.trim()) return msg.trim();
@@ -99,6 +128,17 @@ export function isCandooSendAccepted(raw: unknown): boolean {
     }
     return false;
   });
+}
+
+/** رد شدن به خاطر شماره فرستنده / قابل تلاش مجدد با src دیگر */
+export function isCandooSrcRejection(raw: unknown): boolean {
+  const row = firstSendRow(raw);
+  if (!row) return false;
+  if (typeof row.status === 'string' && row.status.toUpperCase() !== 'REJECTED') return false;
+  if (typeof row.statusCode === 'number' && row.statusCode === -4) return true;
+  // generic REJECTED with non-2xx — try next src when multiple are configured
+  if (typeof row.status === 'string' && row.status.toUpperCase() === 'REJECTED') return true;
+  return false;
 }
 
 export async function candooSend(items: CandooSendItem[]): Promise<CandooSendResult> {
@@ -165,6 +205,71 @@ export async function candooSend(items: CandooSendItem[]): Promise<CandooSendRes
   }
 }
 
+/**
+ * ارسال با یک یا چند شماره فرستنده.
+ * اگر Candoo یک src را REJECT کند (مثلاً -4)، بقیهٔ CANDOO_SRC_NUMBERS را امتحان می‌کند.
+ */
+export async function candooSendWithSrcFallback(
+  item: Omit<CandooSendItem, 'srcNum'> & { srcNum?: string }
+): Promise<CandooSendResult & { srcNum: string }> {
+  const preferred = item.srcNum ? [item.srcNum] : [];
+  const configured = srcNumbers();
+  const candidates = [...preferred];
+  for (const n of configured) {
+    if (!candidates.includes(n)) candidates.push(n);
+  }
+  // start from round-robin position when no explicit src
+  if (!item.srcNum && configured.length > 1) {
+    const start = srcRoundRobin % configured.length;
+    const rotated = [...configured.slice(start), ...configured.slice(0, start)];
+    candidates.length = 0;
+    candidates.push(...rotated);
+    srcRoundRobin += 1;
+  } else if (!item.srcNum && configured.length === 1) {
+    srcRoundRobin += 1;
+  }
+
+  if (!candidates.length) {
+    return {
+      ok: false,
+      status: 0,
+      raw: null,
+      error: 'CANDOO_SRC_NUMBERS خالی است',
+      srcNum: '',
+    };
+  }
+
+  let last: CandooSendResult & { srcNum: string } = {
+    ok: false,
+    status: 0,
+    raw: null,
+    error: 'ارسال پیامک ناموفق بود',
+    srcNum: candidates[0]!,
+  };
+
+  for (let i = 0; i < candidates.length; i += 1) {
+    const srcNum = candidates[i]!;
+    const result = await candooSend([
+      {
+        ...item,
+        srcNum,
+      },
+    ]);
+    last = { ...result, srcNum };
+    if (result.ok) return last;
+    // auth / hard HTTP errors: do not burn through other numbers
+    if (result.status === 401 || result.status >= 500 || result.status === 0) return last;
+    const canRetry = isCandooSrcRejection(result.raw) && i < candidates.length - 1;
+    if (!canRetry) return last;
+    console.warn(
+      `Candoo src ${srcNum} rejected; trying next sender (${i + 2}/${candidates.length})`,
+      result.error
+    );
+  }
+
+  return last;
+}
+
 /** ارسال OTP — type=1 طبق مستند Candoo */
 export async function candooSendOtp(opts: {
   recipient: string;
@@ -172,19 +277,15 @@ export async function candooSendOtp(opts: {
   srcNum?: string;
   customerId?: number;
 }): Promise<CandooSendResult & { srcNum: string }> {
-  const srcNum = opts.srcNum || nextSrcNumber();
-  const result = await candooSend([
-    {
-      srcNum,
-      recipient: opts.recipient,
-      body: opts.body,
-      type: 1,
-      retryCount: 2,
-      validityPeriod: 300,
-      ...(opts.customerId != null ? { customerId: opts.customerId } : {}),
-    },
-  ]);
-  return { ...result, srcNum };
+  return candooSendWithSrcFallback({
+    recipient: opts.recipient,
+    body: opts.body,
+    type: 1,
+    retryCount: 2,
+    validityPeriod: 300,
+    ...(opts.srcNum ? { srcNum: opts.srcNum } : {}),
+    ...(opts.customerId != null ? { customerId: opts.customerId } : {}),
+  });
 }
 
 /** بررسی اعتبار / موجودی — بدون ارسال SMS */

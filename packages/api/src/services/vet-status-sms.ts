@@ -1,5 +1,5 @@
 import { normalizeIranMobile, formatIranMobileDisplay } from '@petdate/shared';
-import { candooSend, isCandooConfigured, nextSrcNumber } from './candoo';
+import { candooSendWithSrcFallback, isCandooConfigured } from './candoo';
 
 export type VetStatusSmsResult =
   | { sent: true; phone: string }
@@ -30,19 +30,16 @@ export async function sendVetEnabledSms(opts: {
   const body = ['همبازی', statusLine].join('\n');
 
   try {
-    const sent = await candooSend([
-      {
-        srcNum: nextSrcNumber(),
-        recipient,
-        body,
-        customerId: opts.customerId,
-        type: 0,
-      },
-    ]);
+    const sent = await candooSendWithSrcFallback({
+      recipient,
+      body,
+      customerId: opts.customerId,
+      type: 0,
+    });
     if (sent.ok) {
       return { sent: true, phone: formatIranMobileDisplay(recipient) };
     }
-    console.error('vet enabled SMS failed:', sent.error, sent.raw);
+    console.error('vet enabled SMS failed:', sent.error, sent.raw, 'src=', sent.srcNum);
     return {
       sent: false,
       skipped: true,

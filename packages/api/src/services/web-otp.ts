@@ -78,12 +78,17 @@ export async function requestWebOtp(
       const sent = await candooSendOtp({
         recipient: target,
         body: `کد ورود petdate: ${code}`,
-        customerId: 0,
       });
       if (!sent.ok) {
-        console.error('web phone otp send failed', sent.error);
+        console.error('web phone otp send failed', sent.error, sent.raw, 'src=', sent.srcNum);
+        // Don't leave a cooldown OTP if SMS never went out
+        dbService.deleteWebOtp(channel, target);
         if (!echoDevCode()) {
-          return { ok: false, reason: 'send_failed', error: 'ارسال پیامک ناموفق بود' };
+          return {
+            ok: false,
+            reason: 'send_failed',
+            error: sent.error || 'ارسال پیامک ناموفق بود',
+          };
         }
       }
     } else {

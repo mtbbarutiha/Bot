@@ -88,7 +88,9 @@ export async function sendPhoneOtp(userId: number, phoneRaw: string): Promise<Se
   });
 
   if (!sent.ok) {
-    console.error('Candoo OTP send failed:', sent.error, sent.raw);
+    console.error('Candoo OTP send failed:', sent.error, sent.raw, 'src=', sent.srcNum);
+    // Don't leave a cooldown OTP if SMS never went out
+    dbService.deletePhoneOtpsForUser(userId);
     return {
       ok: false,
       reason: 'send_failed',

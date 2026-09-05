@@ -3,7 +3,7 @@
  * Run: npx tsx packages/api/src/services/candoo.selftest.ts
  */
 import { formatIranMobileDisplay, normalizeIranMobile } from '@petdate/shared';
-import { buildSendPayload, isCandooSendAccepted } from './candoo';
+import { buildSendPayload, isCandooSendAccepted, isCandooSrcRejection } from './candoo';
 
 function assert(cond: unknown, msg: string): void {
   if (!cond) throw new Error(msg);
@@ -52,5 +52,13 @@ assert(
 );
 assert(!isCandooSendAccepted([{ status: 'REJECTED', statusCode: 400 }]), 'rejected payload');
 assert(!isCandooSendAccepted([]), 'empty payload');
+assert(
+  isCandooSrcRejection([{ status: 'REJECTED', statusCode: -4, messageId: 0 }]),
+  'src rejection -4'
+);
+assert(
+  !isCandooSrcRejection([{ status: 'ACCEPTED', statusCode: 200 }]),
+  'accepted is not src rejection'
+);
 
 console.log('candoo.selftest: OK');

@@ -4,7 +4,7 @@
 import path from 'path';
 import { normalizeIranMobile, formatIranMobileDisplay } from '@petdate/shared';
 import { dbService } from '../db';
-import { candooSend, isCandooConfigured, nextSrcNumber } from './candoo';
+import { candooSendWithSrcFallback, isCandooConfigured } from './candoo';
 import { generatePrescriptionPdf, prescriptionsDir } from './prescription-pdf';
 
 export type CreatePrescriptionInput = {
@@ -171,19 +171,16 @@ export async function createPrescriptionWithDelivery(
         petName: pet.name,
         text,
       });
-      const sent = await candooSend([
-        {
-          srcNum: nextSrcNumber(),
-          recipient,
-          body,
-          customerId: patient.id,
-          type: 0,
-        },
-      ]);
+      const sent = await candooSendWithSrcFallback({
+        recipient,
+        body,
+        customerId: patient.id,
+        type: 0,
+      });
       if (sent.ok) {
         sms = { sent: true, phone: formatIranMobileDisplay(recipient) };
       } else {
-        console.error('prescription SMS failed:', sent.error, sent.raw);
+        console.error('prescription SMS failed:', sent.error, sent.raw, 'src=', sent.srcNum);
         sms = {
           sent: false,
           skipped: true,
