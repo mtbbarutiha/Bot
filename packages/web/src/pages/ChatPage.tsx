@@ -1,23 +1,12 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import {
-  ArrowRight,
-  Lock,
-  LockOpen,
-  MessageCircle,
-  PawPrint,
-  Phone,
-  Shield,
-  Trash2,
-  UserPlus,
-  UserRound,
-  X,
-} from 'lucide-react';
+import { ArrowRight, Check, CheckCheck, Send, X } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
 import {
+  addUserContact,
   clearPlaydateChatMessages,
   endPlaydateChat,
   getPlaydateRequest,
@@ -35,10 +24,25 @@ import {
   type MatchRequest,
 } from '../types';
 
+/** Same labels as Telegram owner-chat reply keyboard. */
+const TG_BTNS = {
+  secureOn: '🔒 چت امن',
+  secureOff: '🔓 خاموش‌کردن چت امن',
+  peerProfile: '👤 پروفایل طرف مقابل',
+  petProfile: '🐾 مشاهده پروفایل پت',
+  addContact: '➕ افزودن مخاطب',
+  end: '🔌 قطع چت همبازی',
+} as const;
+
+const CHAT_WIPE_HINT =
+  '🗑 لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
+
+const POLL_MS = 2500;
+
 type ChatMsg = {
   id: string;
   numericId: number;
-  from: 'me' | 'peer';
+  from: 'me' | 'peer' | 'system';
   text: string;
   at: number;
   mediaKind?: PlaydateChatMediaKind | null;
@@ -46,10 +50,6 @@ type ChatMsg = {
   mimeType?: string | null;
   fileName?: string | null;
 };
-
-type Panel = 'none' | 'owner' | 'pet';
-
-const POLL_MS = 2500;
 
 function toUiMessage(row: PlaydateChatMessage, myUserId: number): ChatMsg {
   const at = Date.parse(row.createdAt);
@@ -91,6 +91,16 @@ function mediaLabel(kind?: PlaydateChatMediaKind | null) {
   }
 }
 
+function systemMessage(text: string): ChatMsg {
+  return {
+    id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    numericId: 0,
+    from: 'system',
+    text,
+    at: Date.now(),
+  };
+}
+
 export function ChatPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
@@ -101,7 +111,6 @@ export function ChatPage() {
   const [loading, setLoading] = useState(true);
   const [secure, setSecure] = useState(false);
   const [contactAdded, setContactAdded] = useState(false);
-  const [panel, setPanel] = useState<Panel>('none');
   const [draft, setDraft] = useState('');
   const [ended, setEnded] = useState(false);
   const [wiped, setWiped] = useState(false);
@@ -111,8 +120,11 @@ export function ChatPage() {
   const [sending, setSending] = useState(false);
   const [ending, setEnding] = useState(false);
   const [wiping, setWiping] = useState(false);
+  const [infoCard, setInfoCard] = useState<'none' | 'owner' | 'pet'>('none');
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const lastMsgIdRef = useRef(0);
+  const bootstrappedRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -164,15 +176,31 @@ export function ChatPage() {
 
   useEffect(() => {
     if (!match) return;
+    if (bootstrappedRef.current === match.id) return;
+    bootstrappedRef.current = match.id;
     setMessages([]);
     lastMsgIdRef.current = 0;
     setContactAdded(false);
-    setPanel('none');
     setDraft('');
     setSendError(null);
     setActionError(null);
     setWiped(false);
-  }, [match?.id]);
+    setInfoCard('none');
+    if (!ended) {
+      setMessages([
+        systemMessage(
+          [
+            '💬 چت با صاحب پت فعال شد',
+            '',
+            `• ${TG_BTNS.secureOn} — پیام‌ها غیرقابل ذخیره/فوروارد`,
+            `• ${TG_BTNS.peerProfile} / ${TG_BTNS.petProfile}`,
+            `• ${TG_BTNS.addContact}`,
+            `• ${TG_BTNS.end}`,
+          ].join('\n'),
+        ),
+      ]);
+    }
+  }, [match?.id, ended]);
 
   useEffect(() => {
     if (!match || !myUserId || ended) return;
@@ -183,7 +211,7 @@ export function ChatPage() {
         const rows = await listPlaydateChatMessages(
           match!.id,
           myUserId!,
-          initial ? undefined : lastMsgIdRef.current || undefined
+          initial ? undefined : lastMsgIdRef.current || undefined,
         );
         if (cancelled || !rows.length) return;
         setMessages((prev) => {
@@ -192,7 +220,7 @@ export function ChatPage() {
             .map((row) => toUiMessage(row, myUserId!))
             .filter((m) => !seen.has(m.id));
           if (!mapped.length) return prev;
-          return initial && !prev.length ? mapped : [...prev, ...mapped];
+          return [...prev, ...mapped];
         });
         lastMsgIdRef.current = Math.max(lastMsgIdRef.current, ...rows.map((r) => r.id));
       } catch {
@@ -204,11 +232,26 @@ export function ChatPage() {
       try {
         const req = await getPlaydateRequest(match!.id);
         if (cancelled || !req) return;
-        setSecure(Boolean(req.chatSecure));
+        setSecure((prev) => {
+          const next = Boolean(req.chatSecure);
+          if (prev !== next) {
+            setMessages((msgs) => [
+              ...msgs,
+              systemMessage(
+                next
+                  ? '🔒 طرف مقابل چت امن را فعال کرد.\nپیام‌های این گفتگو قابل ذخیره یا فوروارد نیستند.'
+                  : '🔓 طرف مقابل چت امن را خاموش کرد.',
+              ),
+            ]);
+          }
+          return next;
+        });
         if (req.chatEnded) {
           setEnded(true);
-          setMessages([]);
-          lastMsgIdRef.current = 0;
+          setMessages((msgs) => [
+            ...msgs,
+            systemMessage(['🔌 چت همبازی قطع شد.', '', CHAT_WIPE_HINT].join('\n')),
+          ]);
         }
       } catch {
         /* ignore */
@@ -216,7 +259,6 @@ export function ChatPage() {
     }
 
     void pull(true);
-    void pullMeta();
     const timer = window.setInterval(() => {
       void pull(false);
       void pullMeta();
@@ -231,23 +273,17 @@ export function ChatPage() {
     const el = scrollerRef.current;
     if (!el) return;
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [messages, ended]);
+  }, [messages, ended, infoCard]);
 
   const peerPet = match?.fromPet;
   const peerOwnerName = peerPet?.ownerName || 'صاحب پت';
-
-  const secureHint = useMemo(
-    () =>
-      secure
-        ? 'چت امن روشن است — پیام‌ها، عکس و ویس در تلگرام قابل ذخیره یا فوروارد نیستند.'
-        : 'برای محرمانگی بیشتر، چت امن را روشن کنید (هم‌زمان با طرف تلگرامی).',
-    [secure],
-  );
+  const peerOwnerId = peerPet?.ownerId;
+  const secureBtnLabel = secure ? TG_BTNS.secureOff : TG_BTNS.secureOn;
 
   if (loading) {
     return (
-      <div className="chat-page chat-page--empty">
-        <BrandMark iconSize={26} className="chat-empty-brand" />
+      <div className="tg-chat tg-chat--empty">
+        <BrandMark iconSize={26} />
         <h1>در حال باز کردن چت…</h1>
       </div>
     );
@@ -255,19 +291,19 @@ export function ChatPage() {
 
   if (!match || !peerPet) {
     return (
-      <div className="chat-page chat-page--empty">
-        <BrandMark iconSize={26} className="chat-empty-brand" />
+      <div className="tg-chat tg-chat--empty">
+        <BrandMark iconSize={26} />
         <h1>چت پیدا نشد</h1>
         <p>این گفتگو تمام شده یا هنوز پذیرفته نشده است.</p>
-        <Link to="/matches" className="chat-btn chat-btn--primary">
+        <Link to="/matches" className="tg-chat-link-btn">
           بازگشت به درخواست‌ها
         </Link>
       </div>
     );
   }
 
-  async function sendMessage(e: FormEvent) {
-    e.preventDefault();
+  async function sendMessage(e?: FormEvent) {
+    e?.preventDefault();
     if (ended || sending || !myUserId || !match) return;
     const text = draft.trim();
     if (!text) return;
@@ -284,6 +320,7 @@ export function ChatPage() {
       setSendError(err instanceof Error ? err.message : 'ارسال پیام ناموفق بود');
     } finally {
       setSending(false);
+      inputRef.current?.focus();
     }
   }
 
@@ -292,6 +329,14 @@ export function ChatPage() {
     const next = !secure;
     setSecure(next);
     setActionError(null);
+    setMessages((prev) => [
+      ...prev,
+      systemMessage(
+        next
+          ? '🔒 چت امن فعال شد.\nاز این به بعد پیام‌ها (متن، عکس، ویس و …) قابل ذخیره یا فوروارد نیستند.'
+          : '🔓 چت امن خاموش شد. پیام‌های بعدی مثل قبل قابل ذخیره هستند.',
+      ),
+    ]);
     try {
       await setPlaydateChatSecure(match.id, myUserId, next);
     } catch (err) {
@@ -300,14 +345,43 @@ export function ChatPage() {
     }
   }
 
+  async function addContact() {
+    if (!myUserId || !peerOwnerId || ended || contactAdded) return;
+    setActionError(null);
+    try {
+      await addUserContact(myUserId, peerOwnerId);
+      setContactAdded(true);
+      setMessages((prev) => [...prev, systemMessage('➕ مخاطب با موفقیت اضافه شد.')]);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'افزودن مخاطب ناموفق بود';
+      if (/قبل|already|exists/i.test(msg)) {
+        setContactAdded(true);
+        setMessages((prev) => [...prev, systemMessage('این شخص از قبل در مخاطبینت بود.')]);
+      } else {
+        setActionError(msg);
+      }
+    }
+  }
+
   async function endChat() {
     if (!myUserId || !match || ending || ended) return;
     setEnding(true);
     setActionError(null);
     setEnded(true);
-    setPanel('none');
-    setMessages([]);
-    lastMsgIdRef.current = 0;
+    setInfoCard('none');
+    setMessages((prev) => [
+      ...prev,
+      systemMessage(
+        [
+          'چت همبازی پایان یافت.',
+          '',
+          CHAT_WIPE_HINT,
+          secure ? 'چت امن فعال بود — حتماً گفتگو را پاک کن.' : null,
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      ),
+    ]);
     try {
       await endPlaydateChat(match.id, myUserId);
     } catch (err) {
@@ -328,7 +402,7 @@ export function ChatPage() {
     setActionError(null);
     try {
       await clearPlaydateChatMessages(match.id, myUserId);
-      setMessages([]);
+      setMessages([systemMessage('🗑 گفتگو به‌طور کامل پاک شد.')]);
       lastMsgIdRef.current = 0;
       setWiped(true);
     } catch (err) {
@@ -343,8 +417,8 @@ export function ChatPage() {
     const src = playdateChatMediaUrl(match.id, msg.numericId, myUserId);
     if (msg.mediaKind === 'photo' || msg.mediaKind === 'sticker') {
       return (
-        <a className="chat-media-link" href={src} target="_blank" rel="noreferrer">
-          <img className="chat-media-image" src={src} alt={mediaLabel(msg.mediaKind)} />
+        <a className="tg-media-link" href={src} target="_blank" rel="noreferrer">
+          <img className="tg-media-image" src={src} alt={mediaLabel(msg.mediaKind)} />
         </a>
       );
     }
@@ -354,304 +428,250 @@ export function ChatPage() {
       msg.mediaKind === 'video_note'
     ) {
       return (
-        <video className="chat-media-video" src={src} controls playsInline>
+        <video className="tg-media-video" src={src} controls playsInline>
           ویدیو پشتیبانی نمی‌شود
         </video>
       );
     }
     if (msg.mediaKind === 'voice' || msg.mediaKind === 'audio') {
-      return <audio className="chat-media-audio" src={src} controls preload="metadata" />;
+      return <audio className="tg-media-audio" src={src} controls preload="metadata" />;
     }
     return (
-      <a className="chat-media-file" href={src} target="_blank" rel="noreferrer">
+      <a className="tg-media-file" href={src} target="_blank" rel="noreferrer">
         📎 {msg.fileName || mediaLabel(msg.mediaKind)}
       </a>
     );
   }
 
   return (
-    <div
-      className={`chat-page${secure ? ' chat-page--secure' : ''}${ended ? ' chat-page--ended' : ''}`}
-    >
-      <div className="chat-shell">
-        <section className="chat-stage" aria-label="گفتگو">
-          <header className="chat-top">
-            <div className="chat-top-main">
-              <button
-                type="button"
-                className="chat-icon-btn"
-                onClick={() => navigate('/matches')}
-                aria-label="بازگشت"
-              >
-                <ArrowRight size={20} strokeWidth={2.2} />
-              </button>
-              <button
-                type="button"
-                className="chat-peer-chip"
-                onClick={() => setPanel(panel === 'owner' ? 'none' : 'owner')}
-              >
-                <PetAvatar
-                  type={peerPet.type}
-                  size="sm"
-                  imageUrl={peerPet.imageUrl}
-                  name={peerPet.name}
-                />
-                <span>
-                  <strong>{peerOwnerName}</strong>
-                  <small>
-                    {peerPet.name} · {peerPet.neighborhood}
-                  </small>
-                </span>
-              </button>
-            </div>
-
-            <div className="chat-top-actions" role="toolbar" aria-label="ابزار چت">
-              <button
-                type="button"
-                className={`chat-action${secure ? ' is-on' : ''}`}
-                onClick={() => void toggleSecure()}
-                disabled={ended}
-                aria-pressed={secure}
-              >
-                {secure ? <Lock size={16} /> : <LockOpen size={16} />}
-                <span>{secure ? 'چت امن: روشن' : 'چت امن'}</span>
-              </button>
-              <button
-                type="button"
-                className={`chat-action${contactAdded ? ' is-on' : ''}`}
-                onClick={() => setContactAdded(true)}
-                disabled={ended || contactAdded}
-              >
-                <UserPlus size={16} />
-                <span>{contactAdded ? 'مخاطب شد' : 'افزودن مخاطب'}</span>
-              </button>
-              <button
-                type="button"
-                className={`chat-action${panel === 'owner' ? ' is-on' : ''}`}
-                onClick={() => setPanel(panel === 'owner' ? 'none' : 'owner')}
-              >
-                <UserRound size={16} />
-                <span>پروفایل طرف</span>
-              </button>
-              <button
-                type="button"
-                className={`chat-action${panel === 'pet' ? ' is-on' : ''}`}
-                onClick={() => setPanel(panel === 'pet' ? 'none' : 'pet')}
-              >
-                <PawPrint size={16} />
-                <span>پروفایل پت</span>
-              </button>
-              <button
-                type="button"
-                className="chat-action chat-action--danger"
-                onClick={() => void endChat()}
-                disabled={ended || ending}
-              >
-                <Trash2 size={16} />
-                <span>{ending ? 'در حال قطع…' : 'قطع چت'}</span>
-              </button>
-            </div>
-          </header>
-
-          <div className={`chat-secure-banner${secure ? ' is-on' : ''}`}>
-            <Shield size={16} strokeWidth={2.2} />
-            <p>{secureHint}</p>
-          </div>
-
-          {actionError ? <p className="chat-send-error">{actionError}</p> : null}
-
-          <div className="chat-stream" ref={scrollerRef}>
-            {!ended && messages.length === 0 && (
-              <div className="chat-start-note">
-                <MessageCircle size={22} />
-                <p>گفتگو با {peerOwnerName} شروع شد. برای هماهنگی همبازی پیام بفرستید.</p>
-              </div>
-            )}
-
-            {!ended &&
-              messages.map((msg) => {
-                const showText = Boolean(msg.text) && !/^\[(تصویر|ویدیو|پیام صوتی|فایل صوتی|فایل|استیکر|رسانه)\]$/.test(msg.text);
-                return (
-                  <div
-                    key={msg.id}
-                    className={`chat-bubble-row${msg.from === 'me' ? ' is-me' : ' is-peer'}`}
-                  >
-                    <div
-                      className={`chat-bubble${secure ? ' is-protected' : ''}${
-                        msg.mediaKind ? ' has-media' : ''
-                      }`}
-                    >
-                      {renderMedia(msg)}
-                      {showText ? <p>{msg.text}</p> : null}
-                      {msg.mediaKind && !showText ? (
-                        <span className="chat-media-caption">{mediaLabel(msg.mediaKind)}</span>
-                      ) : null}
-                      <time>{formatClock(msg.at)}</time>
-                      {secure && (
-                        <span className="chat-lock-dot" aria-hidden>
-                          <Lock size={10} />
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-            {ended && (
-              <div className="chat-ended-panel">
-                <div className="chat-ended-orb" aria-hidden />
-                <BrandMark iconSize={34} className="chat-ended-brand" />
-                <h2>چت همبازی پایان یافت</h2>
-                <p>
-                  {wiped
-                    ? 'گفتگو به‌طور کامل پاک شد.'
-                    : 'چت قطع شد. برای پاک‌کردن کامل پیام‌ها، دکمه پایین صفحه را بزنید.'}
-                </p>
-                <div className="chat-ended-actions">
-                  <Link to="/matches" className="chat-btn chat-btn--primary">
-                    بازگشت به درخواست‌ها
-                  </Link>
-                  <Link to={`/pets/${peerPet.id}`} className="chat-btn chat-btn--ghost">
-                    مشاهده پروفایل پت
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {ended && (
-            <div className="chat-wipe-bar">
-              <button
-                type="button"
-                className="chat-btn chat-btn--danger chat-wipe-btn"
-                onClick={() => void wipeConversation()}
-                disabled={wiping || wiped}
-              >
-                <Trash2 size={18} />
-                {wiped ? 'گفتگو کاملاً پاک شد' : wiping ? 'در حال پاک‌کردن…' : 'پاک کردن کل گفتگو'}
-              </button>
-            </div>
-          )}
-
-          {!ended && (
-            <>
-              {sendError ? <p className="chat-send-error">{sendError}</p> : null}
-              <form className="chat-composer" onSubmit={(e) => void sendMessage(e)}>
-                <input
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder={secure ? 'پیام امن بنویسید…' : 'پیام بنویسید…'}
-                  aria-label="متن پیام"
-                />
-                <button type="submit" className="chat-send" disabled={!draft.trim() || sending}>
-                  ارسال
-                </button>
-              </form>
-            </>
-          )}
-        </section>
-
-        <aside
-          className={`chat-rail${panel !== 'none' ? ' is-open' : ''}`}
-          aria-label="جزئیات طرف مقابل"
+    <div className={`tg-chat${secure ? ' tg-chat--secure' : ''}${ended ? ' tg-chat--ended' : ''}`}>
+      <header className="tg-chat-header">
+        <button
+          type="button"
+          className="tg-chat-back"
+          onClick={() => navigate('/matches')}
+          aria-label="بازگشت"
         >
-          <div className="chat-rail-inner">
-            <div className="chat-rail-head">
-              <BrandMark iconSize={22} />
+          <ArrowRight size={22} strokeWidth={2.2} />
+        </button>
+        <button
+          type="button"
+          className="tg-chat-peer"
+          onClick={() => setInfoCard(infoCard === 'owner' ? 'none' : 'owner')}
+        >
+          <PetAvatar
+            type={peerPet.type}
+            size="sm"
+            imageUrl={peerPet.imageUrl}
+            name={peerPet.name}
+          />
+          <span>
+            <strong>{peerOwnerName}</strong>
+            <small>
+              {secure ? '🔒 چت امن' : 'آنلاین در چت همبازی'} · {peerPet.name}
+            </small>
+          </span>
+        </button>
+      </header>
+
+      {secure ? (
+        <div className="tg-secure-strip" role="status">
+          🔒 چت امن فعال است — پیام‌ها قابل ذخیره یا فوروارد نیستند
+        </div>
+      ) : null}
+
+      <div className="tg-chat-wallpaper" ref={scrollerRef}>
+        <div className="tg-chat-messages">
+          {messages.map((msg) => {
+            if (msg.from === 'system') {
+              return (
+                <div key={msg.id} className="tg-system-msg">
+                  <span>{msg.text}</span>
+                </div>
+              );
+            }
+            const showText =
+              Boolean(msg.text) &&
+              !/^\[(تصویر|ویدیو|پیام صوتی|فایل صوتی|فایل|استیکر|رسانه)\]$/.test(msg.text);
+            return (
+              <div
+                key={msg.id}
+                className={`tg-bubble-row${msg.from === 'me' ? ' is-out' : ' is-in'}`}
+              >
+                <div
+                  className={`tg-bubble${secure ? ' is-protected' : ''}${
+                    msg.mediaKind ? ' has-media' : ''
+                  }`}
+                >
+                  {renderMedia(msg)}
+                  {showText ? <p className="tg-bubble-text">{msg.text}</p> : null}
+                  {msg.mediaKind && !showText ? (
+                    <span className="tg-media-caption">{mediaLabel(msg.mediaKind)}</span>
+                  ) : null}
+                  <footer className="tg-bubble-meta">
+                    <time>{formatClock(msg.at)}</time>
+                    {msg.from === 'me' ? (
+                      <CheckCheck size={14} className="tg-ticks" aria-hidden />
+                    ) : null}
+                    {secure ? <span className="tg-lock">🔒</span> : null}
+                  </footer>
+                </div>
+              </div>
+            );
+          })}
+
+          {infoCard === 'owner' ? (
+            <div className="tg-info-card">
               <button
                 type="button"
-                className="chat-icon-btn"
-                onClick={() => setPanel('none')}
-                aria-label="بستن پنل"
+                className="tg-info-close"
+                onClick={() => setInfoCard('none')}
+                aria-label="بستن"
               >
-                <X size={18} />
+                <X size={16} />
+              </button>
+              <h3>👤 پروفایل طرف مقابل</h3>
+              <p>
+                <strong>{peerOwnerName}</strong>
+              </p>
+              <ul>
+                <li>شهر: {peerPet.city || '—'}</li>
+                <li>محله: {peerPet.neighborhood || '—'}</li>
+                <li>پت: {peerPet.name}</li>
+              </ul>
+            </div>
+          ) : null}
+
+          {infoCard === 'pet' ? (
+            <div className="tg-info-card">
+              <button
+                type="button"
+                className="tg-info-close"
+                onClick={() => setInfoCard('none')}
+                aria-label="بستن"
+              >
+                <X size={16} />
+              </button>
+              <div
+                className="tg-info-pet-cover"
+                style={{ backgroundImage: `url(${peerPet.imageUrl})` }}
+              />
+              <h3>
+                🐾 {peerPet.emoji} {peerPet.name}
+              </h3>
+              <ul>
+                <li>
+                  نوع: {PET_TYPE_LABELS[peerPet.type]} · {peerPet.breed}
+                </li>
+                <li>سن: {formatAge(peerPet)}</li>
+                <li>جنسیت: {PET_GENDER_LABELS[peerPet.gender]}</li>
+                <li>جثه: {PET_SIZE_LABELS[peerPet.size]}</li>
+                <li>واکسن: {peerPet.vaccinated ? 'زده' : 'نزده'}</li>
+              </ul>
+              {peerPet.bio ? <p className="tg-info-bio">{peerPet.bio}</p> : null}
+              <Link to={`/pets/${peerPet.id}`} className="tg-chat-link-btn">
+                مشاهده کامل پروفایل پت
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      {actionError ? <p className="tg-error">{actionError}</p> : null}
+      {sendError ? <p className="tg-error">{sendError}</p> : null}
+
+      {!ended ? (
+        <>
+          <form
+            className="tg-composer"
+            onSubmit={(e) => {
+              void sendMessage(e);
+            }}
+          >
+            <input
+              ref={inputRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              placeholder={secure ? 'پیام امن…' : 'پیام…'}
+              aria-label="متن پیام"
+              autoComplete="off"
+            />
+            <button
+              type="submit"
+              className="tg-send"
+              disabled={!draft.trim() || sending}
+              aria-label="ارسال"
+            >
+              <Send size={18} />
+            </button>
+          </form>
+
+          <div className="tg-reply-keyboard" role="toolbar" aria-label="منوی چت همبازی">
+            <div className="tg-reply-row">
+              <button
+                type="button"
+                className={`tg-reply-key${secure ? ' is-on' : ''}`}
+                onClick={() => void toggleSecure()}
+              >
+                {secureBtnLabel}
+              </button>
+              <button
+                type="button"
+                className="tg-reply-key"
+                onClick={() => setInfoCard('owner')}
+              >
+                {TG_BTNS.peerProfile}
               </button>
             </div>
-
-            {(panel === 'owner' || panel === 'none') && (
-              <div className={`chat-profile-block${panel === 'owner' ? ' is-focus' : ''}`}>
-                <div className="chat-profile-hero chat-profile-hero--owner">
-                  <span className="chat-profile-kicker">پروفایل طرف مقابل</span>
-                  <h2>{peerOwnerName}</h2>
-                  <p>
-                    صاحب {peerPet.name} در {peerPet.neighborhood}، {peerPet.city}
-                  </p>
-                </div>
-                <ul className="chat-profile-facts">
-                  <li>
-                    <strong>شهر</strong>
-                    <span>{peerPet.city}</span>
-                  </li>
-                  <li>
-                    <strong>محله</strong>
-                    <span>{peerPet.neighborhood}</span>
-                  </li>
-                  <li>
-                    <strong>پت</strong>
-                    <span>{peerPet.name}</span>
-                  </li>
-                </ul>
-                <div className="chat-profile-cta">
-                  <button
-                    type="button"
-                    className="chat-btn chat-btn--primary"
-                    onClick={() => setContactAdded(true)}
-                    disabled={contactAdded}
-                  >
-                    <UserPlus size={16} />
-                    {contactAdded ? 'به مخاطبین اضافه شد' : 'افزودن مخاطب'}
-                  </button>
-                  <button type="button" className="chat-btn chat-btn--ghost" disabled>
-                    <Phone size={16} />
-                    تماس بعد از هماهنگی
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {(panel === 'pet' || panel === 'none') && (
-              <div className={`chat-profile-block${panel === 'pet' ? ' is-focus' : ''}`}>
-                <div
-                  className="chat-pet-cover"
-                  style={{ backgroundImage: `url(${peerPet.imageUrl})` }}
-                >
-                  <div className="chat-pet-cover-shade">
-                    <span className="chat-profile-kicker">پروفایل پت</span>
-                    <h2>
-                      {peerPet.emoji} {peerPet.name}
-                    </h2>
-                    <p>
-                      {PET_TYPE_LABELS[peerPet.type]} · {peerPet.breed}
-                    </p>
-                  </div>
-                </div>
-                <ul className="chat-profile-facts">
-                  <li>
-                    <strong>سن</strong>
-                    <span>{formatAge(peerPet)}</span>
-                  </li>
-                  <li>
-                    <strong>جنسیت</strong>
-                    <span>{PET_GENDER_LABELS[peerPet.gender]}</span>
-                  </li>
-                  <li>
-                    <strong>جثه</strong>
-                    <span>{PET_SIZE_LABELS[peerPet.size]}</span>
-                  </li>
-                  <li>
-                    <strong>واکسن</strong>
-                    <span>{peerPet.vaccinated ? 'زده' : 'نزده'}</span>
-                  </li>
-                </ul>
-                {peerPet.bio && <p className="chat-pet-bio">{peerPet.bio}</p>}
-                <Link to={`/pets/${peerPet.id}`} className="chat-btn chat-btn--primary">
-                  مشاهده کامل پروفایل پت
-                </Link>
-              </div>
-            )}
+            <div className="tg-reply-row">
+              <button type="button" className="tg-reply-key" onClick={() => setInfoCard('pet')}>
+                {TG_BTNS.petProfile}
+              </button>
+              <button
+                type="button"
+                className={`tg-reply-key${contactAdded ? ' is-done' : ''}`}
+                onClick={() => void addContact()}
+                disabled={contactAdded}
+              >
+                {contactAdded ? '✅ مخاطب اضافه شد' : TG_BTNS.addContact}
+              </button>
+            </div>
+            <div className="tg-reply-row">
+              <button
+                type="button"
+                className="tg-reply-key tg-reply-key--danger"
+                onClick={() => void endChat()}
+                disabled={ending}
+              >
+                {ending ? 'در حال قطع…' : TG_BTNS.end}
+              </button>
+            </div>
           </div>
-        </aside>
-      </div>
+        </>
+      ) : (
+        <div className="tg-ended-bar">
+          <p>{wiped ? 'گفتگو کاملاً پاک شد.' : CHAT_WIPE_HINT}</p>
+          <button
+            type="button"
+            className="tg-wipe-btn"
+            onClick={() => void wipeConversation()}
+            disabled={wiping || wiped}
+          >
+            {wiped ? (
+              <>
+                <Check size={16} /> پاک شد
+              </>
+            ) : wiping ? (
+              'در حال پاک‌کردن…'
+            ) : (
+              '🗑 پاک کردن کل گفتگو'
+            )}
+          </button>
+          <Link to="/matches" className="tg-chat-link-btn">
+            بازگشت به درخواست‌ها
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

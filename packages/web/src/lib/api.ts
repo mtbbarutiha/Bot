@@ -190,6 +190,17 @@ export async function clearPlaydateChatMessages(
   });
 }
 
+
+export async function addUserContact(
+  userId: number,
+  contactUserId: number
+): Promise<{ ok: true; created: boolean }> {
+  return request(`/api/users/${userId}/contacts`, {
+    method: 'POST',
+    body: JSON.stringify({ contactUserId }),
+  });
+}
+
 export async function endPlaydateChat(
   playdateId: number,
   userId: number
