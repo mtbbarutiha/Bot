@@ -245,6 +245,24 @@ export interface VetConsultation {
   petBreed?: string;
 }
 
+/** نسخه دارویی صادرشده توسط دامپزشک */
+export interface Prescription {
+  id: number;
+  consultId?: number;
+  petId: number;
+  vetUserId: number;
+  patientUserId: number;
+  text: string;
+  pdfPath?: string;
+  createdAt: string;
+  /** غنی‌سازی */
+  vetName?: string;
+  patientName?: string;
+  petName?: string;
+  petSpecies?: string;
+  petBreed?: string;
+}
+
 export interface BotSession {
   telegramId: string;
   userId?: number;
@@ -296,6 +314,8 @@ export interface BotSession {
   vetChatRole?: 'vet' | 'patient';
   /** ثبت مورد در پرونده پزشکی (پت انتخاب‌شده) */
   medicalNotePetId?: number;
+  /** نوشتن نسخه — پت انتخاب‌شده */
+  prescriptionPetId?: number;
   updatedAt: string;
 }
 
@@ -371,6 +391,7 @@ export type BotStep =
   | 'admin_password'
   | 'vet_chat'
   | 'vet_medical_note'
+  | 'vet_prescription'
   | 'ready';
 
 export interface PetDraft {

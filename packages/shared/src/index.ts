@@ -85,6 +85,8 @@ export {
   PET_SPECIES_LABELS,
 } from './catalog';
 
+export type { Prescription } from './petdate';
+
 export interface User {
   id: number;
   telegramId?: string;

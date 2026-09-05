@@ -20,6 +20,7 @@ import type {
   PetSpecies,
   PlaydateRequest,
   PlaydateStatus,
+  Prescription,
   ProfileRewardSection,
   Section,
   User,
@@ -308,6 +309,27 @@ function migrateSchema() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_pet_medical_entries_pet
       ON pet_medical_entries (pet_id, created_at DESC);
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS prescriptions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consult_id INTEGER REFERENCES vet_consultations(id),
+      pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+      vet_user_id INTEGER NOT NULL REFERENCES users(id),
+      patient_user_id INTEGER NOT NULL REFERENCES users(id),
+      text TEXT NOT NULL,
+      pdf_path TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_prescriptions_pet
+      ON prescriptions (pet_id, created_at DESC);
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_prescriptions_consult
+      ON prescriptions (consult_id, created_at DESC);
   `);
 
   db.exec(`
@@ -2499,4 +2521,95 @@ export const dbService = {
     if (byPatient) return { ok: true, asOwner: false, asVet: true };
     return { ok: false };
   },
+
+  createPrescription(input: {
+    consultId?: number;
+    petId: number;
+    vetUserId: number;
+    patientUserId: number;
+    text: string;
+    pdfPath?: string;
+  }): Prescription {
+    const result = db
+      .prepare(
+        `INSERT INTO prescriptions (
+           consult_id, pet_id, vet_user_id, patient_user_id, text, pdf_path
+         ) VALUES (?, ?, ?, ?, ?, ?)`
+      )
+      .run(
+        input.consultId ?? null,
+        input.petId,
+        input.vetUserId,
+        input.patientUserId,
+        input.text.trim(),
+        input.pdfPath ?? null
+      );
+    return this.getPrescription(Number(result.lastInsertRowid))!;
+  },
+
+  updatePrescriptionPdfPath(id: number, pdfPath: string): Prescription | null {
+    const existing = this.getPrescription(id);
+    if (!existing) return null;
+    db.prepare(`UPDATE prescriptions SET pdf_path = ? WHERE id = ?`).run(pdfPath, id);
+    return this.getPrescription(id);
+  },
+
+  getPrescription(id: number): Prescription | null {
+    const row = db
+      .prepare(
+        `SELECT pr.*,
+                vet.name AS vet_name,
+                patient.name AS patient_name,
+                pets.name AS pet_name,
+                pets.species AS pet_species,
+                pets.breed AS pet_breed
+         FROM prescriptions pr
+         LEFT JOIN users vet ON vet.id = pr.vet_user_id
+         LEFT JOIN users patient ON patient.id = pr.patient_user_id
+         LEFT JOIN pets ON pets.id = pr.pet_id
+         WHERE pr.id = ?`
+      )
+      .get(id) as Record<string, unknown> | undefined;
+    if (!row) return null;
+    return mapPrescription(row);
+  },
+
+  listPrescriptionsForPet(petId: number, limit = 20): Prescription[] {
+    const rows = db
+      .prepare(
+        `SELECT pr.*,
+                vet.name AS vet_name,
+                patient.name AS patient_name,
+                pets.name AS pet_name,
+                pets.species AS pet_species,
+                pets.breed AS pet_breed
+         FROM prescriptions pr
+         LEFT JOIN users vet ON vet.id = pr.vet_user_id
+         LEFT JOIN users patient ON patient.id = pr.patient_user_id
+         LEFT JOIN pets ON pets.id = pr.pet_id
+         WHERE pr.pet_id = ?
+         ORDER BY pr.created_at DESC, pr.id DESC
+         LIMIT ?`
+      )
+      .all(petId, limit) as Record<string, unknown>[];
+    return rows.map(mapPrescription);
+  },
 };
+
+function mapPrescription(row: Record<string, unknown>): Prescription {
+  return {
+    id: Number(row.id),
+    consultId: row.consult_id != null ? Number(row.consult_id) : undefined,
+    petId: Number(row.pet_id),
+    vetUserId: Number(row.vet_user_id),
+    patientUserId: Number(row.patient_user_id),
+    text: String(row.text),
+    pdfPath: (row.pdf_path as string) || undefined,
+    createdAt: String(row.created_at),
+    vetName: (row.vet_name as string) || undefined,
+    patientName: (row.patient_name as string) || undefined,
+    petName: (row.pet_name as string) || undefined,
+    petSpecies: (row.pet_species as string) || undefined,
+    petBreed: (row.pet_breed as string) || undefined,
+  };
+}

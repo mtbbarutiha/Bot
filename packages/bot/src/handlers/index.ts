@@ -87,6 +87,7 @@ import {
 import {
   handleVetChatMedicalPetPick,
   handleVetChatNotePetPick,
+  handleVetChatPrescriptionPetPick,
   handleVetChatRelay,
 } from './vet-chat';
 import { handleVetPatients } from './vet';
@@ -452,6 +453,9 @@ export function registerHandlers(bot: Bot): void {
   );
   bot.callbackQuery(/^vchat:note:(\d+)$/, (ctx) =>
     handleVetChatNotePetPick(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery(/^vchat:rx:(\d+)$/, (ctx) =>
+    handleVetChatPrescriptionPetPick(ctx, Number(ctx.match![1]))
   );
   bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));
   bot.callbackQuery(/^shop:/, (ctx) => handleComingSoon(ctx, 'پت شاپ'));

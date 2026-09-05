@@ -684,3 +684,41 @@ export async function getVetConsultation(id: number): Promise<import('@petdate/s
     return null;
   }
 }
+
+export type CreatePrescriptionResponse = {
+  prescription: import('@petdate/shared').Prescription;
+  pdfPath: string;
+  pdfUrl: string;
+  sms:
+    | { sent: true; phone: string }
+    | { sent: false; skipped: true; reason: string };
+  patient: {
+    id: number;
+    name: string;
+    telegramId?: string;
+    phoneVerified?: boolean;
+  };
+  vet: { id: number; name: string; telegramId?: string };
+  pet: { id: number; name: string; species?: string; breed?: string };
+};
+
+export async function createConsultationPrescription(
+  consultId: number,
+  data: { vetUserId: number; petId: number; text: string }
+): Promise<CreatePrescriptionResponse> {
+  return request(`/api/consultations/${consultId}/prescription`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/** دانلود باینری PDF نسخه از API */
+export async function fetchPrescriptionPdfBuffer(prescriptionId: number): Promise<Buffer> {
+  const res = await fetch(`${config.apiUrl}/api/prescriptions/${prescriptionId}/pdf`);
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`PDF ${res.status}: ${body}`);
+  }
+  const ab = await res.arrayBuffer();
+  return Buffer.from(ab);
+}
