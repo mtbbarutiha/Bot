@@ -2233,8 +2233,13 @@ export const dbService = {
     const params: unknown[] = [];
 
     if (filters?.userId) {
-      sql += ' AND (from_user_id = ? OR to_user_id = ?)';
-      params.push(filters.userId, filters.userId);
+      // Match by user ids OR by pets owned by this user (covers bot→web identity edge cases)
+      sql += ` AND (
+        from_user_id = ? OR to_user_id = ?
+        OR from_pet_id IN (SELECT id FROM pets WHERE owner_id = ?)
+        OR to_pet_id IN (SELECT id FROM pets WHERE owner_id = ?)
+      )`;
+      params.push(filters.userId, filters.userId, filters.userId, filters.userId);
     }
     if (filters?.petId) {
       sql += ' AND (from_pet_id = ? OR to_pet_id = ?)';

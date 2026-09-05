@@ -54,7 +54,8 @@ function toMatchStatus(status: PlaydateRequest['status']): MatchStatus {
 
 /** Map API playdate → UI card (other party’s pet as fromPet). */
 export function playdateToMatchRequest(req: PlaydateRequest, myUserId: number): MatchRequest {
-  const incoming = req.toUserId === myUserId;
+  const incoming =
+    req.toUserId === myUserId || req.toPet?.ownerId === myUserId;
   const other = incoming ? req.fromPet : req.toPet;
   return {
     id: req.id,

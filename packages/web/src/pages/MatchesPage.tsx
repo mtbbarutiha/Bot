@@ -40,10 +40,10 @@ export function MatchesPage() {
       const rows = await listPlaydateRequests({ userId: myUserId });
       const mapped = rows
         .filter((r) => {
-          if (r.status === 'pending') return r.toUserId === myUserId;
-          if (r.status === 'accepted') {
-            return r.toUserId === myUserId || r.fromUserId === myUserId;
-          }
+          const ownsTo = r.toUserId === myUserId || r.toPet?.ownerId === myUserId;
+          const ownsFrom = r.fromUserId === myUserId || r.fromPet?.ownerId === myUserId;
+          if (r.status === 'pending') return Boolean(ownsTo);
+          if (r.status === 'accepted') return Boolean(ownsTo || ownsFrom);
           return false;
         })
         .map((r) => playdateToMatchRequest(r, myUserId));
