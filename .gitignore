@@ -10,3 +10,4 @@ dev-dist/
 *.tsbuildinfo
 packages/bot/data/sessions.json
 packages/api/data/prescriptions/
+packages/api/data/chat-uploads/

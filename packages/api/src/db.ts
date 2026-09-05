@@ -500,6 +500,9 @@ function migrateSchema() {
   if (!chatNames.has('file_name')) {
     db.exec('ALTER TABLE playdate_chat_messages ADD COLUMN file_name TEXT');
   }
+  if (!chatNames.has('storage_key')) {
+    db.exec('ALTER TABLE playdate_chat_messages ADD COLUMN storage_key TEXT');
+  }
 
   // Backfill roles JSON from legacy single role column
   const roleRows = db
@@ -1127,6 +1130,7 @@ function mapPlaydateChatMessage(row: Record<string, unknown>): PlaydateChatMessa
     text: row.text as string,
     mediaKind: (row.media_kind as PlaydateChatMessage['mediaKind']) ?? null,
     telegramFileId: (row.telegram_file_id as string | undefined) ?? null,
+    storageKey: (row.storage_key as string | undefined) ?? null,
     mimeType: (row.mime_type as string | undefined) ?? null,
     fileName: (row.file_name as string | undefined) ?? null,
     createdAt: row.created_at as string,
@@ -2421,18 +2425,22 @@ export const dbService = {
     text?: string;
     mediaKind?: PlaydateChatMessage['mediaKind'];
     telegramFileId?: string | null;
+    storageKey?: string | null;
     mimeType?: string | null;
     fileName?: string | null;
   }): PlaydateChatMessage {
     const text = (data.text ?? '').trim();
-    const hasMedia = Boolean(data.mediaKind && data.telegramFileId);
+    const hasMedia = Boolean(
+      data.mediaKind && (data.telegramFileId || data.storageKey)
+    );
     if (!text && !hasMedia) throw new Error('EMPTY_TEXT');
     if (text.length > 4000) throw new Error('TEXT_TOO_LONG');
     const result = db
       .prepare(
         `INSERT INTO playdate_chat_messages (
-          playdate_id, sender_user_id, text, media_kind, telegram_file_id, mime_type, file_name
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+          playdate_id, sender_user_id, text, media_kind, telegram_file_id,
+          mime_type, file_name, storage_key
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         data.playdateId,
@@ -2441,7 +2449,8 @@ export const dbService = {
         data.mediaKind ?? null,
         data.telegramFileId ?? null,
         data.mimeType ?? null,
-        data.fileName ?? null
+        data.fileName ?? null,
+        data.storageKey ?? null
       );
     return mapPlaydateChatMessage(
       db
@@ -2468,6 +2477,7 @@ export const dbService = {
     db.prepare(
       `UPDATE playdate_requests SET chat_ended = 1, chat_secure = 0, updated_at = datetime('now') WHERE id = ?`
     ).run(id);
+    // File cleanup is handled by the route (imports fs helpers outside db).
     this.clearPlaydateChatMessages(id);
     return this.getPlaydateRequest(id);
   },
@@ -2477,6 +2487,16 @@ export const dbService = {
       `UPDATE playdate_requests SET chat_ended = 0, updated_at = datetime('now') WHERE id = ?`
     ).run(id);
     return this.getPlaydateRequest(id);
+  },
+
+  listPlaydateChatStorageKeys(playdateId: number): string[] {
+    const rows = db
+      .prepare(
+        `SELECT storage_key FROM playdate_chat_messages
+         WHERE playdate_id = ? AND storage_key IS NOT NULL AND storage_key != ''`
+      )
+      .all(playdateId) as { storage_key: string }[];
+    return rows.map((r) => r.storage_key).filter(Boolean);
   },
 
   clearPlaydateChatMessages(playdateId: number): number {

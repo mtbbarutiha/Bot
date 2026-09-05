@@ -282,6 +282,8 @@ export interface PlaydateChatMessage {
   text: string;
   mediaKind?: PlaydateChatMediaKind | null;
   telegramFileId?: string | null;
+  /** Local upload key under API chat-uploads (web attach). */
+  storageKey?: string | null;
   mimeType?: string | null;
   fileName?: string | null;
   createdAt: string;

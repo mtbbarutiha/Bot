@@ -1,4 +1,6 @@
 import { Router } from 'express';
+import fs from 'fs';
+import multer from 'multer';
 import type { PlaydateStatus } from '@petdate/shared';
 import { dbService } from '../db';
 import { notifyPlaydateRequestTelegram } from '../services/telegram-playdate-notify';
@@ -8,11 +10,29 @@ import {
   notifyPlaydateChatTelegram,
   resolveTelegramFile,
 } from '../services/telegram-chat-notify';
+import {
+  MAX_UPLOAD_BYTES,
+  deleteChatUpload,
+  inferMediaKind,
+  resolveStoragePath,
+  saveChatUpload,
+} from '../services/chat-upload-store';
 import { startOwnerChatFromApi } from '../services/telegram-owner-chat-start';
 
 const VALID_STATUSES: PlaydateStatus[] = ['pending', 'accepted', 'rejected', 'cancelled'];
 
+const chatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+});
+
 export const playdatesRouter = Router();
+
+function purgePlaydateUploads(playdateId: number): void {
+  for (const key of dbService.listPlaydateChatStorageKeys(playdateId)) {
+    deleteChatUpload(key);
+  }
+}
 
 function peerTelegramIds(playdate: NonNullable<ReturnType<typeof dbService.getPlaydateRequest>>, exceptUserId?: number): string[] {
   const ids: string[] = [];
@@ -226,6 +246,10 @@ playdatesRouter.post('/:id/messages', async (req, res) => {
           text: message.text,
           playdateId,
           protectContent: Boolean(playdate.chatSecure),
+          mediaKind: message.mediaKind,
+          storageKey: message.storageKey,
+          mimeType: message.mimeType,
+          fileName: message.fileName,
         });
       }
     }
@@ -244,6 +268,120 @@ playdatesRouter.post('/:id/messages', async (req, res) => {
   }
 });
 
+playdatesRouter.post('/:id/messages/upload', (req, res) => {
+  chatUpload.single('file')(req, res, async (uploadErr) => {
+    if (uploadErr) {
+      const tooLarge =
+        uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE';
+      res.status(tooLarge ? 413 : 400).json({
+        error: tooLarge ? 'حجم فایل بیش از حد مجاز است (حداکثر ۱۵ مگابایت)' : 'آپلود فایل ناموفق بود',
+      });
+      return;
+    }
+
+    const playdateId = Number(req.params.id);
+    const senderUserId = Number(
+      (req.body as { senderUserId?: string; userId?: string })?.senderUserId ??
+        (req.body as { userId?: string })?.userId
+    );
+    const caption =
+      typeof (req.body as { caption?: string; text?: string })?.caption === 'string'
+        ? (req.body as { caption: string }).caption
+        : typeof (req.body as { text?: string })?.text === 'string'
+          ? (req.body as { text: string }).text
+          : '';
+    const file = req.file;
+
+    if (!Number.isFinite(playdateId) || !Number.isFinite(senderUserId)) {
+      res.status(400).json({ error: 'شناسه درخواست و senderUserId الزامی هستند' });
+      return;
+    }
+    if (!file?.buffer?.length) {
+      res.status(400).json({ error: 'فایل الزامی است' });
+      return;
+    }
+
+    const gate = requireParticipant(playdateId, senderUserId);
+    if (gate.error === 'not_found') {
+      res.status(404).json({ error: 'درخواست پیدا نشد' });
+      return;
+    }
+    if (gate.error === 'forbidden') {
+      res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+      return;
+    }
+    if (gate.playdate.status !== 'accepted') {
+      res.status(409).json({ error: 'چت فقط بعد از قبول درخواست فعال است' });
+      return;
+    }
+    if (gate.playdate.chatEnded) {
+      res.status(409).json({ error: 'این چت قطع شده است' });
+      return;
+    }
+
+    try {
+      const originalName = file.originalname || 'file';
+      const mimeType = file.mimetype || 'application/octet-stream';
+      const mediaKind = inferMediaKind(mimeType, originalName);
+      const saved = saveChatUpload({
+        playdateId,
+        originalName,
+        buffer: file.buffer,
+      });
+
+      const message = dbService.createPlaydateChatMessage({
+        playdateId,
+        senderUserId,
+        text: caption,
+        mediaKind,
+        storageKey: saved.storageKey,
+        mimeType,
+        fileName: originalName,
+      });
+
+      const playdate = gate.playdate;
+      let peerUserId =
+        playdate.fromUserId === senderUserId ? playdate.toUserId : playdate.fromUserId;
+      if (!peerUserId) {
+        const peerPetId =
+          playdate.fromUserId === senderUserId ? playdate.toPetId : playdate.fromPetId;
+        peerUserId = dbService.getPet(peerPetId)?.ownerId;
+      }
+      const peer = peerUserId ? dbService.getUserById(peerUserId) : null;
+      const sender = dbService.getUserById(senderUserId);
+      if (peer?.telegramId) {
+        void notifyPlaydateChatTelegram({
+          toTelegramId: peer.telegramId,
+          senderName: sender?.name || 'همبازی',
+          text: message.text,
+          playdateId,
+          protectContent: Boolean(playdate.chatSecure),
+          mediaKind: message.mediaKind,
+          storageKey: message.storageKey,
+          mimeType: message.mimeType,
+          fileName: message.fileName,
+        });
+      }
+
+      res.status(201).json(message);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'FILE_TOO_LARGE') {
+        res.status(413).json({ error: 'حجم فایل بیش از حد مجاز است (حداکثر ۱۵ مگابایت)' });
+        return;
+      }
+      if (err instanceof Error && err.message === 'EMPTY_TEXT') {
+        res.status(400).json({ error: 'فایل یا متن پیام الزامی است' });
+        return;
+      }
+      if (err instanceof Error && err.message === 'TEXT_TOO_LONG') {
+        res.status(400).json({ error: 'کپشن خیلی طولانی است' });
+        return;
+      }
+      console.warn('chat upload failed:', (err as Error).message);
+      res.status(500).json({ error: 'ذخیره فایل ناموفق بود' });
+    }
+  });
+});
 
 playdatesRouter.get('/:id/messages/:messageId/file', async (req, res) => {
   const playdateId = Number(req.params.id);
@@ -265,7 +403,31 @@ playdatesRouter.get('/:id/messages/:messageId/file', async (req, res) => {
   }
 
   const message = dbService.getPlaydateChatMessage(messageId);
-  if (!message || message.playdateId !== playdateId || !message.telegramFileId) {
+  if (!message || message.playdateId !== playdateId) {
+    res.status(404).json({ error: 'فایل پیدا نشد' });
+    return;
+  }
+
+  if (message.storageKey) {
+    const abs = resolveStoragePath(message.storageKey);
+    if (!abs || !fs.existsSync(abs)) {
+      res.status(404).json({ error: 'فایل پیدا نشد' });
+      return;
+    }
+    const contentType = message.mimeType || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    if (message.fileName) {
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename*=UTF-8''${encodeURIComponent(message.fileName)}`
+      );
+    }
+    res.send(fs.readFileSync(abs));
+    return;
+  }
+
+  if (!message.telegramFileId) {
     res.status(404).json({ error: 'فایل پیدا نشد' });
     return;
   }
@@ -324,6 +486,7 @@ playdatesRouter.post('/:id/end-chat', async (req, res) => {
     return;
   }
 
+  purgePlaydateUploads(playdateId);
   const updated = dbService.endPlaydateChat(playdateId);
   for (const telegramId of peerTelegramIds(gate.playdate, userId)) {
     void notifyPlaydateChatEndedTelegram({ toTelegramId: telegramId });
@@ -383,6 +546,7 @@ playdatesRouter.delete('/:id/messages', (req, res) => {
     return;
   }
 
+  purgePlaydateUploads(playdateId);
   const cleared = dbService.clearPlaydateChatMessages(playdateId);
   res.json({ ok: true, cleared });
 });

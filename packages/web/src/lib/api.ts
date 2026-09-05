@@ -181,6 +181,40 @@ export async function postPlaydateChatMessage(
   });
 }
 
+/** Upload a chat attachment (photo / video / audio / document). */
+export async function uploadPlaydateChatFile(
+  playdateId: number,
+  senderUserId: number,
+  file: File,
+  caption = ''
+): Promise<PlaydateChatMessage> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('senderUserId', String(senderUserId));
+  if (caption.trim()) form.append('caption', caption.trim());
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/playdate-requests/${playdateId}/messages/upload`, {
+      method: 'POST',
+      body: form,
+    });
+  } catch {
+    throw new Error('اتصال به سرور برقرار نشد. مطمئن شو API روشن است.');
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    try {
+      const json = JSON.parse(body) as { error?: string; message?: string };
+      throw new Error(json.error || json.message || body || `خطای ${res.status}`);
+    } catch (err) {
+      if (err instanceof Error && !err.message.startsWith('{') && err.message !== body) throw err;
+      throw new Error(body || `خطای ${res.status}`);
+    }
+  }
+  return res.json() as Promise<PlaydateChatMessage>;
+}
+
 export async function clearPlaydateChatMessages(
   playdateId: number,
   userId: number

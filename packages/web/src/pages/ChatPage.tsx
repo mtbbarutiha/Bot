@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, Check, CheckCheck, Send, X } from 'lucide-react';
+import { ArrowRight, Check, CheckCheck, Paperclip, Send, X } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
@@ -14,6 +14,7 @@ import {
   playdateChatMediaUrl,
   postPlaydateChatMessage,
   setPlaydateChatSecure,
+  uploadPlaydateChatFile,
 } from '../lib/api';
 import type { PlaydateChatMediaKind, PlaydateChatMessage } from '@petdate/shared';
 import { playdateToMatchRequest } from '../lib/playdateMap';
@@ -38,6 +39,7 @@ const CHAT_WIPE_HINT =
   '🗑 لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
 const POLL_MS = 2500;
+const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 
 type ChatMsg = {
   id: string;
@@ -47,6 +49,7 @@ type ChatMsg = {
   at: number;
   mediaKind?: PlaydateChatMediaKind | null;
   telegramFileId?: string | null;
+  storageKey?: string | null;
   mimeType?: string | null;
   fileName?: string | null;
 };
@@ -61,6 +64,7 @@ function toUiMessage(row: PlaydateChatMessage, myUserId: number): ChatMsg {
     at: Number.isFinite(at) ? at : Date.now(),
     mediaKind: row.mediaKind,
     telegramFileId: row.telegramFileId,
+    storageKey: row.storageKey,
     mimeType: row.mimeType,
     fileName: row.fileName,
   };
@@ -121,8 +125,11 @@ export function ChatPage() {
   const [ending, setEnding] = useState(false);
   const [wiping, setWiping] = useState(false);
   const [infoCard, setInfoCard] = useState<'none' | 'owner' | 'pet'>('none');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const lastMsgIdRef = useRef(0);
   const bootstrappedRef = useRef<number | null>(null);
 
@@ -186,6 +193,8 @@ export function ChatPage() {
     setActionError(null);
     setWiped(false);
     setInfoCard('none');
+    setPendingFile(null);
+    setPendingPreview(null);
     if (!ended) {
       setMessages([
         systemMessage('💬 چت همبازی فعال شد — از دکمه‌های پایین مثل تلگرام استفاده کن'),
@@ -266,6 +275,16 @@ export function ChatPage() {
     el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [messages, ended, infoCard]);
 
+  useEffect(() => {
+    if (!pendingFile || !pendingFile.type.startsWith('image/')) {
+      setPendingPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(pendingFile);
+    setPendingPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingFile]);
+
   const peerPet = match?.fromPet;
   const peerOwnerName = peerPet?.ownerName || 'صاحب پت';
   const peerOwnerId = peerPet?.ownerId;
@@ -293,21 +312,44 @@ export function ChatPage() {
     );
   }
 
+  function clearPendingFile() {
+    setPendingFile(null);
+    setPendingPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function onPickFile(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    if (file.size > MAX_ATTACH_BYTES) {
+      setSendError('حجم فایل بیش از حد مجاز است (حداکثر ۱۵ مگابایت)');
+      clearPendingFile();
+      return;
+    }
+    setSendError(null);
+    setPendingFile(file);
+  }
+
   async function sendMessage(e?: FormEvent) {
     e?.preventDefault();
     if (ended || sending || !myUserId || !match) return;
     const text = draft.trim();
-    if (!text) return;
+    const file = pendingFile;
+    if (!text && !file) return;
     setSending(true);
     setSendError(null);
     setDraft('');
+    clearPendingFile();
     try {
-      const saved = await postPlaydateChatMessage(match.id, myUserId, text);
+      const saved = file
+        ? await uploadPlaydateChatFile(match.id, myUserId, file, text)
+        : await postPlaydateChatMessage(match.id, myUserId, text);
       const ui = toUiMessage(saved, myUserId);
       setMessages((prev) => (prev.some((m) => m.id === ui.id) ? prev : [...prev, ui]));
       lastMsgIdRef.current = Math.max(lastMsgIdRef.current, saved.id);
     } catch (err) {
-      setDraft(text);
+      if (text) setDraft(text);
+      if (file) setPendingFile(file);
       setSendError(err instanceof Error ? err.message : 'ارسال پیام ناموفق بود');
     } finally {
       setSending(false);
@@ -404,7 +446,8 @@ export function ChatPage() {
   }
 
   function renderMedia(msg: ChatMsg) {
-    if (!msg.mediaKind || !msg.telegramFileId || !myUserId || !match) return null;
+    const hasFile = Boolean(msg.telegramFileId || msg.storageKey);
+    if (!msg.mediaKind || !hasFile || !myUserId || !match) return null;
     const src = playdateChatMediaUrl(match.id, msg.numericId, myUserId);
     if (msg.mediaKind === 'photo' || msg.mediaKind === 'sticker') {
       return (
@@ -573,6 +616,23 @@ export function ChatPage() {
 
       {!ended ? (
         <>
+          {pendingFile ? (
+            <div className="tg-attach-preview">
+              {pendingPreview ? (
+                <img src={pendingPreview} alt="" className="tg-attach-thumb" />
+              ) : (
+                <span className="tg-attach-name">📎 {pendingFile.name}</span>
+              )}
+              <button
+                type="button"
+                className="tg-attach-clear"
+                onClick={clearPendingFile}
+                aria-label="حذف فایل"
+              >
+                <X size={16} />
+              </button>
+            </div>
+          ) : null}
           <form
             className="tg-composer"
             onSubmit={(e) => {
@@ -580,17 +640,42 @@ export function ChatPage() {
             }}
           >
             <input
+              ref={fileInputRef}
+              type="file"
+              className="tg-file-input"
+              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip,.txt"
+              onChange={(e) => onPickFile(e.target.files)}
+              aria-hidden
+              tabIndex={-1}
+            />
+            <button
+              type="button"
+              className="tg-attach"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending}
+              aria-label="پیوست فایل"
+              title="پیوست عکس یا فایل"
+            >
+              <Paperclip size={20} />
+            </button>
+            <input
               ref={inputRef}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder={secure ? 'پیام امن…' : 'پیام…'}
+              placeholder={
+                pendingFile
+                  ? 'کپشن (اختیاری)…'
+                  : secure
+                    ? 'پیام امن…'
+                    : 'پیام…'
+              }
               aria-label="متن پیام"
               autoComplete="off"
             />
             <button
               type="submit"
               className="tg-send"
-              disabled={!draft.trim() || sending}
+              disabled={(!draft.trim() && !pendingFile) || sending}
               aria-label="ارسال"
             >
               <Send size={18} />
