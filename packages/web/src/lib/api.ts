@@ -6,9 +6,10 @@ const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
+    // headers must come after ...init so Authorization does not wipe Content-Type
     res = await fetch(`${API_BASE}${path}`, {
-      headers: { 'Content-Type': 'application/json', ...init?.headers },
       ...init,
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
     });
   } catch {
     throw new Error('اتصال به سرور برقرار نشد. مطمئن شو API روشن است.');

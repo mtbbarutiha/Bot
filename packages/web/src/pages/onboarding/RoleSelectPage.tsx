@@ -52,8 +52,8 @@ export function RoleSelectPage() {
     try {
       await saveRoles(selected);
       navigate('/onboarding/profile', { state: { next } });
-    } catch {
-      setError('ثبت نقش‌ها ناموفق بود. دوباره امتحان کن.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'ثبت نقش‌ها ناموفق بود. دوباره امتحان کن.');
     } finally {
       setSaving(false);
     }
