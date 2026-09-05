@@ -144,22 +144,13 @@ export async function handleQuickVet(ctx: Context): Promise<void> {
       'دامپزشک آنلاین در دسترسه.',
       `هزینه اتصال فوری: <b>${formatNum(QUICK_VET_COST)}</b> سکه`,
       '',
-      'نوع مشاوره رو انتخاب کن:',
+      'برای شروع مشاوره، دکمه زیر رو بزن:',
     ].join('\n'),
     {
       parse_mode: 'HTML',
       reply_markup: new InlineKeyboard()
         .text('🩺 به یه پزشک آنلاین وصلم کن', 'vet:connect')
-        .success()
-        .row()
-        .text('💬 چت متنی', 'vet:chat')
-        .primary()
-        .row()
-        .text('📞 تماس صوتی', 'vet:call')
-        .primary()
-        .row()
-        .text('📹 ویدیو کال', 'vet:video')
-        .primary(),
+        .success(),
     }
   );
   await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
