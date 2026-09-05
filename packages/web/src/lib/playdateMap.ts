@@ -13,7 +13,10 @@ function speciesToType(species?: string): PetType {
 }
 
 function resolveImage(url?: string | null): string {
-  if (url && /^https?:\/\//i.test(url)) return url;
+  if (!url?.trim()) return EMPTY_STATE_PHOTO;
+  const u = url.trim();
+  // Absolute remote, same-origin API uploads, or static /pets assets
+  if (/^https?:\/\//i.test(u) || u.startsWith('/')) return u;
   return EMPTY_STATE_PHOTO;
 }
 

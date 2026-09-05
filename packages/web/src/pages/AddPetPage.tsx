@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { DEFAULT_IMAGES, DOG_PHOTOS, CAT_PHOTOS, imageForType, petLocal } from '../data/petImages';
+import { PetPhotoUpload } from '../components/PetPhotoUpload';
+import { DEFAULT_IMAGES, imageForType } from '../data/petImages';
+import { useAuthStore } from '../hooks/useAuthStore';
 import { usePetStore } from '../hooks/usePetStore';
+import { createPet } from '../lib/api';
 import type { PetGender, PetSize, PetType } from '../types';
 import { PET_GENDER_LABELS, PET_SIZE_LABELS, PET_TYPE_EMOJI, PET_TYPE_LABELS } from '../types';
 
@@ -10,17 +13,15 @@ const PET_TYPES = Object.keys(PET_TYPE_LABELS) as PetType[];
 const PET_SIZES = Object.keys(PET_SIZE_LABELS) as PetSize[];
 const PET_GENDERS = Object.keys(PET_GENDER_LABELS) as PetGender[];
 
-const GALLERY: Partial<Record<PetType, readonly string[]>> = {
-  dog: DOG_PHOTOS,
-  cat: CAT_PHOTOS,
-};
-
 const PERSONALITY_TRAITS = ['بازیگوش', 'آرام', 'اجتماعی', 'پرانرژی', 'مهربان', 'آموزش‌دیده'];
 
 export function AddPetPage() {
   const navigate = useNavigate();
   const { addPet, myPet } = usePetStore();
+  const { user: authUser, isLoggedIn } = useAuthStore();
   const [showToast, setShowToast] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [form, setForm] = useState({
     name: '',
     type: 'dog' as PetType,
@@ -29,10 +30,10 @@ export function AddPetPage() {
     ageUnit: 'year' as 'month' | 'year',
     size: 'medium' as PetSize,
     gender: 'male' as PetGender,
-    city: myPet.city,
+    city: myPet.city || authUser?.city || '',
     neighborhood: '',
     bio: '',
-    imageUrl: DEFAULT_IMAGES.dog,
+    imageUrl: '',
     vaccinated: true,
     neutered: false,
     lookingForPlaymate: true,
@@ -40,51 +41,85 @@ export function AddPetPage() {
     traits: ['بازیگوش'] as string[],
   });
 
-  const gallery = useMemo(() => GALLERY[form.type] ?? [], [form.type]);
+  const ownerId = authUser?.id;
+  const previewFallback = useMemo(
+    () => imageForType(form.type, 0) || DEFAULT_IMAGES.dog,
+    [form.type]
+  );
 
   const update = (field: string, value: string | boolean | string[]) => {
-    setForm((prev) => {
-      const next = { ...prev, [field]: value };
-      if (field === 'type' && typeof value === 'string') {
-        const t = value as PetType;
-        next.imageUrl = imageForType(t, 0);
-      }
-      return next;
-    });
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    addPet({
-      name: form.name,
-      type: form.type,
-      breed: form.breed,
-      age: Number(form.age) || 1,
-      ageUnit: form.ageUnit,
-      size: form.size,
-      gender: form.gender,
-      city: form.city,
-      neighborhood: form.neighborhood,
-      ownerName: myPet.ownerName,
-      ownerId: myPet.ownerId,
-      imageUrl: form.imageUrl,
-      emoji: PET_TYPE_EMOJI[form.type],
-      bio: form.bio,
-      traits: form.traits,
-      vaccinated: form.vaccinated,
-      neutered: form.neutered,
-      lookingForPlaymate: form.lookingForPlaymate,
-      healthNotes: form.healthNotes,
-      distanceKm: 0.5,
-    });
-    setShowToast(true);
-    setTimeout(() => {
-      setShowToast(false);
-      navigate('/profile');
-    }, 2000);
+    if (!form.imageUrl) {
+      setSubmitError('لطفاً یک عکس واقعی از پت آپلود کن');
+      return;
+    }
+    setSaving(true);
+    setSubmitError('');
+
+    const ageNum = Number(form.age) || 1;
+    const ageMonths = form.ageUnit === 'year' ? ageNum * 12 : ageNum;
+
+    try {
+      if (isLoggedIn && ownerId) {
+        await createPet({
+          ownerId,
+          name: form.name.trim(),
+          species: form.type,
+          breed: form.breed.trim(),
+          gender: form.gender,
+          ageMonths,
+          size: form.size,
+          bio: form.bio.trim() || undefined,
+          vaccinated: form.vaccinated,
+          neutered: form.neutered,
+          lookingForPlaymate: form.lookingForPlaymate,
+          diseases: form.healthNotes.trim() || undefined,
+          personality: form.traits.length ? { traits: form.traits } : undefined,
+          imageUrl: form.imageUrl,
+          city: form.city.trim() || authUser?.city,
+          neighborhood: form.neighborhood.trim(),
+        });
+      }
+
+      addPet({
+        name: form.name,
+        type: form.type,
+        breed: form.breed,
+        age: ageNum,
+        ageUnit: form.ageUnit,
+        size: form.size,
+        gender: form.gender,
+        city: form.city,
+        neighborhood: form.neighborhood,
+        ownerName: authUser?.name || myPet.ownerName,
+        ownerId: ownerId ?? myPet.ownerId,
+        imageUrl: form.imageUrl,
+        emoji: PET_TYPE_EMOJI[form.type],
+        bio: form.bio,
+        traits: form.traits,
+        vaccinated: form.vaccinated,
+        neutered: form.neutered,
+        lookingForPlaymate: form.lookingForPlaymate,
+        healthNotes: form.healthNotes,
+        distanceKm: 0.5,
+      });
+      setShowToast(true);
+      setTimeout(() => {
+        setShowToast(false);
+        navigate('/profile');
+      }, 2000);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'ثبت پت ناموفق بود');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const isValid = form.name && form.breed && form.neighborhood;
+  const isValid = Boolean(form.name && form.breed && form.neighborhood && form.imageUrl);
 
   return (
     <div className="form-page">
@@ -97,31 +132,17 @@ export function AddPetPage() {
       </button>
 
       <h1>ثبت پت جدید</h1>
-      <p className="subtitle">عکس و اطلاعات پت‌ات رو وارد کن</p>
+      <p className="subtitle">عکس واقعی و اطلاعات پت‌ات رو وارد کن</p>
 
-      <div className="add-pet-preview">
-        <img src={form.imageUrl} alt={form.name || 'پت'} />
-      </div>
+      <PetPhotoUpload
+        ownerId={ownerId}
+        imageUrl={form.imageUrl}
+        placeholderSrc={previewFallback}
+        onChange={(url) => update('imageUrl', url)}
+        label="عکس پت *"
+      />
 
-      {gallery.length > 0 && (
-        <div className="add-pet-gallery">
-          <label className="form-label">انتخاب عکس</label>
-          <div className="pet-gallery-grid">
-            {gallery.slice(0, 8).map((photoId) => (
-              <button
-                key={photoId}
-                type="button"
-                className={`pet-gallery-item${form.imageUrl === petLocal(photoId) ? ' active' : ''}`}
-                onClick={() => update('imageUrl', petLocal(photoId))}
-              >
-                <img src={petLocal(photoId)} alt="" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
+      <form onSubmit={(e) => void handleSubmit(e)}>
         <div className="form-group">
           <label className="form-label">نام پت *</label>
           <input
@@ -264,8 +285,14 @@ export function AddPetPage() {
           </label>
         </div>
 
-        <button type="submit" className="cta-btn" disabled={!isValid}>
-          ➕ ثبت پت
+        {submitError && (
+          <p className="pet-photo-error" role="alert">
+            {submitError}
+          </p>
+        )}
+
+        <button type="submit" className="cta-btn" disabled={!isValid || saving}>
+          {saving ? 'در حال ذخیره…' : '➕ ثبت پت'}
         </button>
       </form>
 

@@ -114,6 +114,37 @@ export async function createPet(data: Record<string, unknown>): Promise<PetProfi
   });
 }
 
+/** Upload a pet profile photo; returns a public URL path under /api/pets/photos/... */
+export async function uploadPetPhoto(
+  ownerId: number,
+  file: File
+): Promise<{ ok: true; url: string; storageKey: string; mimeType?: string }> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('ownerId', String(ownerId));
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/pets/photos/upload`, {
+      method: 'POST',
+      body: form,
+    });
+  } catch {
+    throw new Error('اتصال به سرور برقرار نشد. مطمئن شو API روشن است.');
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    try {
+      const json = JSON.parse(body) as { error?: string; message?: string };
+      throw new Error(json.error || json.message || body || `خطای ${res.status}`);
+    } catch (err) {
+      if (err instanceof Error && !err.message.startsWith('{') && err.message !== body) throw err;
+      throw new Error(body || `خطای ${res.status}`);
+    }
+  }
+  return res.json();
+}
+
 export async function listPlaydateRequests(filters?: {
   userId?: number;
   petId?: number;

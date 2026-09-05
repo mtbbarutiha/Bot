@@ -1,7 +1,97 @@
+import fs from 'fs';
 import { Router } from 'express';
+import multer from 'multer';
 import { dbService } from '../db';
+import {
+  MAX_PET_PHOTO_BYTES,
+  mimeFromPetPhotoKey,
+  resolvePetPhotoPath,
+  savePetPhoto,
+} from '../services/pet-photo-store';
 
 export const petsRouter = Router();
+
+const petPhotoUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_PET_PHOTO_BYTES, files: 1 },
+});
+
+/** Upload a pet profile photo (multipart field: `file`). Returns a public URL path. */
+petsRouter.post('/photos/upload', (req, res) => {
+  petPhotoUpload.single('file')(req, res, (uploadErr) => {
+    if (uploadErr) {
+      const tooLarge =
+        uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE';
+      res.status(tooLarge ? 413 : 400).json({
+        error: tooLarge
+          ? 'حجم عکس بیش از حد مجاز است (حداکثر ۸ مگابایت)'
+          : 'آپلود عکس ناموفق بود',
+      });
+      return;
+    }
+
+    const ownerId = Number(
+      (req.body as { ownerId?: string })?.ownerId ?? req.query.ownerId
+    );
+    const file = req.file;
+
+    if (!Number.isFinite(ownerId) || ownerId <= 0) {
+      res.status(400).json({ error: 'ownerId الزامی است' });
+      return;
+    }
+    if (!file?.buffer?.length) {
+      res.status(400).json({ error: 'فایل عکس الزامی است' });
+      return;
+    }
+
+    const owner = dbService.getUserById(ownerId);
+    if (!owner) {
+      res.status(404).json({ error: 'صاحب پت پیدا نشد' });
+      return;
+    }
+
+    try {
+      const saved = savePetPhoto({
+        ownerId,
+        originalName: file.originalname || 'pet.jpg',
+        mimeType: file.mimetype,
+        buffer: file.buffer,
+      });
+      res.status(201).json({
+        ok: true,
+        url: saved.urlPath,
+        storageKey: saved.storageKey,
+        mimeType: file.mimetype,
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === 'FILE_TOO_LARGE') {
+        res.status(413).json({ error: 'حجم عکس بیش از حد مجاز است (حداکثر ۸ مگابایت)' });
+        return;
+      }
+      if (err instanceof Error && err.message === 'INVALID_MIME') {
+        res.status(400).json({ error: 'فقط عکس (JPG، PNG، WebP، GIF) مجاز است' });
+        return;
+      }
+      console.warn('pet photo upload failed:', (err as Error).message);
+      res.status(500).json({ error: 'ذخیره عکس ناموفق بود' });
+    }
+  });
+});
+
+/** Serve an uploaded pet photo by storage key `ownerId/filename`. */
+petsRouter.get('/photos/:ownerId/:filename', (req, res) => {
+  const ownerId = String(req.params.ownerId || '');
+  const filename = String(req.params.filename || '');
+  const storageKey = `${ownerId}/${filename}`;
+  const abs = resolvePetPhotoPath(storageKey);
+  if (!abs || !fs.existsSync(abs)) {
+    res.status(404).json({ error: 'عکس پیدا نشد' });
+    return;
+  }
+  res.setHeader('Content-Type', mimeFromPetPhotoKey(storageKey));
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(fs.readFileSync(abs));
+});
 
 petsRouter.get('/', (req, res) => {
   const ownerId = req.query.ownerId ? Number(req.query.ownerId) : undefined;
