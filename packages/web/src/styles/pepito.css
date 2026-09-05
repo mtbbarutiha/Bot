@@ -1,0 +1,600 @@
+/** Pepito theme tokens + surfaces — adapted from shthemes Pepito demo */
+:root {
+  --pepito-base: #5c4d91;
+  --pepito-dark: #19063d;
+  --pepito-muted: #757086;
+  --pepito-pink: #db89ca;
+  --pepito-soft: #f4f4f7;
+  --pepito-lilac: #e4e2f3;
+  --pepito-orange: #fd961e;
+  --pepito-sky: #0ba5f2;
+  --pepito-mint: #15cca0;
+  --pepito-white: #ffffff;
+
+  /* Map existing brand vars → Pepito look for whole app */
+  --brand-hero: var(--pepito-base);
+  --brand-50: #f4f4f7;
+  --brand-100: #eae7f5;
+  --brand-200: #d7cff4;
+  --brand-300: #b9aee3;
+  --brand-400: #8f7fc4;
+  --brand-500: #5c4d91;
+  --brand-600: #4a3d78;
+  --brand-700: #3a2f62;
+  --brand-800: #2a2148;
+  --font-display: 'Urbanist', 'Vazirmatn', system-ui, sans-serif;
+  --font-body: 'Vazirmatn', 'Urbanist', system-ui, sans-serif;
+  --bg: var(--pepito-soft);
+  --text: var(--pepito-dark);
+  --text-secondary: var(--pepito-muted);
+  --primary: var(--pepito-base);
+  --primary-soft: var(--pepito-lilac);
+  --radius-md: 30px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+}
+
+body {
+  background: var(--pepito-soft);
+  color: var(--pepito-muted);
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
+  font-family: var(--font-display);
+  color: var(--pepito-dark);
+  letter-spacing: -0.02em;
+}
+
+/* Pepito pill buttons */
+.pepito-btn,
+.landing-btn,
+.landing-nav-cta,
+.btn-primary,
+.cta-btn,
+.auth-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 48px;
+  padding: 0.55rem 1.35rem;
+  border-radius: 30px;
+  border: 0;
+  background: var(--pepito-base);
+  color: #fff !important;
+  font-weight: 700;
+  font-family: var(--font-display);
+  text-decoration: none;
+  box-shadow: 0 12px 28px rgba(92, 77, 145, 0.28);
+  transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  cursor: pointer;
+}
+.pepito-btn:hover,
+.landing-btn:hover,
+.landing-nav-cta:hover,
+.btn-primary:hover,
+.cta-btn:hover {
+  background: #4a3d78;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(92, 77, 145, 0.34);
+}
+.pepito-btn--ghost,
+.landing-btn--ghost,
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #fff !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.55) !important;
+  backdrop-filter: blur(10px);
+  box-shadow: none;
+}
+.pepito-btn--ghost:hover,
+.landing-btn--ghost:hover,
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+.pepito-btn--lg,
+.landing-btn--primary {
+  min-height: 54px;
+  padding: 0 1.6rem;
+  font-size: 1.02rem;
+}
+
+/* ── Pepito landing ── */
+.pepito-landing {
+  background: var(--pepito-white);
+  color: var(--pepito-muted);
+  overflow-x: clip;
+}
+
+.pepito-nav {
+  position: fixed;
+  inset-inline: 0;
+  top: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem clamp(1rem, 4vw, 2.75rem);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(92, 77, 145, 0.06);
+  transition: box-shadow 0.25s ease;
+}
+.pepito-nav.is-scrolled {
+  box-shadow: 0 10px 30px rgba(25, 6, 61, 0.08);
+}
+.pepito-nav-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none;
+  color: var(--pepito-dark);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.25rem;
+}
+.pepito-nav-logo img {
+  height: 36px;
+  width: auto;
+}
+.pepito-nav-links {
+  display: none;
+  gap: 1.35rem;
+  margin-inline-start: 1.25rem;
+}
+.pepito-nav-links a {
+  color: var(--pepito-dark);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+.pepito-nav-links a:hover { color: var(--pepito-base); }
+.pepito-nav-actions {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+.pepito-nav-login {
+  color: var(--pepito-dark);
+  font-weight: 700;
+  text-decoration: none;
+  padding: 0.45rem 0.8rem;
+}
+
+.pepito-hero {
+  position: relative;
+  min-height: 100dvh;
+  display: grid;
+  align-items: center;
+  overflow: hidden;
+  color: #fff;
+}
+.pepito-hero-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 30%;
+  animation: pepito-ken 18s ease-in-out infinite alternate;
+}
+.pepito-hero-wash {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(25, 6, 61, 0.72) 0%, rgba(25, 6, 61, 0.35) 48%, rgba(11, 165, 242, 0.18) 100%),
+    linear-gradient(180deg, rgba(25, 6, 61, 0.25) 0%, transparent 35%, rgba(25, 6, 61, 0.45) 100%);
+  pointer-events: none;
+}
+.pepito-hero-inner {
+  position: relative;
+  z-index: 2;
+  width: min(680px, 100%);
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 7rem)
+    clamp(1.1rem, 4vw, 2.75rem)
+    clamp(2.5rem, 6vw, 4.5rem);
+  animation: pepito-rise 0.85s ease both;
+}
+.pepito-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0 0 1rem;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+.pepito-kicker-dot {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--pepito-pink);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.pepito-hero h1 {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(2.2rem, 5.5vw, 3.6rem);
+  line-height: 1.15;
+  font-weight: 800;
+}
+.pepito-hero-lead {
+  margin: 1rem 0 1.6rem;
+  max-width: 28rem;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 1.08rem;
+  line-height: 1.8;
+}
+.pepito-hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.pepito-section {
+  padding: 4.25rem clamp(1rem, 4vw, 2.75rem);
+}
+.pepito-section--soft { background: var(--pepito-soft); }
+.pepito-section--lilac { background: linear-gradient(180deg, #fff, var(--pepito-lilac)); }
+.pepito-section-head {
+  max-width: 40rem;
+  margin: 0 auto 2.25rem;
+  text-align: center;
+}
+.pepito-section-head .pepito-eyebrow {
+  margin: 0 0 0.55rem;
+  color: var(--pepito-pink);
+  font-weight: 800;
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+}
+.pepito-section-head h2 {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.7rem, 3.2vw, 2.5rem);
+}
+.pepito-section-head p {
+  margin: 0;
+  color: var(--pepito-muted);
+  line-height: 1.75;
+}
+
+.pepito-services {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.15rem;
+}
+.pepito-service {
+  display: grid;
+  gap: 0.65rem;
+  justify-items: center;
+  text-align: center;
+  padding: 1.5rem 1.15rem 1.35rem;
+  border-radius: 28px;
+  background: #fff;
+  border: 1px solid rgba(92, 77, 145, 0.08);
+  box-shadow: 0 12px 32px rgba(25, 6, 61, 0.05);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  min-height: 100%;
+}
+.pepito-service:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 44px rgba(25, 6, 61, 0.1);
+}
+.pepito-service img {
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+}
+.pepito-service strong {
+  color: var(--pepito-dark);
+  font-size: 1.08rem;
+  font-family: var(--font-display);
+}
+.pepito-service span {
+  color: var(--pepito-muted);
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+
+.pepito-pets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.15rem;
+}
+.pepito-pet {
+  background: #fff;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(92, 77, 145, 0.08);
+  box-shadow: 0 12px 30px rgba(25, 6, 61, 0.05);
+  animation: pepito-rise 0.7s ease both;
+}
+.pepito-pet:nth-child(2) { animation-delay: 0.08s; }
+.pepito-pet:nth-child(3) { animation-delay: 0.16s; }
+.pepito-pet:nth-child(4) { animation-delay: 0.24s; }
+.pepito-pet img {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+}
+.pepito-pet > div { padding: 1rem 1.05rem 1.2rem; }
+.pepito-pet h3 {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+}
+.pepito-pet p {
+  margin: 0 0 0.85rem;
+  font-size: 0.88rem;
+}
+.pepito-pet-cta {
+  display: inline-flex;
+  min-height: 38px;
+  padding: 0 1rem;
+  align-items: center;
+  border-radius: 30px;
+  background: var(--pepito-lilac);
+  color: var(--pepito-base);
+  font-weight: 800;
+  font-size: 0.88rem;
+  text-decoration: none;
+}
+.pepito-pet-cta:hover { background: #d7cff4; }
+
+.pepito-team {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.15rem;
+}
+.pepito-member {
+  text-align: center;
+  padding: 0.5rem;
+}
+.pepito-member img {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0 auto 1rem;
+  border: 4px solid #fff;
+  box-shadow: 0 14px 32px rgba(92, 77, 145, 0.18);
+}
+.pepito-member h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.08rem;
+}
+.pepito-member p {
+  margin: 0;
+  color: var(--pepito-pink);
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.pepito-reviews {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+}
+.pepito-review {
+  margin: 0;
+  padding: 1.35rem 1.2rem;
+  border-radius: 24px;
+  background: #fff;
+  border: 1px solid rgba(92, 77, 145, 0.08);
+  box-shadow: 0 10px 28px rgba(25, 6, 61, 0.04);
+}
+.pepito-review p {
+  margin: 0 0 0.9rem;
+  color: var(--pepito-dark);
+  line-height: 1.75;
+}
+.pepito-review footer {
+  font-weight: 800;
+  color: var(--pepito-base);
+}
+
+.pepito-faq {
+  display: grid;
+  gap: 0.8rem;
+  max-width: 52rem;
+  margin: 0 auto;
+}
+.pepito-faq-item {
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid rgba(92, 77, 145, 0.1);
+  overflow: hidden;
+}
+.pepito-faq-q {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.15rem;
+  text-align: start;
+  font-weight: 800;
+  color: var(--pepito-dark);
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+.pepito-faq-a {
+  margin: 0;
+  padding: 0 1.15rem 1.05rem;
+  color: var(--pepito-muted);
+  line-height: 1.75;
+}
+
+.pepito-cta {
+  padding: 1rem clamp(1rem, 4vw, 2.75rem) 3rem;
+}
+.pepito-cta-inner {
+  padding: clamp(2.2rem, 5vw, 3.4rem);
+  border-radius: 36px;
+  text-align: center;
+  background:
+    radial-gradient(600px 240px at 50% 0%, rgba(219, 137, 202, 0.35), transparent 60%),
+    linear-gradient(135deg, #19063d, #5c4d91 55%, #db89ca);
+  color: #fff;
+  box-shadow: 0 24px 50px rgba(25, 6, 61, 0.28);
+}
+.pepito-cta-inner h2 {
+  margin: 0 0 0.55rem;
+  color: #fff;
+  font-size: clamp(1.6rem, 3vw, 2.3rem);
+}
+.pepito-cta-inner p {
+  margin: 0 auto 1.4rem;
+  max-width: 34rem;
+  opacity: 0.92;
+  line-height: 1.75;
+}
+.pepito-cta-inner .pepito-btn {
+  background: #fff;
+  color: var(--pepito-base) !important;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+}
+
+.pepito-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.4rem clamp(1rem, 4vw, 2.75rem) 2.2rem;
+  color: var(--pepito-muted);
+  font-size: 0.9rem;
+  line-height: 1.7;
+  background: #fff;
+  border-top: 1px solid rgba(92, 77, 145, 0.08);
+}
+
+@keyframes pepito-rise {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes pepito-ken {
+  from { transform: scale(1.03) translateY(0); }
+  to { transform: scale(1.1) translateY(-1.5%); }
+}
+
+@media (max-width: 980px) {
+  .pepito-services,
+  .pepito-pets,
+  .pepito-team,
+  .pepito-reviews { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 720px) {
+  .pepito-services,
+  .pepito-pets,
+  .pepito-team,
+  .pepito-reviews { grid-template-columns: 1fr; }
+  .pepito-member img { width: 120px; height: 120px; }
+}
+@media (min-width: 860px) {
+  .pepito-nav-links { display: flex; }
+}
+
+/* App shell Pepito restyle */
+.app-layout {
+  background: var(--pepito-soft);
+}
+.desktop-sidebar {
+  background: linear-gradient(180deg, #fff 0%, #f7f5fc 100%);
+  border-inline-end: 1px solid rgba(92, 77, 145, 0.1);
+}
+.desktop-nav-item {
+  border-radius: 18px !important;
+  color: var(--pepito-dark);
+}
+.desktop-nav-item.active,
+.desktop-nav-item:hover {
+  background: var(--pepito-lilac) !important;
+  color: var(--pepito-base) !important;
+}
+.desktop-logout {
+  background: rgba(219, 137, 202, 0.12) !important;
+  color: #9b4d88 !important;
+  border-radius: 18px !important;
+}
+.app-main {
+  background:
+    radial-gradient(700px 280px at 100% 0%, rgba(219, 137, 202, 0.12), transparent 55%),
+    radial-gradient(600px 260px at 0% 20%, rgba(92, 77, 145, 0.08), transparent 50%),
+    var(--pepito-soft);
+}
+.floating-nav,
+.mobile-nav {
+  background: rgba(255, 255, 255, 0.94) !important;
+  border: 1px solid rgba(92, 77, 145, 0.1);
+  box-shadow: 0 16px 40px rgba(25, 6, 61, 0.14) !important;
+}
+.nav-item.active {
+  color: var(--pepito-base) !important;
+}
+.home-header {
+  background: linear-gradient(145deg, #5c4d91 0%, #3a2f62 55%, #db89ca 140%) !important;
+}
+.btn-accept,
+.chat-btn--primary {
+  background: linear-gradient(135deg, #5c4d91, #3a2f62) !important;
+  border-radius: 30px !important;
+}
+.chip.is-on,
+.role-card--selected {
+  background: linear-gradient(135deg, #5c4d91, #4a3d78) !important;
+  border-color: transparent !important;
+  color: #fff !important;
+}
+.auth-channel-btn.is-on,
+.auth-tab.is-on,
+.auth-method.is-on,
+button.chip.is-on {
+  background: var(--pepito-base) !important;
+  color: #fff !important;
+}
+.pepito-hero-cta .pepito-btn:not(.pepito-btn--ghost) {
+  background: var(--pepito-base) !important;
+  color: #fff !important;
+}
+.auth-page {
+  background:
+    radial-gradient(700px 320px at 90% 0%, rgba(219, 137, 202, 0.25), transparent 55%),
+    radial-gradient(600px 280px at 0% 40%, rgba(92, 77, 145, 0.18), transparent 50%),
+    var(--pepito-soft) !important;
+}
+.auth-card {
+  border-radius: 28px !important;
+  border: 1px solid rgba(92, 77, 145, 0.1) !important;
+  box-shadow: 0 24px 50px rgba(25, 6, 61, 0.1) !important;
+}
+.home-service-chip {
+  border-radius: 30px !important;
+  background: #fff !important;
+  border-color: rgba(92, 77, 145, 0.14) !important;
+  color: var(--pepito-dark) !important;
+}
+.home-service-chip svg { color: var(--pepito-base) !important; }
+
+.auth-tab.is-on {
+  background: var(--pepito-base) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+}
+.auth-tab {
+  border-radius: 30px !important;
+}

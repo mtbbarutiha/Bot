@@ -1,79 +1,41 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  ArrowLeft,
-  Heart,
-  MessageCircle,
-  PawPrint,
-  ShieldCheck,
-  ShoppingBag,
-  Stethoscope,
-} from 'lucide-react';
+import { ArrowLeft, PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
-import { BrandMark } from '../components/BrandMark';
-import { imageForType, WELCOME_HERO } from '../data/petImages';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
 
+const P = '/pepito/uploads';
+
 const SERVICES = [
-  {
-    to: '/explore',
-    title: 'پیدا کردن همبازی',
-    desc: 'پت‌های نزدیک را ببین و درخواست بازی بفرست — داده با ربات یکی است.',
-    icon: Heart,
-  },
-  {
-    to: '/vet-consult',
-    title: 'ارتباط با دامپزشک',
-    desc: 'مشاوره سریع، پرونده و نسخه روی همان حساب ربات.',
-    icon: Stethoscope,
-  },
-  {
-    to: '/add-pet',
-    title: 'ثبت پت',
-    desc: 'پروفایل پت بساز؛ در تلگرام همان پروفایل را می‌بینی.',
-    icon: PawPrint,
-  },
-  {
-    to: '/matches',
-    title: 'درخواست‌ها و چت',
-    desc: 'حتی اگر طرف مقابل فقط ربات باشد، مکالمه مشترک می‌ماند.',
-    icon: MessageCircle,
-  },
-  {
-    to: '/clinics',
-    title: 'کلینیک‌ها',
-    desc: 'کلینیک نزدیک و پیگیری خدمات از دسکتاپ.',
-    icon: ShieldCheck,
-  },
-  {
-    to: '/shop',
-    title: 'پت‌شاپ',
-    desc: 'لوازم و خوراک منتخب برای مراقبت روزانه.',
-    icon: ShoppingBag,
-  },
+  { to: '/explore', title: 'پیدا کردن همبازی', desc: 'پت نزدیک را پیدا کن و درخواست بازی بفرست.', icon: `${P}/01.png` },
+  { to: '/vet-consult', title: 'مشاوره دامپزشک', desc: 'ارتباط سریع با دامپزشک روی همان حساب ربات.', icon: `${P}/02.png` },
+  { to: '/add-pet', title: 'ثبت پت', desc: 'پروفایل پت بساز؛ در تلگرام همان را می‌بینی.', icon: `${P}/03.png` },
+  { to: '/matches', title: 'درخواست و چت', desc: 'حتی اگر طرف فقط ربات باشد، مکالمه مشترک می‌ماند.', icon: `${P}/04.png` },
+  { to: '/clinics', title: 'کلینیک‌ها', desc: 'کلینیک نزدیک و پیگیری خدمات از دسکتاپ.', icon: `${P}/05.png` },
+  { to: '/shop', title: 'پت‌شاپ', desc: 'لوازم و خوراک منتخب برای مراقبت روزانه.', icon: `${P}/06.png` },
 ] as const;
 
 const PETS = [
-  { name: 'رکس', meta: 'سگ · ۲ سال · تهران', type: 'dog' as const, idx: 2 },
-  { name: 'موکا', meta: 'گربه · ۱ سال · کرج', type: 'cat' as const, idx: 3 },
-  { name: 'پیچی', meta: 'خرگوش · ۸ ماه · اصفهان', type: 'rabbit' as const, idx: 1 },
-  { name: 'آبی', meta: 'پرنده · ۳ سال · شیراز', type: 'bird' as const, idx: 0 },
-];
+  { name: 'میسی', meta: 'سگ · ۵ سال · ماده', img: `${P}/01-2.jpg`, to: '/explore' },
+  { name: 'بلا', meta: 'سگ · ۳ سال · نر', img: `${P}/02-2.jpg`, to: '/explore' },
+  { name: 'کیتی', meta: 'گربه · ۲ سال · ماده', img: `${P}/03-2.jpg`, to: '/explore' },
+  { name: 'پنی', meta: 'سگ · ۱ سال · نر', img: `${P}/04-2.jpg`, to: '/explore' },
+] as const;
 
 const TEAM = [
-  { name: 'دکتر سارا نوری', role: 'دامپزشک عمومی', img: imageForType('dog', 0) },
-  { name: 'دکتر امیر رضایی', role: 'اورژانس و جراحی', img: imageForType('cat', 2) },
-  { name: 'دکتر لیلا کیانی', role: 'پوست و تغذیه', img: imageForType('dog', 5) },
-  { name: 'دکتر پویا مرادی', role: 'مشاوره آنلاین', img: imageForType('cat', 6) },
-];
+  { name: 'دکتر سارا نوری', role: 'دامپزشک', img: `${P}/01-3.jpg` },
+  { name: 'دکتر امیر رضایی', role: 'مدیر آموزش', img: `${P}/02-3.jpg` },
+  { name: 'دکتر لیلا کیانی', role: 'مراقبت پت', img: `${P}/03-3.jpg` },
+  { name: 'دکتر پویا مرادی', role: 'مشاوره آنلاین', img: `${P}/04-3.jpg` },
+] as const;
 
 const REVIEWS = [
-  { handle: '@سارا', text: 'همبازی برای سگم پیدا شد؛ چت وب و ربات یکی بود.' },
-  { handle: '@مینا', text: 'دامپزشک آنلاین جواب داد و نسخه را همان لحظه دیدم.' },
-  { handle: '@علی', text: 'پت را تو وب ثبت کردم، تو ربات همان پروفایل آمد.' },
-  { handle: '@نگار', text: 'صفحه دسکتاپ خیلی روان‌تر و زیباتر از کیبورد ربات است.' },
-];
+  { handle: '@سارا', text: 'قابل اعتماد و مهربون؛ معلومه عاشق حیوانان‌اند!' },
+  { handle: '@مینا', text: 'سگم عاشق همبازی‌شه و زمان‌بندی‌شون انعطاف‌پذیره.' },
+  { handle: '@علی', text: 'درستکار و مطمئن؛ خرگوش‌هام عاشقشون شدن!' },
+  { handle: '@نگار', text: 'دیدن اینکه بچه‌هام خوب مراقبت می‌شن همیشه لذت‌بخشه.' },
+] as const;
 
 const FAQS = [
   {
@@ -88,7 +50,11 @@ const FAQS = [
     q: 'اگر من وب باشم و طرف مقابل ربات؟',
     a: 'پیام و درخواست از API مشترک رد می‌شود؛ هر دو طرف همان مکالمه را می‌بینند.',
   },
-];
+  {
+    q: 'طراحی این صفحه از کجا آمده؟',
+    a: 'ظاهر و عکس‌ها بر پایه قالب Pepito تنظیم شده تا تجربه دسکتاپ شبیه یک سایت مراقبت از پت واقعی باشد.',
+  },
+] as const;
 
 function GatedLink({
   to,
@@ -128,88 +94,89 @@ export function WelcomePage() {
   }, []);
 
   return (
-    <div className="landing">
-      <header className={`landing-nav${scrolled ? ' is-scrolled' : ''}`}>
-        <BrandMark iconSize={32} className="landing-nav-brand" />
-        <nav className="landing-nav-links" aria-label="بخش‌های صفحه">
+    <div className="pepito-landing">
+      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}`}>
+        <Link to="/" className="pepito-nav-logo">
+          <img src="/pepito/img/logo.png" alt="" />
+          <span>{BRAND.displayName}</span>
+        </Link>
+        <nav className="pepito-nav-links" aria-label="بخش‌ها">
           <a href="#services">خدمات</a>
-          <a href="#pets">پت‌ها</a>
+          <a href="#pets">پذیرش</a>
           <a href="#team">تیم</a>
+          <a href="#reviews">نظرات</a>
           <a href="#faq">سؤالات</a>
         </nav>
-        <div className="landing-nav-actions">
-          <Link to={loginPath('/home')} className="landing-nav-login">
+        <div className="pepito-nav-actions">
+          <Link to={loginPath('/home')} className="pepito-nav-login">
             ورود
           </Link>
-          <GatedLink to="/explore" className="landing-nav-cta">
+          <GatedLink to="/explore" className="pepito-btn">
             شروع رایگان
+            <PawPrint size={16} />
           </GatedLink>
         </div>
       </header>
 
-      <section className="landing-hero">
-        <img className="landing-hero-media" src={WELCOME_HERO} alt="" />
-        <div className="landing-hero-wash" aria-hidden />
-        <div className="landing-hero-inner">
-          <div className="landing-brand-mark">
-            <span className="landing-brand-en">{BRAND.displayName}</span>
-            <span className="landing-brand-tag">{BRAND.taglineEn}</span>
-          </div>
-          <h1 className="landing-hero-title">{BRAND.taglineFa}</h1>
-          <p className="landing-hero-lead">
-            همبازی، دامپزشک و خدمات پت روی دسکتاپ — با طراحی آزاد وب، و همان حساب مشترک با ربات تلگرام.
+      <section className="pepito-hero">
+        <img className="pepito-hero-media" src={`${P}/01.jpg`} alt="" />
+        <div className="pepito-hero-wash" aria-hidden />
+        <div className="pepito-hero-inner">
+          <p className="pepito-kicker">
+            <span className="pepito-kicker-dot">
+              <PawPrint size={16} />
+            </span>
+            عشق ما حیوانات‌اند
           </p>
-          <div className="landing-hero-cta">
-            <GatedLink to="/explore" className="landing-btn landing-btn--primary">
-              پیدا کردن همبازی
-              <ArrowLeft size={18} />
+          <h1>خدماتی برای پت‌های خاص شما!</h1>
+          <p className="pepito-hero-lead">
+            همبازی، دامپزشک و مراقبت پت روی دسکتاپ — با ظاهر Pepito و همان حساب مشترک با ربات تلگرام.
+          </p>
+          <div className="pepito-hero-cta">
+            <GatedLink to="/explore" className="pepito-btn pepito-btn--lg">
+              کشف کن
+              <PawPrint size={16} />
             </GatedLink>
-            <GatedLink to="/vet-consult" className="landing-btn landing-btn--ghost">
+            <GatedLink to="/vet-consult" className="pepito-btn pepito-btn--ghost pepito-btn--lg">
               مشاوره دامپزشک
             </GatedLink>
           </div>
         </div>
       </section>
 
-      <section className="landing-section" id="services">
-        <div className="landing-section-head">
-          <p className="landing-kicker">خدمات مراقبت از پت</p>
-          <h2>امکانات ربات، تجربهٔ دسکتاپ</h2>
-          <p>برای هر بخش وارد حساب شو؛ داده همان لحظه با تلگرام سینک می‌ماند.</p>
+      <section className="pepito-section" id="services">
+        <div className="pepito-section-head">
+          <p className="pepito-eyebrow">عاشق حیواناتیم</p>
+          <h2>خدمات مراقبت از پت</h2>
+          <p>امکانات ربات، با تجربهٔ دسکتاپ قالب Pepito — داده همان لحظه سینک می‌ماند.</p>
         </div>
-        <ul className="landing-service-grid">
+        <ul className="pepito-services">
           {SERVICES.map((s) => (
             <li key={s.to}>
-              <GatedLink to={s.to} className="landing-service">
-                <span className="landing-service-icon">
-                  <s.icon size={22} strokeWidth={2} />
-                </span>
+              <GatedLink to={s.to} className="pepito-service">
+                <img src={s.icon} alt="" />
                 <strong>{s.title}</strong>
                 <span>{s.desc}</span>
-                <em className="landing-service-cta">
-                  ادامه
-                  <ArrowLeft size={16} />
-                </em>
               </GatedLink>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="landing-section landing-pets" id="pets">
-        <div className="landing-section-head">
-          <p className="landing-kicker">همبازی‌ها</p>
-          <h2>پت‌هایی که منتظر بازی‌اند</h2>
+      <section className="pepito-section pepito-section--soft" id="pets">
+        <div className="pepito-section-head">
+          <p className="pepito-eyebrow">پذیرش پت</p>
+          <h2>یک دوست پشمالوی جدید پیدا کن</h2>
           <p>پیش‌نمایش عمومی؛ برای درخواست واقعی با OTP وارد شو.</p>
         </div>
-        <div className="landing-pet-rail">
+        <div className="pepito-pets">
           {PETS.map((p) => (
-            <article key={p.name} className="landing-pet">
-              <img src={imageForType(p.type, p.idx)} alt={p.name} loading="lazy" />
+            <article key={p.name} className="pepito-pet">
+              <img src={p.img} alt={p.name} loading="lazy" />
               <div>
                 <h3>{p.name}</h3>
                 <p>{p.meta}</p>
-                <GatedLink to="/explore" className="landing-pet-cta">
+                <GatedLink to={p.to} className="pepito-pet-cta">
                   درخواست همبازی
                 </GatedLink>
               </div>
@@ -218,35 +185,36 @@ export function WelcomePage() {
         </div>
       </section>
 
-      <section className="landing-section" id="team">
-        <div className="landing-section-head">
-          <p className="landing-kicker">تیم دامپزشکی</p>
-          <h2>پزشک‌های آمادهٔ مشاوره</h2>
+      <section className="pepito-section" id="team">
+        <div className="pepito-section-head">
+          <p className="pepito-eyebrow">متخصصان واجد شرایط</p>
+          <h2>با تیم ما آشنا شو</h2>
         </div>
-        <div className="landing-team-grid">
+        <div className="pepito-team">
           {TEAM.map((m) => (
-            <article key={m.name} className="landing-member">
+            <article key={m.name} className="pepito-member">
               <img src={m.img} alt="" loading="lazy" />
               <h3>{m.name}</h3>
               <p>{m.role}</p>
             </article>
           ))}
         </div>
-        <div className="landing-section-cta">
-          <GatedLink to="/vet-consult" className="landing-btn landing-btn--primary">
+        <div style={{ marginTop: 28, textAlign: 'center' }}>
+          <GatedLink to="/vet-consult" className="pepito-btn">
             ارتباط با پزشک
+            <ArrowLeft size={16} />
           </GatedLink>
         </div>
       </section>
 
-      <section className="landing-section">
-        <div className="landing-section-head">
-          <p className="landing-kicker">نظر پت‌دوست‌ها</p>
-          <h2>از دسکتاپ تا تلگرام</h2>
+      <section className="pepito-section pepito-section--lilac" id="reviews">
+        <div className="pepito-section-head">
+          <p className="pepito-eyebrow">عاشقان خوشحال پت</p>
+          <h2>نظرات petdate</h2>
         </div>
-        <div className="landing-review-grid">
+        <div className="pepito-reviews">
           {REVIEWS.map((r) => (
-            <blockquote key={r.handle} className="landing-review">
+            <blockquote key={r.handle} className="pepito-review">
               <p>{r.text}</p>
               <footer>{r.handle}</footer>
             </blockquote>
@@ -254,51 +222,56 @@ export function WelcomePage() {
         </div>
       </section>
 
-      <section className="landing-section" id="faq">
-        <div className="landing-section-head">
-          <p className="landing-kicker">سؤالات پرتکرار</p>
-          <h2>قبل از ورود بدانی</h2>
+      <section className="pepito-section" id="faq">
+        <div className="pepito-section-head">
+          <p className="pepito-eyebrow">عمومی و پرتکرار</p>
+          <h2>سؤالات متداول</h2>
         </div>
-        <div className="landing-faq-list">
+        <div className="pepito-faq">
           {FAQS.map((item, i) => {
             const open = openFaq === i;
             return (
-              <div key={item.q} className={`landing-faq-item${open ? ' is-open' : ''}`}>
+              <div key={item.q} className="pepito-faq-item">
                 <button
                   type="button"
-                  className="landing-faq-q"
+                  className="pepito-faq-q"
                   aria-expanded={open}
                   onClick={() => setOpenFaq(open ? null : i)}
                 >
-                  <span>{item.q}</span>
+                  <span>
+                    {String(i + 1).padStart(2, '0')} {item.q}
+                  </span>
                   <span aria-hidden>{open ? '−' : '+'}</span>
                 </button>
-                {open ? <p className="landing-faq-a">{item.a}</p> : null}
+                {open ? <p className="pepito-faq-a">{item.a}</p> : null}
               </div>
             );
           })}
         </div>
       </section>
 
-      <section className="landing-cta-band">
-        <div className="landing-cta-band-inner">
+      <section className="pepito-cta">
+        <div className="pepito-cta-inner">
           <h2>آماده‌ای همبازی پیدا کنی؟</h2>
           <p>
-            لندینگ آزاد است؛ برای امکانات اصلی با یک کد یکبارمصرف وارد دنیای مشترک وب و ربات شو — یک حساب، یک دیتابیس.
+            لندینگ آزاد است؛ برای امکانات اصلی با یک کد یکبارمصرف وارد دنیای مشترک وب و ربات شو.
           </p>
-          <Link to={loginPath('/explore')} className="landing-btn landing-btn--primary">
+          <Link to={loginPath('/explore')} className="pepito-btn pepito-btn--lg">
             ورود و شروع
-            <ArrowLeft size={18} />
+            <PawPrint size={16} />
           </Link>
         </div>
       </section>
 
-      <footer className="landing-footer">
-        <BrandMark iconSize={28} />
+      <footer className="pepito-footer">
+        <Link to="/" className="pepito-nav-logo">
+          <img src="/pepito/img/logo.png" alt="" />
+          <span>{BRAND.displayName}</span>
+        </Link>
         <p>
-          {BRAND.displayName} · {BRAND.taglineEn}
+          ظاهر الهام‌گرفته از قالب Pepito · داده مشترک API با ربات تلگرام
           <br />
-          داده مشترک API — همگام با ربات تلگرام
+          {BRAND.taglineEn}
         </p>
       </footer>
     </div>
