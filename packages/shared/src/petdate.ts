@@ -288,8 +288,47 @@ export interface BotSession {
   profileSectionEdit?: boolean;
   /** شماره در انتظار OTP احراز موبایل (نرمال‌شده 98…) */
   pendingPhone?: string;
+  /** چت مشاوره دامپزشک — شناسه مشاوره */
+  vetChatConsultId?: number;
+  /** تلگرام طرف مقابل در چت مشاوره */
+  vetChatPeerTelegramId?: string;
+  /** نقش در چت: دامپزشک یا بیمار */
+  vetChatRole?: 'vet' | 'patient';
+  /** ثبت مورد در پرونده پزشکی (پت انتخاب‌شده) */
+  medicalNotePetId?: number;
   updatedAt: string;
 }
+
+/** پرونده پزشکی پت */
+export interface PetMedicalRecord {
+  petId: number;
+  notes?: string;
+  vaccinations?: string;
+  allergies?: string;
+  chronicConditions?: string;
+  lastCheckup?: string;
+  medications?: string;
+  updatedAt: string;
+}
+
+export interface PetMedicalEntry {
+  id: number;
+  petId: number;
+  authorUserId: number;
+  authorName?: string;
+  consultId?: number;
+  text: string;
+  createdAt: string;
+}
+
+export type PetMedicalField =
+  | 'notes'
+  | 'vaccinations'
+  | 'allergies'
+  | 'chronicConditions'
+  | 'lastCheckup'
+  | 'medications';
+
 
 export type BotStep =
   | 'start'
@@ -330,6 +369,8 @@ export type BotStep =
   | 'phone_verify_otp'
   | 'admin_reject_reason'
   | 'admin_password'
+  | 'vet_chat'
+  | 'vet_medical_note'
   | 'ready';
 
 export interface PetDraft {

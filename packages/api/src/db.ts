@@ -13,6 +13,8 @@ import type {
   PaymentOrderStatus,
   PetBreed,
   PetGender,
+  PetMedicalEntry,
+  PetMedicalRecord,
   PetProfile,
   PetSize,
   PetSpecies,
@@ -279,6 +281,33 @@ function migrateSchema() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_vet_consultations_vet
       ON vet_consultations (vet_user_id, created_at DESC);
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pet_medical_records (
+      pet_id INTEGER PRIMARY KEY REFERENCES pets(id) ON DELETE CASCADE,
+      notes TEXT,
+      vaccinations TEXT,
+      allergies TEXT,
+      chronic_conditions TEXT,
+      last_checkup TEXT,
+      medications TEXT,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS pet_medical_entries (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+      author_user_id INTEGER NOT NULL REFERENCES users(id),
+      consult_id INTEGER REFERENCES vet_consultations(id),
+      text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_pet_medical_entries_pet
+      ON pet_medical_entries (pet_id, created_at DESC);
   `);
 
   db.exec(`
@@ -2325,5 +2354,149 @@ export const dbService = {
       user: this.getUserById(existing.userId)!,
       credited: true,
     };
+  },
+
+  getPetMedicalRecord(petId: number): PetMedicalRecord {
+    const row = db
+      .prepare(`SELECT * FROM pet_medical_records WHERE pet_id = ?`)
+      .get(petId) as Record<string, unknown> | undefined;
+    if (!row) {
+      return {
+        petId,
+        updatedAt: new Date().toISOString(),
+      };
+    }
+    return {
+      petId: Number(row.pet_id),
+      notes: (row.notes as string) || undefined,
+      vaccinations: (row.vaccinations as string) || undefined,
+      allergies: (row.allergies as string) || undefined,
+      chronicConditions: (row.chronic_conditions as string) || undefined,
+      lastCheckup: (row.last_checkup as string) || undefined,
+      medications: (row.medications as string) || undefined,
+      updatedAt: String(row.updated_at),
+    };
+  },
+
+  upsertPetMedicalRecord(
+    petId: number,
+    patch: Partial<Omit<PetMedicalRecord, 'petId' | 'updatedAt'>>
+  ): PetMedicalRecord {
+    const current = this.getPetMedicalRecord(petId);
+    const next = {
+      notes: patch.notes !== undefined ? patch.notes : current.notes,
+      vaccinations: patch.vaccinations !== undefined ? patch.vaccinations : current.vaccinations,
+      allergies: patch.allergies !== undefined ? patch.allergies : current.allergies,
+      chronicConditions:
+        patch.chronicConditions !== undefined
+          ? patch.chronicConditions
+          : current.chronicConditions,
+      lastCheckup: patch.lastCheckup !== undefined ? patch.lastCheckup : current.lastCheckup,
+      medications: patch.medications !== undefined ? patch.medications : current.medications,
+    };
+    db.prepare(
+      `INSERT INTO pet_medical_records (
+         pet_id, notes, vaccinations, allergies, chronic_conditions, last_checkup, medications, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(pet_id) DO UPDATE SET
+         notes = excluded.notes,
+         vaccinations = excluded.vaccinations,
+         allergies = excluded.allergies,
+         chronic_conditions = excluded.chronic_conditions,
+         last_checkup = excluded.last_checkup,
+         medications = excluded.medications,
+         updated_at = datetime('now')`
+    ).run(
+      petId,
+      next.notes ?? null,
+      next.vaccinations ?? null,
+      next.allergies ?? null,
+      next.chronicConditions ?? null,
+      next.lastCheckup ?? null,
+      next.medications ?? null
+    );
+    return this.getPetMedicalRecord(petId);
+  },
+
+  listPetMedicalEntries(petId: number, limit = 20): PetMedicalEntry[] {
+    const rows = db
+      .prepare(
+        `SELECT e.*, u.name AS author_name
+         FROM pet_medical_entries e
+         LEFT JOIN users u ON u.id = e.author_user_id
+         WHERE e.pet_id = ?
+         ORDER BY e.created_at DESC, e.id DESC
+         LIMIT ?`
+      )
+      .all(petId, limit) as Record<string, unknown>[];
+    return rows.map((row) => ({
+      id: Number(row.id),
+      petId: Number(row.pet_id),
+      authorUserId: Number(row.author_user_id),
+      authorName: (row.author_name as string) || undefined,
+      consultId: row.consult_id != null ? Number(row.consult_id) : undefined,
+      text: String(row.text),
+      createdAt: String(row.created_at),
+    }));
+  },
+
+  addPetMedicalEntry(input: {
+    petId: number;
+    authorUserId: number;
+    text: string;
+    consultId?: number;
+  }): PetMedicalEntry {
+    const result = db
+      .prepare(
+        `INSERT INTO pet_medical_entries (pet_id, author_user_id, consult_id, text)
+         VALUES (?, ?, ?, ?)`
+      )
+      .run(
+        input.petId,
+        input.authorUserId,
+        input.consultId ?? null,
+        input.text.trim()
+      );
+    const rows = this.listPetMedicalEntries(input.petId, 1);
+    return (
+      rows.find((e) => e.id === Number(result.lastInsertRowid)) ?? {
+        id: Number(result.lastInsertRowid),
+        petId: input.petId,
+        authorUserId: input.authorUserId,
+        consultId: input.consultId,
+        text: input.text.trim(),
+        createdAt: new Date().toISOString(),
+      }
+    );
+  },
+
+  /** آیا کاربر (دامپزشک با مشاوره فعال یا صاحب پت) به پرونده دسترسی دارد */
+  canAccessPetMedical(
+    petId: number,
+    viewerUserId: number
+  ): { ok: true; asOwner: boolean; asVet: boolean } | { ok: false } {
+    const pet = this.getPet(petId);
+    if (!pet) return { ok: false };
+    if (pet.ownerId === viewerUserId) {
+      return { ok: true, asOwner: true, asVet: false };
+    }
+    const active = db
+      .prepare(
+        `SELECT id FROM vet_consultations
+         WHERE pet_id = ? AND vet_user_id = ? AND status = 'active'
+         LIMIT 1`
+      )
+      .get(petId, viewerUserId);
+    if (active) return { ok: true, asOwner: false, asVet: true };
+    // دامپزشک با مشاوره فعال روی بیمار (حتی بدون pet_id)
+    const byPatient = db
+      .prepare(
+        `SELECT id FROM vet_consultations
+         WHERE patient_user_id = ? AND vet_user_id = ? AND status = 'active'
+         LIMIT 1`
+      )
+      .get(pet.ownerId, viewerUserId);
+    if (byPatient) return { ok: true, asOwner: false, asVet: true };
+    return { ok: false };
   },
 };

@@ -23,6 +23,20 @@ consultationsRouter.get('/', (req, res) => {
   res.json(consultations);
 });
 
+consultationsRouter.get('/:id', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+  const consultation = dbService.getVetConsultation(id);
+  if (!consultation) {
+    res.status(404).json({ error: 'مشاوره پیدا نشد' });
+    return;
+  }
+  res.json(consultation);
+});
+
 consultationsRouter.post('/', (req, res) => {
   const { vetUserId, patientUserId, petId, status, notes } = req.body ?? {};
 

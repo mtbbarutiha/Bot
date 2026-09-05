@@ -644,3 +644,43 @@ export async function completeStarsPayment(
     credited: Boolean(body.credited),
   };
 }
+
+export async function getPetMedical(
+  petId: number,
+  viewerId: number
+): Promise<{
+  record: import('@petdate/shared').PetMedicalRecord;
+  entries: import('@petdate/shared').PetMedicalEntry[];
+  pet: import('@petdate/shared').PetProfile;
+}> {
+  return request(`/api/pets/${petId}/medical-record?viewerId=${viewerId}`);
+}
+
+export async function updatePetMedical(
+  petId: number,
+  viewerId: number,
+  patch: Partial<import('@petdate/shared').PetMedicalRecord>
+): Promise<import('@petdate/shared').PetMedicalRecord> {
+  return request(`/api/pets/${petId}/medical-record`, {
+    method: 'PUT',
+    body: JSON.stringify({ viewerId, ...patch }),
+  });
+}
+
+export async function addPetMedicalEntry(
+  petId: number,
+  data: { authorUserId: number; text: string; consultId?: number }
+): Promise<import('@petdate/shared').PetMedicalEntry> {
+  return request(`/api/pets/${petId}/medical-entries`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getVetConsultation(id: number): Promise<import('@petdate/shared').VetConsultation | null> {
+  try {
+    return await request(`/api/consultations/${id}`);
+  } catch {
+    return null;
+  }
+}

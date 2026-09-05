@@ -11,6 +11,7 @@ import {
 import { QUICK_VET_COST, formatNum } from '../economy';
 import { mainMenuKeyboard } from '../keyboards';
 import { getCtxUser, menuKeyboardFor } from './helpers';
+import { startVetChat } from './vet-chat';
 
 export async function handleCoins(ctx: Context): Promise<void> {
   const { handleCoins: coinsHandler } = await import('./coins');
@@ -268,9 +269,26 @@ export async function handleVetConsultDecision(
     text: action === 'accept' ? 'قبول شد ✅' : 'رد شد',
   });
 
+  if (action === 'accept') {
+    const patient = await getUserById(updated.patientUserId);
+    if (patient) {
+      try {
+        const prev =
+          ctx.callbackQuery?.message && 'text' in ctx.callbackQuery.message
+            ? String(ctx.callbackQuery.message.text)
+            : '📬 درخواست مشاوره';
+        await ctx.editMessageText(`${prev}\n\n✅ قبول شد — چت در حال شروع…`);
+      } catch {
+        /* ignore */
+      }
+      await startVetChat(ctx, updated.id, vet, patient);
+      return;
+    }
+  }
+
   const statusLine =
     action === 'accept'
-      ? '✅ درخواست را قبول کردی. با بیمار هماهنگ کن.'
+      ? '✅ درخواست را قبول کردی.'
       : '❌ درخواست رد شد.';
 
   try {
@@ -288,22 +306,10 @@ export async function handleVetConsultDecision(
     if (patient?.telegramId) {
       await ctx.api.sendMessage(
         patient.telegramId,
-        action === 'accept'
-          ? [
-              '🎉 <b>پزشک درخواستت را قبول کرد</b>',
-              '',
-              `دامپزشک: <b>${escapeHtml(vet.name)}</b>`,
-              vet.city ? `شهر: ${escapeHtml(vet.city)}` : null,
-              '',
-              'به‌زودی باهات هماهنگ می‌کنه.',
-            ]
-              .filter(Boolean)
-              .join('\n')
-          : [
-              'دامپزشک این درخواست را نپذیرفت.',
-              'می‌تونی دوباره از «ارتباط سریع با پزشک» درخواست بدی.',
-            ].join('\n'),
-        { parse_mode: 'HTML' }
+        [
+          'دامپزشک این درخواست را نپذیرفت.',
+          'می‌تونی دوباره از «ارتباط سریع با پزشک» درخواست بدی.',
+        ].join('\n')
       );
     }
   } catch (err) {

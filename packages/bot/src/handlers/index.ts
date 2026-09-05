@@ -84,6 +84,11 @@ import {
   handleServices,
   handleVetConsultDecision,
 } from './services';
+import {
+  handleVetChatMedicalPetPick,
+  handleVetChatNotePetPick,
+  handleVetChatRelay,
+} from './vet-chat';
 import { handleVetPatients } from './vet';
 import {
   handleCoins,
@@ -442,6 +447,12 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery(/^vet:consult:ack:/, async (ctx) => {
     await ctx.answerCallbackQuery({ text: 'باشه ✅' }).catch(() => undefined);
   });
+  bot.callbackQuery(/^vchat:med:(\d+)$/, (ctx) =>
+    handleVetChatMedicalPetPick(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery(/^vchat:note:(\d+)$/, (ctx) =>
+    handleVetChatNotePetPick(ctx, Number(ctx.match![1]))
+  );
   bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));
   bot.callbackQuery(/^shop:/, (ctx) => handleComingSoon(ctx, 'پت شاپ'));
   bot.callbackQuery(/^svc:/, (ctx) => handleComingSoon(ctx, 'خدمات'));
@@ -487,6 +498,7 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:photo', async (ctx) => {
+    if (await handleVetChatRelay(ctx)) return;
     // اول بر اساس session.step مسیریابی کن تا handler اشتباه عکس را نبلعد
     const step = ctx.from ? (await getSession(String(ctx.from.id)))?.step : undefined;
     if (step === 'pet_photo') {
@@ -521,6 +533,7 @@ export function registerHandlers(bot: Bot): void {
   });
 
   bot.on('message:document', async (ctx) => {
+    if (await handleVetChatRelay(ctx)) return;
     const step = ctx.from ? (await getSession(String(ctx.from.id)))?.step : undefined;
     if (step === 'payment_receipt') {
       if (await handlePaymentReceiptPhoto(ctx)) return;
@@ -536,12 +549,19 @@ export function registerHandlers(bot: Bot): void {
     if (await handleVetCredentialDocument(ctx)) return;
   });
 
+  bot.on('message:voice', async (ctx) => {
+    if (await handleVetChatRelay(ctx)) return;
+  });
+
   bot.on('message:text', handleTextMessage);
 }
 
 async function handleTextMessage(ctx: Context): Promise<void> {
   const text = ctx.message?.text?.trim();
   if (!text || text.startsWith('/')) return;
+
+  // چت مشاوره دامپزشک — اولویت بالا
+  if (await handleVetChatRelay(ctx)) return;
 
   // Global cancel from reply keyboard while in any flow
   if (text === WIZARD_NAV.cancel) {

@@ -158,3 +158,93 @@ petsRouter.delete('/:id', (req, res) => {
   }
   res.json({ ok: true, id });
 });
+
+petsRouter.get('/:id/medical-record', (req, res) => {
+  const petId = Number(req.params.id);
+  const viewerId = req.query.viewerId ? Number(req.query.viewerId) : undefined;
+  if (!Number.isFinite(petId) || petId <= 0) {
+    res.status(400).json({ error: 'شناسه پت نامعتبر' });
+    return;
+  }
+  const pet = dbService.getPet(petId);
+  if (!pet) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+  if (viewerId != null) {
+    const access = dbService.canAccessPetMedical(petId, viewerId);
+    if (!access.ok) {
+      res.status(403).json({ error: 'دسترسی به پرونده نداری' });
+      return;
+    }
+  }
+  const record = dbService.getPetMedicalRecord(petId);
+  const entries = dbService.listPetMedicalEntries(petId);
+  res.json({ record, entries, pet });
+});
+
+petsRouter.put('/:id/medical-record', (req, res) => {
+  const petId = Number(req.params.id);
+  const viewerId = req.body?.viewerId != null ? Number(req.body.viewerId) : undefined;
+  if (!Number.isFinite(petId) || petId <= 0) {
+    res.status(400).json({ error: 'شناسه پت نامعتبر' });
+    return;
+  }
+  const pet = dbService.getPet(petId);
+  if (!pet) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+  if (viewerId == null) {
+    res.status(400).json({ error: 'viewerId الزامی است' });
+    return;
+  }
+  const access = dbService.canAccessPetMedical(petId, viewerId);
+  if (!access.ok) {
+    res.status(403).json({ error: 'دسترسی به پرونده نداری' });
+    return;
+  }
+  const patch = {
+    notes: typeof req.body?.notes === 'string' ? req.body.notes : undefined,
+    vaccinations: typeof req.body?.vaccinations === 'string' ? req.body.vaccinations : undefined,
+    allergies: typeof req.body?.allergies === 'string' ? req.body.allergies : undefined,
+    chronicConditions:
+      typeof req.body?.chronicConditions === 'string' ? req.body.chronicConditions : undefined,
+    lastCheckup: typeof req.body?.lastCheckup === 'string' ? req.body.lastCheckup : undefined,
+    medications: typeof req.body?.medications === 'string' ? req.body.medications : undefined,
+  };
+  const record = dbService.upsertPetMedicalRecord(petId, patch);
+  res.json(record);
+});
+
+petsRouter.post('/:id/medical-entries', (req, res) => {
+  const petId = Number(req.params.id);
+  const authorUserId = req.body?.authorUserId != null ? Number(req.body.authorUserId) : undefined;
+  const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
+  const consultId = req.body?.consultId != null ? Number(req.body.consultId) : undefined;
+  if (!Number.isFinite(petId) || petId <= 0) {
+    res.status(400).json({ error: 'شناسه پت نامعتبر' });
+    return;
+  }
+  if (!authorUserId || !text) {
+    res.status(400).json({ error: 'authorUserId و text الزامی هستند' });
+    return;
+  }
+  const pet = dbService.getPet(petId);
+  if (!pet) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+  const access = dbService.canAccessPetMedical(petId, authorUserId);
+  if (!access.ok) {
+    res.status(403).json({ error: 'اجازه ثبت در پرونده را نداری' });
+    return;
+  }
+  const entry = dbService.addPetMedicalEntry({
+    petId,
+    authorUserId,
+    text,
+    consultId: Number.isFinite(consultId) ? consultId : undefined,
+  });
+  res.status(201).json(entry);
+});
