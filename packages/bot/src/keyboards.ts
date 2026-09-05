@@ -176,16 +176,16 @@ export function withWizardNav(
   opts?: { skip?: boolean; noBack?: boolean; skipLater?: boolean }
 ): Keyboard {
   if (opts?.skip) {
-    kb.row().text(WIZARD_NAV.skip);
+    kb.row().text(WIZARD_NAV.skip).primary();
   }
   if (opts?.skipLater) {
-    kb.row().text(WIZARD_NAV.skipLater);
+    kb.row().text(WIZARD_NAV.skipLater).primary();
   }
   kb.row();
-  if (!opts?.noBack) kb.text(WIZARD_NAV.back);
+  if (!opts?.noBack) kb.text(WIZARD_NAV.back).primary();
   kb.text(WIZARD_NAV.cancel).danger();
   // همیشه «منو» قابل‌دسترس باشد تا کیبورد قدیمی تلگرام گیر نکند
-  kb.row().text(MAIN_MENU_BTN);
+  kb.row().text(MAIN_MENU_BTN).primary();
   return kb.resized().persistent();
 }
 
@@ -264,15 +264,15 @@ export function phoneWizardKeyboard(): Keyboard {
     .requestContact(WIZARD_NAV.sharePhone)
     .primary()
     .row()
-    .text(WIZARD_NAV.skip)
+    .text(WIZARD_NAV.skip).primary()
     .row()
-    .text(WIZARD_NAV.skipLater)
+    .text(WIZARD_NAV.skipLater).primary()
     .row()
-    .text(WIZARD_NAV.back)
+    .text(WIZARD_NAV.back).primary()
     .text(WIZARD_NAV.cancel)
     .danger()
     .row()
-    .text(MAIN_MENU_BTN)
+    .text(MAIN_MENU_BTN).primary()
     .resized()
     .persistent();
 }
@@ -308,18 +308,18 @@ export function breedReplyKeyboard(breeds: PetBreed[], page: number): Keyboard {
 
   if (totalPages > 1) {
     kb.row();
-    if (safePage > 0) kb.text(WIZARD_NAV.prevPage);
+    if (safePage > 0) kb.text(WIZARD_NAV.prevPage).primary();
     kb.text(`${safePage + 1}/${totalPages}`);
-    if (safePage < totalPages - 1) kb.text(WIZARD_NAV.nextPage);
+    if (safePage < totalPages - 1) kb.text(WIZARD_NAV.nextPage).primary();
   }
 
   // بازگشت و نوشتن دستی کنار هم — بدون رد کردن تا جا برای نژاد بیشتر باشد
   kb.row();
-  kb.text(WIZARD_NAV.back);
-  kb.text(WIZARD_NAV.custom);
+  kb.text(WIZARD_NAV.back).primary();
+  kb.text(WIZARD_NAV.custom).primary();
   kb.row();
   kb.text(WIZARD_NAV.cancel).danger();
-  kb.row().text(MAIN_MENU_BTN);
+  kb.row().text(MAIN_MENU_BTN).primary();
   return kb.resized().persistent();
 }
 
@@ -349,11 +349,11 @@ export function yesNoReplyKeyboard(): Keyboard {
     .text(NO_LABEL)
     .danger()
     .row()
-    .text(WIZARD_NAV.back)
+    .text(WIZARD_NAV.back).primary()
     .text(WIZARD_NAV.cancel)
     .danger()
     .row()
-    .text(MAIN_MENU_BTN)
+    .text(MAIN_MENU_BTN).primary()
     .resized()
     .persistent();
 }
@@ -422,7 +422,7 @@ export function mainMenuKeyboard(
  * - «پنل ادمین» فقط اگر telegramId در ADMIN_TELEGRAM_IDS / TELEGRAM_ADMIN_IDS باشد
  */
 function appendAccessRow(kb: Keyboard, telegramId?: string | number | null): Keyboard {
-  kb.row().text(MY_ROLES_LABEL);
+  kb.row().text(MY_ROLES_LABEL).primary();
   if (telegramId != null && isTelegramAdmin(telegramId)) {
     kb.text(ADMIN_MENU.panel).primary();
   }
@@ -435,14 +435,18 @@ export function vetMenuKeyboard(
 ): Keyboard {
   const m = VET_MENU;
   const online = options?.vetOnline === true;
-  const kb = new Keyboard()
-    .text(online ? m.goOffline : m.goOnline)
-    .primary()
+  const kb = new Keyboard().text(online ? m.goOffline : m.goOnline);
+  if (online) kb.danger();
+  else kb.success();
+  kb
     .row()
     .text(m.recentPatients)
+    .primary()
     .row()
     .text(m.profile)
+    .primary()
     .text(m.help)
+    .primary()
     .resized()
     .persistent();
   return appendAccessRow(kb, telegramId);
@@ -460,21 +464,29 @@ export function petOwnerMenuKeyboard(telegramId?: string | number | null): Keybo
     .primary()
     .row()
     .text(m.myProfile)
+    .primary()
     .text(m.myPets)
+    .primary()
     .row()
     .text(m.coins)
+    .primary()
     .text(m.earn)
+    .success()
     .row()
     .text(m.medical)
+    .primary()
     .text(m.invite)
     .success()
     .row()
     .text(m.quickVet)
     .primary()
     .text(m.shop)
+    .primary()
     .row()
     .text(m.services)
+    .primary()
     .text(m.help)
+    .primary()
     .resized()
     .persistent();
   return appendAccessRow(kb, telegramId);
@@ -492,8 +504,10 @@ export function searchPetsMenuKeyboard(): Keyboard {
     .primary()
     .row()
     .text(m.allPets)
+    .primary()
     .row()
     .text(m.backToMenu)
+    .primary()
     .resized()
     .persistent();
 }
@@ -505,9 +519,12 @@ export function defaultMenuKeyboard(telegramId?: string | number | null): Keyboa
     .primary()
     .row()
     .text(m.myPets)
+    .primary()
     .text(m.profile)
+    .primary()
     .row()
     .text(m.help)
+    .primary()
     .resized()
     .persistent();
   return appendAccessRow(kb, telegramId);
@@ -521,6 +538,7 @@ export function adminPanelKeyboard(): Keyboard {
     .primary()
     .row()
     .text(m.vetQueue)
+    .primary()
     .row()
     .text(m.vetList)
     .primary()
@@ -528,8 +546,10 @@ export function adminPanelKeyboard(): Keyboard {
     .text(m.stats)
     .success()
     .text(m.pendingPayments)
+    .primary()
     .row()
     .text(m.back)
+    .primary()
     .resized()
     .persistent();
 }
@@ -560,8 +580,8 @@ export function adminVetCredentialKeyboard(userId: number): InlineKeyboard {
     .text('❌ رد', `vetcred:reject:${userId}`)
     .danger()
     .row()
-    .text('⏭ بعدی', 'vetcred:admin:next')
-    .text('📋 صف', 'vetcred:admin:queue');
+    .text('⏭ بعدی', 'vetcred:admin:next').primary()
+    .text('📋 صف', 'vetcred:admin:queue').primary();
 }
 
 /** لیست فشردهٔ پزشک‌ها با انتخاب جزئیات + صفحه‌بندی */
@@ -605,7 +625,7 @@ export function adminVetToggleKeyboard(
   } else {
     kb.text('▶️ فعال کردن', `admin:vet:enable:${userId}:${listPage}`).success();
   }
-  kb.row().text('🔙 بازگشت به لیست', `admin:vet:list:${listPage}`);
+  kb.row().text('🔙 بازگشت به لیست', `admin:vet:list:${listPage}`).primary();
   return kb;
 }
 
@@ -617,6 +637,7 @@ export function myPetsSectionKeyboard(): Keyboard {
     .success()
     .row()
     .text(m.backToMenu)
+    .primary()
     .resized()
     .persistent();
 }
@@ -678,7 +699,7 @@ export function petBoolKeyboard(field: 'vaccinated' | 'neutered' | 'looking'): I
 }
 
 export function skipKeyboard(callback: string): InlineKeyboard {
-  return new InlineKeyboard().text('⏭ رد کردن', callback);
+  return new InlineKeyboard().text('⏭ رد کردن', callback).primary();
 }
 
 export function exploreListKeyboard(pets: PetProfile[], page: number, pageSize: number): InlineKeyboard {
@@ -697,7 +718,7 @@ export function exploreListKeyboard(pets: PetProfile[], page: number, pageSize: 
     if (page < totalPages - 1) kb.text('بعدی ▶️', `explore:page:${page + 1}`);
     kb.row();
   }
-  kb.text('🔄 تعویض پت من', 'explore:pick').row();
+  kb.text('🔄 تعویض پت من', 'explore:pick').primary().row();
   return kb;
 }
 
@@ -717,7 +738,7 @@ export function petDetailKeyboard(petId: number, canRequest: boolean): InlineKey
   // درخواست دستی حذف شد — پیدا کردن همبازی خودکار ارسال می‌کند
   void petId;
   void canRequest;
-  kb.text('🔙 بازگشت', 'explore:pick');
+  kb.text('🔙 بازگشت', 'explore:pick').primary();
   return kb;
 }
 
@@ -772,16 +793,16 @@ export function profileActionsKeyboard(
   }
 
   if (opts?.isVet) {
-    kb.text('📄 آپلود مدرک', 'profile:vet_credential').row();
+    kb.text('📄 آپلود مدرک', 'profile:vet_credential').primary().row();
   }
 
   // Face verify lives only in profile (not main reply menus)
   if (verificationStatus === 'verified') {
-    kb.text('✅ احراز چهره شده', 'verify:status').row();
+    kb.text('✅ احراز چهره شده', 'verify:status').success().row();
   } else if (verificationStatus === 'pending') {
-    kb.text('⏳ در انتظار احراز چهره', 'verify:status').row();
+    kb.text('⏳ در انتظار احراز چهره', 'verify:status').primary().row();
   } else {
-    kb.text('🛡 احراز چهره', 'verify:start').row();
+    kb.text('🛡 احراز چهره', 'verify:start').primary().row();
   }
 
   kb.text('📱 احراز موبایل', 'phone:verify:start').primary().row();
@@ -801,26 +822,26 @@ export function profileEditSectionsKeyboard(opts?: {
   isVet?: boolean;
 }): InlineKeyboard {
   const kb = new InlineKeyboard()
-    .text('✏️ ویرایش نام', 'profile:edit:name')
-    .text('🎂 ویرایش سن', 'profile:edit:age')
+    .text('✏️ ویرایش نام', 'profile:edit:name').primary()
+    .text('🎂 ویرایش سن', 'profile:edit:age').primary()
     .row()
-    .text('⚧ ویرایش جنسیت', 'profile:edit:gender')
-    .text('📍 ویرایش موقعیت', 'profile:edit:location')
+    .text('⚧ ویرایش جنسیت', 'profile:edit:gender').primary()
+    .text('📍 ویرایش موقعیت', 'profile:edit:location').primary()
     .row()
-    .text('📱 ویرایش موبایل', 'profile:edit:phone')
-    .text('🖼 ویرایش عکس', 'profile:edit:photo')
+    .text('📱 ویرایش موبایل', 'profile:edit:phone').primary()
+    .text('🖼 ویرایش عکس', 'profile:edit:photo').primary()
     .row()
-    .text('💬 ویرایش بیو', 'profile:edit:bio')
-    .text('💚 ویرایش علایق', 'profile:edit:interests')
+    .text('💬 ویرایش بیو', 'profile:edit:bio').primary()
+    .text('💚 ویرایش علایق', 'profile:edit:interests').primary()
     .row();
 
   if (opts?.isVet) {
-    kb.text('📄 آپلود مدرک', 'profile:vet_credential').row();
+    kb.text('📄 آپلود مدرک', 'profile:vet_credential').primary().row();
   }
   if (opts?.incomplete) {
     kb.text('✨ تکمیل همه', 'profile:edit:all').success().row();
   }
-  kb.text('↩️ بازگشت به پروفایل', 'profile:edit:back');
+  kb.text('↩️ بازگشت به پروفایل', 'profile:edit:back').primary();
   return kb;
 }
 
@@ -829,7 +850,7 @@ export function verificationSubmitKeyboard(hasAvatar: boolean): InlineKeyboard {
   if (hasAvatar) {
     kb.text('📷 ارسال عکس فعلی پروفایل', 'verify:use_avatar').success().row();
   }
-  kb.text('↩️ انصراف', 'verify:cancel');
+  kb.text('↩️ انصراف', 'verify:cancel').danger();
   return kb;
 }
 
@@ -840,12 +861,12 @@ export function adminVerificationKeyboard(userId: number): InlineKeyboard {
     .text('❌ رد', `verify:reject:${userId}`)
     .danger()
     .row()
-    .text('⏭ بعدی', 'verify:admin:next')
-    .text('📋 صف', 'verify:admin:queue');
+    .text('⏭ بعدی', 'verify:admin:next').primary()
+    .text('📋 صف', 'verify:admin:queue').primary();
 }
 
 export function adminRejectSkipKeyboard(): InlineKeyboard {
-  return new InlineKeyboard().text('⏭ بدون دلیل', 'verify:reject_skip');
+  return new InlineKeyboard().text('⏭ بدون دلیل', 'verify:reject_skip').primary();
 }
 
 export function profileConfirmKeyboard(action: 'deactivate' | 'delete'): InlineKeyboard {
@@ -862,7 +883,7 @@ export function confirmDeleteKeyboard(): InlineKeyboard {
 }
 
 export function skipProfileKeyboard(callback: string): InlineKeyboard {
-  return new InlineKeyboard().text('⏭ رد کردن', callback);
+  return new InlineKeyboard().text('⏭ رد کردن', callback).primary();
 }
 
 export function myPetsActionKeyboard(): InlineKeyboard {
@@ -889,7 +910,7 @@ export function myPetProfileKeyboard(petId: number): InlineKeyboard {
     .text('🗑 حذف پت', `pets:delete:${petId}`)
     .danger()
     .row()
-    .text('🔙 بازگشت به پت‌های من', 'pets:list');
+    .text('🔙 بازگشت به پت‌های من', 'pets:list').primary();
 }
 
 /** منوی ویرایش بخش‌به‌بخش پروفایل پت (صاحب پت) */
@@ -913,7 +934,7 @@ export function petEditSectionsKeyboard(petId: number): InlineKeyboard {
     .text('🤝 همبازی', `pets:edit:${petId}:looking`)
     .text('🏥 بیماری', `pets:edit:${petId}:diseases`)
     .row()
-    .text('↩️ بازگشت به پروفایل', `pets:edit:${petId}:back`);
+    .text('↩️ بازگشت به پروفایل', `pets:edit:${petId}:back`).primary();
 }
 
 export function confirmPetDeleteKeyboard(petId: number): InlineKeyboard {
@@ -940,7 +961,7 @@ export function coinsShopKeyboard(lastDailyCoinAt?: string | null): InlineKeyboa
   if (canClaimDaily(lastDailyCoinAt)) {
     kb.text(`🎁 سکه روزانه (+${formatNum(DAILY_COIN_REWARD)})`, 'coins:daily').success().row();
   } else {
-    kb.text('🎁 سکه روزانه (فردا)', 'coins:daily:done').row();
+    kb.text('🎁 سکه روزانه (فردا)', 'coins:daily:done').primary().row();
   }
   for (const p of COIN_PACKAGES) {
     kb.text(packagePickerLabel(p), `coins:pkg:${p.id}`);
@@ -957,6 +978,7 @@ export function coinPackagePayKeyboard(pkgId: string): InlineKeyboard {
     .primary()
     .row()
     .text('💳 کارت به کارت', `coins:pay:card:${pkgId}`)
+    .primary()
     .row()
     .text('↩️ بازگشت', 'coins:back')
     .primary();
@@ -967,7 +989,7 @@ export function paymentReceiptCancelKeyboard(): InlineKeyboard {
     .text('📤 ارسال فیش', 'coins:pay:receipt')
     .primary()
     .row()
-    .text('↩️ انصراف از پرداخت', 'coins:pay:cancel');
+    .text('↩️ انصراف از پرداخت', 'coins:pay:cancel').danger();
 }
 
 /** کیبورد reply هنگام انتظار فیش کارت‌به‌کارت */
@@ -977,6 +999,7 @@ export function paymentReceiptReplyKeyboard(): Keyboard {
     .primary()
     .row()
     .text('↩️ انصراف از پرداخت')
+    .danger()
     .resized()
     .persistent();
 }
@@ -995,7 +1018,7 @@ export function earnKeyboard(canSell: boolean): InlineKeyboard {
   if (canSell) {
     kb.text('💵 فروش سکه', 'earn:sell').success().row();
   }
-  kb.text('✖️ بستن', 'earn:close');
+  kb.text('✖️ بستن', 'earn:close').primary().primary();
   return kb;
 }
 

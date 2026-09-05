@@ -15,7 +15,14 @@ function escapeHtml(value: string): string {
 }
 
 export function ownerChatReplyKeyboard(): Keyboard {
-  return new Keyboard().text(OWNER_CHAT_BTNS.end).row().text(MAIN_MENU_BTN).resized().persistent();
+  return new Keyboard()
+    .text(OWNER_CHAT_BTNS.end)
+    .danger()
+    .row()
+    .text(MAIN_MENU_BTN)
+    .primary()
+    .resized()
+    .persistent();
 }
 
 function clearOwnerChatPatch() {

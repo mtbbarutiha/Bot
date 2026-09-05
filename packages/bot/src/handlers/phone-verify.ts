@@ -37,7 +37,7 @@ const MENU_LABELS = new Set<string>([
 ]);
 
 function phoneOtpKeyboard(): Keyboard {
-  return withWizardNav(new Keyboard().text('🔄 ارسال مجدد کد'), {
+  return withWizardNav(new Keyboard().text('🔄 ارسال مجدد کد').primary(), {
     noBack: true,
     skip: false,
   });

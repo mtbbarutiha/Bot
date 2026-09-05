@@ -48,10 +48,10 @@ function clearPrescriptionSessionPatch() {
 function rxActionKeyboard(hasDraft: boolean): InlineKeyboard {
   const kb = new InlineKeyboard();
   if (hasDraft) {
-    kb.text('✅ تأیید و صدور نسخه', 'vchat:rxok').row();
+    kb.text('✅ تأیید و صدور نسخه', 'vchat:rxok').success().row();
   }
-  kb.text('➕ داروی دیگر', 'vchat:rxmore')
-    .text('✏️ نوشتن دستی', 'vchat:rxmanual')
+  kb.text('➕ داروی دیگر', 'vchat:rxmore').primary()
+    .text('✏️ نوشتن دستی', 'vchat:rxmanual').primary()
     .row();
   return kb;
 }
@@ -59,11 +59,11 @@ function rxActionKeyboard(hasDraft: boolean): InlineKeyboard {
 function rxCategoriesKeyboard(hasDraft: boolean): InlineKeyboard {
   const kb = new InlineKeyboard();
   for (const cat of RX_CONDITION_CATEGORIES) {
-    kb.text(`${cat.emoji} ${cat.labelFa}`, `vchat:rxcat:${cat.id}`).row();
+    kb.text(`${cat.emoji} ${cat.labelFa}`, `vchat:rxcat:${cat.id}`).primary().row();
   }
-  kb.text('✏️ نوشتن دستی', 'vchat:rxmanual');
+  kb.text('✏️ نوشتن دستی', 'vchat:rxmanual').primary();
   if (hasDraft) {
-    kb.row().text('✅ تأیید و صدور نسخه', 'vchat:rxok');
+    kb.row().text('✅ تأیید و صدور نسخه', 'vchat:rxok').success();
   }
   return kb;
 }
@@ -73,12 +73,12 @@ function rxMedsKeyboard(categoryId: string, hasDraft: boolean): InlineKeyboard |
   if (!cat) return null;
   const kb = new InlineKeyboard();
   for (const med of cat.medications) {
-    kb.text(`💊 ${med.nameFa}`, `vchat:rxmed:${cat.id}:${med.id}`).row();
+    kb.text(`💊 ${med.nameFa}`, `vchat:rxmed:${cat.id}:${med.id}`).primary().row();
   }
-  kb.text('◀️ بازگشت به بیماری‌ها', 'vchat:rxmore').row();
-  kb.text('✏️ نوشتن دستی', 'vchat:rxmanual');
+  kb.text('◀️ بازگشت به بیماری‌ها', 'vchat:rxmore').primary().row();
+  kb.text('✏️ نوشتن دستی', 'vchat:rxmanual').primary();
   if (hasDraft) {
-    kb.row().text('✅ تأیید و صدور نسخه', 'vchat:rxok');
+    kb.row().text('✅ تأیید و صدور نسخه', 'vchat:rxok').success();
   }
   return kb;
 }
@@ -379,7 +379,7 @@ async function showProfileForPatientPets(
 
   const kb = new InlineKeyboard();
   for (const pet of pets.slice(0, 12)) {
-    kb.text(`🐾 ${pet.name}`, `vchat:prof:${pet.id}`).row();
+    kb.text(`🐾 ${pet.name}`, `vchat:prof:${pet.id}`).primary().row();
   }
   await ctx.reply('پروفایل کدام پت؟', { reply_markup: kb });
 }
@@ -463,7 +463,7 @@ async function showMedicalForPatientPets(
 
   const kb = new InlineKeyboard();
   for (const pet of pets.slice(0, 12)) {
-    kb.text(`🐾 ${pet.name}`, `vchat:med:${pet.id}`).row();
+    kb.text(`🐾 ${pet.name}`, `vchat:med:${pet.id}`).primary().row();
   }
   await ctx.reply('کدام پت؟', { reply_markup: kb });
 }
@@ -559,7 +559,7 @@ export async function handleVetChatAddNoteStart(ctx: Context): Promise<boolean> 
 
   const kb = new InlineKeyboard();
   for (const pet of pets.slice(0, 12)) {
-    kb.text(`✍️ ${pet.name}`, `vchat:note:${pet.id}`).row();
+    kb.text(`✍️ ${pet.name}`, `vchat:note:${pet.id}`).primary().row();
   }
   await ctx.reply('ثبت مورد برای کدام پت؟', { reply_markup: kb });
   return true;
@@ -692,7 +692,7 @@ export async function handleVetChatPrescriptionStart(ctx: Context): Promise<bool
 
   const kb = new InlineKeyboard();
   for (const pet of pets.slice(0, 12)) {
-    kb.text(`💊 ${pet.name}`, `vchat:rx:${pet.id}`).row();
+    kb.text(`💊 ${pet.name}`, `vchat:rx:${pet.id}`).primary().row();
   }
   await ctx.reply('نسخه برای کدام پت؟', { reply_markup: kb });
   return true;
