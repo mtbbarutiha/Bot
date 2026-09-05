@@ -110,11 +110,11 @@ export function MatchesPage() {
                   </div>
                 ) : (
                   <div className="match-actions">
-                    <button className="btn-reject" disabled style={{ opacity: 0.5 }}>
+                    <Link to={`/chats/${match.id}`} className="btn-accept">
                       <MessageCircle size={16} strokeWidth={2} />
-                      چت (فاز بعدی)
-                    </button>
-                    <Link to={`/pets/${match.fromPet.id}`} className="btn-accept btn-profile">👤 پروفایل</Link>
+                      💬 باز کردن چت
+                    </Link>
+                    <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">👤 پروفایل</Link>
                   </div>
                 )}
               </div>

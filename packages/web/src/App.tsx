@@ -7,6 +7,7 @@ import { ExplorePage } from './pages/ExplorePage';
 import { PetDetailPage } from './pages/PetDetailPage';
 import { AddPetPage } from './pages/AddPetPage';
 import { MatchesPage } from './pages/MatchesPage';
+import { ChatPage } from './pages/ChatPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { ClinicsPage } from './pages/ClinicsPage';
 import { ShopPage } from './pages/ShopPage';
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="pets/:id" element={<PetDetailPage />} />
             <Route path="add-pet" element={<AddPetPage />} />
             <Route path="matches" element={<MatchesPage />} />
+            <Route path="chats/:matchId" element={<ChatPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="clinics" element={<ClinicsPage />} />
             <Route path="shop" element={<ShopPage />} />
