@@ -81,6 +81,7 @@ import {
   handlePetShop,
   handleQuickVet,
   handleQuickVetConnect,
+  handleQuickVetReconnect,
   handleServices,
   handleVetConsultDecision,
 } from './services';
@@ -89,6 +90,11 @@ import {
   handleVetChatNotePetPick,
   handleVetChatPrescriptionPetPick,
   handleVetChatRelay,
+  handleVetChatRxCategory,
+  handleVetChatRxConfirm,
+  handleVetChatRxManual,
+  handleVetChatRxMedPick,
+  handleVetChatRxMore,
 } from './vet-chat';
 import { handleVetPatients } from './vet';
 import {
@@ -439,6 +445,9 @@ export function registerHandlers(bot: Bot): void {
 
   bot.callbackQuery(/^medical:/, (ctx) => handleComingSoon(ctx, 'پزشکی'));
   bot.callbackQuery('vet:connect', (ctx) => handleQuickVetConnect(ctx));
+  bot.callbackQuery(/^vet:reconnect:(\d+)$/, (ctx) =>
+    handleQuickVetReconnect(ctx, Number(ctx.match![1]))
+  );
   bot.callbackQuery(/^vet:consult:accept:(\d+)$/, (ctx) =>
     handleVetConsultDecision(ctx, Number(ctx.match![1]), 'accept')
   );
@@ -457,6 +466,15 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery(/^vchat:rx:(\d+)$/, (ctx) =>
     handleVetChatPrescriptionPetPick(ctx, Number(ctx.match![1]))
   );
+  bot.callbackQuery(/^vchat:rxcat:([a-z]+)$/, (ctx) =>
+    handleVetChatRxCategory(ctx, ctx.match![1]!)
+  );
+  bot.callbackQuery(/^vchat:rxmed:([a-z]+):([a-z0-9_]+)$/, (ctx) =>
+    handleVetChatRxMedPick(ctx, ctx.match![1]!, ctx.match![2]!)
+  );
+  bot.callbackQuery('vchat:rxmore', (ctx) => handleVetChatRxMore(ctx));
+  bot.callbackQuery('vchat:rxmanual', (ctx) => handleVetChatRxManual(ctx));
+  bot.callbackQuery('vchat:rxok', (ctx) => handleVetChatRxConfirm(ctx));
   bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));
   bot.callbackQuery(/^shop:/, (ctx) => handleComingSoon(ctx, 'پت شاپ'));
   bot.callbackQuery(/^svc:/, (ctx) => handleComingSoon(ctx, 'خدمات'));

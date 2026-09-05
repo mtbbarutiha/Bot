@@ -2,6 +2,7 @@ export * from './petdate';
 export * from './catalog';
 export * from './brand';
 export * from './economy';
+export * from './rx-suggestions';
 
 import type {
   OnboardingStatus,
@@ -45,6 +46,7 @@ export {
   formatPersianDateTime,
   formatPetAge,
   formatVetAuthorName,
+  formatVetRatingLine,
   normalizeIranMobile,
   normalizeRoles,
   parsePetAgeInput,
@@ -73,6 +75,7 @@ export type {
   PetProfile,
   ProfileDraft,
   UserGender,
+  PreviousVet,
   VetConsultation,
   VetConsultStatus,
   VetCredentialStatus,
@@ -137,7 +140,29 @@ export interface User {
   /** مدرک دامپزشک (Telegram file_id) */
   vetCredentialFileId?: string;
   vetCredentialStatus?: VetCredentialStatus;
+  /** میانگین امتیاز کاربران (۱–۵) — فقط برای دامپزشک */
+  avgRating?: number;
+  /** تعداد نظرات ثبت‌شده برای دامپزشک */
+  ratingCount?: number;
   createdAt: string;
+}
+
+/** امتیاز صاحب‌پت به دامپزشک پس از مشاوره */
+export interface VetRating {
+  id: number;
+  consultId: number;
+  vetUserId: number;
+  patientUserId: number;
+  rating: number;
+  comment?: string;
+  createdAt: string;
+}
+
+/** خلاصه امتیاز دامپزشک */
+export interface VetRatingStats {
+  vetUserId: number;
+  avgRating: number;
+  ratingCount: number;
 }
 
 export interface Section {

@@ -2,8 +2,12 @@ import { InlineKeyboard, InputFile, Keyboard } from 'grammy';
 import type { Context } from 'grammy';
 import type { PetMedicalEntry, PetMedicalRecord, PetProfile, User } from '@petdate/shared';
 import {
+  RX_CONDITION_CATEGORIES,
   formatMedicalEntryAttribution,
+  formatRxMedicationTemplate,
   formatVetAuthorName,
+  getRxCategoryById,
+  getRxMedication,
 } from '@petdate/shared';
 import {
   addPetMedicalEntry,
@@ -23,6 +27,87 @@ export const VET_CHAT_BTNS = {
   addNote: '✍️ ثبت در پرونده',
   prescription: '💊 نوشتن نسخه',
 } as const;
+
+const RX_NOTE =
+  '⚠️ پیشنهادها فقط راهنما هستند؛ دوز و مدت را خودتان تکمیل/ویرایش کنید.';
+
+function clearPrescriptionSessionPatch() {
+  return {
+    prescriptionPetId: undefined as number | undefined,
+    prescriptionDraft: undefined as string | undefined,
+  };
+}
+
+function rxActionKeyboard(hasDraft: boolean): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  if (hasDraft) {
+    kb.text('✅ تأیید و صدور نسخه', 'vchat:rxok').row();
+  }
+  kb.text('➕ داروی دیگر', 'vchat:rxmore')
+    .text('✏️ نوشتن دستی', 'vchat:rxmanual')
+    .row();
+  return kb;
+}
+
+function rxCategoriesKeyboard(hasDraft: boolean): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  for (const cat of RX_CONDITION_CATEGORIES) {
+    kb.text(`${cat.emoji} ${cat.labelFa}`, `vchat:rxcat:${cat.id}`).row();
+  }
+  kb.text('✏️ نوشتن دستی', 'vchat:rxmanual');
+  if (hasDraft) {
+    kb.row().text('✅ تأیید و صدور نسخه', 'vchat:rxok');
+  }
+  return kb;
+}
+
+function rxMedsKeyboard(categoryId: string, hasDraft: boolean): InlineKeyboard | null {
+  const cat = getRxCategoryById(categoryId);
+  if (!cat) return null;
+  const kb = new InlineKeyboard();
+  for (const med of cat.medications) {
+    kb.text(med.nameFa, `vchat:rxmed:${cat.id}:${med.id}`).row();
+  }
+  kb.text('◀️ بازگشت به بیماری‌ها', 'vchat:rxmore').row();
+  kb.text('✏️ نوشتن دستی', 'vchat:rxmanual');
+  if (hasDraft) {
+    kb.row().text('✅ تأیید و صدور نسخه', 'vchat:rxok');
+  }
+  return kb;
+}
+
+function formatDraftPreview(draft: string): string {
+  const trimmed = draft.trim();
+  if (!trimmed) return '— (خالی)';
+  return escapeHtml(trimmed.length > 1200 ? `${trimmed.slice(0, 1200)}…` : trimmed);
+}
+
+async function promptPrescriptionComposer(
+  ctx: Context,
+  petName: string,
+  draft?: string
+): Promise<void> {
+  const hasDraft = Boolean(draft?.trim());
+  const lines = [
+    `💊 <b>نوشتن نسخه برای «${escapeHtml(petName)}»</b>`,
+    '',
+    '<b>پیشنهاد داروها</b> — یک بیماری را انتخاب کنید:',
+    RX_NOTE,
+  ];
+  if (hasDraft) {
+    lines.push('', '<b>پیش‌نویس فعلی:</b>', formatDraftPreview(draft!));
+  } else {
+    lines.push(
+      '',
+      'می‌توانید از پیشنهادها انتخاب کنید یا «نوشتن دستی» را بزنید.',
+      `انصراف: ${VET_CHAT_BTNS.end}`
+    );
+  }
+  await ctx.reply(lines.join('\n'), {
+    parse_mode: 'HTML',
+    reply_markup: rxCategoriesKeyboard(hasDraft),
+  });
+}
 
 export function vetChatReplyKeyboard(isVet: boolean): Keyboard {
   const kb = new Keyboard().text(VET_CHAT_BTNS.end).row();
@@ -90,6 +175,7 @@ export async function startVetChat(
     vetChatRole: 'vet',
     medicalNotePetId: undefined,
     prescriptionPetId: undefined,
+    prescriptionDraft: undefined,
   });
   await upsertSession(String(patient.telegramId), {
     step: 'vet_chat',
@@ -98,6 +184,7 @@ export async function startVetChat(
     vetChatRole: 'patient',
     medicalNotePetId: undefined,
     prescriptionPetId: undefined,
+    prescriptionDraft: undefined,
   });
 
   const vetIntro = [
@@ -163,6 +250,7 @@ export async function handleVetChatEnd(ctx: Context): Promise<boolean> {
     vetChatRole: undefined,
     medicalNotePetId: undefined,
     prescriptionPetId: undefined,
+    prescriptionDraft: undefined,
   });
 
   if (peerId) {
@@ -173,6 +261,7 @@ export async function handleVetChatEnd(ctx: Context): Promise<boolean> {
       vetChatRole: undefined,
       medicalNotePetId: undefined,
       prescriptionPetId: undefined,
+      prescriptionDraft: undefined,
     });
     try {
       await ctx.api.sendMessage(peerId, '🔌 چت مشاوره قطع شد.');
@@ -298,6 +387,7 @@ export async function handleVetChatAddNoteStart(ctx: Context): Promise<boolean> 
       step: 'vet_medical_note',
       medicalNotePetId: pets[0]!.id,
       prescriptionPetId: undefined,
+      prescriptionDraft: undefined,
     });
     await ctx.reply(
       `✍️ مورد بالینی برای «${pets[0]!.name}» را بنویس و بفرست.\nانصراف با: ${VET_CHAT_BTNS.end}`,
@@ -326,6 +416,7 @@ export async function handleVetChatNotePetPick(ctx: Context, petId: number): Pro
     step: 'vet_medical_note',
     medicalNotePetId: petId,
     prescriptionPetId: undefined,
+    prescriptionDraft: undefined,
   });
   await ctx.answerCallbackQuery();
   await ctx.reply('متن مورد بالینی را بنویس و بفرست (تشخیص، دارو، توصیه…).', {
@@ -419,17 +510,10 @@ export async function handleVetChatPrescriptionStart(ctx: Context): Promise<bool
       await upsertSession(String(from.id), {
         step: 'vet_prescription',
         prescriptionPetId: linked.id,
+        prescriptionDraft: undefined,
         medicalNotePetId: undefined,
       });
-      await ctx.reply(
-        [
-          `💊 <b>نوشتن نسخه برای «${escapeHtml(linked.name)}»</b>`,
-          '',
-          'نام دارو، دوز، مدت مصرف و نکات را بنویس (چندخطی مجاز است).',
-          `انصراف: ${VET_CHAT_BTNS.end}`,
-        ].join('\n'),
-        { parse_mode: 'HTML', reply_markup: vetChatReplyKeyboard(true) }
-      );
+      await promptPrescriptionComposer(ctx, linked.name);
       return true;
     }
   }
@@ -438,17 +522,10 @@ export async function handleVetChatPrescriptionStart(ctx: Context): Promise<bool
     await upsertSession(String(from.id), {
       step: 'vet_prescription',
       prescriptionPetId: pets[0]!.id,
+      prescriptionDraft: undefined,
       medicalNotePetId: undefined,
     });
-    await ctx.reply(
-      [
-        `💊 <b>نوشتن نسخه برای «${escapeHtml(pets[0]!.name)}»</b>`,
-        '',
-        'نام دارو، دوز، مدت مصرف و نکات را بنویس (چندخطی مجاز است).',
-        `انصراف: ${VET_CHAT_BTNS.end}`,
-      ].join('\n'),
-      { parse_mode: 'HTML', reply_markup: vetChatReplyKeyboard(true) }
-    );
+    await promptPrescriptionComposer(ctx, pets[0]!.name);
     return true;
   }
 
@@ -471,20 +548,144 @@ export async function handleVetChatPrescriptionPetPick(
     await ctx.answerCallbackQuery({ text: 'فقط دامپزشک', show_alert: true });
     return;
   }
+
+  let petName = `پت #${petId}`;
+  if (session.vetChatConsultId) {
+    try {
+      const consult = await getVetConsultation(session.vetChatConsultId);
+      if (consult) {
+        const pets = await listPets({ ownerId: consult.patientUserId });
+        const found = pets.find((p) => p.id === petId);
+        if (found) petName = found.name;
+      }
+    } catch {
+      /* keep fallback */
+    }
+  }
+
   await upsertSession(String(from.id), {
     step: 'vet_prescription',
     prescriptionPetId: petId,
+    prescriptionDraft: undefined,
     medicalNotePetId: undefined,
   });
   await ctx.answerCallbackQuery();
+  await promptPrescriptionComposer(ctx, petName);
+}
+
+export async function handleVetChatRxCategory(ctx: Context, categoryId: string): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const session = await getSession(String(from.id));
+  if (!session || session.step !== 'vet_prescription' || session.vetChatRole !== 'vet') {
+    await ctx.answerCallbackQuery({ text: 'الان در حالت نسخه نیستید', show_alert: true });
+    return;
+  }
+  const cat = getRxCategoryById(categoryId);
+  if (!cat) {
+    await ctx.answerCallbackQuery({ text: 'دسته نامعتبر', show_alert: true });
+    return;
+  }
+  const hasDraft = Boolean(session.prescriptionDraft?.trim());
+  const kb = rxMedsKeyboard(categoryId, hasDraft);
+  if (!kb) {
+    await ctx.answerCallbackQuery({ text: 'دسته نامعتبر', show_alert: true });
+    return;
+  }
+  await ctx.answerCallbackQuery();
   await ctx.reply(
     [
-      '💊 متن نسخه را بنویس و بفرست.',
+      `💊 <b>${escapeHtml(cat.emoji)} ${escapeHtml(cat.labelFa)}</b>`,
+      'داروی پیشنهادی را انتخاب کنید (چند دارو مجاز است):',
+      RX_NOTE,
+    ].join('\n'),
+    { parse_mode: 'HTML', reply_markup: kb }
+  );
+}
+
+export async function handleVetChatRxMore(ctx: Context): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const session = await getSession(String(from.id));
+  if (!session || session.step !== 'vet_prescription' || session.vetChatRole !== 'vet') {
+    await ctx.answerCallbackQuery({ text: 'الان در حالت نسخه نیستید', show_alert: true });
+    return;
+  }
+  await ctx.answerCallbackQuery();
+  const hasDraft = Boolean(session.prescriptionDraft?.trim());
+  await ctx.reply(
+    [
+      '<b>پیشنهاد داروها</b> — بیماری را انتخاب کنید:',
+      RX_NOTE,
+      hasDraft ? `\n<b>پیش‌نویس فعلی:</b>\n${formatDraftPreview(session.prescriptionDraft!)}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    { parse_mode: 'HTML', reply_markup: rxCategoriesKeyboard(hasDraft) }
+  );
+}
+
+export async function handleVetChatRxManual(ctx: Context): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const session = await getSession(String(from.id));
+  if (!session || session.step !== 'vet_prescription' || session.vetChatRole !== 'vet') {
+    await ctx.answerCallbackQuery({ text: 'الان در حالت نسخه نیستید', show_alert: true });
+    return;
+  }
+  await ctx.answerCallbackQuery();
+  const hasDraft = Boolean(session.prescriptionDraft?.trim());
+  await ctx.reply(
+    [
+      '✏️ <b>نوشتن دستی</b>',
+      hasDraft
+        ? 'متن جدید را بفرستید تا جایگزین پیش‌نویس شود، یا خط تازه اضافه کنید و دوباره تأیید کنید.'
+        : 'نام دارو، دوز، فاصله و مدت را بنویسید و بفرستید.',
       'مثال:',
       'آموکسی‌سیلین ۲۵۰mg — هر ۱۲ ساعت — ۷ روز',
       'با غذا داده شود',
+      '',
+      'بعد از ارسال متن، می‌توانید دارو اضافه کنید یا «تأیید و صدور» بزنید.',
+      `انصراف: ${VET_CHAT_BTNS.end}`,
     ].join('\n'),
-    { reply_markup: vetChatReplyKeyboard(true) }
+    { parse_mode: 'HTML', reply_markup: vetChatReplyKeyboard(true) }
+  );
+}
+
+export async function handleVetChatRxMedPick(
+  ctx: Context,
+  categoryId: string,
+  medId: string
+): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const session = await getSession(String(from.id));
+  if (!session || session.step !== 'vet_prescription' || session.vetChatRole !== 'vet') {
+    await ctx.answerCallbackQuery({ text: 'الان در حالت نسخه نیستید', show_alert: true });
+    return;
+  }
+  const med = getRxMedication(categoryId, medId);
+  if (!med) {
+    await ctx.answerCallbackQuery({ text: 'دارو پیدا نشد', show_alert: true });
+    return;
+  }
+  const line = formatRxMedicationTemplate(med);
+  const prev = (session.prescriptionDraft || '').trim();
+  const nextDraft = prev ? `${prev}\n${line}` : line;
+  await upsertSession(String(from.id), { prescriptionDraft: nextDraft });
+  await ctx.answerCallbackQuery({ text: 'اضافه شد ✅' });
+  await ctx.reply(
+    [
+      `✅ اضافه شد: <b>${escapeHtml(med.nameFa)}</b>`,
+      RX_NOTE,
+      '',
+      '<b>پیش‌نویس نسخه:</b>',
+      formatDraftPreview(nextDraft),
+      '',
+      'داروی دیگر، نوشتن دستی، یا تأیید صدور را انتخاب کنید.',
+      'می‌توانید پیش‌نویس را با ارسال پیام متنی ویرایش/جایگزین کنید.',
+    ].join('\n'),
+    { parse_mode: 'HTML', reply_markup: rxActionKeyboard(true) }
   );
 }
 
@@ -504,9 +705,54 @@ export async function handleVetChatPrescriptionText(
     return false;
   }
 
-  const user = await getCtxUser(ctx);
-  if (!user) return true;
+  const trimmed = text.trim();
+  if (!trimmed) return true;
 
+  await upsertSession(String(from.id), { prescriptionDraft: trimmed });
+  await ctx.reply(
+    [
+      '✏️ پیش‌نویس ذخیره شد.',
+      RX_NOTE,
+      '',
+      '<b>پیش‌نویس نسخه:</b>',
+      formatDraftPreview(trimmed),
+      '',
+      'در صورت نیاز دوزها را در پیام بعدی اصلاح کنید، دارو اضافه کنید، یا تأیید کنید.',
+    ].join('\n'),
+    { parse_mode: 'HTML', reply_markup: rxActionKeyboard(true) }
+  );
+  return true;
+}
+
+export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const session = await getSession(String(from.id));
+  if (!session || session.step !== 'vet_prescription' || !session.prescriptionPetId) {
+    await ctx.answerCallbackQuery({ text: 'الان در حالت نسخه نیستید', show_alert: true });
+    return;
+  }
+  if (!session.vetChatConsultId) {
+    await ctx.answerCallbackQuery({ text: 'مشاوره نامعتبر', show_alert: true });
+    return;
+  }
+
+  const text = (session.prescriptionDraft || '').trim();
+  if (!text) {
+    await ctx.answerCallbackQuery({
+      text: 'پیش‌نویس خالی است — دارو انتخاب یا متن بنویسید',
+      show_alert: true,
+    });
+    return;
+  }
+
+  const user = await getCtxUser(ctx);
+  if (!user) {
+    await ctx.answerCallbackQuery({ text: 'کاربر پیدا نشد', show_alert: true });
+    return;
+  }
+
+  await ctx.answerCallbackQuery();
   await ctx.reply('⏳ در حال ساخت PDF و ارسال نسخه…');
 
   let created;
@@ -519,7 +765,7 @@ export async function handleVetChatPrescriptionText(
   } catch (err) {
     console.error('create prescription failed:', err);
     await ctx.reply('صدور نسخه ناموفق بود. دوباره تلاش کن.');
-    return true;
+    return;
   }
 
   let pdfBuf: Buffer;
@@ -529,12 +775,12 @@ export async function handleVetChatPrescriptionText(
     console.error('fetch prescription pdf failed:', err);
     await upsertSession(String(from.id), {
       step: 'vet_chat',
-      prescriptionPetId: undefined,
+      ...clearPrescriptionSessionPatch(),
     });
     await ctx.reply('نسخه ثبت شد ولی دریافت PDF ناموفق بود.', {
       reply_markup: vetChatReplyKeyboard(true),
     });
-    return true;
+    return;
   }
 
   const fileName = `hambazi-rx-${created.prescription.id}.pdf`;
@@ -570,7 +816,7 @@ export async function handleVetChatPrescriptionText(
 
   await upsertSession(String(from.id), {
     step: 'vet_chat',
-    prescriptionPetId: undefined,
+    ...clearPrescriptionSessionPatch(),
   });
 
   const smsLine =
@@ -587,8 +833,6 @@ export async function handleVetChatPrescriptionText(
     ].join('\n'),
     { reply_markup: vetChatReplyKeyboard(true) }
   );
-
-  return true;
 }
 
 export async function handleVetChatRelay(ctx: Context): Promise<boolean> {

@@ -245,6 +245,17 @@ export interface VetConsultation {
   petBreed?: string;
 }
 
+/** دامپزشکی که بیمار قبلاً باهاش مشاوره داشته (برای ارتباط سریع) */
+export interface PreviousVet {
+  id: number;
+  name: string;
+  city?: string;
+  telegramId?: string;
+  lastConsultAt: string;
+  avgRating?: number;
+  ratingCount?: number;
+}
+
 /** نسخه دارویی صادرشده توسط دامپزشک */
 export interface Prescription {
   id: number;
@@ -316,6 +327,8 @@ export interface BotSession {
   medicalNotePetId?: number;
   /** نوشتن نسخه — پت انتخاب‌شده */
   prescriptionPetId?: number;
+  /** پیش‌نویس متن نسخه (پیشنهاد دارو / دستی) قبل از تأیید صدور */
+  prescriptionDraft?: string;
   updatedAt: string;
 }
 
@@ -653,6 +666,21 @@ export function phoneVerifyIntroText(opts?: { required?: boolean }): string {
 
 export function toPersianDigits(value: number | string): string {
   return String(value).replace(/\d/g, (d) => FA_DIGITS[Number(d)] ?? d);
+}
+
+/** نمایش امتیاز دامپزشک — مثلاً «⭐ ۴.۶ (۱۲ نظر)» یا پیام خالی */
+export function formatVetRatingLine(
+  avgRating?: number | null,
+  ratingCount?: number | null,
+  opts?: { emptyLabel?: string }
+): string {
+  const count = ratingCount != null ? Math.max(0, Math.floor(Number(ratingCount))) : 0;
+  if (!count || avgRating == null || !Number.isFinite(avgRating)) {
+    return opts?.emptyLabel ?? 'هنوز نظری ثبت نشده';
+  }
+  const avg = Math.round(Number(avgRating) * 10) / 10;
+  const avgText = toPersianDigits(avg % 1 === 0 ? String(avg) : avg.toFixed(1));
+  return `⭐ ${avgText} (${toPersianDigits(count)} نظر)`;
 }
 
 /** نمایش سن پت به فارسی خوانا */
