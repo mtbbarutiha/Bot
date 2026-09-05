@@ -32,6 +32,27 @@
   --radius-md: 30px;
   --radius-lg: 24px;
   --radius-xl: 32px;
+
+  /* Pepito Bootstrap `.container` — max-width 1220px, horizontal pad 15px */
+  --pepito-container-max: 1220px;
+  --pepito-container-pad: 15px;
+  /*
+   * Side inset matching the content edge of a centered `.container`.
+   * `100%` resolves on the element that consumes this via padding-inline.
+   */
+  --pepito-gutter-x: max(
+    var(--pepito-container-pad),
+    calc((100% - var(--pepito-container-max)) / 2 + var(--pepito-container-pad))
+  );
+}
+
+/* Shared Pepito content shell (nav / sections / footer / CTA) */
+.pepito-container {
+  width: 100%;
+  max-width: var(--pepito-container-max);
+  margin-inline: auto;
+  padding-inline: var(--pepito-container-pad);
+  box-sizing: border-box;
 }
 
 body {
@@ -252,7 +273,8 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   align-items: center;
   gap: 1rem;
   min-height: var(--pepito-nav-h);
-  padding: 0.85rem clamp(1rem, 4vw, 2.75rem);
+  padding-block: 0.85rem;
+  padding-inline: var(--pepito-gutter-x);
   box-sizing: border-box;
   background: #fff;
   backdrop-filter: none;
@@ -359,14 +381,15 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 .pepito-hero-slide.is-active .pepito-hero-media {
   animation: pepito-ken 14s ease-in-out infinite alternate;
 }
-/* Bootstrap `.container` (max 1220) + vertically centered caption */
+/* Bootstrap `.container` (max 1220 / pad 15) + vertically centered caption */
 .pepito-hero-inner {
   position: relative;
   z-index: 3;
-  width: min(1220px, 100%);
+  width: min(var(--pepito-container-max), 100%);
   margin-inline: auto;
-  padding-inline: 15px;
+  padding-inline: var(--pepito-container-pad);
   padding-block: calc(env(safe-area-inset-top, 0px) + 5.5rem) 4rem;
+  box-sizing: border-box;
   animation: pepito-rise 0.75s ease both;
 }
 /* `.col-lg-7` within container */
@@ -510,7 +533,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     font-size: 18px;
   }
   .pepito-hero-inner {
-    padding-inline: 20px;
+    padding-inline: var(--pepito-container-pad);
   }
 }
 
@@ -606,7 +629,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr);
   gap: clamp(1.5rem, 4vw, 3rem);
   align-items: start;
-  max-width: 72rem;
+  width: 100%;
   margin: 0 auto;
 }
 .pepito-faq-intro .pepito-eyebrow {
@@ -626,7 +649,9 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 }
 
 .pepito-section {
-  padding: 4.25rem clamp(1rem, 4vw, 2.75rem);
+  padding-block: 4.25rem;
+  padding-inline: var(--pepito-gutter-x);
+  box-sizing: border-box;
 }
 .pepito-section--soft { background: var(--pepito-soft); }
 .pepito-section--lilac { background: linear-gradient(180deg, #fff, var(--pepito-lilac)); }
@@ -655,7 +680,17 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 .pepito-services-section {
   background: var(--pepito-soft);
   padding-block: 120px;
+  /* Full-bleed carousel: cancel section gutters; re-apply on head/track */
+  padding-inline: 0;
   overflow: hidden;
+}
+.pepito-services-section > .pepito-section-head,
+.pepito-services-section > .pepito-services-dots {
+  width: 100%;
+  max-width: var(--pepito-container-max);
+  margin-inline: auto;
+  padding-inline: var(--pepito-container-pad);
+  box-sizing: border-box;
 }
 .pepito-section-head--center {
   text-align: center;
@@ -694,7 +729,6 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 }
 .pepito-services-viewport {
   overflow: hidden;
-  margin-inline: calc(-1 * clamp(0.5rem, 2vw, 1rem));
   padding-block: 1.25rem 0.5rem;
 }
 .pepito-services-track {
@@ -705,8 +739,10 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   scroll-behavior: smooth;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  padding-inline: clamp(1rem, 4vw, 2.75rem);
+  /* Align first card with container; allow cards to bleed past opposite edge */
+  padding-inline: var(--pepito-gutter-x);
   padding-block: 1.75rem 1.25rem; /* room for -15px hover lift */
+  box-sizing: border-box;
 }
 .pepito-services-track::-webkit-scrollbar {
   display: none;
@@ -1046,7 +1082,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 20px;
-  width: min(1190px, 100%);
+  width: 100%;
   margin-inline: auto;
 }
 .pepito-member {
@@ -1248,7 +1284,9 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 }
 
 .pepito-cta {
-  padding: 1rem clamp(1rem, 4vw, 2.75rem) 3rem;
+  padding-block: 1rem 3rem;
+  padding-inline: var(--pepito-gutter-x);
+  box-sizing: border-box;
 }
 .pepito-cta-inner {
   padding: clamp(2.2rem, 5vw, 3.4rem);
@@ -1277,7 +1315,9 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.4rem clamp(1rem, 4vw, 2.75rem) 2.2rem;
+  padding-block: 1.4rem 2.2rem;
+  padding-inline: var(--pepito-gutter-x);
+  box-sizing: border-box;
   color: var(--pepito-muted);
   font-size: 0.9rem;
   line-height: 1.7;
@@ -1442,7 +1482,9 @@ button.chip.is-on {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.85rem clamp(1rem, 4vw, 2.75rem);
+  padding-block: 0.85rem;
+  padding-inline: var(--pepito-gutter-x);
+  box-sizing: border-box;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(14px);
   border-bottom: 1px solid rgba(92, 77, 145, 0.06);
@@ -1609,9 +1651,11 @@ button.chip.is-on {
 .pepito-adopt-banner-inner {
   position: relative;
   z-index: 1;
-  width: min(1220px, calc(100% - 2.5rem));
+  width: min(var(--pepito-container-max), 100%);
   margin-inline: auto;
+  padding-inline: var(--pepito-container-pad);
   padding-block: 4rem;
+  box-sizing: border-box;
 }
 .pepito-adopt-banner-inner h1 {
   margin: 0 0 0.5rem;
@@ -1632,8 +1676,10 @@ button.chip.is-on {
   background: #fff;
 }
 .pepito-adopt-single-grid {
-  width: min(1220px, calc(100% - 2.5rem));
+  width: min(var(--pepito-container-max), 100%);
   margin-inline: auto;
+  padding-inline: var(--pepito-container-pad);
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
   gap: 2.5rem;
