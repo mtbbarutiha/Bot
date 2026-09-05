@@ -190,7 +190,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     grid-template-columns: 1fr;
   }
   .pepito-adoption-card {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 1 / 1;
   }
   .pepito-adoption-back {
     padding: 1.75rem;
@@ -696,7 +696,8 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   overflow: hidden;
   border-radius: 20px;
   isolation: isolate;
-  aspect-ratio: 3 / 4;
+  /* Pepito demo assets (01-2…04-2.jpg) are 700×700; cards size to image via w-100 */
+  aspect-ratio: 1 / 1;
   background: #fff;
 }
 .pepito-adoption-media {
@@ -1040,7 +1041,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     grid-template-columns: 1fr;
   }
   .pepito-adoption-card {
-    aspect-ratio: 4 / 5;
+    aspect-ratio: 1 / 1;
   }
   .pepito-adoption-back {
     padding: 1.75rem;
