@@ -406,7 +406,7 @@ export function WelcomePage() {
         </div>
         <div className="pepito-adoption-info">
           <span className="pepito-adoption-tag">پذیرش یک پت</span>
-          <p>
+          <p className="pepito-adoption-desc">
             با ما تماس بگیرید{' '}
             <a href={`tel:${CONTACT_PHONE_TEL}`} dir="ltr" className="pepito-adoption-phone">
               {CONTACT_PHONE_DISPLAY}
@@ -424,9 +424,13 @@ export function WelcomePage() {
         <div className="pepito-team">
           {TEAM.map((m) => (
             <article key={m.name} className="pepito-member">
-              <img src={m.img} alt="" loading="lazy" />
-              <h3>{m.name}</h3>
-              <p>{m.role}</p>
+              <div className="pepito-member-photo">
+                <img src={m.img} alt="" loading="lazy" />
+              </div>
+              <div className="pepito-member-info">
+                <h3>{m.name}</h3>
+                <p>{m.role}</p>
+              </div>
             </article>
           ))}
         </div>
