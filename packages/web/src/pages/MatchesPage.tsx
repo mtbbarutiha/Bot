@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Check, Clock, Mail, MapPin, MessageCircle, RefreshCw } from 'lucide-react';
+import { Check, Clock, Mail, MessageCircle, RefreshCw, Send, X } from 'lucide-react';
 import { userHasRole } from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
@@ -13,25 +13,27 @@ import { listPlaydateRequests, updatePlaydateStatus } from '../lib/api';
 import { playdateToMatchRequest } from '../lib/playdateMap';
 import type { MatchRequest } from '../types';
 
+type Tab = 'incoming' | 'sent' | 'accepted';
+
 export function MatchesPage() {
   const { myPet } = usePetStore();
   const { user } = useUserStore();
   const { user: authUser, isLoggedIn } = useAuthStore();
-  const [tab, setTab] = useState<'pending' | 'accepted'>('pending');
+  const [tab, setTab] = useState<Tab>('incoming');
   const [matches, setMatches] = useState<MatchRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   const myUserId = authUser?.id ?? user.id;
-
   const isPetOwner = !user.role || userHasRole(user, 'pet_owner');
 
   const reload = useCallback(async () => {
     if (!myUserId) {
       setMatches([]);
       setLoading(false);
-      setError('برای دیدن درخواست‌های ربات وارد حساب شو.');
+      setError('برای دیدن درخواست‌های همبازی وارد حساب شو.');
       return;
     }
     setLoading(true);
@@ -40,11 +42,11 @@ export function MatchesPage() {
       const rows = await listPlaydateRequests({ userId: myUserId });
       const mapped = rows
         .filter((r) => {
-          const ownsTo = r.toUserId === myUserId || r.toPet?.ownerId === myUserId;
-          const ownsFrom = r.fromUserId === myUserId || r.fromPet?.ownerId === myUserId;
-          if (r.status === 'pending') return Boolean(ownsTo);
-          if (r.status === 'accepted') return Boolean(ownsTo || ownsFrom);
-          return false;
+          const incoming = r.toUserId === myUserId || r.toPet?.ownerId === myUserId;
+          const outgoing = r.fromUserId === myUserId || r.fromPet?.ownerId === myUserId;
+          if (!incoming && !outgoing) return false;
+          if (r.status === 'rejected' || r.status === 'cancelled') return false;
+          return true;
         })
         .map((r) => playdateToMatchRequest(r, myUserId));
       setMatches(mapped);
@@ -60,26 +62,34 @@ export function MatchesPage() {
   }, [reload]);
 
   const incomingPending = useMemo(
-    () => matches.filter((m) => m.status === 'pending'),
+    () => matches.filter((m) => m.status === 'pending' && m.direction === 'incoming'),
+    [matches]
+  );
+  const sentPending = useMemo(
+    () => matches.filter((m) => m.status === 'pending' && m.direction === 'outgoing'),
     [matches]
   );
   const accepted = useMemo(
     () => matches.filter((m) => m.status === 'accepted'),
     [matches]
   );
-  const filtered = tab === 'pending' ? incomingPending : accepted;
-  const pendingCount = incomingPending.length;
+
+  const filtered =
+    tab === 'incoming' ? incomingPending : tab === 'sent' ? sentPending : accepted;
 
   async function onAccept(id: number) {
     setBusyId(id);
     setError(null);
     try {
       await updatePlaydateStatus(id, 'accepted');
+      setToast('✅ توافق شد! چت همبازی باز شد.');
+      setTab('accepted');
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'قبول درخواست ناموفق بود');
     } finally {
       setBusyId(null);
+      setTimeout(() => setToast(null), 2800);
     }
   }
 
@@ -88,11 +98,13 @@ export function MatchesPage() {
     setError(null);
     try {
       await updatePlaydateStatus(id, 'rejected');
+      setToast('درخواست رد شد.');
       await reload();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'رد درخواست ناموفق بود');
     } finally {
       setBusyId(null);
+      setTimeout(() => setToast(null), 2500);
     }
   }
 
@@ -106,7 +118,7 @@ export function MatchesPage() {
         <div className="empty-state empty-state--role">
           <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
           <h3>همبازی برای صاحبان پت</h3>
-          <p>این بخش برای نقش «صاحب پت» فعاله. از پروفایل نقشت رو تغییر بده یا خدمات دیگه رو امتحان کن.</p>
+          <p>این بخش برای نقش «صاحب پت» فعاله. از پروفایل نقشت رو تغییر بده.</p>
           <Link to="/profile" className="cta-btn cta-btn--inline">پروفایل</Link>
         </div>
       </>
@@ -118,11 +130,13 @@ export function MatchesPage() {
       <div className="page-title-block">
         <BrandMark className="greeting-brand" iconSize={22} />
         <h1>
-          درخواست‌ها
+          درخواست همبازی
           <Mail size={22} className="title-icon" />
         </h1>
         <p>
-          {isLoggedIn ? `همگام با ربات · ${pendingCount} جدید` : 'برای همگام‌سازی با ربات وارد شو'}
+          {isLoggedIn
+            ? `همگام با ربات · ${incomingPending.length} ورودی جدید`
+            : 'برای همگام‌سازی با ربات وارد شو'}
           {myPet?.name ? ` · ${myPet.name}` : ''}
         </p>
       </div>
@@ -130,11 +144,19 @@ export function MatchesPage() {
       <div className="match-tabs">
         <button
           type="button"
-          className={`match-tab${tab === 'pending' ? ' active' : ''}`}
-          onClick={() => setTab('pending')}
+          className={`match-tab${tab === 'incoming' ? ' active' : ''}`}
+          onClick={() => setTab('incoming')}
         >
           <Clock size={14} strokeWidth={2} />
-          در انتظار ({pendingCount})
+          دریافتی ({incomingPending.length})
+        </button>
+        <button
+          type="button"
+          className={`match-tab${tab === 'sent' ? ' active' : ''}`}
+          onClick={() => setTab('sent')}
+        >
+          <Send size={14} strokeWidth={2} />
+          ارسالی ({sentPending.length})
         </button>
         <button
           type="button"
@@ -142,11 +164,10 @@ export function MatchesPage() {
           onClick={() => setTab('accepted')}
         >
           <Check size={14} strokeWidth={2} />
-          پذیرفته
+          پذیرفته ({accepted.length})
         </button>
         <button type="button" className="match-tab" onClick={() => void reload()} aria-label="بروزرسانی">
           <RefreshCw size={14} strokeWidth={2} />
-          بروزرسانی
         </button>
       </div>
 
@@ -159,7 +180,7 @@ export function MatchesPage() {
       ) : filtered.length > 0 ? (
         <div className="match-list">
           {filtered.map((match) => (
-            <div key={match.id} className="match-card">
+            <article key={match.id} className="match-card">
               <Link to={`/pets/${match.fromPet.id}`} className="match-card-photo">
                 <img src={match.fromPet.imageUrl} alt={match.fromPet.name} />
                 <div className="match-card-photo-overlay">
@@ -176,24 +197,29 @@ export function MatchesPage() {
                     name={match.fromPet.name}
                   />
                   <div className="match-info">
-                    <h3>{match.fromPet.name}</h3>
-                    <p>{formatTimeAgo(match.createdAt)}</p>
+                    <h3>
+                      {match.rawFromName ?? match.fromPet.name}
+                      {' → '}
+                      {match.rawToName ?? match.toPet?.name ?? 'پت شما'}
+                    </h3>
+                    <p>
+                      #{match.id} · {match.statusLabel ?? 'در انتظار'} · {formatTimeAgo(match.createdAt)}
+                    </p>
                   </div>
                 </div>
-                {match.message && <p className="match-msg">«{match.message}»</p>}
-                {match.scheduledAt && (
-                  <p className="match-schedule">
-                    <Calendar size={14} strokeWidth={2} />
-                    {new Date(match.scheduledAt).toLocaleDateString('fa-IR')}
-                    {match.location && (
-                      <>
-                        <MapPin size={14} strokeWidth={2} />
-                        {match.location}
-                      </>
-                    )}
+
+                {match.direction === 'incoming' && match.status === 'pending' && (
+                  <p className="match-msg">
+                    درخواست همبازی جدید از طرف <strong>{match.fromPet.name}</strong>
+                    {match.toPet?.name ? ` برای ${match.toPet.name}` : ''}
                   </p>
                 )}
-                {match.status === 'pending' ? (
+                {match.direction === 'outgoing' && match.status === 'pending' && (
+                  <p className="match-msg">منتظر پاسخ صاحب {match.fromPet.name} باش.</p>
+                )}
+                {match.message && <p className="match-msg">«{match.message}»</p>}
+
+                {match.status === 'pending' && match.direction === 'incoming' ? (
                   <div className="match-actions">
                     <button
                       type="button"
@@ -210,31 +236,54 @@ export function MatchesPage() {
                       disabled={busyId === match.id}
                       onClick={() => void onReject(match.id)}
                     >
+                      <X size={16} strokeWidth={2.5} />
                       رد
                     </button>
                   </div>
+                ) : match.status === 'accepted' ? (
+                  <div className="match-actions">
+                    <Link to={`/chats/${match.id}`} className="btn-accept">
+                      <MessageCircle size={16} strokeWidth={2} />
+                      باز کردن چت
+                    </Link>
+                    <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">
+                      پروفایل پت
+                    </Link>
+                  </div>
                 ) : (
                   <div className="match-actions">
-                    <span className="btn-accept" style={{ pointerEvents: 'none' }}>
-                      <MessageCircle size={16} strokeWidth={2} />
-                      پذیرفته · چت در ربات
-                    </span>
+                    <span className="match-status-pill">{match.statusLabel}</span>
+                    <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">
+                      پروفایل
+                    </Link>
                   </div>
                 )}
               </div>
-            </div>
+            </article>
           ))}
         </div>
       ) : (
         <div className="empty-state">
           <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
-          <h3>{tab === 'pending' ? 'درخواست جدیدی نیست' : 'هنوز مچی نداری'}</h3>
+          <h3>
+            {tab === 'incoming'
+              ? 'درخواست جدیدی نیست'
+              : tab === 'sent'
+                ? 'هنوز درخواستی نفرستادی'
+                : 'هنوز مچی نداری'}
+          </h3>
           <p style={{ color: '#5f7d93', fontSize: '0.9rem' }}>
-            درخواست‌های ربات تلگرام اینجا می‌آیند — با همان حساب (موبایل/ایمیل).
+            از «🔍 پیدا کردن همبازی» مثل ربات شروع کن — درخواست‌ها اینجا همگام می‌شن.
           </p>
           <Link to="/explore" className="cta-btn cta-btn--inline">
-            جستجو
+            پیدا کردن همبازی
           </Link>
+        </div>
+      )}
+
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
         </div>
       )}
     </>

@@ -1,4 +1,4 @@
-import type { PetProfile, PlaydateRequest } from '@petdate/shared';
+import { PLAYDATE_STATUS_LABELS, type PetProfile, type PlaydateRequest } from '@petdate/shared';
 import type { MatchRequest, MatchStatus, Pet, PetType } from '../types';
 import { PET_TYPE_EMOJI } from '../types';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
@@ -52,19 +52,33 @@ function toMatchStatus(status: PlaydateRequest['status']): MatchStatus {
   return 'pending';
 }
 
-/** Map API playdate → UI card (other party’s pet as fromPet). */
+export function isIncomingPlaydate(req: PlaydateRequest, myUserId: number): boolean {
+  return req.toUserId === myUserId || req.toPet?.ownerId === myUserId;
+}
+
+export function isOutgoingPlaydate(req: PlaydateRequest, myUserId: number): boolean {
+  return req.fromUserId === myUserId || req.fromPet?.ownerId === myUserId;
+}
+
+/** Map API playdate → UI card (other party’s pet as fromPet for chat/peer display). */
 export function playdateToMatchRequest(req: PlaydateRequest, myUserId: number): MatchRequest {
-  const incoming =
-    req.toUserId === myUserId || req.toPet?.ownerId === myUserId;
+  const incoming = isIncomingPlaydate(req, myUserId);
   const other = incoming ? req.fromPet : req.toPet;
+  const mine = incoming ? req.toPet : req.fromPet;
   return {
     id: req.id,
     fromPet: petProfileToUiPet(other),
+    toPet: petProfileToUiPet(mine),
     toPetId: incoming ? req.toPetId : req.fromPetId,
+    fromPetId: incoming ? req.fromPetId : req.toPetId,
     message: req.message,
     status: toMatchStatus(req.status),
+    statusLabel: PLAYDATE_STATUS_LABELS[req.status] ?? req.status,
+    direction: incoming ? 'incoming' : 'outgoing',
     createdAt: req.createdAt,
     scheduledAt: req.scheduledAt,
     location: req.location,
+    rawFromName: req.fromPet?.name ?? `#${req.fromPetId}`,
+    rawToName: req.toPet?.name ?? `#${req.toPetId}`,
   };
 }

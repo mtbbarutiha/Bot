@@ -32,13 +32,22 @@ export interface Pet {
 
 export interface MatchRequest {
   id: number;
+  /** پت طرف مقابل (برای نمایش کارت / چت) */
   fromPet: Pet;
+  /** پت خود کاربر در این درخواست */
+  toPet?: Pet;
   toPetId: number;
+  fromPetId?: number;
   message?: string;
   status: MatchStatus;
+  statusLabel?: string;
+  direction?: 'incoming' | 'outgoing';
   createdAt: string;
   scheduledAt?: string;
   location?: string;
+  /** نام پت مبدأ در API (برای فرمت ربات: مبدأ → مقصد) */
+  rawFromName?: string;
+  rawToName?: string;
 }
 
 export interface OwnerProfile {

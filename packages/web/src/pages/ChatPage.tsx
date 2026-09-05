@@ -16,7 +16,10 @@ import {
 import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
+import { useAuthStore } from '../hooks/useAuthStore';
 import { usePetStore } from '../hooks/usePetStore';
+import { getPlaydateRequest } from '../lib/api';
+import { playdateToMatchRequest } from '../lib/playdateMap';
 import {
   PET_GENDER_LABELS,
   PET_SIZE_LABELS,
@@ -66,9 +69,12 @@ function formatClock(ts: number) {
 export function ChatPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
-  const { matches, myPet } = usePetStore();
-  const match = matches.find((m) => String(m.id) === matchId && m.status === 'accepted');
+  const { myPet } = usePetStore();
+  const { user: authUser } = useAuthStore();
+  const myUserId = authUser?.id;
 
+  const [match, setMatch] = useState<MatchRequest | null>(null);
+  const [loading, setLoading] = useState(true);
   const [secure, setSecure] = useState(false);
   const [contactAdded, setContactAdded] = useState(false);
   const [panel, setPanel] = useState<Panel>('none');
@@ -76,6 +82,46 @@ export function ChatPage() {
   const [ended, setEnded] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const scrollerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      const id = Number(matchId);
+      if (!Number.isFinite(id) || !myUserId) {
+        if (!cancelled) {
+          setMatch(null);
+          setLoading(false);
+        }
+        return;
+      }
+      try {
+        const req = await getPlaydateRequest(id);
+        if (!req || req.status !== 'accepted') {
+          if (!cancelled) setMatch(null);
+          return;
+        }
+        const owns =
+          req.toUserId === myUserId ||
+          req.fromUserId === myUserId ||
+          req.toPet?.ownerId === myUserId ||
+          req.fromPet?.ownerId === myUserId;
+        if (!owns) {
+          if (!cancelled) setMatch(null);
+          return;
+        }
+        if (!cancelled) setMatch(playdateToMatchRequest(req, myUserId));
+      } catch {
+        if (!cancelled) setMatch(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [matchId, myUserId]);
 
   useEffect(() => {
     if (!match) return;
@@ -94,7 +140,7 @@ export function ChatPage() {
   }, [messages, ended]);
 
   const peerPet = match?.fromPet;
-  const peerOwnerName = peerPet?.ownerName ?? 'صاحب پت';
+  const peerOwnerName = peerPet?.ownerName || 'صاحب پت';
 
   const secureHint = useMemo(
     () =>
@@ -103,6 +149,15 @@ export function ChatPage() {
         : 'برای محرمانگی بیشتر، چت امن را روشن کنید.',
     [secure],
   );
+
+  if (loading) {
+    return (
+      <div className="chat-page chat-page--empty">
+        <BrandMark iconSize={26} className="chat-empty-brand" />
+        <h1>در حال باز کردن چت…</h1>
+      </div>
+    );
+  }
 
   if (!match || !peerPet) {
     return (

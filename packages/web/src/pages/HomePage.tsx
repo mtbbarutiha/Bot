@@ -1,28 +1,34 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, Mail, MapPin, Search, ShoppingBag, Stethoscope, Zap } from 'lucide-react';
 import { userHasRole } from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
+import { useAuthStore } from '../hooks/useAuthStore';
 import { usePetStore } from '../hooks/usePetStore';
 import { useUserStore } from '../hooks/useUserStore';
-import type { PetType } from '../types';
+import { listPets } from '../lib/api';
+import { sendPlaymateRequestNow } from '../lib/playmateActions';
+import type { Pet, PetType } from '../types';
 import { PET_TYPE_LABELS } from '../types';
 
 const ALL = 'all' as const;
 const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird', 'rabbit'];
 
 export function HomePage() {
-  const { myPet, matches, getNearbyPets, sendPlaydateRequest } = usePetStore();
+  const { myPet, getNearbyPets } = usePetStore();
   const { user } = useUserStore();
+  const { user: authUser, isLoggedIn } = useAuthStore();
+  const navigate = useNavigate();
   const [activeCategory, setActiveCategory] = useState<PetType | typeof ALL>(ALL);
   const [search, setSearch] = useState('');
   const [showToast, setShowToast] = useState(false);
+  const [toastText, setToastText] = useState('درخواست همبازی ارسال شد');
+  const [pendingCount, setPendingCount] = useState(0);
 
-  const pendingCount = matches.filter((m) => m.status === 'pending').length;
-  const firstPending = matches.find((m) => m.status === 'pending');
+  const myUserId = authUser?.id;
   const pets = activeCategory === ALL
     ? getNearbyPets(myPet.id)
     : getNearbyPets(myPet.id).filter((p) => p.type === activeCategory);
@@ -35,14 +41,33 @@ export function HomePage() {
       )
     : pets;
 
-  const handleQuickAdd = (pet: import('../types').Pet) => {
-    sendPlaydateRequest({
-      toPetId: pet.id,
-      message: `سلام ${pet.name}! ${myPet.name} دنبال همبازیه 🐾`,
-      location: pet.neighborhood,
-    });
-    setShowToast(true);
-    setTimeout(() => setShowToast(false), 2500);
+  const handleQuickAdd = async (pet: Pet) => {
+    if (!isLoggedIn || !myUserId) {
+      navigate('/auth/login');
+      return;
+    }
+    try {
+      const mine = await listPets({ ownerId: myUserId });
+      if (mine.length === 0) {
+        setToastText('اول یک پت ثبت کن');
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 2500);
+        return;
+      }
+      await sendPlaymateRequestNow({
+        fromPetId: mine[0]!.id,
+        toPetId: pet.id,
+        fromUserId: myUserId,
+      });
+      setPendingCount((c) => c + 1);
+      setToastText('✅ درخواست همبازی ارسال شد!');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
+    } catch (err) {
+      setToastText(err instanceof Error ? err.message : 'ارسال ناموفق بود');
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 2500);
+    }
   };
 
   const isPetOwner = !user.role || userHasRole(user, 'pet_owner');
@@ -111,6 +136,12 @@ export function HomePage() {
 
         {isPetOwner ? (
           <>
+        <div className="find-playmate-home-cta">
+          <Link to="/explore" className="cta-btn">
+            🔍 پیدا کردن همبازی
+          </Link>
+        </div>
+
         <div className="section-row">
           <div>
             <span className="section-label">فیلتر</span>
@@ -146,7 +177,7 @@ export function HomePage() {
         {filtered.length > 0 ? (
           <div className="pet-grid">
             {filtered.map((pet, i) => (
-              <PetGridCard key={pet.id} pet={pet} index={i} onQuickAdd={handleQuickAdd} />
+              <PetGridCard key={pet.id} pet={pet} index={i} onQuickAdd={(p) => void handleQuickAdd(p)} />
             ))}
           </div>
         ) : (
@@ -169,17 +200,14 @@ export function HomePage() {
 
       {pendingCount > 0 && (
         <div className="promo-banner">
-          {firstPending && (
-            <img src={firstPending.fromPet.imageUrl} alt="" className="promo-banner-photo" />
-          )}
           <div className="promo-banner-icon"><Mail size={16} strokeWidth={2} /></div>
-          <p><strong>{pendingCount} درخواست جدید</strong> برای {myPet.name}</p>
+          <p><strong>{pendingCount} درخواست</strong> ارسال شد</p>
           <Link to="/matches" className="promo-btn">👀 مشاهده</Link>
         </div>
       )}
 
       {showToast && (
-        <div className="toast" role="status">درخواست همبازی ارسال شد</div>
+        <div className="toast" role="status">{toastText}</div>
       )}
     </div>
   );

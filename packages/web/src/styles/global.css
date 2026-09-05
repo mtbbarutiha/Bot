@@ -4014,3 +4014,128 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   border: 1.5px solid rgba(91,168,210,.28) !important;
 }
 .btn-profile:hover { background: rgba(91,168,210,.08); }
+
+/* ── Playmate request (bot parity) ── */
+.match-status-pill {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm, 12px);
+  font-size: 0.82rem;
+  font-weight: 700;
+  background: #f3f7fb;
+  color: var(--text-secondary, #5f7d93);
+}
+
+.match-actions a.btn-accept,
+.match-actions a.btn-profile {
+  text-decoration: none;
+}
+
+.find-playmate-panel {
+  margin: 0 0 22px;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background:
+    linear-gradient(160deg, rgba(91, 168, 210, 0.12), rgba(255, 255, 255, 0.92)),
+    #fff;
+  border: 1px solid rgba(91, 168, 210, 0.22);
+}
+
+.find-playmate-panel__head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.find-playmate-panel__head h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 0 0 6px;
+}
+
+.find-playmate-panel__head p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: var(--text-secondary, #5f7d93);
+}
+
+.find-playmate-panel__prompt {
+  font-weight: 700;
+  margin: 0 0 10px;
+}
+
+.find-playmate-pet-list {
+  display: grid;
+  gap: 8px;
+}
+
+.find-playmate-pet-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  text-align: right;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1.5px solid #cfe6f4;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.15s ease;
+}
+
+.find-playmate-pet-btn:hover {
+  border-color: #5ba8d2;
+  transform: translateY(-1px);
+}
+
+.find-playmate-pet-btn img {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.find-playmate-pet-btn strong {
+  display: block;
+  font-size: 0.95rem;
+}
+
+.find-playmate-pet-btn small {
+  color: #5f7d93;
+  font-size: 0.78rem;
+}
+
+.find-playmate-panel__result h3 {
+  margin: 0 0 8px;
+  font-size: 1rem;
+}
+
+.find-playmate-sample {
+  margin: 8px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(91, 168, 210, 0.08);
+  font-size: 0.88rem;
+}
+
+.find-playmate-panel__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.find-playmate-home-cta {
+  margin: 0 0 18px;
+}
+
+.find-playmate-home-cta .cta-btn {
+  width: 100%;
+  justify-content: center;
+}
