@@ -47,8 +47,10 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   letter-spacing: -0.02em;
 }
 
-/* Pepito pill buttons */
+/* Pepito pill buttons — button-1 (purple) / button-3 (pink) */
 .pepito-btn,
+.button-1,
+.button-3,
 .landing-btn,
 .landing-nav-cta,
 .btn-primary,
@@ -57,29 +59,82 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  min-height: 48px;
-  padding: 0.55rem 1.35rem;
-  border-radius: 30px;
+  gap: 0.45rem;
+  height: auto;
+  min-height: 0;
+  padding: 12px 36px;
+  border-radius: 50px;
   border: 0;
   background: var(--pepito-base);
   color: #fff !important;
   font-weight: 700;
   font-family: var(--font-display);
+  font-size: 18px;
+  line-height: 1.35;
   text-decoration: none;
-  box-shadow: 0 12px 28px rgba(92, 77, 145, 0.28);
-  transition: transform 0.25s ease, background 0.25s ease, box-shadow 0.25s ease;
+  text-align: center;
+  box-shadow: none;
   cursor: pointer;
+  transform-style: preserve-3d;
+  transition:
+    border-color 300ms ease,
+    transform 300ms ease,
+    background-color 300ms ease,
+    color 300ms ease;
+}
+.pepito-btn .pepito-btn-icon,
+.button-1 .pepito-btn-icon,
+.button-3 .pepito-btn-icon,
+.pepito-btn svg.pepito-btn-icon {
+  display: inline-block;
+  flex-shrink: 0;
+  transform: rotate(30deg);
+  transition: transform 0.4s ease, color 0.4s ease;
 }
 .pepito-btn:hover,
+.button-1:hover,
 .landing-btn:hover,
 .landing-nav-cta:hover,
 .btn-primary:hover,
 .cta-btn:hover {
-  background: #4a3d78;
-  transform: translateY(-2px);
-  box-shadow: 0 16px 34px rgba(92, 77, 145, 0.34);
+  background: var(--pepito-pink);
+  color: #fff !important;
+  transform: translate3d(0, -6px, 0.01px);
+  box-shadow: none;
 }
+.pepito-btn:hover .pepito-btn-icon,
+.button-1:hover .pepito-btn-icon {
+  transform: rotate(-30deg);
+}
+
+/* button-3 — pink → white on hover (Pepito Book now) */
+.button-3,
+.pepito-btn.button-3 {
+  background: var(--pepito-pink);
+  color: #fff !important;
+}
+.button-3:hover,
+.pepito-btn.button-3:hover {
+  background: #fff;
+  color: var(--pepito-dark) !important;
+  transform: translate3d(0, -6px, 0.01px);
+}
+.button-3:hover .pepito-btn-icon,
+.pepito-btn.button-3:hover .pepito-btn-icon {
+  transform: rotate(-30deg);
+  color: var(--pepito-dark);
+}
+
+.pepito-btn--nav {
+  padding: 7px 21px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.pepito-btn--nav:hover {
+  transform: translate3d(0, -3px, 0.01px);
+  background: var(--pepito-pink);
+}
+
 .pepito-btn--ghost,
 .landing-btn--ghost,
 .btn-ghost {
@@ -96,9 +151,27 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 }
 .pepito-btn--lg,
 .landing-btn--primary {
-  min-height: 54px;
-  padding: 0 1.6rem;
-  font-size: 1.02rem;
+  padding: 14px 40px;
+  font-size: 1.05rem;
+}
+.pepito-btn--on-dark,
+.pepito-cta-inner .pepito-btn {
+  background: #fff !important;
+  color: var(--pepito-base) !important;
+}
+.pepito-btn--on-dark:hover,
+.pepito-cta-inner .pepito-btn:hover {
+  background: var(--pepito-pink) !important;
+  color: #fff !important;
+}
+
+@media (max-width: 720px) {
+  .pepito-btn,
+  .button-1,
+  .button-3 {
+    padding: 12px 18px;
+    font-size: 16px;
+  }
 }
 
 /* ── Pepito landing ── */
@@ -277,6 +350,94 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   display: flex;
   flex-wrap: wrap;
   gap: 0.85rem;
+}
+
+/* About strip (Pepito Read more) */
+.pepito-about {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: center;
+}
+.pepito-about-copy .pepito-eyebrow {
+  margin: 0 0 0.55rem;
+  color: var(--pepito-pink);
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+.pepito-about-copy h2 {
+  margin: 0 0 0.85rem;
+  font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+}
+.pepito-about-copy p {
+  margin: 0 0 1.35rem;
+  max-width: 34rem;
+  line-height: 1.75;
+}
+.pepito-about-media img {
+  width: 100%;
+  border-radius: 28px;
+  display: block;
+  object-fit: cover;
+  aspect-ratio: 5 / 4;
+  box-shadow: 0 20px 48px rgba(25, 6, 61, 0.12);
+}
+
+.pepito-call-band {
+  margin-top: 2.25rem;
+  text-align: center;
+}
+.pepito-call-tag {
+  display: inline-block;
+  margin-bottom: 0.55rem;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  background: var(--pepito-lilac);
+  color: var(--pepito-base);
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+.pepito-call-band p {
+  margin: 0;
+  color: var(--pepito-dark);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.pepito-call-band a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--pepito-base);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.pepito-call-band a:hover {
+  color: var(--pepito-pink);
+}
+
+.pepito-faq-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.35fr);
+  gap: clamp(1.5rem, 4vw, 3rem);
+  align-items: start;
+  max-width: 72rem;
+  margin: 0 auto;
+}
+.pepito-faq-intro .pepito-eyebrow {
+  margin: 0 0 0.55rem;
+  color: var(--pepito-pink);
+  font-weight: 800;
+  font-size: 0.92rem;
+}
+.pepito-faq-intro h2 {
+  margin: 0 0 0.65rem;
+  font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+}
+.pepito-faq-intro p {
+  margin: 0 0 1.25rem;
+  color: var(--pepito-muted);
+  line-height: 1.75;
 }
 
 .pepito-section {
@@ -504,12 +665,6 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   opacity: 0.92;
   line-height: 1.75;
 }
-.pepito-cta-inner .pepito-btn {
-  background: #fff;
-  color: var(--pepito-base) !important;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
-}
-
 .pepito-footer {
   display: flex;
   flex-wrap: wrap;
@@ -538,6 +693,8 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   .pepito-pets,
   .pepito-team,
   .pepito-reviews { grid-template-columns: 1fr 1fr; }
+  .pepito-about,
+  .pepito-faq-layout { grid-template-columns: 1fr; }
 }
 @media (max-width: 720px) {
   .pepito-services,
@@ -605,10 +762,6 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 .auth-tab.is-on,
 .auth-method.is-on,
 button.chip.is-on {
-  background: var(--pepito-base) !important;
-  color: #fff !important;
-}
-.pepito-hero-cta .pepito-btn:not(.pepito-btn--ghost) {
   background: var(--pepito-base) !important;
   color: #fff !important;
 }

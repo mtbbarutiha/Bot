@@ -1,11 +1,15 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, PawPrint } from 'lucide-react';
+import { PawPrint, Phone } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
 
 const P = '/pepito/uploads';
+
+/** Display + tel: for Pepito-style “Call us” band */
+const CONTACT_PHONE_DISPLAY = '۰۲۱-۸۸۷۷۶۶۵۵';
+const CONTACT_PHONE_TEL = '+982188776655';
 
 const HERO_SLIDES = [
   {
@@ -95,6 +99,10 @@ function GatedLink({
   );
 }
 
+function PawIcon({ size = 16 }: { size?: number }) {
+  return <PawPrint size={size} className="pepito-btn-icon" aria-hidden />;
+}
+
 export function WelcomePage() {
   const navigate = useNavigate();
   const { isLoggedIn, hasRole, isProfileComplete } = useAuthStore();
@@ -142,9 +150,10 @@ export function WelcomePage() {
           <Link to={loginPath('/home')} className="pepito-nav-login">
             ورود
           </Link>
-          <GatedLink to="/explore" className="pepito-btn">
-            شروع رایگان
-            <PawPrint size={16} />
+          {/* Pepito: Send a message → contact / chat */}
+          <GatedLink to="/matches" className="pepito-btn pepito-btn--nav">
+            <PawIcon size={14} />
+            ارسال پیام
           </GatedLink>
         </div>
       </header>
@@ -171,14 +180,12 @@ export function WelcomePage() {
           </p>
           <h1>{current.title}</h1>
           <p className="pepito-hero-lead">{current.lead}</p>
+          {/* Pepito: Discover only → service pages */}
           <div className="pepito-hero-cta">
-            <GatedLink to="/explore" className="pepito-btn pepito-btn--lg">
+            <a href="#services" className="pepito-btn button-1 pepito-btn--lg">
+              <PawIcon />
               کشف کن
-              <PawPrint size={16} />
-            </GatedLink>
-            <GatedLink to="/vet-consult" className="pepito-btn pepito-btn--ghost pepito-btn--lg">
-              مشاوره دامپزشک
-            </GatedLink>
+            </a>
           </div>
         </div>
         <div className="pepito-hero-dots" role="tablist" aria-label="اسلایدها">
@@ -193,6 +200,25 @@ export function WelcomePage() {
               aria-label={`اسلاید ${i + 1}`}
             />
           ))}
+        </div>
+      </section>
+
+      <section className="pepito-section pepito-about" id="about">
+        <div className="pepito-about-copy">
+          <p className="pepito-eyebrow">عاشق حیواناتیم</p>
+          <h2>خدماتی برای پت‌های خاص شما!</h2>
+          <p>
+            امکانات ربات، با تجربهٔ دسکتاپ قالب Pepito — داده همان لحظه سینک می‌ماند.
+            دامپزشکان و همبازی‌ها روی یک حساب مشترک وب و تلگرام.
+          </p>
+          {/* Pepito: Read more → about / services */}
+          <a href="#services" className="pepito-btn button-1">
+            <PawIcon />
+            بیشتر بخوانید
+          </a>
+        </div>
+        <div className="pepito-about-media">
+          <img src={`${P}/about.jpg`} alt="" loading="lazy" />
         </div>
       </section>
 
@@ -220,6 +246,11 @@ export function WelcomePage() {
           <p className="pepito-eyebrow">پذیرش پت</p>
           <h2>یک دوست پشمالوی جدید پیدا کن</h2>
           <p>پیش‌نمایش عمومی؛ برای درخواست واقعی با OTP وارد شو.</p>
+          {/* Pepito: Adopt a pet → gated explore */}
+          <GatedLink to="/explore" className="pepito-btn button-1" style={{ marginTop: '1.1rem' }}>
+            <PawIcon />
+            پذیرش یک پت
+          </GatedLink>
         </div>
         <div className="pepito-pets">
           {PETS.map((p) => (
@@ -234,6 +265,18 @@ export function WelcomePage() {
               </div>
             </article>
           ))}
+        </div>
+        {/* Pepito: Call us tel: band */}
+        <div className="pepito-call-band">
+          <span className="pepito-call-tag">پذیرش پت</span>
+          <p>
+            با ما تماس بگیرید{' '}
+            <a href={`tel:${CONTACT_PHONE_TEL}`} dir="ltr">
+              <Phone size={16} aria-hidden />
+              {CONTACT_PHONE_DISPLAY}
+            </a>{' '}
+            برای اطلاعات بیشتر!
+          </p>
         </div>
       </section>
 
@@ -252,9 +295,10 @@ export function WelcomePage() {
           ))}
         </div>
         <div style={{ marginTop: 28, textAlign: 'center' }}>
-          <GatedLink to="/vet-consult" className="pepito-btn">
-            ارتباط با پزشک
-            <ArrowLeft size={16} />
+          {/* Pepito: Book now (button-3 pink) → contact / vet */}
+          <GatedLink to="/vet-consult" className="pepito-btn button-3">
+            <PawIcon />
+            همین حالا رزرو کن
           </GatedLink>
         </div>
       </section>
@@ -275,30 +319,38 @@ export function WelcomePage() {
       </section>
 
       <section className="pepito-section" id="faq">
-        <div className="pepito-section-head">
-          <p className="pepito-eyebrow">عمومی و پرتکرار</p>
-          <h2>سؤالات متداول</h2>
-        </div>
-        <div className="pepito-faq">
-          {FAQS.map((item, i) => {
-            const open = openFaq === i;
-            return (
-              <div key={item.q} className="pepito-faq-item">
-                <button
-                  type="button"
-                  className="pepito-faq-q"
-                  aria-expanded={open}
-                  onClick={() => setOpenFaq(open ? null : i)}
-                >
-                  <span>
-                    {String(i + 1).padStart(2, '0')} {item.q}
-                  </span>
-                  <span aria-hidden>{open ? '−' : '+'}</span>
-                </button>
-                {open ? <p className="pepito-faq-a">{item.a}</p> : null}
-              </div>
-            );
-          })}
+        <div className="pepito-faq-layout">
+          <div className="pepito-faq-intro">
+            <p className="pepito-eyebrow">عمومی و پرتکرار</p>
+            <h2>سؤالات متداول</h2>
+            <p>پاسخ‌های کوتاه دربارهٔ حساب مشترک وب و ربات، OTP و همگام‌سازی داده.</p>
+            {/* Pepito: Other FAQs → FAQ page / #faq */}
+            <a href="#faq" className="pepito-btn button-1">
+              <PawIcon />
+              سایر سؤالات
+            </a>
+          </div>
+          <div className="pepito-faq">
+            {FAQS.map((item, i) => {
+              const open = openFaq === i;
+              return (
+                <div key={item.q} className="pepito-faq-item">
+                  <button
+                    type="button"
+                    className="pepito-faq-q"
+                    aria-expanded={open}
+                    onClick={() => setOpenFaq(open ? null : i)}
+                  >
+                    <span>
+                      {String(i + 1).padStart(2, '0')} {item.q}
+                    </span>
+                    <span aria-hidden>{open ? '−' : '+'}</span>
+                  </button>
+                  {open ? <p className="pepito-faq-a">{item.a}</p> : null}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </section>
 
@@ -308,10 +360,10 @@ export function WelcomePage() {
           <p>
             لندینگ آزاد است؛ برای امکانات اصلی با یک کد یکبارمصرف وارد دنیای مشترک وب و ربات شو.
           </p>
-          <Link to={loginPath('/explore')} className="pepito-btn pepito-btn--lg">
-            ورود و شروع
-            <PawPrint size={16} />
-          </Link>
+          <GatedLink to="/explore" className="pepito-btn button-1 pepito-btn--lg pepito-btn--on-dark">
+            <PawIcon />
+            پذیرش یک پت
+          </GatedLink>
         </div>
       </section>
 
