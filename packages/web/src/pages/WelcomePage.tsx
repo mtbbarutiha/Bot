@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Bone,
+  ChevronLeft,
+  ChevronRight,
   Cross,
   Dog,
   Footprints,
@@ -184,9 +186,18 @@ export function WelcomePage() {
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [scrolled, setScrolled] = useState(false);
   const [slide, setSlide] = useState(0);
+  const [heroNavKey, setHeroNavKey] = useState(0);
   const [svcIndex, setSvcIndex] = useState(0);
   const [svcPaused, setSvcPaused] = useState(false);
   const svcTrackRef = useRef<HTMLDivElement>(null);
+
+  const goToSlide = (index: number) => {
+    const len = HERO_SLIDES.length;
+    setSlide(((index % len) + len) % len);
+    setHeroNavKey((k) => k + 1);
+  };
+  const goPrevSlide = () => goToSlide(slide - 1);
+  const goNextSlide = () => goToSlide(slide + 1);
 
   useEffect(() => {
     if (isLoggedIn && hasRole && isProfileComplete) {
@@ -206,7 +217,7 @@ export function WelcomePage() {
       setSlide((s) => (s + 1) % HERO_SLIDES.length);
     }, 5500);
     return () => window.clearInterval(id);
-  }, []);
+  }, [heroNavKey]);
 
   useEffect(() => {
     if (svcPaused) return;
@@ -287,6 +298,26 @@ export function WelcomePage() {
             </div>
           </div>
         </div>
+        {/* Pepito `.slider-fade .owl-nav` — circular angle arrows, hover-reveal, hide ≤991px */}
+        <div className="pepito-hero-nav" aria-label="جابجایی اسلاید">
+          <button
+            type="button"
+            className="pepito-hero-arrow pepito-hero-arrow--prev"
+            onClick={goPrevSlide}
+            aria-label="اسلاید قبلی"
+          >
+            {/* RTL: prev sits inline-start (right); chevron points toward previous */}
+            <ChevronRight size={16} strokeWidth={1.75} aria-hidden />
+          </button>
+          <button
+            type="button"
+            className="pepito-hero-arrow pepito-hero-arrow--next"
+            onClick={goNextSlide}
+            aria-label="اسلاید بعدی"
+          >
+            <ChevronLeft size={16} strokeWidth={1.75} aria-hidden />
+          </button>
+        </div>
         <div className="pepito-hero-dots" role="tablist" aria-label="اسلایدها">
           {HERO_SLIDES.map((s, i) => (
             <button
@@ -295,7 +326,7 @@ export function WelcomePage() {
               role="tab"
               aria-selected={i === slide}
               className={`pepito-hero-dot${i === slide ? ' is-active' : ''}`}
-              onClick={() => setSlide(i)}
+              onClick={() => goToSlide(i)}
               aria-label={`اسلاید ${i + 1}`}
             />
           ))}
@@ -317,7 +348,24 @@ export function WelcomePage() {
           </a>
         </div>
         <div className="pepito-about-media">
-          <img src={`${P}/about.jpg`} alt="" loading="lazy" />
+          <div className="pepito-about-item">
+            {/* Pepito `.note.vert-move` floating quote on the about photo */}
+            <aside className="pepito-about-note pepito-vert-move" aria-label="نظر">
+              <div className="pepito-about-note-stars" aria-hidden>
+                {Array.from({ length: 5 }, (_, i) => (
+                  <Star key={i} size={14} fill="currentColor" strokeWidth={0} />
+                ))}
+              </div>
+              <p className="pepito-about-note-txt">
+                «از حیوانات طوری مراقبت کنید که انگار فرزندان‌تان هستند!»
+              </p>
+              <p className="pepito-about-note-title">
+                <PawIcon />
+                اولیویا مارتین
+              </p>
+            </aside>
+            <img src={`${P}/about.jpg`} alt="" loading="lazy" />
+          </div>
         </div>
       </section>
 
