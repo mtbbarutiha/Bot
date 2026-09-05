@@ -12,6 +12,7 @@ import {
   PartyPopper,
   PawPrint,
   Scissors,
+  Star,
   Syringe,
   Utensils,
   type LucideIcon,
@@ -122,11 +123,28 @@ const TEAM = [
   { name: 'دکتر پویا مرادی', role: 'مشاوره آنلاین', img: `${P}/04-3.jpg` },
 ] as const;
 
+/** Pepito “Happy pet lovers / Pepito reviews” — photo + stars + quote */
 const REVIEWS = [
-  { handle: '@سارا', text: 'قابل اعتماد و مهربون؛ معلومه عاشق حیوانان‌اند!' },
-  { handle: '@مینا', text: 'سگم عاشق همبازی‌شه و زمان‌بندی‌شون انعطاف‌پذیره.' },
-  { handle: '@علی', text: 'درستکار و مطمئن؛ خرگوش‌هام عاشقشون شدن!' },
-  { handle: '@نگار', text: 'دیدن اینکه بچه‌هام خوب مراقبت می‌شن همیشه لذت‌بخشه.' },
+  {
+    handle: '@سارا',
+    text: 'قابل اعتماد و مهربون؛ معلومه عاشق حیوانان‌اند!',
+    img: `${P}/01-4.jpg`,
+  },
+  {
+    handle: '@مینا',
+    text: 'سگم عاشق همبازی‌شه و زمان‌بندی‌شون انعطاف‌پذیره.',
+    img: `${P}/02-4.jpg`,
+  },
+  {
+    handle: '@علی',
+    text: 'درستکار و مطمئن؛ خرگوش‌هام عاشقشون شدن!',
+    img: `${P}/03-4.jpg`,
+  },
+  {
+    handle: '@نگار',
+    text: 'دیدن اینکه بچه‌هام خوب مراقبت می‌شن همیشه لذت‌بخشه.',
+    img: `${P}/04-4.jpg`,
+  },
 ] as const;
 
 const FAQS = [
@@ -445,18 +463,42 @@ export function WelcomePage() {
         </div>
       </section>
 
-      <section className="pepito-section pepito-section--lilac" id="reviews">
-        <div className="pepito-section-head">
-          <p className="pepito-eyebrow">عاشقان خوشحال پت</p>
+      <section className="pepito-section pepito-reviews-section" id="reviews">
+        <div className="pepito-section-head pepito-section-head--center">
+          <p className="pepito-eyebrow">
+            <span className="pepito-eyebrow-icon" aria-hidden>
+              <PawPrint size={18} />
+            </span>
+            عاشقان خوشحال پت
+          </p>
           <h2>نظرات petdate</h2>
         </div>
         <div className="pepito-reviews">
           {REVIEWS.map((r) => (
-            <blockquote key={r.handle} className="pepito-review">
-              <p>{r.text}</p>
-              <footer>{r.handle}</footer>
-            </blockquote>
+            <article key={r.handle} className="pepito-review">
+              <div className="pepito-review-img">
+                <div className="pepito-review-img-frame">
+                  <img src={r.img} alt="" loading="lazy" />
+                </div>
+              </div>
+              <div className="pepito-review-body">
+                <h3>{r.handle}</h3>
+                <div className="pepito-review-stars" aria-label="۵ از ۵ ستاره">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} size={16} fill="currentColor" strokeWidth={0} aria-hidden />
+                  ))}
+                </div>
+                <p>{r.text}</p>
+              </div>
+            </article>
           ))}
+        </div>
+        <div className="pepito-review-trust">
+          <span className="pepito-review-trust-tag">عاشقان پت</span>
+          <p className="pepito-review-trust-desc">
+            بیش از ۱۰۰۰ نفر واقعی به مراقبت پت{' '}
+            <span className="pepito-underline-pink">petdate</span> اعتماد دارند.
+          </p>
         </div>
       </section>
 
