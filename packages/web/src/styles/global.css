@@ -4034,39 +4034,32 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   text-decoration: none;
 }
 
-.find-playmate-panel {
-  margin: 0 0 22px;
-  padding: 18px 16px;
-  border-radius: 16px;
-  background:
-    linear-gradient(160deg, rgba(91, 168, 210, 0.12), rgba(255, 255, 255, 0.92)),
-    #fff;
-  border: 1px solid rgba(91, 168, 210, 0.22);
-}
-
-.find-playmate-panel__head {
+.find-playmate-one {
+  margin: 0 0 18px;
   display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  margin-bottom: 14px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
 }
 
-.find-playmate-panel__head h2 {
-  font-size: 1.05rem;
-  font-weight: 800;
-  margin: 0 0 6px;
+.find-playmate-one .cta-btn {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
 }
 
-.find-playmate-panel__head p {
+.find-playmate-one__hint {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.find-playmate-one__status {
   margin: 0;
   font-size: 0.86rem;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--text-secondary, #5f7d93);
-}
-
-.find-playmate-panel__prompt {
-  font-weight: 700;
-  margin: 0 0 10px;
+  text-align: center;
 }
 
 .find-playmate-pet-list {
@@ -4093,6 +4086,11 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   transform: translateY(-1px);
 }
 
+.find-playmate-pet-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .find-playmate-pet-btn img {
   width: 48px;
   height: 48px;
@@ -4109,26 +4107,6 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .find-playmate-pet-btn small {
   color: #5f7d93;
   font-size: 0.78rem;
-}
-
-.find-playmate-panel__result h3 {
-  margin: 0 0 8px;
-  font-size: 1rem;
-}
-
-.find-playmate-sample {
-  margin: 8px 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: rgba(91, 168, 210, 0.08);
-  font-size: 0.88rem;
-}
-
-.find-playmate-panel__actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
 }
 
 .find-playmate-home-cta {

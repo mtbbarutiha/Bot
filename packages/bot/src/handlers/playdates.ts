@@ -301,8 +301,8 @@ async function sendPlaydateNow(
   const fromPet = await getPet(fromPetId);
   const toPet = await getPet(toPetId);
 
-  // اطلاع به صاحب پت مقصد — همراه عکس پروفایل پت فرستنده
-  if (req.toUserId && fromPet) {
+  // اطلاع به صاحب پت مقصد — اگر API از قبل تلگرام زده، دوباره نفرست
+  if (req.toUserId && fromPet && !req.telegramNotified) {
     const owner = await getUserById(req.toUserId);
     if (owner?.telegramId) {
       try {

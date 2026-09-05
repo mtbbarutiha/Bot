@@ -275,8 +275,8 @@ export async function createPlaydate(data: {
   toPetId: number;
   fromUserId: number;
   message?: string;
-}): Promise<PlaydateRequest> {
-  return request<PlaydateRequest>('/api/playdate-requests', {
+}): Promise<PlaydateRequest & { telegramNotified?: boolean }> {
+  return request<PlaydateRequest & { telegramNotified?: boolean }>('/api/playdate-requests', {
     method: 'POST',
     body: JSON.stringify(data),
   });

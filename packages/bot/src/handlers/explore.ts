@@ -147,8 +147,8 @@ export async function handleExploreForPet(ctx: Context, petId: number | 'all'): 
         preferredSample = line;
       }
 
-      // اطلاع به صاحب پت مقصد — همراه عکس پروفایل پت فرستنده
-      if (req.toUserId) {
+      // اطلاع به صاحب پت مقصد — اگر API از قبل تلگرام زده، دوباره نفرست
+      if (req.toUserId && !req.telegramNotified) {
         const owner = await getUserById(req.toUserId);
         if (owner?.telegramId) {
           try {

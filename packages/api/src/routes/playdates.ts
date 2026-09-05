@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { PlaydateStatus } from '@petdate/shared';
 import { dbService } from '../db';
+import { notifyPlaydateRequestTelegram } from '../services/telegram-playdate-notify';
 
 const VALID_STATUSES: PlaydateStatus[] = ['pending', 'accepted', 'rejected', 'cancelled'];
 
@@ -13,6 +14,21 @@ function enrichPlaydate(req: ReturnType<typeof dbService.getPlaydateRequest>) {
     fromPet: dbService.getPet(req.fromPetId) ?? undefined,
     toPet: dbService.getPet(req.toPetId) ?? undefined,
   };
+}
+
+/** Fire-and-forget Telegram notify to recipient (bot-equivalent). */
+async function notifyNewPlaydateTelegram(
+  request: NonNullable<ReturnType<typeof enrichPlaydate>>
+): Promise<boolean> {
+  if (!request.toUserId || !request.fromPet || !request.toPet) return false;
+  const owner = dbService.getUserById(request.toUserId);
+  if (!owner?.telegramId) return false;
+  return notifyPlaydateRequestTelegram({
+    requestId: request.id,
+    toTelegramId: owner.telegramId,
+    fromPet: request.fromPet,
+    toPetName: request.toPet.name,
+  });
 }
 
 playdatesRouter.get('/', (req, res) => {
@@ -35,7 +51,7 @@ playdatesRouter.get('/:id', (req, res) => {
   res.json(request);
 });
 
-playdatesRouter.post('/', (req, res) => {
+playdatesRouter.post('/', async (req, res) => {
   const { fromPetId, toPetId, fromUserId, toUserId, message, scheduledAt, location } = req.body;
 
   if (!fromPetId || !toPetId || !fromUserId) {
@@ -54,7 +70,8 @@ playdatesRouter.post('/', (req, res) => {
     const existing = dbService
       .listPlaydateRequests({ userId: Number(fromUserId), status: 'pending' })
       .find((r) => r.fromPetId === Number(fromPetId) && r.toPetId === Number(toPetId));
-    res.status(200).json(enrichPlaydate(existing ?? null));
+    // Existing pending — do not re-notify Telegram
+    res.status(200).json({ ...enrichPlaydate(existing ?? null), telegramNotified: false });
     return;
   }
 
@@ -68,7 +85,9 @@ playdatesRouter.post('/', (req, res) => {
     location,
   });
 
-  res.status(201).json(enrichPlaydate(request));
+  const enriched = enrichPlaydate(request)!;
+  const telegramNotified = await notifyNewPlaydateTelegram(enriched);
+  res.status(201).json({ ...enriched, telegramNotified });
 });
 
 playdatesRouter.patch('/:id', (req, res) => {
