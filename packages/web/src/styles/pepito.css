@@ -248,12 +248,16 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   align-items: center;
   gap: 1rem;
   padding: 0.85rem clamp(1rem, 4vw, 2.75rem);
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(92, 77, 145, 0.06);
-  transition: box-shadow 0.25s ease;
+  /* Clear at rest so slide TOP (ear tips / crown) is not frosted over */
+  background: transparent;
+  backdrop-filter: none;
+  border-bottom: 1px solid transparent;
+  transition: box-shadow 0.25s ease, background 0.25s ease, backdrop-filter 0.25s ease, border-color 0.25s ease;
 }
 .pepito-nav.is-scrolled {
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+  border-bottom-color: rgba(92, 77, 145, 0.06);
   box-shadow: 0 10px 30px rgba(25, 6, 61, 0.08);
 }
 .pepito-nav-logo {
@@ -296,7 +300,10 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   padding: 0.45rem 0.8rem;
 }
 
-/* Hero — Pepito `.header.slider-fade` / `.banner-header` measurements */
+/* Hero — Pepito `.header.slider-fade` / `.banner-header` measurements
+   Anchor cover to the TOP (Pepito `.parallax-header` uses `50% 0` / center top):
+   center/center crops dog heads when the hero is shorter than the scaled image,
+   and the fixed nav then hides another ~70px of that already-cropped top. */
 .pepito-hero {
   position: relative;
   width: 100%;
@@ -320,6 +327,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   opacity: 0;
   transition: opacity 1.1s ease;
   z-index: 0;
+  background-position: center top;
 }
 .pepito-hero-slide.is-active {
   opacity: 1;
@@ -338,7 +346,8 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center center;
+  /* img equivalent of background-position: center top */
+  object-position: center top;
   transform: scale(1.04);
   animation: pepito-ken 14s ease-in-out infinite alternate;
 }
