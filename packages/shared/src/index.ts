@@ -140,6 +140,8 @@ export interface User {
   /** مدرک دامپزشک (Telegram file_id) */
   vetCredentialFileId?: string;
   vetCredentialStatus?: VetCredentialStatus;
+  /** دامپزشک آنلاین و آماده پذیرش بیمار */
+  vetOnline?: boolean;
   /** میانگین امتیاز کاربران (۱–۵) — فقط برای دامپزشک */
   avgRating?: number;
   /** تعداد نظرات ثبت‌شده برای دامپزشک */

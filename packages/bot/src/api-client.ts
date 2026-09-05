@@ -321,6 +321,17 @@ export async function listVerifiedVets(): Promise<User[]> {
   return request<User[]>('/api/users/vets/verified');
 }
 
+/** وضعیت آنلاین/آفلاین دامپزشک */
+export async function setVetOnline(telegramId: string, online: boolean): Promise<User> {
+  return request<User>(
+    `/api/users/telegram/${encodeURIComponent(telegramId)}/vet-online`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ online }),
+    }
+  );
+}
+
 export async function debitUserCoins(telegramId: string, amount: number): Promise<User> {
   return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/coins/debit`, {
     method: 'POST',

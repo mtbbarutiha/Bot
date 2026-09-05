@@ -104,7 +104,12 @@ import {
   handleVetChatRxMedPick,
   handleVetChatRxMore,
 } from './vet-chat';
-import { handleVetPatients } from './vet';
+import {
+  handlePatientChatInvite,
+  handleVetOnlineToggle,
+  handleVetRecentPatients,
+  handleVetRequestRechat,
+} from './vet';
 import {
   handleCoins,
   handleCoinsBack,
@@ -486,6 +491,15 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery(/^vet:consult:reject:(\d+)$/, (ctx) =>
     handleVetConsultDecision(ctx, Number(ctx.match![1]), 'reject')
   );
+  bot.callbackQuery(/^vet:rechat:(\d+)$/, (ctx) =>
+    handleVetRequestRechat(ctx, Number(ctx.match![1]))
+  );
+  bot.callbackQuery(/^vet:invite:accept:(\d+)$/, (ctx) =>
+    handlePatientChatInvite(ctx, Number(ctx.match![1]), 'accept')
+  );
+  bot.callbackQuery(/^vet:invite:reject:(\d+)$/, (ctx) =>
+    handlePatientChatInvite(ctx, Number(ctx.match![1]), 'reject')
+  );
   bot.callbackQuery(/^vet:consult:ack:/, async (ctx) => {
     await ctx.answerCallbackQuery({ text: 'باشه ✅' }).catch(() => undefined);
   });
@@ -697,9 +711,17 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case m.findPlaymate:
     case d.explore:
       return handleFindPlaymate(ctx);
-    case v.patients: {
+    case v.goOnline: {
       if (!(await ensureVetPhoneVerified(ctx))) return;
-      return handleVetPatients(ctx);
+      return handleVetOnlineToggle(ctx, true);
+    }
+    case v.goOffline: {
+      if (!(await ensureVetPhoneVerified(ctx))) return;
+      return handleVetOnlineToggle(ctx, false);
+    }
+    case v.recentPatients: {
+      if (!(await ensureVetPhoneVerified(ctx))) return;
+      return handleVetRecentPatients(ctx);
     }
     case m.nearbyPets:
       return handleNearbyPets(ctx);

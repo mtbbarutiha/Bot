@@ -147,6 +147,8 @@ export interface PetdateUser {
   /** فایل مدرک دامپزشک (Telegram file_id) */
   vetCredentialFileId?: string;
   vetCredentialStatus?: VetCredentialStatus;
+  /** دامپزشک آنلاین و آماده پذیرش بیمار */
+  vetOnline?: boolean;
   createdAt: string;
   updatedAt: string;
 }

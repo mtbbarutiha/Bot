@@ -21,7 +21,9 @@ export async function getCtxUser(ctx: Context): Promise<User | null> {
 /** منوی اصلی با ردیف دسترسی (نقش‌ها / پنل ادمین) بر اساس دسترسی کاربر */
 export function menuKeyboardFor(
   ctx: Context,
-  user?: Pick<User, 'role' | 'roles'> | null
+  user?: (Pick<User, 'role' | 'roles'> & { vetOnline?: boolean }) | null
 ) {
-  return mainMenuKeyboard(user?.role, user?.roles, ctx.from?.id);
+  return mainMenuKeyboard(user?.role, user?.roles, ctx.from?.id, {
+    vetOnline: user?.vetOnline,
+  });
 }

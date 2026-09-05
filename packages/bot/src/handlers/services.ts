@@ -190,7 +190,7 @@ export async function handleQuickVetConnect(ctx: Context): Promise<void> {
               user.phone ? `تماس: <code>${escapeHtml(user.phone)}</code>` : null,
               '',
               'اگر آماده‌ای قبول کن؛ بیمار منتظر پاسخته.',
-              'از منو «📋 بیماران / مشاوره‌ها» هم می‌تونی ببینی.',
+              'از منو «🩺 آخرین بیمارها» هم می‌تونی بیماران قبلی را ببینی.',
             ]
               .filter(Boolean)
               .join('\n'),

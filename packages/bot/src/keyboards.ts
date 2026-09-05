@@ -101,7 +101,9 @@ export const DEFAULT_MENU = {
 
 /** منوی دامپزشک (بدون کشف همبازی) — فقط وقتی نقش فعال vet باشد */
 export const VET_MENU = {
-  patients: '📋 بیماران / مشاوره‌ها',
+  goOnline: '🟢 آنلاین هستم و آماده پذیرش بیمار',
+  goOffline: '🔴 آفلاین هستم',
+  recentPatients: '🩺 آخرین بیمارها',
   profile: '👤 پروفایل',
   verify: '🛡 احراز چهره',
   phoneVerify: '📱 احراز موبایل',
@@ -399,13 +401,14 @@ export function roleKeyboard(selected: UserRole[] = []): InlineKeyboard {
 export function mainMenuKeyboard(
   role?: UserRole | string | null,
   roles?: UserRole[] | null,
-  telegramId?: string | number | null
+  telegramId?: string | number | null,
+  options?: { vetOnline?: boolean },
 ): Keyboard {
   const list = normalizeRoles(roles as UserRole[] | null | undefined, role as UserRole | null | undefined);
   const active = primaryRole(list, role as UserRole | null | undefined);
 
   if (active === 'pet_owner') return petOwnerMenuKeyboard(telegramId);
-  if (active === 'vet') return vetMenuKeyboard(telegramId);
+  if (active === 'vet') return vetMenuKeyboard(telegramId, options);
   return defaultMenuKeyboard(telegramId);
 }
 
@@ -422,11 +425,17 @@ function appendAccessRow(kb: Keyboard, telegramId?: string | number | null): Key
   return kb;
 }
 
-export function vetMenuKeyboard(telegramId?: string | number | null): Keyboard {
+export function vetMenuKeyboard(
+  telegramId?: string | number | null,
+  options?: { vetOnline?: boolean },
+): Keyboard {
   const m = VET_MENU;
+  const online = options?.vetOnline === true;
   const kb = new Keyboard()
-    .text(m.patients)
+    .text(online ? m.goOffline : m.goOnline)
     .primary()
+    .row()
+    .text(m.recentPatients)
     .row()
     .text(m.profile)
     .text(m.verify)

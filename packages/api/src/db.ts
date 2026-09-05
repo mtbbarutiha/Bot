@@ -27,6 +27,9 @@ import type {
   UserGender,
   UserRole,
   VerificationStatus,
+  VetRatingStats,
+  VetRating,
+  PreviousVet,
   VetConsultation,
   VetConsultStatus,
   VetCredentialStatus,
@@ -213,6 +216,9 @@ function migrateSchema() {
   if (!names.has('vet_credential_status')) {
     db.exec("ALTER TABLE users ADD COLUMN vet_credential_status TEXT NOT NULL DEFAULT 'none'");
   }
+  if (!names.has('vet_online')) {
+    db.exec('ALTER TABLE users ADD COLUMN vet_online INTEGER NOT NULL DEFAULT 0');
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS coin_ledger (
@@ -284,6 +290,26 @@ function migrateSchema() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_vet_consultations_vet
       ON vet_consultations (vet_user_id, created_at DESC);
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_vet_consultations_patient
+      ON vet_consultations (patient_user_id, created_at DESC);
+  `);
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS vet_ratings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consult_id INTEGER NOT NULL UNIQUE REFERENCES vet_consultations(id),
+      vet_user_id INTEGER NOT NULL REFERENCES users(id),
+      patient_user_id INTEGER NOT NULL REFERENCES users(id),
+      rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+      comment TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_vet_ratings_vet
+      ON vet_ratings (vet_user_id, created_at DESC);
   `);
 
   db.exec(`
@@ -844,6 +870,18 @@ function isProfileSectionFilled(section: ProfileRewardSection, u: User): boolean
   }
 }
 
+function mapVetRating(row: Record<string, unknown>): VetRating {
+  return {
+    id: Number(row.id),
+    consultId: Number(row.consult_id),
+    vetUserId: Number(row.vet_user_id),
+    patientUserId: Number(row.patient_user_id),
+    rating: Number(row.rating),
+    comment: (row.comment as string | undefined) ?? undefined,
+    createdAt: String(row.created_at ?? ''),
+  };
+}
+
 function mapUser(row: Record<string, unknown>): User {
   const roles = parseRoles(row.roles, row.role);
   const role =
@@ -882,6 +920,12 @@ function mapUser(row: Record<string, unknown>): User {
     verificationNote: (row.verification_note as string | undefined) ?? undefined,
     vetCredentialFileId: (row.vet_credential_file_id as string | undefined) ?? undefined,
     vetCredentialStatus: parseVetCredentialStatus(row.vet_credential_status),
+    vetOnline: row.vet_online == null ? false : Boolean(row.vet_online),
+    avgRating:
+      row.avg_rating != null && Number.isFinite(Number(row.avg_rating))
+        ? Math.round(Number(row.avg_rating) * 10) / 10
+        : undefined,
+    ratingCount: row.rating_count != null ? Number(row.rating_count) : undefined,
     createdAt: row.created_at as string,
   };
 }
@@ -1477,6 +1521,7 @@ export const dbService = {
       .prepare(
         `SELECT * FROM users
          WHERE is_active = 1
+           AND COALESCE(vet_online, 0) = 1
            AND (
              role = 'vet'
              OR roles LIKE '%"vet"%'
@@ -1496,6 +1541,150 @@ export const dbService = {
     return phoneOk.length > 0 ? phoneOk : vets;
   },
 
+  setVetOnline(userId: number, online: boolean): User | null {
+    const result = db
+      .prepare(`UPDATE users SET vet_online = ? WHERE id = ?`)
+      .run(online ? 1 : 0, userId);
+    if (result.changes === 0) return null;
+    return this.getUserById(userId);
+  },
+
+  setVetOnlineByTelegramId(telegramId: string, online: boolean): User | null {
+    const user = this.getUserByTelegramId(telegramId);
+    if (!user) return null;
+    return this.setVetOnline(user.id, online);
+  },
+
+  listPreviousVetsForPatient(patientUserId: number): PreviousVet[] {
+    const rows = db
+      .prepare(
+        `SELECT
+           u.id AS id,
+           u.name AS name,
+           u.city AS city,
+           u.telegram_id AS telegram_id,
+           MAX(vc.created_at) AS last_consult_at,
+           (
+             SELECT ROUND(AVG(vr.rating) * 10) / 10
+             FROM vet_ratings vr
+             WHERE vr.vet_user_id = vc.vet_user_id
+           ) AS avg_rating,
+           (
+             SELECT COUNT(*)
+             FROM vet_ratings vr
+             WHERE vr.vet_user_id = vc.vet_user_id
+           ) AS rating_count
+         FROM vet_consultations vc
+         INNER JOIN users u ON u.id = vc.vet_user_id
+         WHERE vc.patient_user_id = ?
+         GROUP BY vc.vet_user_id
+         ORDER BY last_consult_at DESC, vc.vet_user_id DESC`
+      )
+      .all(patientUserId) as Record<string, unknown>[];
+    return rows.map((row) => {
+      const ratingCount = Number(row.rating_count ?? 0);
+      return {
+        id: Number(row.id),
+        name: String(row.name ?? 'دامپزشک'),
+        city: (row.city as string | undefined) ?? undefined,
+        telegramId: (row.telegram_id as string | undefined) ?? undefined,
+        lastConsultAt: String(row.last_consult_at ?? ''),
+        avgRating:
+          ratingCount > 0 && row.avg_rating != null
+            ? Number(row.avg_rating)
+            : undefined,
+        ratingCount: ratingCount > 0 ? ratingCount : undefined,
+      };
+    });
+  },
+
+  getVetRatingByConsultId(consultId: number): VetRating | null {
+    const row = db
+      .prepare(`SELECT * FROM vet_ratings WHERE consult_id = ?`)
+      .get(consultId) as Record<string, unknown> | undefined;
+    return row ? mapVetRating(row) : null;
+  },
+
+  getVetRatingStats(vetUserId: number): VetRatingStats {
+    const row = db
+      .prepare(
+        `SELECT
+           COUNT(*) AS rating_count,
+           AVG(rating) AS avg_rating
+         FROM vet_ratings
+         WHERE vet_user_id = ?`
+      )
+      .get(vetUserId) as { rating_count?: number; avg_rating?: number } | undefined;
+    const ratingCount = Number(row?.rating_count ?? 0);
+    const avg =
+      ratingCount > 0 && row?.avg_rating != null ? Number(row.avg_rating) : 0;
+    return {
+      vetUserId,
+      avgRating: ratingCount > 0 ? Math.round(avg * 10) / 10 : 0,
+      ratingCount,
+    };
+  },
+
+  upsertVetRating(input: {
+    consultId: number;
+    patientUserId: number;
+    rating: number;
+    comment?: string;
+  }):
+    | { ok: true; rating: VetRating; created: boolean }
+    | { ok: false; reason: 'missing_consult' | 'forbidden' | 'invalid_rating' } {
+    const rating = Math.floor(Number(input.rating));
+    if (!Number.isFinite(rating) || rating < 1 || rating > 5) {
+      return { ok: false, reason: 'invalid_rating' };
+    }
+    const consult = this.getVetConsultation(input.consultId);
+    if (!consult) return { ok: false, reason: 'missing_consult' };
+    if (consult.patientUserId !== input.patientUserId) {
+      return { ok: false, reason: 'forbidden' };
+    }
+
+    const existing = this.getVetRatingByConsultId(input.consultId);
+    if (existing) {
+      const comment =
+        typeof input.comment === 'string' && input.comment.trim()
+          ? input.comment.trim().slice(0, 500)
+          : existing.comment;
+      if (comment && comment !== existing.comment) {
+        db.prepare(`UPDATE vet_ratings SET comment = ? WHERE id = ?`).run(
+          comment,
+          existing.id
+        );
+        return {
+          ok: true,
+          rating: this.getVetRatingByConsultId(input.consultId)!,
+          created: false,
+        };
+      }
+      return { ok: true, rating: existing, created: false };
+    }
+
+    const comment =
+      typeof input.comment === 'string' && input.comment.trim()
+        ? input.comment.trim().slice(0, 500)
+        : null;
+    const result = db
+      .prepare(
+        `INSERT INTO vet_ratings (
+          consult_id, vet_user_id, patient_user_id, rating, comment
+        ) VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(
+        input.consultId,
+        consult.vetUserId,
+        input.patientUserId,
+        rating,
+        comment
+      );
+    const row = db
+      .prepare(`SELECT * FROM vet_ratings WHERE id = ?`)
+      .get(Number(result.lastInsertRowid)) as Record<string, unknown>;
+    return { ok: true, rating: mapVetRating(row), created: true };
+  },
   /** کم کردن سکه اتمیک؛ اگر موجودی کافی نباشد null */
   debitCoins(userId: number, amount: number): User | null {
     if (amount <= 0) return this.getUserById(userId);

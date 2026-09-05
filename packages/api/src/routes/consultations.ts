@@ -25,6 +25,23 @@ consultationsRouter.get('/', (req, res) => {
   res.json(consultations);
 });
 
+/** دامپزشک‌های قبلی بیمار — قبل از /:id تا route اشتباه نشود */
+consultationsRouter.get('/previous-vets', (req, res) => {
+  const patientUserId = req.query.patientUserId
+    ? Number(req.query.patientUserId)
+    : undefined;
+  if (!patientUserId || Number.isNaN(patientUserId)) {
+    res.status(400).json({ error: 'patientUserId الزامی است' });
+    return;
+  }
+  const patient = dbService.getUserById(patientUserId);
+  if (!patient) {
+    res.status(404).json({ error: 'بیمار پیدا نشد' });
+    return;
+  }
+  res.json(dbService.listPreviousVetsForPatient(patientUserId));
+});
+
 consultationsRouter.get('/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id) || id <= 0) {
@@ -95,6 +112,65 @@ consultationsRouter.patch('/:id/status', (req, res) => {
     return;
   }
   res.json(updated);
+});
+
+/** ثبت امتیاز اختیاری صاحب‌پت به دامپزشک — یک امتیاز به ازای هر مشاوره */
+consultationsRouter.post('/:id/rating', (req, res) => {
+  const consultId = Number(req.params.id);
+  const patientUserId =
+    req.body?.patientUserId != null ? Number(req.body.patientUserId) : undefined;
+  const rating = req.body?.rating != null ? Number(req.body.rating) : undefined;
+  const comment = typeof req.body?.comment === 'string' ? req.body.comment : undefined;
+
+  if (!Number.isFinite(consultId) || consultId <= 0) {
+    res.status(400).json({ error: 'شناسه مشاوره نامعتبر' });
+    return;
+  }
+  if (!patientUserId || !Number.isFinite(patientUserId)) {
+    res.status(400).json({ error: 'patientUserId الزامی است' });
+    return;
+  }
+
+  const result = dbService.upsertVetRating({
+    consultId,
+    patientUserId,
+    rating: rating as number,
+    comment,
+  });
+
+  if (!result.ok) {
+    if (result.reason === 'missing_consult') {
+      res.status(404).json({ error: 'مشاوره پیدا نشد' });
+      return;
+    }
+    if (result.reason === 'forbidden') {
+      res.status(403).json({ error: 'فقط صاحب پت می‌تواند امتیاز دهد' });
+      return;
+    }
+    res.status(400).json({ error: 'امتیاز باید بین ۱ تا ۵ باشد' });
+    return;
+  }
+
+  res.status(result.created ? 201 : 200).json({
+    ...result.rating,
+    created: result.created,
+    stats: dbService.getVetRatingStats(result.rating.vetUserId),
+  });
+});
+
+/** دریافت امتیاز ثبت‌شده برای یک مشاوره (در صورت وجود) */
+consultationsRouter.get('/:id/rating', (req, res) => {
+  const consultId = Number(req.params.id);
+  if (!Number.isFinite(consultId) || consultId <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+  const rating = dbService.getVetRatingByConsultId(consultId);
+  if (!rating) {
+    res.status(404).json({ error: 'امتیازی ثبت نشده' });
+    return;
+  }
+  res.json(rating);
 });
 
 /** صدور نسخه دارویی: PDF + پرونده + پیامک (در صورت موبایل تأییدشده) */

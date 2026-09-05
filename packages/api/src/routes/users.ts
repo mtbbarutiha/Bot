@@ -291,9 +291,20 @@ usersRouter.post('/:id/verification/approve', (req, res) => {
   res.json({ ok: true, user, rewardCoins: awarded || amount });
 });
 
-/** دامپزشک‌های واجد شرایط اتصال سریع (نقش vet؛ ترجیح phoneVerified) */
+/** دامپزشک‌های واجد شرایط اتصال سریع (نقش vet + آنلاین؛ ترجیح phoneVerified) */
 usersRouter.get('/vets/verified', (_req, res) => {
   res.json(dbService.listVerifiedVets());
+});
+
+/** وضعیت آنلاین/آفلاین دامپزشک برای پذیرش بیمار */
+usersRouter.post('/telegram/:telegramId/vet-online', (req, res) => {
+  const online = Boolean(req.body?.online);
+  const user = dbService.setVetOnlineByTelegramId(req.params.telegramId, online);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(user);
 });
 
 usersRouter.post('/telegram/:telegramId/coins/debit', (req, res) => {
