@@ -282,11 +282,15 @@ export async function createPlaydate(data: {
   });
 }
 
-export async function updatePlaydateStatus(id: number, status: PlaydateStatus): Promise<PlaydateRequest> {
+export async function updatePlaydateStatus(
+  id: number,
+  status: PlaydateStatus,
+  userId: number
+): Promise<PlaydateRequest> {
   return request<PlaydateRequest>(`/api/playdate-requests/${id}`, {
     method: 'PATCH',
     // Bot opens owner chat itself — API must not send a second intro.
-    body: JSON.stringify({ status, startOwnerChat: false }),
+    body: JSON.stringify({ status, userId, startOwnerChat: false }),
   });
 }
 

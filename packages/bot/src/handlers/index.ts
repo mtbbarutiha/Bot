@@ -104,7 +104,7 @@ import {
   handleVetChatRxMedPick,
   handleVetChatRxMore,
 } from './vet-chat';
-import { handleOwnerChatRelay } from './owner-chat';
+import { enterOwnerChatFromCallback, handleOwnerChatRelay } from './owner-chat';
 import {
   handlePatientChatInvite,
   handleVetOnlineToggle,
@@ -310,6 +310,9 @@ export function registerHandlers(bot: Bot): void {
   );
   bot.callbackQuery(/^playdate:reject:(\d+)$/, (ctx) =>
     handlePlaydateAction(ctx, Number(ctx.match![1]), 'reject')
+  );
+  bot.callbackQuery(/^playdate:enterchat:(\d+)$/, (ctx) =>
+    enterOwnerChatFromCallback(ctx, Number(ctx.match![1]))
   );
   bot.callbackQuery('playdate:cancel', handlePlaydateCancel);
 

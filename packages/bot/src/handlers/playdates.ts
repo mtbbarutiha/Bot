@@ -375,7 +375,7 @@ export async function handlePlaydateAction(
 
   const status = action === 'accept' ? 'accepted' : 'rejected';
   await ctx.answerCallbackQuery({ text: action === 'accept' ? 'پذیرفته شد ✅' : 'رد شد' });
-  const updated = await updatePlaydateStatus(requestId, status);
+  const updated = await updatePlaydateStatus(requestId, status, user.id);
   if (!updated) {
     await ctx.reply('به‌روزرسانی درخواست ناموفق بود.');
     return;

@@ -12,7 +12,6 @@ import {
   getPet,
   getUserById,
   getUserByTelegramId,
-  getActiveOwnerChat,
   postPlaydateChatMessage,
 } from '../api-client';
 import { getSession, upsertSession } from '../session';
@@ -100,7 +99,9 @@ function protectOpts(secure: boolean): { protect_content?: true } {
 }
 
 /**
- * بعد از قبول درخواست همبازی، هر دو مالک وارد چت می‌شوند.
+ * بعد از قبول درخواست همبازی توسط گیرنده:
+ * - قبول‌کننده (که دکمه قبول را زده) وارد چت می‌شود
+ * - درخواست‌دهنده فقط دعوت می‌شود و باید «شروع چت» را بزند
  */
 export async function startOwnerChat(
   ctx: Context,
@@ -119,6 +120,7 @@ export async function startOwnerChat(
     return;
   }
 
+  // Only the accepter opted in by tapping Accept — do not force the requester in.
   await upsertSession(String(accepter.telegramId), {
     step: 'owner_chat',
     ownerChatPlaydateId: playdateId,
@@ -126,15 +128,6 @@ export async function startOwnerChat(
     ownerChatPeerUserId: requester.id,
     ownerChatMyPetId: opts?.toPetId,
     ownerChatPeerPetId: opts?.fromPetId,
-    ownerChatSecure: false,
-  });
-  await upsertSession(String(requester.telegramId), {
-    step: 'owner_chat',
-    ownerChatPlaydateId: playdateId,
-    ownerChatPeerTelegramId: String(accepter.telegramId),
-    ownerChatPeerUserId: accepter.id,
-    ownerChatMyPetId: opts?.fromPetId,
-    ownerChatPeerPetId: opts?.toPetId,
     ownerChatSecure: false,
   });
 
@@ -166,12 +159,11 @@ export async function startOwnerChat(
   const requesterIntro = [
     '✅ <b>درخواست همبازی پذیرفته شد!</b>',
     '',
-    '💬 چت با صاحب پت فعال شد.',
     `طرف مقابل: <b>${escapeHtml(accepter.name)}</b>`,
     petLine,
-    'هر پیامی بفرستی مستقیم به طرف مقابل می‌رسد.',
     '',
-    tipLines,
+    'برای شروع گفتگو دکمهٔ <b>شروع چت</b> را بزن.',
+    'تا وقتی وارد چت نشوی، پیام‌ها به‌صورت چت دوطرفه وصل نمی‌شوند.',
   ]
     .filter(Boolean)
     .join('\n');
@@ -184,10 +176,14 @@ export async function startOwnerChat(
   try {
     await ctx.api.sendMessage(requester.telegramId, requesterIntro, {
       parse_mode: 'HTML',
-      reply_markup: ownerChatReplyKeyboard(false),
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '💬 شروع چت', callback_data: `playdate:enterchat:${playdateId}` }],
+        ],
+      },
     });
   } catch (err) {
-    console.warn('notify requester owner chat start failed:', err);
+    console.warn('notify requester owner chat invite failed:', err);
   }
 }
 
@@ -418,37 +414,83 @@ async function handleOwnerChatAction(ctx: Context, text: string): Promise<boolea
   return false;
 }
 
+
+/**
+ * Explicit opt-in to owner chat after a playdate was accepted.
+ * Used when the user taps «شروع چت» — never auto-connect on random messages.
+ */
+export async function enterOwnerChatFromCallback(
+  ctx: Context,
+  playdateId: number
+): Promise<void> {
+  await ctx.answerCallbackQuery();
+  const from = ctx.from;
+  if (!from) return;
+  const me = await getCtxUser(ctx);
+  if (!me?.id) {
+    await ctx.reply('اول /start بزن.');
+    return;
+  }
+
+  const { getPlaydate, getUserById } = await import('../api-client');
+  const pd = await getPlaydate(playdateId);
+  if (!pd || pd.status !== 'accepted') {
+    await ctx.reply('این همبازی هنوز تایید نشده یا پیدا نشد.');
+    return;
+  }
+
+  const recipientId = pd.toUserId;
+  const isParticipant = pd.fromUserId === me.id || recipientId === me.id;
+  if (!isParticipant) {
+    await ctx.reply('این چت مربوط به تو نیست.');
+    return;
+  }
+
+  const peerUserId = pd.fromUserId === me.id ? recipientId : pd.fromUserId;
+  if (!peerUserId) {
+    await ctx.reply('طرف مقابل پیدا نشد.');
+    return;
+  }
+  const peer = await getUserById(peerUserId);
+  if (!peer?.telegramId) {
+    await ctx.reply('طرف مقابل تلگرام ندارد؛ چت ربات ممکن نیست.');
+    return;
+  }
+
+  const myPetId = pd.fromUserId === me.id ? pd.fromPetId : pd.toPetId;
+  const peerPetId = pd.fromUserId === me.id ? pd.toPetId : pd.fromPetId;
+
+  await upsertSession(String(from.id), {
+    userId: me.id,
+    step: 'owner_chat',
+    ownerChatPlaydateId: playdateId,
+    ownerChatPeerTelegramId: String(peer.telegramId),
+    ownerChatPeerUserId: peer.id,
+    ownerChatMyPetId: myPetId,
+    ownerChatPeerPetId: peerPetId,
+    ownerChatSecure: false,
+  });
+
+  await ctx.reply(
+    [
+      '💬 <b>وارد چت همبازی شدی</b>',
+      '',
+      `طرف مقابل: <b>${peer.name}</b>`,
+      'از حالا پیام‌هایت مستقیم می‌رسد.',
+    ].join('\n'),
+    { parse_mode: 'HTML', reply_markup: ownerChatReplyKeyboard(false) }
+  );
+}
+
 export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
   const from = ctx.from;
   if (!from) return false;
-  let session = await getSession(String(from.id));
+  const session = await getSession(String(from.id));
+  // Do NOT auto-enter chat on arbitrary messages — that connected peers
+  // without an explicit "enter chat" / accept action.
   if (!session || session.step !== 'owner_chat' || !session.ownerChatPeerTelegramId) {
-    // Web accept may have opened chat without writing this process's in-memory session.
-    const active = await getActiveOwnerChat(String(from.id));
-    if (!active?.peerTelegramId) return false;
-    const me = await getCtxUser(ctx);
-    session = await upsertSession(String(from.id), {
-      userId: me?.id,
-      step: 'owner_chat',
-      ownerChatPlaydateId: active.playdateId,
-      ownerChatPeerTelegramId: active.peerTelegramId,
-      ownerChatPeerUserId: active.peerUserId,
-      ownerChatMyPetId: active.myPetId,
-      ownerChatPeerPetId: active.peerPetId,
-      ownerChatSecure: false,
-    });
-    await ctx.reply(
-      [
-        '💬 چت همبازی دوباره فعال شد.',
-        active.peerName ? `طرف مقابل: ${active.peerName}` : null,
-        'پیام‌هایت مستقیم به طرف مقابل می‌رسد.',
-      ]
-        .filter(Boolean)
-        .join('\n'),
-      { reply_markup: ownerChatReplyKeyboard(false) }
-    );
+    return false;
   }
-  if (!session.ownerChatPeerTelegramId) return false;
 
   const text = ctx.message?.text?.trim();
   if (text && (OWNER_CHAT_ACTION_BTNS.has(text) || MAIN_MENU_ALIASES.has(text) || text === MAIN_MENU_BTN)) {

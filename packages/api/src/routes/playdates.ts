@@ -277,15 +277,52 @@ playdatesRouter.post('/', async (req, res) => {
 
 playdatesRouter.patch('/:id', async (req, res) => {
   const { status } = req.body;
+  const actorUserId = Number(req.body?.userId ?? req.body?.actorUserId);
   /** Bot already runs startOwnerChat — pass false to avoid duplicate intros. */
   const startOwnerChat = req.body?.startOwnerChat !== false;
   if (!VALID_STATUSES.includes(status)) {
     res.status(400).json({ error: 'وضعیت نامعتبر است' });
     return;
   }
+  if (!Number.isFinite(actorUserId)) {
+    res.status(400).json({ error: 'userId الزامی است' });
+    return;
+  }
 
   const id = Number(req.params.id);
   const previous = dbService.getPlaydateRequest(id);
+  if (!previous) {
+    res.status(404).json({ error: 'درخواست پیدا نشد' });
+    return;
+  }
+
+  const recipientId =
+    previous.toUserId ?? dbService.getPet(previous.toPetId)?.ownerId ?? undefined;
+  const isRecipient = recipientId === actorUserId;
+  const isSender = previous.fromUserId === actorUserId;
+
+  // Accept/reject: ONLY the recipient (owner of toPet) may confirm.
+  if (status === 'accepted' || status === 'rejected') {
+    if (!isRecipient) {
+      res.status(403).json({
+        error: 'فقط گیرندهٔ درخواست می‌تواند قبول یا رد کند',
+      });
+      return;
+    }
+    if (previous.status !== 'pending') {
+      res.status(409).json({ error: 'این درخواست قبلاً پاسخ داده شده است' });
+      return;
+    }
+  } else if (status === 'cancelled') {
+    if (!isRecipient && !isSender) {
+      res.status(403).json({ error: 'اجازه لغو این درخواست را ندارید' });
+      return;
+    }
+  } else if (!isRecipient && !isSender) {
+    res.status(403).json({ error: 'اجازه تغییر این درخواست را ندارید' });
+    return;
+  }
+
   const updated = enrichPlaydate(dbService.updatePlaydateStatus(id, status));
   if (!updated) {
     res.status(404).json({ error: 'درخواست پیدا نشد' });
@@ -293,7 +330,8 @@ playdatesRouter.patch('/:id', async (req, res) => {
   }
 
   let ownerChatStarted = false;
-  if (previous && startOwnerChat) {
+  // Only after the recipient accepts — never when sender self-accepts.
+  if (startOwnerChat && isRecipient) {
     ownerChatStarted = await openOwnerChatOnAccept(updated, previous.status);
   }
 

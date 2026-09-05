@@ -151,11 +151,12 @@ export async function createPlaydateRequest(data: {
 
 export async function updatePlaydateStatus(
   id: number,
-  status: PlaydateStatus
+  status: PlaydateStatus,
+  userId: number
 ): Promise<PlaydateRequest> {
   return request<PlaydateRequest>(`/api/playdate-requests/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, userId }),
   });
 }
 

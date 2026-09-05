@@ -82,7 +82,8 @@ export function MatchesPage() {
     setBusyId(id);
     setError(null);
     try {
-      await updatePlaydateStatus(id, 'accepted');
+      if (!myUserId) throw new Error('وارد حساب نشده‌اید');
+      await updatePlaydateStatus(id, 'accepted', myUserId);
       navigate(`/chats/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'قبول درخواست ناموفق بود');
@@ -94,7 +95,8 @@ export function MatchesPage() {
     setBusyId(id);
     setError(null);
     try {
-      await updatePlaydateStatus(id, 'rejected');
+      if (!myUserId) throw new Error('وارد حساب نشده‌اید');
+      await updatePlaydateStatus(id, 'rejected', myUserId);
       setToast('درخواست رد شد.');
       await reload();
     } catch (err) {

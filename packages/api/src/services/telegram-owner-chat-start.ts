@@ -1,34 +1,5 @@
-import Redis from 'ioredis';
-import type { BotSession, User } from '@petdate/shared';
+import type { User } from '@petdate/shared';
 import { infra } from '../config/infra';
-
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
-const KEY_PREFIX = 'petdate:bot:session:';
-
-/** Must match bot OWNER_CHAT_BTNS exactly so reply handlers work. */
-const OWNER_CHAT_BTNS = {
-  secureOn: '🔒 چت امن',
-  secureOff: '🔓 خاموش‌کردن چت امن',
-  peerProfile: '👤 پروفایل طرف مقابل',
-  petProfile: '🐾 مشاهده پروفایل پت',
-  addContact: '➕ افزودن مخاطب',
-  end: '🔌 قطع چت همبازی',
-} as const;
-
-function ownerChatKeyboard(secure = false) {
-  return {
-    keyboard: [
-      [
-        { text: secure ? OWNER_CHAT_BTNS.secureOff : OWNER_CHAT_BTNS.secureOn },
-        { text: OWNER_CHAT_BTNS.peerProfile },
-      ],
-      [{ text: OWNER_CHAT_BTNS.petProfile }, { text: OWNER_CHAT_BTNS.addContact }],
-      [{ text: OWNER_CHAT_BTNS.end }],
-    ],
-    resize_keyboard: true,
-    is_persistent: true,
-  };
-}
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -61,36 +32,18 @@ function usableTelegramId(id?: string | null): id is string {
   return true;
 }
 
-async function upsertBotSession(
-  redis: Redis,
-  telegramId: string,
-  patch: Partial<BotSession>
-): Promise<void> {
-  const key = `${KEY_PREFIX}${telegramId}`;
-  let existing: BotSession | null = null;
-  try {
-    const raw = await redis.get(key);
-    if (raw) existing = JSON.parse(raw) as BotSession;
-  } catch {
-    existing = null;
-  }
-  const next: BotSession = {
-    ...(existing ?? {
-      telegramId,
-      step: 'ready' as const,
-      locale: 'fa',
-      updatedAt: new Date().toISOString(),
-    }),
-    ...patch,
-    telegramId,
-    updatedAt: new Date().toISOString(),
+function enterChatKeyboard(playdateId: number) {
+  return {
+    inline_keyboard: [
+      [{ text: '💬 شروع چت', callback_data: `playdate:enterchat:${playdateId}` }],
+    ],
   };
-  await redis.set(key, JSON.stringify(next), 'EX', SESSION_TTL_SECONDS);
 }
 
 /**
- * When a playdate is accepted from the web/API, put both Telegram users into
- * owner_chat and send the same intro the bot would send on accept.
+ * After a playdate is accepted on the web, invite both Telegram users to
+ * explicitly tap «شروع چت». Do NOT auto-enter owner_chat sessions — that
+ * made chat feel connected without each side confirming.
  */
 export async function startOwnerChatFromApi(opts: {
   playdateId: number;
@@ -111,84 +64,36 @@ export async function startOwnerChatFromApi(opts: {
     return false;
   }
 
-  const redisUrl = infra.redis.url;
-  if (redisUrl) {
-    const redis = new Redis(redisUrl, {
-      maxRetriesPerRequest: 1,
-      lazyConnect: true,
-      connectTimeout: 2000,
-      retryStrategy: () => null,
-    });
-    try {
-      await redis.connect();
-      await upsertBotSession(redis, accepter.telegramId, {
-        userId: accepter.id,
-        step: 'owner_chat',
-        ownerChatPlaydateId: playdateId,
-        ownerChatPeerTelegramId: requester.telegramId,
-        ownerChatPeerUserId: requester.id,
-        ownerChatMyPetId: opts.toPetId,
-        ownerChatPeerPetId: opts.fromPetId,
-        ownerChatSecure: false,
-      });
-      await upsertBotSession(redis, requester.telegramId, {
-        userId: requester.id,
-        step: 'owner_chat',
-        ownerChatPlaydateId: playdateId,
-        ownerChatPeerTelegramId: accepter.telegramId,
-        ownerChatPeerUserId: accepter.id,
-        ownerChatMyPetId: opts.fromPetId,
-        ownerChatPeerPetId: opts.toPetId,
-        ownerChatSecure: false,
-      });
-    } catch (err) {
-      console.warn('startOwnerChatFromApi: redis session write failed:', (err as Error).message);
-    } finally {
-      await redis.quit().catch(() => undefined);
-    }
-  }
-
   const petLine =
     opts.fromPetName && opts.toPetName
       ? `پت‌ها: <b>${escapeHtml(opts.fromPetName)}</b> ↔ <b>${escapeHtml(opts.toPetName)}</b>`
       : null;
 
-  const tipLines = [
-    'دکمه‌های چت:',
-    `• ${OWNER_CHAT_BTNS.secureOn} — پیام‌ها غیرقابل ذخیره/فوروارد`,
-    `• ${OWNER_CHAT_BTNS.peerProfile} / ${OWNER_CHAT_BTNS.petProfile}`,
-    `• ${OWNER_CHAT_BTNS.addContact}`,
-    `• ${OWNER_CHAT_BTNS.end}`,
-  ].join('\n');
-
   const accepterIntro = [
-    '💬 <b>چت با صاحب پت فعال شد</b>',
+    '✅ <b>درخواست همبازی را قبول کردی</b>',
     '',
     `طرف مقابل: <b>${escapeHtml(requester.name)}</b>`,
     petLine,
-    'هر پیامی بفرستی مستقیم به صاحب پت همبازی می‌رسد.',
-    'پیام‌های وب هم اینجا می‌آید.',
     '',
-    tipLines,
+    'برای شروع گفتگو دکمهٔ <b>شروع چت</b> را بزن.',
+    'تا وقتی وارد چت نشوی، پیام‌ها رد و بدل نمی‌شوند.',
   ]
     .filter(Boolean)
     .join('\n');
 
   const requesterIntro = [
-    '✅ <b>درخواست همبازی پذیرفته شد!</b>',
+    '✅ <b>درخواست همبازی‌ات پذیرفته شد!</b>',
     '',
-    '💬 چت با صاحب پت فعال شد.',
     `طرف مقابل: <b>${escapeHtml(accepter.name)}</b>`,
     petLine,
-    'هر پیامی بفرستی مستقیم به طرف مقابل می‌رسد.',
-    'پیام‌های وب هم اینجا می‌آید.',
     '',
-    tipLines,
+    'برای شروع گفتگو دکمهٔ <b>شروع چت</b> را بزن.',
+    'تا وقتی طرف مقابل هم وارد چت نشود / تو وارد نشوی، اتصال کامل نیست.',
   ]
     .filter(Boolean)
     .join('\n');
 
-  const keyboard = ownerChatKeyboard(false);
+  const keyboard = enterChatKeyboard(playdateId);
   const aOk = await telegramCall('sendMessage', {
     chat_id: accepter.telegramId,
     text: accepterIntro,
