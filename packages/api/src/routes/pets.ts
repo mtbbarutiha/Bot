@@ -213,7 +213,17 @@ petsRouter.put('/:id/medical-record', (req, res) => {
     lastCheckup: typeof req.body?.lastCheckup === 'string' ? req.body.lastCheckup : undefined,
     medications: typeof req.body?.medications === 'string' ? req.body.medications : undefined,
   };
-  const record = dbService.upsertPetMedicalRecord(petId, patch);
+  const authorUser = dbService.getUserById(viewerId);
+  const consultId =
+    req.body?.consultId != null && Number.isFinite(Number(req.body.consultId))
+      ? Number(req.body.consultId)
+      : undefined;
+  const record = dbService.upsertPetMedicalRecord(petId, patch, {
+    userId: viewerId,
+    name: authorUser?.name,
+    consultId,
+    appendEntries: true,
+  });
   res.json(record);
 });
 
@@ -222,6 +232,8 @@ petsRouter.post('/:id/medical-entries', (req, res) => {
   const authorUserId = req.body?.authorUserId != null ? Number(req.body.authorUserId) : undefined;
   const text = typeof req.body?.text === 'string' ? req.body.text.trim() : '';
   const consultId = req.body?.consultId != null ? Number(req.body.consultId) : undefined;
+  const authorName =
+    typeof req.body?.authorName === 'string' ? req.body.authorName.trim() : undefined;
   if (!Number.isFinite(petId) || petId <= 0) {
     res.status(400).json({ error: 'شناسه پت نامعتبر' });
     return;
@@ -243,6 +255,7 @@ petsRouter.post('/:id/medical-entries', (req, res) => {
   const entry = dbService.addPetMedicalEntry({
     petId,
     authorUserId,
+    authorName,
     text,
     consultId: Number.isFinite(consultId) ? consultId : undefined,
   });

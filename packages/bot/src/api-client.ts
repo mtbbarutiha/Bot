@@ -669,7 +669,7 @@ export async function updatePetMedical(
 
 export async function addPetMedicalEntry(
   petId: number,
-  data: { authorUserId: number; text: string; consultId?: number }
+  data: { authorUserId: number; text: string; consultId?: number; authorName?: string }
 ): Promise<import('@petdate/shared').PetMedicalEntry> {
   return request(`/api/pets/${petId}/medical-entries`, {
     method: 'POST',

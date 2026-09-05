@@ -35,10 +35,12 @@ import {
   COIN_REASON,
   FACE_VERIFY_REWARD,
   PET_BREEDS_SEED,
+  PET_MEDICAL_FIELD_LABELS,
   PET_SPECIES,
   PROFILE_REWARD_SECTIONS,
   PROFILE_SECTION_REWARD,
   SIGNUP_BONUS,
+  type PetMedicalField,
 } from '@petdate/shared';
 
 /** Absolute DATABASE_PATH wins; relative paths ignored (cwd varies across worktrees). */
@@ -293,6 +295,8 @@ function migrateSchema() {
       chronic_conditions TEXT,
       last_checkup TEXT,
       medications TEXT,
+      last_updated_by_user_id INTEGER REFERENCES users(id),
+      last_updated_by_name TEXT,
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
@@ -301,6 +305,7 @@ function migrateSchema() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
       author_user_id INTEGER NOT NULL REFERENCES users(id),
+      author_name TEXT,
       consult_id INTEGER REFERENCES vet_consultations(id),
       text TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -354,6 +359,29 @@ function migrateSchema() {
   if (!breedNames.has('sort_order')) {
     db.exec('ALTER TABLE pet_breeds ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 100');
   }
+
+  const medRecCols = db.prepare('PRAGMA table_info(pet_medical_records)').all() as { name: string }[];
+  const medRecNames = new Set(medRecCols.map((c) => c.name));
+  if (!medRecNames.has('last_updated_by_user_id')) {
+    db.exec('ALTER TABLE pet_medical_records ADD COLUMN last_updated_by_user_id INTEGER REFERENCES users(id)');
+  }
+  if (!medRecNames.has('last_updated_by_name')) {
+    db.exec('ALTER TABLE pet_medical_records ADD COLUMN last_updated_by_name TEXT');
+  }
+
+  const medEntryCols = db.prepare('PRAGMA table_info(pet_medical_entries)').all() as { name: string }[];
+  const medEntryNames = new Set(medEntryCols.map((c) => c.name));
+  if (!medEntryNames.has('author_name')) {
+    db.exec('ALTER TABLE pet_medical_entries ADD COLUMN author_name TEXT');
+  }
+  // Backfill author_name from current user name for older rows
+  db.exec(`
+    UPDATE pet_medical_entries
+    SET author_name = (
+      SELECT u.name FROM users u WHERE u.id = pet_medical_entries.author_user_id
+    )
+    WHERE author_name IS NULL OR trim(author_name) = ''
+  `);
 
   // Backfill roles JSON from legacy single role column
   const roleRows = db
@@ -2396,13 +2424,19 @@ export const dbService = {
       chronicConditions: (row.chronic_conditions as string) || undefined,
       lastCheckup: (row.last_checkup as string) || undefined,
       medications: (row.medications as string) || undefined,
+      lastUpdatedByUserId:
+        row.last_updated_by_user_id != null
+          ? Number(row.last_updated_by_user_id)
+          : undefined,
+      lastUpdatedByName: (row.last_updated_by_name as string) || undefined,
       updatedAt: String(row.updated_at),
     };
   },
 
   upsertPetMedicalRecord(
     petId: number,
-    patch: Partial<Omit<PetMedicalRecord, 'petId' | 'updatedAt'>>
+    patch: Partial<Omit<PetMedicalRecord, 'petId' | 'updatedAt'>>,
+    author?: { userId: number; name?: string; consultId?: number; appendEntries?: boolean }
   ): PetMedicalRecord {
     const current = this.getPetMedicalRecord(petId);
     const next = {
@@ -2416,10 +2450,29 @@ export const dbService = {
       lastCheckup: patch.lastCheckup !== undefined ? patch.lastCheckup : current.lastCheckup,
       medications: patch.medications !== undefined ? patch.medications : current.medications,
     };
+
+    let authorUserId: number | null =
+      author?.userId ??
+      (patch.lastUpdatedByUserId !== undefined
+        ? patch.lastUpdatedByUserId
+        : current.lastUpdatedByUserId ?? null);
+    let authorName: string | null =
+      (author?.name && author.name.trim()) ||
+      (patch.lastUpdatedByName !== undefined
+        ? patch.lastUpdatedByName || null
+        : current.lastUpdatedByName ?? null);
+
+    if (author?.userId != null && !authorName) {
+      const u = this.getUserById(author.userId);
+      authorName = u?.name ?? null;
+      authorUserId = author.userId;
+    }
+
     db.prepare(
       `INSERT INTO pet_medical_records (
-         pet_id, notes, vaccinations, allergies, chronic_conditions, last_checkup, medications, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'))
+         pet_id, notes, vaccinations, allergies, chronic_conditions, last_checkup, medications,
+         last_updated_by_user_id, last_updated_by_name, updated_at
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
        ON CONFLICT(pet_id) DO UPDATE SET
          notes = excluded.notes,
          vaccinations = excluded.vaccinations,
@@ -2427,6 +2480,8 @@ export const dbService = {
          chronic_conditions = excluded.chronic_conditions,
          last_checkup = excluded.last_checkup,
          medications = excluded.medications,
+         last_updated_by_user_id = COALESCE(excluded.last_updated_by_user_id, pet_medical_records.last_updated_by_user_id),
+         last_updated_by_name = COALESCE(excluded.last_updated_by_name, pet_medical_records.last_updated_by_name),
          updated_at = datetime('now')`
     ).run(
       petId,
@@ -2435,15 +2490,46 @@ export const dbService = {
       next.allergies ?? null,
       next.chronicConditions ?? null,
       next.lastCheckup ?? null,
-      next.medications ?? null
+      next.medications ?? null,
+      authorUserId,
+      authorName
     );
+
+    const shouldAppend = author?.appendEntries !== false && author?.userId != null;
+    if (shouldAppend) {
+      const fields: PetMedicalField[] = [
+        'notes',
+        'vaccinations',
+        'allergies',
+        'chronicConditions',
+        'lastCheckup',
+        'medications',
+      ];
+      for (const field of fields) {
+        if (patch[field] === undefined) continue;
+        const before = (current[field] || '').trim();
+        const after = (next[field] || '').trim();
+        if (before === after) continue;
+        const label = PET_MEDICAL_FIELD_LABELS[field];
+        const body = after || '— (پاک شد)';
+        this.addPetMedicalEntry({
+          petId,
+          authorUserId: author!.userId,
+          authorName: authorName || undefined,
+          consultId: author?.consultId,
+          text: `✏️ به‌روزرسانی «${label}»:\n${body}`,
+        });
+      }
+    }
+
     return this.getPetMedicalRecord(petId);
   },
 
   listPetMedicalEntries(petId: number, limit = 20): PetMedicalEntry[] {
     const rows = db
       .prepare(
-        `SELECT e.*, u.name AS author_name
+        `SELECT e.*,
+                COALESCE(NULLIF(trim(e.author_name), ''), u.name) AS author_name
          FROM pet_medical_entries e
          LEFT JOIN users u ON u.id = e.author_user_id
          WHERE e.pet_id = ?
@@ -2467,24 +2553,32 @@ export const dbService = {
     authorUserId: number;
     text: string;
     consultId?: number;
+    authorName?: string;
   }): PetMedicalEntry {
+    let authorName = (input.authorName || '').trim();
+    if (!authorName) {
+      const u = this.getUserById(input.authorUserId);
+      authorName = u?.name?.trim() || '';
+    }
     const result = db
       .prepare(
-        `INSERT INTO pet_medical_entries (pet_id, author_user_id, consult_id, text)
-         VALUES (?, ?, ?, ?)`
+        `INSERT INTO pet_medical_entries (pet_id, author_user_id, author_name, consult_id, text)
+         VALUES (?, ?, ?, ?, ?)`
       )
       .run(
         input.petId,
         input.authorUserId,
+        authorName || null,
         input.consultId ?? null,
         input.text.trim()
       );
-    const rows = this.listPetMedicalEntries(input.petId, 1);
+    const rows = this.listPetMedicalEntries(input.petId, 5);
     return (
       rows.find((e) => e.id === Number(result.lastInsertRowid)) ?? {
         id: Number(result.lastInsertRowid),
         petId: input.petId,
         authorUserId: input.authorUserId,
+        authorName: authorName || undefined,
         consultId: input.consultId,
         text: input.text.trim(),
         createdAt: new Date().toISOString(),

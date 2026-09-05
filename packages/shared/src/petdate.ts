@@ -328,6 +328,10 @@ export interface PetMedicalRecord {
   chronicConditions?: string;
   lastCheckup?: string;
   medications?: string;
+  /** آخرین ویرایشگر فیلدهای خلاصه پرونده */
+  lastUpdatedByUserId?: number;
+  /** نام نمایشی ویرایشگر در زمان آخرین به‌روزرسانی */
+  lastUpdatedByName?: string;
   updatedAt: string;
 }
 
@@ -335,6 +339,7 @@ export interface PetMedicalEntry {
   id: number;
   petId: number;
   authorUserId: number;
+  /** نام پزشک/نویسنده در زمان ثبت (snapshot) */
   authorName?: string;
   consultId?: number;
   text: string;
@@ -348,6 +353,72 @@ export type PetMedicalField =
   | 'chronicConditions'
   | 'lastCheckup'
   | 'medications';
+
+export const PET_MEDICAL_FIELD_LABELS: Record<PetMedicalField, string> = {
+  notes: 'یادداشت / تاریخچه',
+  vaccinations: 'واکسیناسیون',
+  allergies: 'آلرژی‌ها',
+  chronicConditions: 'بیماری‌های مزمن',
+  lastCheckup: 'آخرین چکاپ',
+  medications: 'داروها',
+};
+
+export const PET_MEDICAL_FIELDS: PetMedicalField[] = [
+  'notes',
+  'vaccinations',
+  'allergies',
+  'chronicConditions',
+  'lastCheckup',
+  'medications',
+];
+
+/** نام پزشک برای نمایش در پرونده (اگر «دکتر» نداشت اضافه می‌شود) */
+export function formatVetAuthorName(name?: string | null, fallbackUserId?: number): string {
+  const raw = (name || '').trim();
+  if (!raw) {
+    return fallbackUserId != null ? `کاربر #${fallbackUserId}` : 'نامشخص';
+  }
+  if (/^دکتر\s/.test(raw) || /^دكتر\s/.test(raw)) return raw;
+  return `دکتر ${raw}`;
+}
+
+/** تاریخ شمسی کوتاه مثل ۱۴۰۳/۰۶/۱۴ — ۱۲:۳۰ */
+export function formatPersianDateTime(iso?: string | null): string {
+  if (!iso) return '';
+  const d = new Date(iso.includes('T') ? iso : iso.replace(' ', 'T') + (iso.includes('Z') ? '' : 'Z'));
+  if (Number.isNaN(d.getTime())) {
+    // sqlite datetime('now') بدون TZ — به عنوان UTC نخوان؛ فقط رقم‌ها را فارسی کن
+    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/);
+    if (!m) return toPersianDigits(iso.slice(0, 16));
+    return toPersianDigits(`${m[1]}/${m[2]}/${m[3]}${m[4] ? ` — ${m[4]}:${m[5]}` : ''}`);
+  }
+  try {
+    const datePart = new Intl.DateTimeFormat('fa-IR-u-ca-persian', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(d);
+    const timePart = new Intl.DateTimeFormat('fa-IR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).format(d);
+    return `${datePart} — ${timePart}`;
+  } catch {
+    return toPersianDigits(iso.slice(0, 16).replace('T', ' '));
+  }
+}
+
+/** خط انتساب ثبت بالینی برای نمایش پرونده */
+export function formatMedicalEntryAttribution(entry: {
+  authorName?: string;
+  authorUserId: number;
+  createdAt: string;
+}): string {
+  const who = formatVetAuthorName(entry.authorName, entry.authorUserId);
+  const when = formatPersianDateTime(entry.createdAt);
+  return when ? `🩺 ثبت‌شده توسط: ${who} · ${when}` : `🩺 ثبت‌شده توسط: ${who}`;
+}
 
 
 export type BotStep =

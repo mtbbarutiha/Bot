@@ -118,16 +118,27 @@ export async function createPrescriptionWithDelivery(
 
   prescription = dbService.updatePrescriptionPdfPath(prescription.id, pdfPath) ?? prescription;
 
-  // Update medical record medications + clinical entry
+  // Update medical record medications + clinical entry (attributed to vet)
   const prevMeds = dbService.getPetMedicalRecord(pet.id).medications;
   const medStamp = new Date().toISOString().slice(0, 10);
   const nextMeds = prevMeds
     ? `${prevMeds}\n---\n[${medStamp}] ${text}`
     : `[${medStamp}] ${text}`;
-  dbService.upsertPetMedicalRecord(pet.id, { medications: nextMeds.slice(0, 4000) });
+  dbService.upsertPetMedicalRecord(
+    pet.id,
+    { medications: nextMeds.slice(0, 4000) },
+    {
+      userId: vet.id,
+      name: vet.name,
+      consultId: consult.id,
+      // نسخه خودش یک ثبت بالینی جدا دارد — از تکرار فیلد جلوگیری می‌کنیم
+      appendEntries: false,
+    }
+  );
   dbService.addPetMedicalEntry({
     petId: pet.id,
     authorUserId: vet.id,
+    authorName: vet.name,
     consultId: consult.id,
     text: `💊 نسخه:\n${text}`,
   });

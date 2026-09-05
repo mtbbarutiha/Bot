@@ -2,6 +2,10 @@ import { InlineKeyboard, InputFile, Keyboard } from 'grammy';
 import type { Context } from 'grammy';
 import type { PetMedicalEntry, PetMedicalRecord, PetProfile, User } from '@petdate/shared';
 import {
+  formatMedicalEntryAttribution,
+  formatVetAuthorName,
+} from '@petdate/shared';
+import {
   addPetMedicalEntry,
   createConsultationPrescription,
   fetchPrescriptionPdfBuffer,
@@ -52,15 +56,18 @@ function formatMedicalRecord(
     `💊 دارو: ${escapeHtml(record.medications || '—')}`,
   ].filter((l): l is string => l != null);
 
+  if (record.lastUpdatedByName || record.lastUpdatedByUserId != null) {
+    const who = formatVetAuthorName(record.lastUpdatedByName, record.lastUpdatedByUserId);
+    lines.push(`— آخرین ویرایشگر فیلدها: ${escapeHtml(who)}`);
+  }
+
   if (entries.length) {
     lines.push('', '<b>ثبت‌های بالینی:</b>');
-    for (const e of entries.slice(0, 8)) {
-      const who = e.authorName || `کاربر #${e.authorUserId}`;
-      const when = e.createdAt?.slice(0, 16).replace('T', ' ') || '';
-      lines.push(`• <i>${escapeHtml(when)}</i> — ${escapeHtml(who)}: ${escapeHtml(e.text)}`);
+    for (const e of entries.slice(0, 12)) {
+      lines.push(escapeHtml(formatMedicalEntryAttribution(e)), escapeHtml(e.text), '');
     }
   }
-  return lines.join('\n');
+  return lines.join('\n').trim();
 }
 
 const CHAT_STEPS = new Set(['vet_chat', 'vet_medical_note', 'vet_prescription']);
@@ -344,6 +351,7 @@ export async function handleVetChatNoteText(ctx: Context, text: string): Promise
   try {
     await addPetMedicalEntry(session.medicalNotePetId, {
       authorUserId: user.id,
+      authorName: user.name,
       text,
       consultId: session.vetChatConsultId,
     });
@@ -364,9 +372,10 @@ export async function handleVetChatNoteText(ctx: Context, text: string): Promise
 
   if (session.vetChatPeerTelegramId) {
     try {
+      const who = formatVetAuthorName(user.name, user.id);
       await ctx.api.sendMessage(
         session.vetChatPeerTelegramId,
-        `📋 پزشک موردی در پرونده پزشکی پت ثبت کرد:\n«${text.slice(0, 400)}»`
+        `📋 ${who} موردی در پرونده پزشکی پت ثبت کرد:\n«${text.slice(0, 400)}»`
       );
     } catch {
       /* ignore */
