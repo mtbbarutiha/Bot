@@ -1,10 +1,12 @@
 import type { Context } from 'grammy';
 import {
   approveVetCredential,
+  listAllVets,
   listPendingCardPayments,
   listPendingVerifications,
   listPendingVetCredentials,
   rejectVetCredential,
+  setVetEnabled,
   type PaymentOrder,
 } from '../api-client';
 import {
@@ -21,10 +23,12 @@ import {
   adminPanelKeyboard,
   adminPaymentKeyboard,
   adminVetCredentialKeyboard,
+  adminVetToggleKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 import { handleAdminVerifyQueue } from './verification';
+import type { User } from '@petdate/shared';
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -310,6 +314,126 @@ export async function handleAdminVetCredentialReject(ctx: Context, userId: numbe
   }
 }
 
+function formatAdminVetCard(user: User): string {
+  const enabled = user.vetEnabled !== false;
+  const online = Boolean(user.vetOnline);
+  const cred = user.vetCredentialStatus ?? 'none';
+  const loc = [user.province, user.city].filter(Boolean).join('، ') || '—';
+  const phone = user.phone
+    ? `${escapeHtml(user.phone)}${user.phoneVerified ? ' ✅' : ''}`
+    : '—';
+  return [
+    `🩺 <b>${escapeHtml(user.name)}</b>`,
+    user.username ? `@${escapeHtml(user.username)}` : null,
+    `<b>آیدی:</b> <code>${user.id}</code>`,
+    user.telegramId ? `<b>تلگرام:</b> <code>${escapeHtml(user.telegramId)}</code>` : null,
+    `<b>وضعیت:</b> ${enabled ? '✅ فعال' : '⏸ غیرفعال'}`,
+    `<b>آنلاین:</b> ${online ? '🟢 بله' : '🔴 خیر'}`,
+    `<b>مدرک:</b> ${escapeHtml(String(cred))}`,
+    `<b>شهر:</b> ${escapeHtml(loc)}`,
+    `<b>موبایل:</b> ${phone}`,
+  ]
+    .filter((l) => l !== null)
+    .join('\n');
+}
+
+/** لیست پزشک‌ها برای فعال/غیرفعال کردن توسط ادمین */
+export async function handleAdminVetList(ctx: Context): Promise<void> {
+  if (!(await requireAdminAuth(ctx))) return;
+
+  let vets: User[];
+  try {
+    vets = await listAllVets();
+  } catch (err) {
+    console.error('listAllVets failed:', err);
+    await ctx.reply('خطا در دریافت لیست پزشک‌ها.', { reply_markup: adminPanelKeyboard() });
+    return;
+  }
+
+  if (vets.length === 0) {
+    await ctx.reply('📭 هنوز دامپزشکی ثبت نشده.', { reply_markup: adminPanelKeyboard() });
+    return;
+  }
+
+  const enabledCount = vets.filter((v) => v.vetEnabled !== false).length;
+  await ctx.reply(
+    `🩺 <b>مدیریت پزشک‌ها</b>\nکل: <b>${vets.length}</b> · فعال: <b>${enabledCount}</b> · غیرفعال: <b>${vets.length - enabledCount}</b>`,
+    { parse_mode: 'HTML', reply_markup: adminPanelKeyboard() }
+  );
+
+  const limit = Math.min(vets.length, 15);
+  for (let i = 0; i < limit; i++) {
+    const vet = vets[i]!;
+    const enabled = vet.vetEnabled !== false;
+    await ctx.reply(formatAdminVetCard(vet), {
+      parse_mode: 'HTML',
+      reply_markup: adminVetToggleKeyboard(vet.id, enabled),
+    });
+  }
+  if (vets.length > limit) {
+    await ctx.reply(`+ ${vets.length - limit} پزشک دیگر در لیست هستند.`);
+  }
+}
+
+export async function handleAdminVetToggle(
+  ctx: Context,
+  userId: number,
+  enabled: boolean
+): Promise<void> {
+  if (!(await requireAdminAuth(ctx))) return;
+
+  let result: Awaited<ReturnType<typeof setVetEnabled>>;
+  try {
+    result = await setVetEnabled(userId, enabled);
+  } catch (err) {
+    console.error('setVetEnabled failed:', err);
+    await ctx.answerCallbackQuery({ text: 'خطا در به‌روزرسانی', show_alert: true }).catch(() => undefined);
+    return;
+  }
+
+  const user = result.user;
+  const sms = result.sms;
+  const smsLine = sms.sent
+    ? `📱 پیامک ارسال شد به ${sms.phone}`
+    : `📱 پیامک ارسال نشد: ${'reason' in sms ? sms.reason : 'نامشخص'}`;
+
+  await ctx.answerCallbackQuery({
+    text: enabled ? 'پزشک فعال شد ✅' : 'پزشک غیرفعال شد',
+  }).catch(() => undefined);
+
+  try {
+    await ctx.editMessageText(
+      `${formatAdminVetCard(user)}\n\n${enabled ? '✅ فعال شد.' : '⏸ غیرفعال شد.'}\n${escapeHtml(smsLine)}`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: adminVetToggleKeyboard(user.id, user.vetEnabled !== false),
+      }
+    );
+  } catch {
+    await ctx.reply(
+      `${formatAdminVetCard(user)}\n\n${enabled ? '✅ فعال شد.' : '⏸ غیرفعال شد.'}\n${escapeHtml(smsLine)}`,
+      {
+        parse_mode: 'HTML',
+        reply_markup: adminVetToggleKeyboard(user.id, user.vetEnabled !== false),
+      }
+    );
+  }
+
+  // اطلاع تلگرامی به پزشک (علاوه بر پیامک)
+  if (user.telegramId) {
+    try {
+      await ctx.api.sendMessage(
+        user.telegramId,
+        enabled
+          ? '✅ حساب دامپزشکی‌ات توسط مدیر فعال شد. می‌تونی دوباره آنلاین بشی.'
+          : '⏸ حساب دامپزشکی‌ات توسط مدیر غیرفعال شد. تا اطلاع بعدی در لیست پزشک‌ها نیستی.'
+      );
+    } catch (err) {
+      console.warn('notify vet enabled toggle failed:', err);
+    }
+  }
+}
+
 /** هندل دکمه‌های کیبورد پنل ادمین */
 export async function handleAdminMenuText(ctx: Context, text: string): Promise<boolean> {
   const m = ADMIN_MENU;
@@ -323,6 +447,9 @@ export async function handleAdminMenuText(ctx: Context, text: string): Promise<b
       return true;
     case m.vetQueue:
       await handleAdminVetCredentialQueue(ctx);
+      return true;
+    case m.vetList:
+      await handleAdminVetList(ctx);
       return true;
     case m.stats:
       await handleAdminStats(ctx);

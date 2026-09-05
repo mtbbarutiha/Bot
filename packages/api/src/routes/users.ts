@@ -3,6 +3,7 @@ import type { OnboardingStatus, UserRole } from '@petdate/shared';
 import { FACE_VERIFY_REWARD, ONBOARDING_STATUS_LABELS, USER_ROLES } from '@petdate/shared';
 import { dbService } from '../db';
 import { sendPhoneOtp, verifyPhoneOtp } from '../services/phone-otp';
+import { sendVetEnabledSms } from '../services/vet-status-sms';
 
 export const usersRouter = Router();
 
@@ -296,9 +297,43 @@ usersRouter.get('/vets/verified', (_req, res) => {
   res.json(dbService.listVerifiedVets());
 });
 
+/** لیست همه دامپزشک‌ها برای پنل ادمین (فعال و غیرفعال) */
+usersRouter.get('/vets', (_req, res) => {
+  res.json(dbService.listAllVets());
+});
+
+/** فعال/غیرفعال کردن دامپزشک توسط ادمین + پیامک اطلاع‌رسانی */
+usersRouter.post('/:id/vet-enabled', async (req, res) => {
+  const enabled = Boolean(req.body?.enabled);
+  const user = dbService.setVetEnabled(Number(req.params.id), enabled);
+  if (!user) {
+    res.status(404).json({ error: 'دامپزشک پیدا نشد' });
+    return;
+  }
+  const sms = await sendVetEnabledSms({
+    phone: user.phone,
+    enabled,
+    vetName: user.name,
+    customerId: user.id,
+  });
+  res.json({ ok: true, user, sms });
+});
+
 /** وضعیت آنلاین/آفلاین دامپزشک برای پذیرش بیمار */
 usersRouter.post('/telegram/:telegramId/vet-online', (req, res) => {
   const online = Boolean(req.body?.online);
+  const existing = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!existing) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  if (online && existing.vetEnabled === false) {
+    res.status(403).json({
+      error: 'حساب دامپزشکی شما توسط مدیر غیرفعال شده است',
+      reason: 'vet_disabled',
+    });
+    return;
+  }
   const user = dbService.setVetOnlineByTelegramId(req.params.telegramId, online);
   if (!user) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });

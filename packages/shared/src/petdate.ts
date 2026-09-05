@@ -149,6 +149,8 @@ export interface PetdateUser {
   vetCredentialStatus?: VetCredentialStatus;
   /** دامپزشک آنلاین و آماده پذیرش بیمار */
   vetOnline?: boolean;
+  /** false = توسط ادمین از لیست/اتصال پزشک‌ها خارج شده */
+  vetEnabled?: boolean;
   createdAt: string;
   updatedAt: string;
 }

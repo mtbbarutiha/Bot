@@ -329,6 +329,27 @@ export async function listVerifiedVets(): Promise<User[]> {
   return request<User[]>('/api/users/vets/verified');
 }
 
+/** همه دامپزشک‌ها برای پنل ادمین */
+export async function listAllVets(): Promise<User[]> {
+  return request<User[]>('/api/users/vets');
+}
+
+export type SetVetEnabledResult = {
+  ok: true;
+  user: User;
+  sms:
+    | { sent: true; phone: string }
+    | { sent: false; skipped?: true; reason: string };
+};
+
+/** فعال/غیرفعال کردن دامپزشک توسط ادمین (+ پیامک) */
+export async function setVetEnabled(userId: number, enabled: boolean): Promise<SetVetEnabledResult> {
+  return request<SetVetEnabledResult>(`/api/users/${userId}/vet-enabled`, {
+    method: 'POST',
+    body: JSON.stringify({ enabled }),
+  });
+}
+
 /** وضعیت آنلاین/آفلاین دامپزشک */
 export async function setVetOnline(telegramId: string, online: boolean): Promise<User> {
   return request<User>(

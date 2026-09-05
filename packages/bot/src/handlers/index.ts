@@ -169,6 +169,8 @@ import {
   handleAdminVetCredentialNext,
   handleAdminVetCredentialQueue,
   handleAdminVetCredentialReject,
+  handleAdminVetList,
+  handleAdminVetToggle,
 } from './admin';
 import {
   ensureVetPhoneVerified,
@@ -475,6 +477,13 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery(/^vetcred:reject:(\d+)$/, (ctx) =>
     handleAdminVetCredentialReject(ctx, Number(ctx.match![1]))
   );
+
+  bot.callbackQuery(/^admin:vet:enable:(\d+)$/, async (ctx) => {
+    await handleAdminVetToggle(ctx, Number(ctx.match![1]), true);
+  });
+  bot.callbackQuery(/^admin:vet:disable:(\d+)$/, async (ctx) => {
+    await handleAdminVetToggle(ctx, Number(ctx.match![1]), false);
+  });
 
   bot.callbackQuery('phone:verify:start', async (ctx) => {
     await ctx.answerCallbackQuery().catch(() => undefined);

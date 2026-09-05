@@ -50,6 +50,14 @@ export async function handleVetOnlineToggle(
     updated = await setVetOnline(String(from.id), online);
   } catch (err) {
     console.error('setVetOnline failed:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    if (online && (msg.includes('vet_disabled') || msg.includes('غیرفعال'))) {
+      await ctx.reply(
+        '⏸ حساب دامپزشکی‌ات توسط مدیر غیرفعال شده و فعلاً نمی‌تونی آنلاین بشی.\nبا پشتیبانی تماس بگیر.',
+        { reply_markup: menuKeyboardFor(ctx, user) }
+      );
+      return;
+    }
     await ctx.reply('تغییر وضعیت آنلاین ممکن نشد. کمی بعد دوباره امتحان کن.', {
       reply_markup: menuKeyboardFor(ctx, user),
     });

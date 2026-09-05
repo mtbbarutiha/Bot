@@ -71,6 +71,7 @@ export const ADMIN_MENU = {
   panel: '🛠 پنل ادمین',
   faceQueue: '📋 صف احراز چهره',
   vetQueue: '📄 صف مدارک دامپزشک',
+  vetList: '🩺 مدیریت پزشک‌ها',
   stats: '📊 وضعیت صف‌ها',
   pendingPayments: '💳 پرداخت‌های در انتظار',
   back: '🔙 بازگشت به منو',
@@ -533,6 +534,9 @@ export function adminPanelKeyboard(): Keyboard {
     .row()
     .text(m.vetQueue)
     .row()
+    .text(m.vetList)
+    .primary()
+    .row()
     .text(m.stats)
     .success()
     .text(m.pendingPayments)
@@ -570,6 +574,17 @@ export function adminVetCredentialKeyboard(userId: number): InlineKeyboard {
     .row()
     .text('⏭ بعدی', 'vetcred:admin:next')
     .text('📋 صف', 'vetcred:admin:queue');
+}
+
+/** فعال/غیرفعال کردن دامپزشک در لیست ادمین */
+export function adminVetToggleKeyboard(userId: number, enabled: boolean): InlineKeyboard {
+  const kb = new InlineKeyboard();
+  if (enabled) {
+    kb.text('⏸ غیرفعال کردن', `admin:vet:disable:${userId}`).danger();
+  } else {
+    kb.text('▶️ فعال کردن', `admin:vet:enable:${userId}`).success();
+  }
+  return kb;
 }
 
 /** ریپلای‌کیبورد داخل بخش پت‌های من — فقط ثبت و بازگشت */

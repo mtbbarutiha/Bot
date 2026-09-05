@@ -142,6 +142,8 @@ export interface User {
   vetCredentialStatus?: VetCredentialStatus;
   /** دامپزشک آنلاین و آماده پذیرش بیمار */
   vetOnline?: boolean;
+  /** false = توسط ادمین از لیست/اتصال پزشک‌ها خارج شده */
+  vetEnabled?: boolean;
   /** میانگین امتیاز کاربران (۱–۵) — فقط برای دامپزشک */
   avgRating?: number;
   /** تعداد نظرات ثبت‌شده برای دامپزشک */

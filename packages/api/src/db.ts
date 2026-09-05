@@ -219,6 +219,9 @@ function migrateSchema() {
   if (!names.has('vet_online')) {
     db.exec('ALTER TABLE users ADD COLUMN vet_online INTEGER NOT NULL DEFAULT 0');
   }
+  if (!names.has('vet_enabled')) {
+    db.exec('ALTER TABLE users ADD COLUMN vet_enabled INTEGER NOT NULL DEFAULT 1');
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS coin_ledger (
@@ -921,6 +924,8 @@ function mapUser(row: Record<string, unknown>): User {
     vetCredentialFileId: (row.vet_credential_file_id as string | undefined) ?? undefined,
     vetCredentialStatus: parseVetCredentialStatus(row.vet_credential_status),
     vetOnline: row.vet_online == null ? false : Boolean(row.vet_online),
+    /** false = توسط ادمین از لیست پزشک‌ها خارج شده */
+    vetEnabled: row.vet_enabled == null ? true : Boolean(row.vet_enabled),
     avgRating:
       row.avg_rating != null && Number.isFinite(Number(row.avg_rating))
         ? Math.round(Number(row.avg_rating) * 10) / 10
@@ -1521,6 +1526,7 @@ export const dbService = {
       .prepare(
         `SELECT * FROM users
          WHERE is_active = 1
+           AND COALESCE(vet_enabled, 1) = 1
            AND COALESCE(vet_online, 0) = 1
            AND (
              role = 'vet'
@@ -1541,7 +1547,50 @@ export const dbService = {
     return phoneOk.length > 0 ? phoneOk : vets;
   },
 
+  /** همهٔ کاربران با نقش دامپزشک (فعال و غیرفعال ادمین) */
+  listAllVets(): User[] {
+    const rows = db
+      .prepare(
+        `SELECT * FROM users
+         WHERE role = 'vet' OR roles LIKE '%"vet"%'
+         ORDER BY
+           CASE WHEN COALESCE(vet_enabled, 1) = 1 THEN 0 ELSE 1 END,
+           id DESC`
+      )
+      .all() as Record<string, unknown>[];
+    return rows
+      .map(mapUser)
+      .filter((u) => {
+        const roles = u.roles?.length ? u.roles : u.role ? [u.role] : [];
+        return roles.includes('vet');
+      });
+  },
+
+  setVetEnabled(userId: number, enabled: boolean): User | null {
+    const existing = this.getUserById(userId);
+    if (!existing) return null;
+    const roles = existing.roles?.length
+      ? existing.roles
+      : existing.role
+        ? [existing.role]
+        : [];
+    if (!roles.includes('vet')) return null;
+
+    db.prepare(
+      `UPDATE users SET
+         vet_enabled = ?,
+         vet_online = CASE WHEN ? = 0 THEN 0 ELSE vet_online END
+       WHERE id = ?`
+    ).run(enabled ? 1 : 0, enabled ? 1 : 0, userId);
+    return this.getUserById(userId);
+  },
+
   setVetOnline(userId: number, online: boolean): User | null {
+    const existing = this.getUserById(userId);
+    if (!existing) return null;
+    if (online && existing.vetEnabled === false) {
+      return null;
+    }
     const result = db
       .prepare(`UPDATE users SET vet_online = ? WHERE id = ?`)
       .run(online ? 1 : 0, userId);
