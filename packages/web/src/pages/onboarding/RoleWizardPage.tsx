@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
 import type { UserRole } from '@petdate/shared';
 import { USER_ROLE_LABELS } from '@petdate/shared';
+import { AuthShell } from '../../components/AuthShell';
 import { useUserStore } from '../../hooks/useUserStore';
 
 interface WizardStep {
@@ -115,24 +115,13 @@ export function RoleWizardPage() {
   };
 
   return (
-    <div className="onboarding-page">
-      <button
-        type="button"
-        className="icon-btn icon-btn--spaced"
-        onClick={() => navigate('/onboarding/role')}
-        aria-label="بازگشت"
-      >
-        <ArrowRight size={20} strokeWidth={2} />
-      </button>
-
-      <header className="onboarding-header">
-        <span className="role-badge">{USER_ROLE_LABELS[role]}</span>
-        <h1>{step.title}</h1>
-        <p>اطلاعات پایه رو وارد کن — می‌تونی ⏭ فعلاً رد کنی و بعداً تکمیل کنی</p>
-      </header>
+    <AuthShell wide backTo="/onboarding/role" backLabel="بازگشت به انتخاب نقش">
+      <p className="pepito-auth-kicker">{USER_ROLE_LABELS[role]}</p>
+      <h1>{step.title}</h1>
+      <p className="auth-lead">اطلاعات پایه رو وارد کن — می‌تونی فعلاً رد کنی و بعداً تکمیل کنی</p>
 
       <form
-        className="wizard-form"
+        className="auth-form wizard-form"
         onSubmit={(e) => {
           e.preventDefault();
           void handleComplete();
@@ -150,18 +139,18 @@ export function RoleWizardPage() {
           </div>
         ))}
 
-        <button type="submit" className="cta-btn" disabled={saving}>
-          {role === 'pet_owner' ? '➡️ مرحله بعد — ثبت پت' : '🚀 شروع استفاده از petdate'}
+        <button type="submit" className="pepito-btn button-1 auth-submit" disabled={saving}>
+          {role === 'pet_owner' ? 'مرحله بعد — ثبت پت' : 'شروع استفاده از Pet Date'}
         </button>
         <button
           type="button"
-          className="cta-btn cta-btn--ghost"
+          className="pepito-btn pepito-btn--ghost auth-skip-btn"
           onClick={() => void handleSkip()}
           disabled={saving}
         >
-          ⏭ فعلاً رد کن
+          فعلاً رد کن
         </button>
       </form>
-    </div>
+    </AuthShell>
   );
 }

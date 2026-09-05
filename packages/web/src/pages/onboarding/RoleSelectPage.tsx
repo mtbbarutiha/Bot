@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { BrandMark } from '../../components/BrandMark';
 import type { UserRole } from '@petdate/shared';
 import {
   BRAND,
@@ -8,6 +7,7 @@ import {
   USER_ROLE_LABELS,
   USER_ROLES,
 } from '@petdate/shared';
+import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { sanitizeNext } from '../../lib/authRedirect';
 
@@ -60,12 +60,10 @@ export function RoleSelectPage() {
   };
 
   return (
-    <div className="onboarding-page">
-      <header className="onboarding-header">
-        <BrandMark iconSize={32} />
-        <h1>نقش‌هات رو انتخاب کن</h1>
-        <p>می‌تونی چند نقش داشته باشی · {BRAND.taglineFa}</p>
-      </header>
+    <AuthShell wide>
+      <p className="pepito-auth-kicker">شروع</p>
+      <h1>نقش‌هات رو انتخاب کن</h1>
+      <p className="auth-lead">می‌تونی چند نقش داشته باشی · {BRAND.taglineFa}</p>
 
       <div className="role-grid">
         {USER_ROLES.map((role) => {
@@ -89,12 +87,12 @@ export function RoleSelectPage() {
 
       <button
         type="button"
-        className="cta-btn cta-btn--spaced"
+        className="pepito-btn button-1 auth-submit cta-btn--spaced"
         onClick={handleConfirm}
         disabled={saving || selected.length === 0}
       >
         {saving ? 'در حال ثبت…' : ROLE_CONFIRM_LABEL}
       </button>
-    </div>
+    </AuthShell>
   );
 }

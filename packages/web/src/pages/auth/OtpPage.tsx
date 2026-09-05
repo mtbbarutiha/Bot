@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { normalizeRoles, userHasRole } from '@petdate/shared';
-import { BrandMark } from '../../components/BrandMark';
+import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { sanitizeNext } from '../../lib/authRedirect';
 
@@ -79,44 +79,45 @@ export function OtpPage() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-hero" aria-hidden />
-      <div className="auth-card">
-        <BrandMark iconSize={34} className="auth-brand" />
-        <h1>کد یکبارمصرف</h1>
-        <p className="auth-lead">
-          کد ۵ رقمی برای <strong>{pendingTarget}</strong> آماده شد
-          {pendingChannel === 'phone'
-            ? ' (در حالت توسعه پیامک واقعی ممکن است نرسد)'
-            : ' (ایمیل در لاگ سرور)'}
-          .
-        </p>
-        <form className="auth-form" onSubmit={onSubmit}>
-          <label>
-            کد تأیید
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              inputMode="numeric"
-              maxLength={5}
-              placeholder="----"
-              required
-              autoFocus
-            />
-          </label>
-          {error && <p className="auth-error">{error}</p>}
-          {devHint && <p className="auth-dev">{devHint}</p>}
-          <button type="submit" className="auth-submit" disabled={busy || code.trim().length < 4}>
-            {busy ? 'در حال بررسی…' : 'تأیید و ادامه'}
-          </button>
-        </form>
-        <div className="auth-secondary-actions">
-          <button type="button" className="auth-link-btn" onClick={resend} disabled={busy}>
-            ارسال دوباره کد
-          </button>
-          <Link to={`/auth/login?next=${encodeURIComponent(next)}`}>تغییر شماره / ایمیل</Link>
-        </div>
+    <AuthShell backTo={`/auth/login?next=${encodeURIComponent(next)}`} backLabel="تغییر شماره / ایمیل">
+      <p className="pepito-auth-kicker">تأیید هویت</p>
+      <h1>کد یکبارمصرف</h1>
+      <p className="auth-lead">
+        کد ۵ رقمی برای <strong>{pendingTarget}</strong> آماده شد
+        {pendingChannel === 'phone'
+          ? ' (در حالت توسعه پیامک واقعی ممکن است نرسد)'
+          : ' (ایمیل در لاگ سرور)'}
+        .
+      </p>
+      <form className="auth-form" onSubmit={onSubmit}>
+        <label>
+          کد تأیید
+          <input
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+            inputMode="numeric"
+            maxLength={5}
+            placeholder="----"
+            required
+            autoFocus
+          />
+        </label>
+        {error && <p className="auth-error">{error}</p>}
+        {devHint && <p className="auth-dev">{devHint}</p>}
+        <button
+          type="submit"
+          className="pepito-btn button-1 auth-submit"
+          disabled={busy || code.trim().length < 4}
+        >
+          {busy ? 'در حال بررسی…' : 'تأیید و ادامه'}
+        </button>
+      </form>
+      <div className="auth-secondary-actions">
+        <button type="button" className="auth-link-btn" onClick={resend} disabled={busy}>
+          ارسال دوباره کد
+        </button>
+        <Link to={`/auth/login?next=${encodeURIComponent(next)}`}>تغییر شماره / ایمیل</Link>
       </div>
-    </div>
+    </AuthShell>
   );
 }

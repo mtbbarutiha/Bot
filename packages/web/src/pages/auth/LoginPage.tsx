@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Smartphone } from 'lucide-react';
-import { BrandMark } from '../../components/BrandMark';
+import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { postAuthPath, sanitizeNext } from '../../lib/authRedirect';
 import type { WebOtpChannel } from '../../lib/api';
@@ -48,57 +48,58 @@ export function LoginPage() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-hero" aria-hidden />
-      <div className="auth-card">
-        <BrandMark iconSize={36} className="auth-brand" />
-        <h1>ورود به petdate</h1>
-        <p className="auth-lead">
-          مثل ربات تلگرام، با شماره موبایل یا ایمیل وارد شو — همان حساب، همان پت‌ها و چت‌ها.
-        </p>
+    <AuthShell>
+      <p className="pepito-auth-kicker">ورود</p>
+      <h1>ورود به Pet Date</h1>
+      <p className="auth-lead">
+        مثل ربات تلگرام، با شماره موبایل یا ایمیل وارد شو — همان حساب، همان پت‌ها و چت‌ها.
+      </p>
 
-        <div className="auth-tabs" role="tablist">
-          <button
-            type="button"
-            className={`auth-tab${channel === 'phone' ? ' is-on' : ''}`}
-            onClick={() => setChannel('phone')}
-          >
-            <Smartphone size={16} /> موبایل
-          </button>
-          <button
-            type="button"
-            className={`auth-tab${channel === 'email' ? ' is-on' : ''}`}
-            onClick={() => setChannel('email')}
-          >
-            <Mail size={16} /> ایمیل
-          </button>
-        </div>
-
-        <form className="auth-form" onSubmit={onSubmit}>
-          <label>
-            {channel === 'phone' ? 'شماره موبایل' : 'ایمیل'}
-            <input
-              value={target}
-              onChange={(e) => setTarget(e.target.value)}
-              placeholder={channel === 'phone' ? '0912…' : 'you@email.com'}
-              inputMode={channel === 'phone' ? 'tel' : 'email'}
-              autoComplete={channel === 'phone' ? 'tel' : 'email'}
-              required
-            />
-          </label>
-          {error && <p className="auth-error">{error}</p>}
-          {devHint && <p className="auth-dev">{devHint}</p>}
-          <button type="submit" className="auth-submit" disabled={busy || !target.trim()}>
-            {busy ? 'در حال ارسال…' : 'دریافت کد یکبارمصرف'}
-          </button>
-        </form>
-
-        <p className="auth-foot">
-          هنوز حساب نداری؟ با همان شماره/ایمیل کد بگیر — حساب خودکار ساخته می‌شود و با ربات همگام است.
-          <br />
-          <Link to="/">بازگشت به صفحه اصلی</Link>
-        </p>
+      <div className="auth-tabs" role="tablist">
+        <button
+          type="button"
+          className={`auth-tab${channel === 'phone' ? ' is-on' : ''}`}
+          onClick={() => setChannel('phone')}
+        >
+          <Smartphone size={16} /> موبایل
+        </button>
+        <button
+          type="button"
+          className={`auth-tab${channel === 'email' ? ' is-on' : ''}`}
+          onClick={() => setChannel('email')}
+        >
+          <Mail size={16} /> ایمیل
+        </button>
       </div>
-    </div>
+
+      <form className="auth-form" onSubmit={onSubmit}>
+        <label>
+          {channel === 'phone' ? 'شماره موبایل' : 'ایمیل'}
+          <input
+            value={target}
+            onChange={(e) => setTarget(e.target.value)}
+            placeholder={channel === 'phone' ? '0912…' : 'you@email.com'}
+            inputMode={channel === 'phone' ? 'tel' : 'email'}
+            autoComplete={channel === 'phone' ? 'tel' : 'email'}
+            required
+          />
+        </label>
+        {error && <p className="auth-error">{error}</p>}
+        {devHint && <p className="auth-dev">{devHint}</p>}
+        <button
+          type="submit"
+          className="pepito-btn button-1 auth-submit"
+          disabled={busy || !target.trim()}
+        >
+          {busy ? 'در حال ارسال…' : 'دریافت کد یکبارمصرف'}
+        </button>
+      </form>
+
+      <p className="auth-foot">
+        هنوز حساب نداری؟ با همان شماره/ایمیل کد بگیر — حساب خودکار ساخته می‌شود و با ربات همگام است.
+        <br />
+        <Link to="/">بازگشت به صفحه اصلی</Link>
+      </p>
+    </AuthShell>
   );
 }

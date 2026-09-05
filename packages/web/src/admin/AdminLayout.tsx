@@ -7,8 +7,9 @@ import {
   ShieldCheck,
   Users,
 } from 'lucide-react';
-import { BrandMark } from '../components/BrandMark';
+import { AdminWordmark } from './AdminWordmark';
 import { logoutAdmin } from './auth';
+import '../styles/admin.css';
 
 const NAV = [
   { to: '/admin/dashboard', icon: LayoutDashboard, label: 'داشبورد' },
@@ -27,36 +28,38 @@ export function AdminLayout() {
   };
 
   return (
-    <div className="admin-shell">
-      <aside className="admin-sidebar">
-        <div className="admin-brand">
-          <BrandMark className="brand-mark--lg admin-brand-mark" iconSize={36} variant="light" />
-          <small className="admin-brand-sub">پنل مدیریت petdate</small>
+    <div className="admin-app">
+      <div className="admin-shell">
+        <aside className="admin-sidebar">
+          <div className="admin-brand">
+            <AdminWordmark />
+            <small className="admin-brand-sub">restricted · ops only</small>
+          </div>
+
+          <nav className="admin-nav">
+            {NAV.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                className={({ isActive }) => `admin-nav-item${isActive ? ' active' : ''}`}
+              >
+                <item.icon size={18} strokeWidth={2} />
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="admin-sidebar-foot">
+            <button type="button" className="admin-logout" onClick={handleLogout}>
+              <LogOut size={16} />
+              خروج
+            </button>
+          </div>
+        </aside>
+
+        <div className="admin-main">
+          <Outlet />
         </div>
-
-        <nav className="admin-nav">
-          {NAV.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              className={({ isActive }) => `admin-nav-item${isActive ? ' active' : ''}`}
-            >
-              <item.icon size={18} strokeWidth={2} />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="admin-sidebar-foot">
-          <button type="button" className="admin-logout" onClick={handleLogout}>
-            <LogOut size={16} />
-            خروج
-          </button>
-        </div>
-      </aside>
-
-      <div className="admin-main">
-        <Outlet />
       </div>
     </div>
   );

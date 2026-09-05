@@ -7,7 +7,7 @@ import {
   citiesForProvince,
   type UserGender,
 } from '@petdate/shared';
-import { BrandMark } from '../../components/BrandMark';
+import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { sanitizeNext } from '../../lib/authRedirect';
 
@@ -119,19 +119,17 @@ export function ProfileWizardPage() {
   }
 
   return (
-    <div className="auth-page">
-      <div className="auth-hero" aria-hidden />
-      <div className="auth-card auth-card--wide">
-        <BrandMark iconSize={30} className="auth-brand" />
-        <h1>ساخت پروفایل</h1>
-        <p className="auth-lead">
-          همان مراحل ربات — مرحله {stepIdx + 1} از {STEPS.length}
-        </p>
-        <div className="wizard-progress">
-          <span style={{ width: `${((stepIdx + 1) / STEPS.length) * 100}%` }} />
-        </div>
+    <AuthShell wide>
+      <p className="pepito-auth-kicker">پروفایل</p>
+      <h1>ساخت پروفایل</h1>
+      <p className="auth-lead">
+        همان مراحل ربات — مرحله {stepIdx + 1} از {STEPS.length}
+      </p>
+      <div className="wizard-progress">
+        <span style={{ width: `${((stepIdx + 1) / STEPS.length) * 100}%` }} />
+      </div>
 
-        <form className="auth-form" onSubmit={goNext}>
+      <form className="auth-form" onSubmit={goNext}>
           {step === 'name' && (
             <label>
               نام نمایشی
@@ -245,7 +243,7 @@ export function ProfileWizardPage() {
                 قبلی
               </button>
             )}
-            <button type="submit" className="auth-submit" disabled={busy}>
+            <button type="submit" className="pepito-btn button-1 auth-submit" disabled={busy}>
               {stepIdx >= STEPS.length - 1
                 ? busy
                   ? 'در حال ذخیره…'
@@ -254,7 +252,6 @@ export function ProfileWizardPage() {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </AuthShell>
   );
 }

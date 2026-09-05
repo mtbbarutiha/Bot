@@ -1,0 +1,404 @@
+/**
+ * Admin ops console — scoped under .admin-app so Pepito marketing tokens
+ * do not paint the internal panel like the consumer landing.
+ */
+
+.admin-app {
+  /* Neutral ops palette (overrides Pepito :root bleed) */
+  --admin-bg: #f1f5f9;
+  --admin-surface: #ffffff;
+  --admin-ink: #0f172a;
+  --admin-muted: #64748b;
+  --admin-border: #e2e8f0;
+  --admin-accent: #0f766e;
+  --admin-accent-soft: #ccfbf1;
+  --admin-sidebar: #0b1220;
+  --admin-sidebar-text: #94a3b8;
+  --admin-danger: #dc2626;
+  --admin-radius: 10px;
+  --admin-font: 'IBM Plex Sans', 'Vazirmatn', system-ui, sans-serif;
+  --admin-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Remap shared vars used by leftover admin markup */
+  --primary: var(--admin-accent);
+  --primary-soft: var(--admin-accent-soft);
+  --brand-50: #f0fdfa;
+  --brand-100: #ccfbf1;
+  --brand-500: var(--admin-accent);
+  --brand-600: #0d9488;
+  --brand-700: #0f766e;
+  --brand-hero: var(--admin-accent);
+  --bg: var(--admin-bg);
+  --text: var(--admin-ink);
+  --text-secondary: var(--admin-muted);
+  --radius-md: var(--admin-radius);
+  --radius-lg: 12px;
+  --radius-xl: 14px;
+  --font-display: var(--admin-font);
+  --font-body: var(--admin-font);
+
+  min-height: 100dvh;
+  background: var(--admin-bg);
+  color: var(--admin-ink);
+  font-family: var(--admin-font);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.admin-app h1,
+.admin-app h2,
+.admin-app h3 {
+  font-family: var(--admin-font);
+  color: var(--admin-ink);
+  letter-spacing: -0.01em;
+}
+
+/* ── Wordmark ── */
+.admin-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: start;
+}
+
+.admin-wordmark-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: linear-gradient(145deg, #134e4a, #0f766e);
+  color: #ecfdf5;
+  font-family: var(--admin-mono);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.admin-wordmark--lg .admin-wordmark-badge {
+  min-width: 52px;
+  height: 52px;
+  font-size: 0.8rem;
+}
+
+.admin-wordmark-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.admin-wordmark-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: inherit;
+  line-height: 1.2;
+}
+
+.admin-wordmark--lg .admin-wordmark-title {
+  font-size: 1.25rem;
+}
+
+.admin-wordmark-sub {
+  font-size: 0.7rem;
+  font-family: var(--admin-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0.72;
+}
+
+.admin-brand .admin-wordmark {
+  color: #e2e8f0;
+}
+
+.admin-brand .admin-wordmark-sub {
+  color: #64748b;
+}
+
+.admin-login-brand.admin-wordmark {
+  justify-content: center;
+  margin-bottom: 8px;
+  color: var(--admin-ink);
+}
+
+/* ── Shell / sidebar ── */
+.admin-app .admin-shell {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--admin-bg);
+}
+
+.admin-app .admin-sidebar {
+  width: 248px;
+  background: var(--admin-sidebar);
+  color: #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 12px;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+  border-inline-end: 1px solid #1e293b;
+}
+
+.admin-app .admin-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 8px 10px 22px;
+  color: #e2e8f0;
+}
+
+.admin-app .admin-brand-sub {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-family: var(--admin-mono);
+  letter-spacing: 0.02em;
+  padding-inline-start: 2px;
+}
+
+.admin-app .admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.admin-app .admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  color: var(--admin-sidebar-text);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.admin-app .admin-nav-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #f8fafc;
+}
+
+.admin-app .admin-nav-item.active {
+  background: rgba(15, 118, 110, 0.35);
+  color: #ccfbf1;
+  box-shadow: inset 3px 0 0 #2dd4bf;
+}
+
+.admin-app .admin-sidebar-foot {
+  border-top: 1px solid #1e293b;
+  padding-top: 14px;
+}
+
+.admin-app .admin-logout {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: transparent;
+  color: #cbd5e1;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.admin-app .admin-logout:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.admin-app .admin-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-app .admin-page {
+  padding: 28px 32px 40px;
+  max-width: 1200px;
+}
+
+.admin-app .admin-header h1 {
+  font-size: 1.45rem;
+  font-weight: 750;
+}
+
+/* Ops buttons — not Pepito pills */
+.admin-app .admin-btn,
+.admin-app .admin-btn--primary,
+.admin-app .cta-btn,
+.admin-app button.cta-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: 8px !important;
+  border: 1px solid transparent;
+  font-family: var(--admin-font);
+  font-size: 0.9rem !important;
+  font-weight: 650;
+  line-height: 1.3;
+  cursor: pointer;
+  text-decoration: none;
+  box-shadow: none !important;
+  transform: none !important;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-app .admin-btn--primary,
+.admin-app .cta-btn,
+.admin-app button.cta-btn {
+  background: var(--admin-accent) !important;
+  color: #fff !important;
+  border-color: #0d9488;
+}
+
+.admin-app .admin-btn--primary:hover,
+.admin-app .cta-btn:hover,
+.admin-app button.cta-btn:hover {
+  background: #0d9488 !important;
+  color: #fff !important;
+  transform: none !important;
+}
+
+.admin-app .admin-btn--ghost {
+  background: var(--admin-surface);
+  color: var(--admin-ink);
+  border-color: var(--admin-border);
+}
+
+.admin-app .admin-card {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: var(--admin-radius);
+  box-shadow: none;
+}
+
+.admin-app .admin-stat {
+  border-radius: var(--admin-radius);
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surface);
+}
+
+.admin-app .admin-stat--blue .admin-stat-icon,
+.admin-app .admin-stat--purple .admin-stat-icon {
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent);
+}
+
+/* ── Login ── */
+.admin-app.admin-login-page,
+.admin-app .admin-login-page,
+.admin-login-page.admin-app {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, #0b1220 0%, #0f172a 42%, #f1f5f9 42%, #f1f5f9 100%);
+}
+
+.admin-app .admin-login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  padding: 32px 28px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.18);
+  text-align: center;
+}
+
+.admin-app .admin-login-subtitle {
+  color: var(--admin-muted);
+  font-size: 0.9rem;
+  margin-bottom: 24px;
+}
+
+.admin-app .admin-login-hint {
+  margin-top: 16px;
+  font-size: 0.78rem;
+  color: var(--admin-muted);
+}
+
+.admin-app .admin-login-hint code {
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: var(--admin-mono);
+  font-size: 0.75rem;
+}
+
+.admin-app .admin-error {
+  color: var(--admin-danger);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.admin-app .form-label {
+  text-align: start;
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 650;
+  color: var(--admin-ink);
+  margin-bottom: 6px;
+}
+
+.admin-app .form-input,
+.admin-app .admin-input-icon .form-input {
+  width: 100%;
+  border: 1px solid var(--admin-border);
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: #fff;
+  font: inherit;
+  color: var(--admin-ink);
+}
+
+.admin-app .form-input:focus {
+  outline: none;
+  border-color: var(--admin-accent);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
+}
+
+.admin-app .admin-input-icon svg {
+  color: var(--admin-muted);
+}
+
+/* Gallery inside admin pet form */
+.admin-app .admin-gallery-item.active {
+  border-color: var(--admin-accent);
+}
+
+@media (max-width: 768px) {
+  .admin-app .admin-shell {
+    flex-direction: column;
+  }
+  .admin-app .admin-sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+  }
+  .admin-app .admin-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .admin-app .admin-sidebar-foot {
+    display: none;
+  }
+  .admin-app .admin-page {
+    padding: 20px 16px;
+  }
+}

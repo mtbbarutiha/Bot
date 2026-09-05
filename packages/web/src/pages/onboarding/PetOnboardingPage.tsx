@@ -120,12 +120,12 @@ export function PetOnboardingPage() {
       {gallery.length > 0 && (
         <div className="add-pet-gallery">
           <label className="form-label">انتخاب عکس</label>
-          <div className="admin-gallery-grid">
+          <div className="pet-gallery-grid">
             {gallery.slice(0, 6).map((photoId) => (
               <button
                 key={photoId}
                 type="button"
-                className={`admin-gallery-item${form.imageUrl === petLocal(photoId) ? ' active' : ''}`}
+                className={`pet-gallery-item${form.imageUrl === petLocal(photoId) ? ' active' : ''}`}
                 onClick={() => update('imageUrl', petLocal(photoId))}
               >
                 <img src={petLocal(photoId)} alt="" />

@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock } from 'lucide-react';
-import { BrandMark } from '../../components/BrandMark';
+import { AdminWordmark } from '../AdminWordmark';
 import { loginAdmin } from '../auth';
+import '../../styles/admin.css';
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
@@ -19,10 +20,10 @@ export function AdminLoginPage() {
   };
 
   return (
-    <div className="admin-login-page">
+    <div className="admin-app admin-login-page">
       <form className="admin-login-card" onSubmit={handleSubmit}>
-        <BrandMark className="brand-mark--center brand-mark--lg admin-login-brand" iconSize={48} />
-        <p className="admin-login-subtitle">ورود به petdate</p>
+        <AdminWordmark className="admin-login-brand" size="lg" />
+        <p className="admin-login-subtitle">ورود اپراتور — جدا از اپلیکیشن کاربران</p>
 
         <div className="form-group">
           <label className="form-label">رمز عبور</label>
@@ -40,7 +41,7 @@ export function AdminLoginPage() {
 
         {error && <p className="admin-error">{error}</p>}
 
-        <button type="submit" className="cta-btn">🔐 ورود</button>
+        <button type="submit" className="cta-btn admin-btn--primary">ورود به کنسول</button>
         <p className="admin-login-hint">رمز پیش‌فرض: <code>petdate</code></p>
       </form>
     </div>
