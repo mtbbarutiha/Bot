@@ -7,6 +7,27 @@ import { loginPath } from '../lib/authRedirect';
 
 const P = '/pepito/uploads';
 
+const HERO_SLIDES = [
+  {
+    img: `${P}/3.jpg`,
+    kicker: 'عشق ما حیوانات‌اند',
+    title: 'خدماتی برای پت‌های خاص شما!',
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
+  },
+  {
+    img: `${P}/2.jpg`,
+    kicker: 'عشق ما حیوانات‌اند',
+    title: 'مراقبت از پت‌های شما',
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
+  },
+  {
+    img: `${P}/4.jpg`,
+    kicker: 'عشق ما حیوانات‌اند',
+    title: 'آماده‌ایم از پت‌تان مراقبت کنیم',
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
+  },
+] as const;
+
 const SERVICES = [
   { to: '/explore', title: 'پیدا کردن همبازی', desc: 'پت نزدیک را پیدا کن و درخواست بازی بفرست.', icon: `${P}/01.png` },
   { to: '/vet-consult', title: 'مشاوره دامپزشک', desc: 'ارتباط سریع با دامپزشک روی همان حساب ربات.', icon: `${P}/02.png` },
@@ -79,6 +100,7 @@ export function WelcomePage() {
   const { isLoggedIn, hasRole, isProfileComplete } = useAuthStore();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [scrolled, setScrolled] = useState(false);
+  const [slide, setSlide] = useState(0);
 
   useEffect(() => {
     if (isLoggedIn && hasRole && isProfileComplete) {
@@ -92,6 +114,15 @@ export function WelcomePage() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
+
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setSlide((s) => (s + 1) % HERO_SLIDES.length);
+    }, 5500);
+    return () => window.clearInterval(id);
+  }, []);
+
+  const current = HERO_SLIDES[slide]!;
 
   return (
     <div className="pepito-landing">
@@ -118,20 +149,28 @@ export function WelcomePage() {
         </div>
       </header>
 
-      <section className="pepito-hero">
-        <img className="pepito-hero-media" src={`${P}/3.jpg`} alt="" />
+      <section className="pepito-hero" aria-roledescription="carousel" aria-label="اسلایدر صفحه اصلی">
+        <div className="pepito-hero-slides">
+          {HERO_SLIDES.map((s, i) => (
+            <div
+              key={s.img}
+              className={`pepito-hero-slide${i === slide ? ' is-active' : ''}`}
+              aria-hidden={i !== slide}
+            >
+              <img className="pepito-hero-media" src={s.img} alt="" />
+            </div>
+          ))}
+        </div>
         <div className="pepito-hero-wash" aria-hidden />
-        <div className="pepito-hero-inner">
+        <div className="pepito-hero-inner" key={slide}>
           <p className="pepito-kicker">
             <span className="pepito-kicker-dot">
               <PawPrint size={16} />
             </span>
-            عشق ما حیوانات‌اند
+            {current.kicker}
           </p>
-          <h1>خدماتی برای پت‌های خاص شما!</h1>
-          <p className="pepito-hero-lead">
-            همبازی، دامپزشک و مراقبت پت روی دسکتاپ — با ظاهر Pepito و همان حساب مشترک با ربات تلگرام.
-          </p>
+          <h1>{current.title}</h1>
+          <p className="pepito-hero-lead">{current.lead}</p>
           <div className="pepito-hero-cta">
             <GatedLink to="/explore" className="pepito-btn pepito-btn--lg">
               کشف کن
@@ -141,6 +180,19 @@ export function WelcomePage() {
               مشاوره دامپزشک
             </GatedLink>
           </div>
+        </div>
+        <div className="pepito-hero-dots" role="tablist" aria-label="اسلایدها">
+          {HERO_SLIDES.map((s, i) => (
+            <button
+              key={s.img}
+              type="button"
+              role="tab"
+              aria-selected={i === slide}
+              className={`pepito-hero-dot${i === slide ? ' is-active' : ''}`}
+              onClick={() => setSlide(i)}
+              aria-label={`اسلاید ${i + 1}`}
+            />
+          ))}
         </div>
       </section>
 
