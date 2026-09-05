@@ -111,6 +111,11 @@ export async function handleQuickVet(ctx: Context): Promise<void> {
 }
 
 /** اتصال فوری: کسر سکه و ارسال درخواست به همه دامپزشک‌های واجد شرایط */
+/** اتصال مجدد به دامپزشک قبلی — فعلاً همان مسیر اتصال سریع */
+export async function handleQuickVetReconnect(ctx: Context, _vetUserId: number): Promise<void> {
+  await handleQuickVetConnect(ctx);
+}
+
 export async function handleQuickVetConnect(ctx: Context): Promise<void> {
   const from = ctx.from;
   if (!from) return;

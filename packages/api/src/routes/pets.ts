@@ -104,13 +104,31 @@ petsRouter.post('/', (req, res) => {
 });
 
 petsRouter.patch('/:id', (req, res) => {
+  const petId = Number(req.params.id);
+  if (!Number.isFinite(petId) || petId <= 0) {
+    res.status(400).json({ error: 'شناسه پت نامعتبر است' });
+    return;
+  }
+
+  const existing = dbService.getPet(petId);
+  if (!existing) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+
+  const ownerId = req.query.ownerId
+    ? Number(req.query.ownerId)
+    : req.body?.ownerId
+      ? Number(req.body.ownerId)
+      : undefined;
+  if (ownerId !== undefined && existing.ownerId !== ownerId) {
+    res.status(403).json({ error: 'اجازه ویرایش این پت را نداری' });
+    return;
+  }
+
   const body = { ...req.body };
+  delete body.ownerId;
   if (typeof body.diseases === 'string') {
-    const existing = dbService.getPet(Number(req.params.id));
-    if (!existing) {
-      res.status(404).json({ error: 'پت پیدا نشد' });
-      return;
-    }
     body.health = {
       ...existing.health,
       ...(body.health && typeof body.health === 'object' ? body.health : {}),
@@ -119,7 +137,7 @@ petsRouter.patch('/:id', (req, res) => {
     delete body.diseases;
   }
 
-  const pet = dbService.updatePet(Number(req.params.id), body);
+  const pet = dbService.updatePet(petId, body);
   if (!pet) {
     res.status(404).json({ error: 'پت پیدا نشد' });
     return;

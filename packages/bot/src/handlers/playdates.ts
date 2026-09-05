@@ -56,7 +56,11 @@ export async function handleMyPetView(ctx: Context, petId: number): Promise<void
     return;
   }
 
-  await ctx.answerCallbackQuery();
+  try {
+    await ctx.answerCallbackQuery();
+  } catch {
+    /* called from text/edit flows without callback */
+  }
   const text = `🐾 <b>پروفایل پت</b>\n\n${formatPet(pet, true)}`;
   const kb = myPetProfileKeyboard(pet.id);
   const photo = pet.imageUrl || defaultPetPhoto(pet);

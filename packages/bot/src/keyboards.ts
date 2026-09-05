@@ -837,10 +837,37 @@ export function myPetsListKeyboard(pets: PetProfile[]): InlineKeyboard {
 
 export function myPetProfileKeyboard(petId: number): InlineKeyboard {
   return new InlineKeyboard()
+    .text('✏️ ویرایش پروفایل', `pets:edit:${petId}`)
+    .primary()
+    .row()
     .text('🗑 حذف پت', `pets:delete:${petId}`)
     .danger()
     .row()
     .text('🔙 بازگشت به پت‌های من', 'pets:list');
+}
+
+/** منوی ویرایش بخش‌به‌بخش پروفایل پت (صاحب پت) */
+export function petEditSectionsKeyboard(petId: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('✏️ نام', `pets:edit:${petId}:name`)
+    .text('🧬 نوع/نژاد', `pets:edit:${petId}:species`)
+    .row()
+    .text('🎂 سن', `pets:edit:${petId}:age`)
+    .text('⚧ جنسیت', `pets:edit:${petId}:gender`)
+    .row()
+    .text('📏 اندازه', `pets:edit:${petId}:size`)
+    .text('🎨 رنگ', `pets:edit:${petId}:color`)
+    .row()
+    .text('🖼 عکس', `pets:edit:${petId}:photo`)
+    .text('💬 بیو', `pets:edit:${petId}:bio`)
+    .row()
+    .text('💉 واکسن', `pets:edit:${petId}:vaccinated`)
+    .text('✂️ عقیم', `pets:edit:${petId}:neutered`)
+    .row()
+    .text('🤝 همبازی', `pets:edit:${petId}:looking`)
+    .text('🏥 بیماری', `pets:edit:${petId}:diseases`)
+    .row()
+    .text('↩️ بازگشت به پروفایل', `pets:edit:${petId}:back`);
 }
 
 export function confirmPetDeleteKeyboard(petId: number): InlineKeyboard {

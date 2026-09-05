@@ -315,6 +315,11 @@ export interface BotSession {
    * بعد از ذخیرهٔ همان فیلد به منوی بخش‌ها برمی‌گردیم.
    */
   profileSectionEdit?: boolean;
+  /**
+   * ویرایش تک‌فیلدی پروفایل پت (از پت‌های من).
+   * بعد از ذخیره به کارت پروفایل پت برمی‌گردیم.
+   */
+  petSectionEdit?: boolean;
   /** شماره در انتظار OTP احراز موبایل (نرمال‌شده 98…) */
   pendingPhone?: string;
   /** چت مشاوره دامپزشک — شناسه مشاوره */
@@ -467,6 +472,7 @@ export type BotStep =
   | 'pet_looking'
   | 'pet_bio'
   | 'pet_photo'
+  | 'pet_edit_menu'
   | 'playdate_message'
   | 'verify_photo'
   | 'phone_verify_ask'

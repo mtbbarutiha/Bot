@@ -42,6 +42,13 @@ import {
   handleRequests,
 } from './playdates';
 import {
+  handlePetEditPhoto,
+  handlePetEditText,
+  showPetEditMenu,
+  startPetSectionEdit,
+  type PetEditField,
+} from './pet-edit';
+import {
   handleProfile,
   handleProfileContact,
   handleProfileDeactivateAsk,
@@ -316,6 +323,30 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery(/^pets:view:(\d+)$/, (ctx) =>
     handleMyPetView(ctx, Number(ctx.match![1]))
   );
+  bot.callbackQuery(/^pets:edit:(\d+):back$/, async (ctx) => {
+    const petId = Number(ctx.match![1]);
+    try {
+      await ctx.answerCallbackQuery();
+    } catch {
+      /* ignore */
+    }
+    if (ctx.from) {
+      await upsertSession(String(ctx.from.id), {
+        step: 'ready',
+        petSectionEdit: false,
+        selectedPetId: undefined,
+        draftPet: undefined,
+        breedPage: undefined,
+      });
+    }
+    await handleMyPetView(ctx, petId);
+  });
+  bot.callbackQuery(
+    /^pets:edit:(\d+):(name|species|age|gender|size|color|photo|bio|vaccinated|neutered|looking|diseases)$/,
+    (ctx) =>
+      startPetSectionEdit(ctx, Number(ctx.match![1]), ctx.match![2] as PetEditField)
+  );
+  bot.callbackQuery(/^pets:edit:(\d+)$/, (ctx) => showPetEditMenu(ctx, Number(ctx.match![1])));
   bot.callbackQuery(/^pets:delete:yes:(\d+)$/, (ctx) =>
     handleMyPetDeleteConfirm(ctx, Number(ctx.match![1]))
   );
@@ -528,6 +559,7 @@ export function registerHandlers(bot: Bot): void {
     // اول بر اساس session.step مسیریابی کن تا handler اشتباه عکس را نبلعد
     const step = ctx.from ? (await getSession(String(ctx.from.id)))?.step : undefined;
     if (step === 'pet_photo') {
+      if (await handlePetEditPhoto(ctx)) return;
       if (await handlePetPhoto(ctx)) return;
     }
     if (step === 'payment_receipt') {
@@ -546,6 +578,7 @@ export function registerHandlers(bot: Bot): void {
     if (await handlePaymentReceiptPhoto(ctx)) return;
     if (await handleVerifyPhoto(ctx)) return;
     if (await handleVetCredentialPhoto(ctx)) return;
+    if (await handlePetEditPhoto(ctx)) return;
     if (await handlePetPhoto(ctx)) return;
     await handleProfilePhoto(ctx);
   });
@@ -651,6 +684,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   if (await handleSearchBreedText(ctx, text)) return;
   if (await handleVetCredentialText(ctx, text)) return;
   if (await handleProfileWizardText(ctx, text)) return;
+  if (await handlePetEditText(ctx, text)) return;
   if (await handleWizardText(ctx, text)) return;
 
   const m = PET_OWNER_MENU;

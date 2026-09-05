@@ -410,6 +410,34 @@ export async function verifyPhoneOtp(
   return body as { ok: true; user: User };
 }
 
+export async function updatePet(
+  id: number,
+  ownerId: number,
+  patch: Partial<{
+    name: string;
+    species: string;
+    breed: string;
+    gender: PetGender;
+    ageMonths: number;
+    size: PetSize;
+    color: string;
+    bio: string;
+    vaccinated: boolean;
+    neutered: boolean;
+    lookingForPlaymate: boolean;
+    health: Record<string, unknown>;
+    diseases: string;
+    imageUrl: string;
+    city: string;
+    neighborhood: string;
+  }>
+): Promise<PetProfile> {
+  return request<PetProfile>(`/api/pets/${id}?ownerId=${ownerId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(patch),
+  });
+}
+
 export async function deletePet(id: number, ownerId: number): Promise<void> {
   await request<{ ok: boolean }>(`/api/pets/${id}?ownerId=${ownerId}`, {
     method: 'DELETE',

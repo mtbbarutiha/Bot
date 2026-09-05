@@ -533,6 +533,7 @@ export async function handleCancel(ctx: Context): Promise<void> {
     draftRoles: undefined,
     addingRoles: undefined,
     profileSectionEdit: false,
+    petSectionEdit: false,
     pendingPhone: undefined,
     selectedPetId: undefined,
     selectedToPetId: undefined,

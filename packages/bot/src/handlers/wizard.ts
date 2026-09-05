@@ -365,6 +365,8 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
 
   const step = session.step;
   if (!String(step).startsWith('pet_') && step !== 'playdate_message') return false;
+  // ویرایش بخش‌به‌بخش پت توسط pet-edit.ts مدیریت می‌شود
+  if (session.petSectionEdit) return false;
 
   // بعد از ری‌استارت/سشن ناقص، userId را بازیابی کن
   if (!session.userId) {
