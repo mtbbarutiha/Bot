@@ -105,7 +105,7 @@ export async function handlePhoneVerifyStart(
         '',
         `شماره: <code>${formatIranMobileDisplay(user.phone)}</code>`,
         '',
-        'اگر می‌خوای شماره جدید تأیید کنی، دوباره از منو «📱 احراز موبایل» رو بزن و شماره جدید بفرست.',
+        'اگر می‌خوای شماره جدید تأیید کنی، از پروفایل دوباره «📱 احراز موبایل» رو بزن و شماره جدید بفرست.',
       ].join('\n'),
       {
         parse_mode: 'HTML',
@@ -188,7 +188,7 @@ export async function handlePhoneVerifyText(ctx: Context, text: string): Promise
     });
     if (vetNeedsPhoneVerify(user)) {
       await ctx.reply(
-        'احراز موبایل برای امکانات دامپزشکی لازم است — بعداً از منو «📱 احراز موبایل» بزن.',
+        'احراز موبایل برای امکانات دامپزشکی لازم است — بعداً از پروفایل «📱 احراز موبایل» بزن.',
         { reply_markup: menuKeyboardFor(ctx, user) }
       );
     }
@@ -357,7 +357,7 @@ async function dispatchSendOtp(
   } catch (err) {
     console.error('sendPhoneOtp failed:', err);
     await ctx.reply(
-      'ارتباط با سرور برقرار نشد یا سرویس پیامک قطع است. کمی بعد دوباره از منو «📱 احراز موبایل» رو بزن.',
+      'ارتباط با سرور برقرار نشد یا سرویس پیامک قطع است. کمی بعد دوباره از پروفایل «📱 احراز موبایل» رو بزن.',
       { reply_markup: phoneAskKeyboard() }
     );
   }
