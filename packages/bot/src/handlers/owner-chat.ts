@@ -148,35 +148,27 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
   }
 
   const peer = session.ownerChatPeerTelegramId;
-  const name = from.first_name || 'صاحب پت';
 
   try {
     if (ctx.message?.photo?.length) {
       const fileId = ctx.message.photo[ctx.message.photo.length - 1]!.file_id;
-      const caption = ctx.message.caption
-        ? `🐾 ${name}:\n${ctx.message.caption}`
-        : `🐾 ${name} عکس فرستاد`;
-      await ctx.api.sendPhoto(peer, fileId, { caption });
+      await ctx.api.sendPhoto(peer, fileId, {
+        caption: ctx.message.caption || undefined,
+      });
       return true;
     }
     if (ctx.message?.document) {
       await ctx.api.sendDocument(peer, ctx.message.document.file_id, {
-        caption: `🐾 ${name} فایل فرستاد`,
+        caption: ctx.message.caption || undefined,
       });
       return true;
     }
     if (ctx.message?.voice) {
-      await ctx.api.sendVoice(peer, ctx.message.voice.file_id, {
-        caption: `🐾 ${name}`,
-      });
+      await ctx.api.sendVoice(peer, ctx.message.voice.file_id);
       return true;
     }
     if (text) {
-      await ctx.api.sendMessage(
-        peer,
-        `🐾 <b>${escapeHtml(name)}</b>:\n${escapeHtml(text)}`,
-        { parse_mode: 'HTML' }
-      );
+      await ctx.api.sendMessage(peer, text);
       return true;
     }
   } catch (err) {

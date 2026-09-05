@@ -991,36 +991,27 @@ export async function handleVetChatRelay(ctx: Context): Promise<boolean> {
   if (session.step !== 'vet_chat') return false;
 
   const peer = session.vetChatPeerTelegramId;
-  const roleLabel = session.vetChatRole === 'vet' ? '🩺 پزشک' : '👤 صاحب پت';
-  const name = from.first_name || '';
 
   try {
     if (ctx.message?.photo?.length) {
       const fileId = ctx.message.photo[ctx.message.photo.length - 1]!.file_id;
-      const caption = ctx.message.caption
-        ? `${roleLabel} ${name}:\n${ctx.message.caption}`
-        : `${roleLabel} ${name} عکس فرستاد`;
-      await ctx.api.sendPhoto(peer, fileId, { caption });
+      await ctx.api.sendPhoto(peer, fileId, {
+        caption: ctx.message.caption || undefined,
+      });
       return true;
     }
     if (ctx.message?.document) {
       await ctx.api.sendDocument(peer, ctx.message.document.file_id, {
-        caption: `${roleLabel} ${name} فایل فرستاد`,
+        caption: ctx.message.caption || undefined,
       });
       return true;
     }
     if (ctx.message?.voice) {
-      await ctx.api.sendVoice(peer, ctx.message.voice.file_id, {
-        caption: `${roleLabel} ${name}`,
-      });
+      await ctx.api.sendVoice(peer, ctx.message.voice.file_id);
       return true;
     }
     if (text) {
-      await ctx.api.sendMessage(
-        peer,
-        `${roleLabel} <b>${escapeHtml(name)}</b>:\n${escapeHtml(text)}`,
-        { parse_mode: 'HTML' }
-      );
+      await ctx.api.sendMessage(peer, text);
       return true;
     }
   } catch (err) {
