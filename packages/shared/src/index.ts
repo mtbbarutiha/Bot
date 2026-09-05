@@ -66,7 +66,6 @@ export {
   userPublicIdOf,
   VERIFIED_BADGE,
 } from './petdate';
-export type { PlaymateMatchScore } from './petdate';
 export type {
   BotStep,
   OnboardingStatus,
@@ -77,6 +76,8 @@ export type {
   PetMedicalRecord,
   PetSize,
   PlaydateChatMessage,
+  PlaydateChatMediaKind,
+  PlaymateMatchScore,
   PlaydateRequest,
   PlaydateStatus,
   PetProfile,

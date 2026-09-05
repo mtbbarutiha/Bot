@@ -476,6 +476,31 @@ function migrateSchema() {
     WHERE author_name IS NULL OR trim(author_name) = ''
   `);
 
+  // Playdate chat media + secure/ended flags
+  const pdCols = db.prepare('PRAGMA table_info(playdate_requests)').all() as { name: string }[];
+  const pdNames = new Set(pdCols.map((c) => c.name));
+  if (!pdNames.has('chat_secure')) {
+    db.exec('ALTER TABLE playdate_requests ADD COLUMN chat_secure INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!pdNames.has('chat_ended')) {
+    db.exec('ALTER TABLE playdate_requests ADD COLUMN chat_ended INTEGER NOT NULL DEFAULT 0');
+  }
+
+  const chatCols = db.prepare('PRAGMA table_info(playdate_chat_messages)').all() as { name: string }[];
+  const chatNames = new Set(chatCols.map((c) => c.name));
+  if (!chatNames.has('media_kind')) {
+    db.exec('ALTER TABLE playdate_chat_messages ADD COLUMN media_kind TEXT');
+  }
+  if (!chatNames.has('telegram_file_id')) {
+    db.exec('ALTER TABLE playdate_chat_messages ADD COLUMN telegram_file_id TEXT');
+  }
+  if (!chatNames.has('mime_type')) {
+    db.exec('ALTER TABLE playdate_chat_messages ADD COLUMN mime_type TEXT');
+  }
+  if (!chatNames.has('file_name')) {
+    db.exec('ALTER TABLE playdate_chat_messages ADD COLUMN file_name TEXT');
+  }
+
   // Backfill roles JSON from legacy single role column
   const roleRows = db
     .prepare(`SELECT id, role, roles FROM users WHERE role IS NOT NULL AND role != ''`)
@@ -1065,9 +1090,33 @@ function mapPlaydate(row: Record<string, unknown>): PlaydateRequest {
     status: row.status as PlaydateStatus,
     scheduledAt: row.scheduled_at as string | undefined,
     location: row.location as string | undefined,
+    chatSecure: Boolean(row.chat_secure),
+    chatEnded: Boolean(row.chat_ended),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
+}
+
+
+function mediaPlaceholder(kind: PlaydateChatMessage['mediaKind']): string {
+  switch (kind) {
+    case 'photo':
+      return '[تصویر]';
+    case 'video':
+    case 'animation':
+    case 'video_note':
+      return '[ویدیو]';
+    case 'voice':
+      return '[پیام صوتی]';
+    case 'audio':
+      return '[فایل صوتی]';
+    case 'document':
+      return '[فایل]';
+    case 'sticker':
+      return '[استیکر]';
+    default:
+      return '[رسانه]';
+  }
 }
 
 function mapPlaydateChatMessage(row: Record<string, unknown>): PlaydateChatMessage {
@@ -1076,6 +1125,10 @@ function mapPlaydateChatMessage(row: Record<string, unknown>): PlaydateChatMessa
     playdateId: row.playdate_id as number,
     senderUserId: row.sender_user_id as number,
     text: row.text as string,
+    mediaKind: (row.media_kind as PlaydateChatMessage['mediaKind']) ?? null,
+    telegramFileId: (row.telegram_file_id as string | undefined) ?? null,
+    mimeType: (row.mime_type as string | undefined) ?? null,
+    fileName: (row.file_name as string | undefined) ?? null,
     createdAt: row.created_at as string,
   };
 }
@@ -2365,22 +2418,65 @@ export const dbService = {
   createPlaydateChatMessage(data: {
     playdateId: number;
     senderUserId: number;
-    text: string;
+    text?: string;
+    mediaKind?: PlaydateChatMessage['mediaKind'];
+    telegramFileId?: string | null;
+    mimeType?: string | null;
+    fileName?: string | null;
   }): PlaydateChatMessage {
-    const text = data.text.trim();
-    if (!text) throw new Error('EMPTY_TEXT');
+    const text = (data.text ?? '').trim();
+    const hasMedia = Boolean(data.mediaKind && data.telegramFileId);
+    if (!text && !hasMedia) throw new Error('EMPTY_TEXT');
     if (text.length > 4000) throw new Error('TEXT_TOO_LONG');
     const result = db
       .prepare(
-        `INSERT INTO playdate_chat_messages (playdate_id, sender_user_id, text)
-         VALUES (?, ?, ?)`
+        `INSERT INTO playdate_chat_messages (
+          playdate_id, sender_user_id, text, media_kind, telegram_file_id, mime_type, file_name
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(data.playdateId, data.senderUserId, text);
+      .run(
+        data.playdateId,
+        data.senderUserId,
+        text || mediaPlaceholder(data.mediaKind),
+        data.mediaKind ?? null,
+        data.telegramFileId ?? null,
+        data.mimeType ?? null,
+        data.fileName ?? null
+      );
     return mapPlaydateChatMessage(
       db
         .prepare('SELECT * FROM playdate_chat_messages WHERE id = ?')
         .get(result.lastInsertRowid) as Record<string, unknown>
     );
+  },
+
+  getPlaydateChatMessage(id: number): PlaydateChatMessage | null {
+    const row = db
+      .prepare('SELECT * FROM playdate_chat_messages WHERE id = ?')
+      .get(id) as Record<string, unknown> | undefined;
+    return row ? mapPlaydateChatMessage(row) : null;
+  },
+
+  setPlaydateChatSecure(id: number, secure: boolean): PlaydateRequest | null {
+    db.prepare(
+      `UPDATE playdate_requests SET chat_secure = ?, updated_at = datetime('now') WHERE id = ?`
+    ).run(secure ? 1 : 0, id);
+    return this.getPlaydateRequest(id);
+  },
+
+  endPlaydateChat(id: number): PlaydateRequest | null {
+    db.prepare(
+      `UPDATE playdate_requests SET chat_ended = 1, chat_secure = 0, updated_at = datetime('now') WHERE id = ?`
+    ).run(id);
+    this.clearPlaydateChatMessages(id);
+    return this.getPlaydateRequest(id);
+  },
+
+  reopenPlaydateChat(id: number): PlaydateRequest | null {
+    db.prepare(
+      `UPDATE playdate_requests SET chat_ended = 0, updated_at = datetime('now') WHERE id = ?`
+    ).run(id);
+    return this.getPlaydateRequest(id);
   },
 
   clearPlaydateChatMessages(playdateId: number): number {

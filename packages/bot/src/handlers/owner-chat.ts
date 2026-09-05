@@ -13,6 +13,8 @@ import {
   getUserById,
   getUserByTelegramId,
   postPlaydateChatMessage,
+  endPlaydateChatViaApi,
+  setPlaydateChatSecureViaApi,
 } from '../api-client';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
@@ -201,6 +203,13 @@ async function handleSecureToggle(ctx: Context): Promise<boolean> {
   await upsertSession(String(from.id), { ownerChatSecure: nextSecure });
   await upsertSession(peerId, { ownerChatSecure: nextSecure });
 
+  if (session.ownerChatPlaydateId) {
+    const me = await getCtxUser(ctx);
+    if (me?.id) {
+      await setPlaydateChatSecureViaApi(session.ownerChatPlaydateId, me.id, nextSecure);
+    }
+  }
+
   const selfMsg = nextSecure
     ? '🔒 <b>چت امن فعال شد.</b>\nاز این به بعد پیام‌ها (متن، عکس، ویس و …) قابل ذخیره یا فوروارد نیستند.'
     : '🔓 چت امن خاموش شد. پیام‌های بعدی مثل قبل قابل ذخیره هستند.';
@@ -351,7 +360,12 @@ export async function handleOwnerChatEnd(ctx: Context): Promise<boolean> {
   const wasSecure = !!session.ownerChatSecure;
   const user = await getCtxUser(ctx);
 
+  const playdateId = session.ownerChatPlaydateId;
   await upsertSession(String(from.id), clearOwnerChatPatch());
+
+  if (playdateId && user?.id) {
+    await endPlaydateChatViaApi(playdateId, user.id);
+  }
 
   const endSelf = [
     'چت همبازی پایان یافت.',
@@ -507,6 +521,24 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
     return false;
   }
 
+  async function persistMedia(
+    kind: string,
+    fileId: string,
+    caption?: string,
+    mimeType?: string,
+    fileName?: string
+  ) {
+    if (!playdateId) return;
+    const me = await getCtxUser(ctx);
+    if (!me?.id) return;
+    await postPlaydateChatMessage(playdateId, me.id, caption || '', {
+      mediaKind: kind,
+      telegramFileId: fileId,
+      mimeType,
+      fileName,
+    });
+  }
+
   try {
     if (ctx.message?.photo?.length) {
       const fileId = ctx.message.photo[ctx.message.photo.length - 1]!.file_id;
@@ -514,6 +546,7 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await persistMedia('photo', fileId, ctx.message.caption || undefined, 'image/jpeg');
       return true;
     }
     if (ctx.message?.video) {
@@ -521,6 +554,13 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await persistMedia(
+        'video',
+        ctx.message.video.file_id,
+        ctx.message.caption || undefined,
+        ctx.message.video.mime_type,
+        ctx.message.video.file_name
+      );
       return true;
     }
     if (ctx.message?.animation) {
@@ -528,10 +568,18 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await persistMedia(
+        'animation',
+        ctx.message.animation.file_id,
+        ctx.message.caption || undefined,
+        ctx.message.animation.mime_type,
+        ctx.message.animation.file_name
+      );
       return true;
     }
     if (ctx.message?.video_note) {
       await ctx.api.sendVideoNote(peer, ctx.message.video_note.file_id, protect);
+      await persistMedia('video_note', ctx.message.video_note.file_id, undefined, 'video/mp4');
       return true;
     }
     if (ctx.message?.document) {
@@ -539,10 +587,18 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await persistMedia(
+        'document',
+        ctx.message.document.file_id,
+        ctx.message.caption || undefined,
+        ctx.message.document.mime_type,
+        ctx.message.document.file_name
+      );
       return true;
     }
     if (ctx.message?.voice) {
       await ctx.api.sendVoice(peer, ctx.message.voice.file_id, protect);
+      await persistMedia('voice', ctx.message.voice.file_id, undefined, ctx.message.voice.mime_type);
       return true;
     }
     if (ctx.message?.audio) {
@@ -550,10 +606,23 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
         caption: ctx.message.caption || undefined,
         ...protect,
       });
+      await persistMedia(
+        'audio',
+        ctx.message.audio.file_id,
+        ctx.message.caption || undefined,
+        ctx.message.audio.mime_type,
+        ctx.message.audio.file_name
+      );
       return true;
     }
     if (ctx.message?.sticker) {
       await ctx.api.sendSticker(peer, ctx.message.sticker.file_id, protect);
+      await persistMedia(
+        'sticker',
+        ctx.message.sticker.file_id,
+        undefined,
+        ctx.message.sticker.is_animated || ctx.message.sticker.is_video ? undefined : 'image/webp'
+      );
       return true;
     }
     if (text) {

@@ -190,6 +190,35 @@ export async function clearPlaydateChatMessages(
   });
 }
 
+export async function endPlaydateChat(
+  playdateId: number,
+  userId: number
+): Promise<{ ok: true; playdate: PlaydateRequest }> {
+  return request(`/api/playdate-requests/${playdateId}/end-chat`, {
+    method: 'POST',
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function setPlaydateChatSecure(
+  playdateId: number,
+  userId: number,
+  secure: boolean
+): Promise<PlaydateRequest> {
+  return request(`/api/playdate-requests/${playdateId}/chat-secure`, {
+    method: 'PATCH',
+    body: JSON.stringify({ userId, secure }),
+  });
+}
+
+export function playdateChatMediaUrl(
+  playdateId: number,
+  messageId: number,
+  userId: number
+): string {
+  return `${API_BASE}/api/playdate-requests/${playdateId}/messages/${messageId}/file?userId=${userId}`;
+}
+
 export type WebOtpChannel = 'phone' | 'email';
 
 export async function requestWebOtp(channel: WebOtpChannel, target: string) {

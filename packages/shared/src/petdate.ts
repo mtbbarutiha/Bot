@@ -253,11 +253,26 @@ export interface PlaydateRequest {
   status: PlaydateStatus;
   scheduledAt?: string;
   location?: string;
+  /** چت امن برای پیام‌های همبازی (protect_content در تلگرام) */
+  chatSecure?: boolean;
+  /** چت از طرف یکی از کاربران قطع شده */
+  chatEnded?: boolean;
   createdAt: string;
   updatedAt: string;
   fromPet?: PetProfile;
   toPet?: PetProfile;
 }
+
+/** نوع رسانهٔ پیام چت همبازی (از تلگرام یا وب) */
+export type PlaydateChatMediaKind =
+  | 'photo'
+  | 'video'
+  | 'animation'
+  | 'video_note'
+  | 'document'
+  | 'voice'
+  | 'audio'
+  | 'sticker';
 
 /** پیام چت همبازی (وب ↔ تلگرام) */
 export interface PlaydateChatMessage {
@@ -265,6 +280,10 @@ export interface PlaydateChatMessage {
   playdateId: number;
   senderUserId: number;
   text: string;
+  mediaKind?: PlaydateChatMediaKind | null;
+  telegramFileId?: string | null;
+  mimeType?: string | null;
+  fileName?: string | null;
   createdAt: string;
 }
 

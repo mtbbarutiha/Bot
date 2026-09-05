@@ -325,7 +325,13 @@ export async function getActiveOwnerChat(telegramId: string): Promise<ActiveOwne
 export async function postPlaydateChatMessage(
   playdateId: number,
   senderUserId: number,
-  text: string
+  text: string,
+  media?: {
+    mediaKind: string;
+    telegramFileId: string;
+    mimeType?: string;
+    fileName?: string;
+  }
 ): Promise<void> {
   try {
     await request(`/api/playdate-requests/${playdateId}/messages`, {
@@ -334,10 +340,44 @@ export async function postPlaydateChatMessage(
         senderUserId,
         text,
         skipTelegram: true,
+        ...(media
+          ? {
+              mediaKind: media.mediaKind,
+              telegramFileId: media.telegramFileId,
+              mimeType: media.mimeType,
+              fileName: media.fileName,
+            }
+          : {}),
       }),
     });
   } catch (err) {
     console.error('Failed to persist playdate chat message:', err);
+  }
+}
+
+export async function endPlaydateChatViaApi(playdateId: number, userId: number): Promise<void> {
+  try {
+    await request(`/api/playdate-requests/${playdateId}/end-chat`, {
+      method: 'POST',
+      body: JSON.stringify({ userId }),
+    });
+  } catch (err) {
+    console.error('Failed to end playdate chat via API:', err);
+  }
+}
+
+export async function setPlaydateChatSecureViaApi(
+  playdateId: number,
+  userId: number,
+  secure: boolean
+): Promise<void> {
+  try {
+    await request(`/api/playdate-requests/${playdateId}/chat-secure`, {
+      method: 'PATCH',
+      body: JSON.stringify({ userId, secure }),
+    });
+  } catch (err) {
+    console.error('Failed to set playdate chat secure via API:', err);
   }
 }
 

@@ -19,11 +19,14 @@ import { formatAge } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
 import {
   clearPlaydateChatMessages,
+  endPlaydateChat,
   getPlaydateRequest,
   listPlaydateChatMessages,
+  playdateChatMediaUrl,
   postPlaydateChatMessage,
+  setPlaydateChatSecure,
 } from '../lib/api';
-import type { PlaydateChatMessage } from '@petdate/shared';
+import type { PlaydateChatMediaKind, PlaydateChatMessage } from '@petdate/shared';
 import { playdateToMatchRequest } from '../lib/playdateMap';
 import {
   PET_GENDER_LABELS,
@@ -34,9 +37,14 @@ import {
 
 type ChatMsg = {
   id: string;
+  numericId: number;
   from: 'me' | 'peer';
   text: string;
   at: number;
+  mediaKind?: PlaydateChatMediaKind | null;
+  telegramFileId?: string | null;
+  mimeType?: string | null;
+  fileName?: string | null;
 };
 
 type Panel = 'none' | 'owner' | 'pet';
@@ -47,14 +55,40 @@ function toUiMessage(row: PlaydateChatMessage, myUserId: number): ChatMsg {
   const at = Date.parse(row.createdAt);
   return {
     id: String(row.id),
+    numericId: row.id,
     from: row.senderUserId === myUserId ? 'me' : 'peer',
     text: row.text,
     at: Number.isFinite(at) ? at : Date.now(),
+    mediaKind: row.mediaKind,
+    telegramFileId: row.telegramFileId,
+    mimeType: row.mimeType,
+    fileName: row.fileName,
   };
 }
 
 function formatClock(ts: number) {
   return new Date(ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function mediaLabel(kind?: PlaydateChatMediaKind | null) {
+  switch (kind) {
+    case 'photo':
+      return 'تصویر';
+    case 'video':
+    case 'animation':
+    case 'video_note':
+      return 'ویدیو';
+    case 'voice':
+      return 'پیام صوتی';
+    case 'audio':
+      return 'فایل صوتی';
+    case 'document':
+      return 'فایل';
+    case 'sticker':
+      return 'استیکر';
+    default:
+      return 'رسانه';
+  }
 }
 
 export function ChatPage() {
@@ -70,9 +104,13 @@ export function ChatPage() {
   const [panel, setPanel] = useState<Panel>('none');
   const [draft, setDraft] = useState('');
   const [ended, setEnded] = useState(false);
+  const [wiped, setWiped] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [wiping, setWiping] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
   const lastMsgIdRef = useRef(0);
 
@@ -103,7 +141,15 @@ export function ChatPage() {
           if (!cancelled) setMatch(null);
           return;
         }
-        if (!cancelled) setMatch(playdateToMatchRequest(req, myUserId));
+        if (!cancelled) {
+          setMatch(playdateToMatchRequest(req, myUserId));
+          setSecure(Boolean(req.chatSecure));
+          setEnded(Boolean(req.chatEnded));
+          if (req.chatEnded) {
+            setMessages([]);
+            lastMsgIdRef.current = 0;
+          }
+        }
       } catch {
         if (!cancelled) setMatch(null);
       } finally {
@@ -120,12 +166,12 @@ export function ChatPage() {
     if (!match) return;
     setMessages([]);
     lastMsgIdRef.current = 0;
-    setSecure(false);
     setContactAdded(false);
-    setEnded(false);
     setPanel('none');
     setDraft('');
     setSendError(null);
+    setActionError(null);
+    setWiped(false);
   }, [match?.id]);
 
   useEffect(() => {
@@ -150,12 +196,31 @@ export function ChatPage() {
         });
         lastMsgIdRef.current = Math.max(lastMsgIdRef.current, ...rows.map((r) => r.id));
       } catch {
-        /* keep local messages on poll errors */
+        /* keep local */
+      }
+    }
+
+    async function pullMeta() {
+      try {
+        const req = await getPlaydateRequest(match!.id);
+        if (cancelled || !req) return;
+        setSecure(Boolean(req.chatSecure));
+        if (req.chatEnded) {
+          setEnded(true);
+          setMessages([]);
+          lastMsgIdRef.current = 0;
+        }
+      } catch {
+        /* ignore */
       }
     }
 
     void pull(true);
-    const timer = window.setInterval(() => void pull(false), POLL_MS);
+    void pullMeta();
+    const timer = window.setInterval(() => {
+      void pull(false);
+      void pullMeta();
+    }, POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
@@ -174,8 +239,8 @@ export function ChatPage() {
   const secureHint = useMemo(
     () =>
       secure
-        ? 'چت امن روشن است — پیام‌ها، عکس و ویس قابل ذخیره یا فوروارد نیستند.'
-        : 'برای محرمانگی بیشتر، چت امن را روشن کنید.',
+        ? 'چت امن روشن است — پیام‌ها، عکس و ویس در تلگرام قابل ذخیره یا فوروارد نیستند.'
+        : 'برای محرمانگی بیشتر، چت امن را روشن کنید (هم‌زمان با طرف تلگرامی).',
     [secure],
   );
 
@@ -222,22 +287,92 @@ export function ChatPage() {
     }
   }
 
+  async function toggleSecure() {
+    if (!myUserId || !match || ended) return;
+    const next = !secure;
+    setSecure(next);
+    setActionError(null);
+    try {
+      await setPlaydateChatSecure(match.id, myUserId, next);
+    } catch (err) {
+      setSecure(!next);
+      setActionError(err instanceof Error ? err.message : 'تغییر چت امن ناموفق بود');
+    }
+  }
+
   async function endChat() {
-    if (myUserId && match) {
+    if (!myUserId || !match || ending || ended) return;
+    setEnding(true);
+    setActionError(null);
+    setEnded(true);
+    setPanel('none');
+    setMessages([]);
+    lastMsgIdRef.current = 0;
+    try {
+      await endPlaydateChat(match.id, myUserId);
+    } catch (err) {
       try {
         await clearPlaydateChatMessages(match.id, myUserId);
       } catch {
         /* local end still ok */
       }
+      setActionError(err instanceof Error ? err.message : 'قطع چت روی سرور ناموفق بود');
+    } finally {
+      setEnding(false);
     }
-    setEnded(true);
-    setPanel('none');
-    setMessages([]);
-    lastMsgIdRef.current = 0;
+  }
+
+  async function wipeConversation() {
+    if (!myUserId || !match || wiping) return;
+    setWiping(true);
+    setActionError(null);
+    try {
+      await clearPlaydateChatMessages(match.id, myUserId);
+      setMessages([]);
+      lastMsgIdRef.current = 0;
+      setWiped(true);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'پاک‌کردن گفتگو ناموفق بود');
+    } finally {
+      setWiping(false);
+    }
+  }
+
+  function renderMedia(msg: ChatMsg) {
+    if (!msg.mediaKind || !msg.telegramFileId || !myUserId || !match) return null;
+    const src = playdateChatMediaUrl(match.id, msg.numericId, myUserId);
+    if (msg.mediaKind === 'photo' || msg.mediaKind === 'sticker') {
+      return (
+        <a className="chat-media-link" href={src} target="_blank" rel="noreferrer">
+          <img className="chat-media-image" src={src} alt={mediaLabel(msg.mediaKind)} />
+        </a>
+      );
+    }
+    if (
+      msg.mediaKind === 'video' ||
+      msg.mediaKind === 'animation' ||
+      msg.mediaKind === 'video_note'
+    ) {
+      return (
+        <video className="chat-media-video" src={src} controls playsInline>
+          ویدیو پشتیبانی نمی‌شود
+        </video>
+      );
+    }
+    if (msg.mediaKind === 'voice' || msg.mediaKind === 'audio') {
+      return <audio className="chat-media-audio" src={src} controls preload="metadata" />;
+    }
+    return (
+      <a className="chat-media-file" href={src} target="_blank" rel="noreferrer">
+        📎 {msg.fileName || mediaLabel(msg.mediaKind)}
+      </a>
+    );
   }
 
   return (
-    <div className={`chat-page${secure ? ' chat-page--secure' : ''}${ended ? ' chat-page--ended' : ''}`}>
+    <div
+      className={`chat-page${secure ? ' chat-page--secure' : ''}${ended ? ' chat-page--ended' : ''}`}
+    >
       <div className="chat-shell">
         <section className="chat-stage" aria-label="گفتگو">
           <header className="chat-top">
@@ -274,8 +409,9 @@ export function ChatPage() {
               <button
                 type="button"
                 className={`chat-action${secure ? ' is-on' : ''}`}
-                onClick={() => setSecure((v) => !v)}
+                onClick={() => void toggleSecure()}
                 disabled={ended}
+                aria-pressed={secure}
               >
                 {secure ? <Lock size={16} /> : <LockOpen size={16} />}
                 <span>{secure ? 'چت امن: روشن' : 'چت امن'}</span>
@@ -308,11 +444,11 @@ export function ChatPage() {
               <button
                 type="button"
                 className="chat-action chat-action--danger"
-                onClick={endChat}
-                disabled={ended}
+                onClick={() => void endChat()}
+                disabled={ended || ending}
               >
                 <Trash2 size={16} />
-                <span>قطع چت</span>
+                <span>{ending ? 'در حال قطع…' : 'قطع چت'}</span>
               </button>
             </div>
           </header>
@@ -321,6 +457,8 @@ export function ChatPage() {
             <Shield size={16} strokeWidth={2.2} />
             <p>{secureHint}</p>
           </div>
+
+          {actionError ? <p className="chat-send-error">{actionError}</p> : null}
 
           <div className="chat-stream" ref={scrollerRef}>
             {!ended && messages.length === 0 && (
@@ -331,22 +469,33 @@ export function ChatPage() {
             )}
 
             {!ended &&
-              messages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={`chat-bubble-row${msg.from === 'me' ? ' is-me' : ' is-peer'}`}
-                >
-                  <div className={`chat-bubble${secure ? ' is-protected' : ''}`}>
-                    <p>{msg.text}</p>
-                    <time>{formatClock(msg.at)}</time>
-                    {secure && (
-                      <span className="chat-lock-dot" aria-hidden>
-                        <Lock size={10} />
-                      </span>
-                    )}
+              messages.map((msg) => {
+                const showText = Boolean(msg.text) && !/^\[(تصویر|ویدیو|پیام صوتی|فایل صوتی|فایل|استیکر|رسانه)\]$/.test(msg.text);
+                return (
+                  <div
+                    key={msg.id}
+                    className={`chat-bubble-row${msg.from === 'me' ? ' is-me' : ' is-peer'}`}
+                  >
+                    <div
+                      className={`chat-bubble${secure ? ' is-protected' : ''}${
+                        msg.mediaKind ? ' has-media' : ''
+                      }`}
+                    >
+                      {renderMedia(msg)}
+                      {showText ? <p>{msg.text}</p> : null}
+                      {msg.mediaKind && !showText ? (
+                        <span className="chat-media-caption">{mediaLabel(msg.mediaKind)}</span>
+                      ) : null}
+                      <time>{formatClock(msg.at)}</time>
+                      {secure && (
+                        <span className="chat-lock-dot" aria-hidden>
+                          <Lock size={10} />
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
 
             {ended && (
               <div className="chat-ended-panel">
@@ -354,9 +503,9 @@ export function ChatPage() {
                 <BrandMark iconSize={34} className="chat-ended-brand" />
                 <h2>چت همبازی پایان یافت</h2>
                 <p>
-                  تمام پیام‌ها از این صفحه پاک شد.
-                  <br />
-                  لطفاً کل این گفتگو را از تاریخچه هم پاک کنید تا اثری نماند.
+                  {wiped
+                    ? 'گفتگو به‌طور کامل پاک شد.'
+                    : 'چت قطع شد. برای پاک‌کردن کامل پیام‌ها، دکمه پایین صفحه را بزنید.'}
                 </p>
                 <div className="chat-ended-actions">
                   <Link to="/matches" className="chat-btn chat-btn--primary">
@@ -369,6 +518,20 @@ export function ChatPage() {
               </div>
             )}
           </div>
+
+          {ended && (
+            <div className="chat-wipe-bar">
+              <button
+                type="button"
+                className="chat-btn chat-btn--danger chat-wipe-btn"
+                onClick={() => void wipeConversation()}
+                disabled={wiping || wiped}
+              >
+                <Trash2 size={18} />
+                {wiped ? 'گفتگو کاملاً پاک شد' : wiping ? 'در حال پاک‌کردن…' : 'پاک کردن کل گفتگو'}
+              </button>
+            </div>
+          )}
 
           {!ended && (
             <>

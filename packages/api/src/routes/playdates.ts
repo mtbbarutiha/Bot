@@ -2,12 +2,36 @@ import { Router } from 'express';
 import type { PlaydateStatus } from '@petdate/shared';
 import { dbService } from '../db';
 import { notifyPlaydateRequestTelegram } from '../services/telegram-playdate-notify';
-import { notifyPlaydateChatTelegram } from '../services/telegram-chat-notify';
+import {
+  notifyPlaydateChatEndedTelegram,
+  notifyPlaydateChatSecureTelegram,
+  notifyPlaydateChatTelegram,
+  resolveTelegramFile,
+} from '../services/telegram-chat-notify';
 import { startOwnerChatFromApi } from '../services/telegram-owner-chat-start';
 
 const VALID_STATUSES: PlaydateStatus[] = ['pending', 'accepted', 'rejected', 'cancelled'];
 
 export const playdatesRouter = Router();
+
+function peerTelegramIds(playdate: NonNullable<ReturnType<typeof dbService.getPlaydateRequest>>, exceptUserId?: number): string[] {
+  const ids: string[] = [];
+  for (const userId of [playdate.fromUserId, playdate.toUserId]) {
+    if (!userId || userId === exceptUserId) continue;
+    const user = dbService.getUserById(userId);
+    if (user?.telegramId) ids.push(user.telegramId);
+  }
+  // Fallback via pets if toUserId missing
+  if (!playdate.toUserId) {
+    const ownerId = dbService.getPet(playdate.toPetId)?.ownerId;
+    if (ownerId && ownerId !== exceptUserId) {
+      const user = dbService.getUserById(ownerId);
+      if (user?.telegramId) ids.push(user.telegramId);
+    }
+  }
+  return [...new Set(ids)];
+}
+
 
 function enrichPlaydate(req: ReturnType<typeof dbService.getPlaydateRequest>) {
   if (!req) return null;
@@ -142,6 +166,11 @@ playdatesRouter.post('/:id/messages', async (req, res) => {
   const playdateId = Number(req.params.id);
   const senderUserId = Number(req.body?.senderUserId ?? req.body?.userId);
   const text = typeof req.body?.text === 'string' ? req.body.text : '';
+  const mediaKind = typeof req.body?.mediaKind === 'string' ? req.body.mediaKind : undefined;
+  const telegramFileId =
+    typeof req.body?.telegramFileId === 'string' ? req.body.telegramFileId : undefined;
+  const mimeType = typeof req.body?.mimeType === 'string' ? req.body.mimeType : undefined;
+  const fileName = typeof req.body?.fileName === 'string' ? req.body.fileName : undefined;
   /** When true, skip Telegram fan-out (bot already delivered the line). */
   const skipTelegram = Boolean(req.body?.skipTelegram);
 
@@ -163,12 +192,20 @@ playdatesRouter.post('/:id/messages', async (req, res) => {
     res.status(409).json({ error: 'چت فقط بعد از قبول درخواست فعال است' });
     return;
   }
+  if (gate.playdate.chatEnded) {
+    res.status(409).json({ error: 'این چت قطع شده است' });
+    return;
+  }
 
   try {
     const message = dbService.createPlaydateChatMessage({
       playdateId,
       senderUserId,
       text,
+      mediaKind,
+      telegramFileId,
+      mimeType,
+      fileName,
     });
 
     if (!skipTelegram) {
@@ -188,6 +225,7 @@ playdatesRouter.post('/:id/messages', async (req, res) => {
           senderName: sender?.name || 'همبازی',
           text: message.text,
           playdateId,
+          protectContent: Boolean(playdate.chatSecure),
         });
       }
     }
@@ -204,6 +242,127 @@ playdatesRouter.post('/:id/messages', async (req, res) => {
     }
     throw err;
   }
+});
+
+
+playdatesRouter.get('/:id/messages/:messageId/file', async (req, res) => {
+  const playdateId = Number(req.params.id);
+  const messageId = Number(req.params.messageId);
+  const userId = Number(req.query.userId);
+  if (!Number.isFinite(playdateId) || !Number.isFinite(messageId) || !Number.isFinite(userId)) {
+    res.status(400).json({ error: 'شناسه درخواست، پیام و userId الزامی هستند' });
+    return;
+  }
+
+  const gate = requireParticipant(playdateId, userId);
+  if (gate.error === 'not_found') {
+    res.status(404).json({ error: 'درخواست پیدا نشد' });
+    return;
+  }
+  if (gate.error === 'forbidden') {
+    res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+    return;
+  }
+
+  const message = dbService.getPlaydateChatMessage(messageId);
+  if (!message || message.playdateId !== playdateId || !message.telegramFileId) {
+    res.status(404).json({ error: 'فایل پیدا نشد' });
+    return;
+  }
+
+  const file = await resolveTelegramFile(message.telegramFileId);
+  if (!file) {
+    res.status(502).json({ error: 'دریافت فایل از تلگرام ناموفق بود' });
+    return;
+  }
+
+  try {
+    const upstream = await fetch(file.downloadUrl);
+    if (!upstream.ok || !upstream.body) {
+      res.status(502).json({ error: 'دانلود فایل ناموفق بود' });
+      return;
+    }
+    const contentType =
+      message.mimeType ||
+      upstream.headers.get('content-type') ||
+      'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    if (message.fileName) {
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename*=UTF-8''${encodeURIComponent(message.fileName)}`
+      );
+    }
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.send(buf);
+  } catch (err) {
+    console.warn('proxy telegram file failed:', (err as Error).message);
+    res.status(502).json({ error: 'پروکسی فایل ناموفق بود' });
+  }
+});
+
+playdatesRouter.post('/:id/end-chat', async (req, res) => {
+  const playdateId = Number(req.params.id);
+  const userId = Number(req.body?.userId);
+  if (!Number.isFinite(playdateId) || !Number.isFinite(userId)) {
+    res.status(400).json({ error: 'شناسه درخواست و userId الزامی هستند' });
+    return;
+  }
+
+  const gate = requireParticipant(playdateId, userId);
+  if (gate.error === 'not_found') {
+    res.status(404).json({ error: 'درخواست پیدا نشد' });
+    return;
+  }
+  if (gate.error === 'forbidden') {
+    res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+    return;
+  }
+  if (gate.playdate.status !== 'accepted') {
+    res.status(409).json({ error: 'فقط چت درخواست پذیرفته‌شده قابل قطع است' });
+    return;
+  }
+
+  const updated = dbService.endPlaydateChat(playdateId);
+  for (const telegramId of peerTelegramIds(gate.playdate, userId)) {
+    void notifyPlaydateChatEndedTelegram({ toTelegramId: telegramId });
+  }
+  res.json({ ok: true, playdate: enrichPlaydate(updated) });
+});
+
+playdatesRouter.patch('/:id/chat-secure', async (req, res) => {
+  const playdateId = Number(req.params.id);
+  const userId = Number(req.body?.userId);
+  const secure = Boolean(req.body?.secure);
+  if (!Number.isFinite(playdateId) || !Number.isFinite(userId)) {
+    res.status(400).json({ error: 'شناسه درخواست و userId الزامی هستند' });
+    return;
+  }
+
+  const gate = requireParticipant(playdateId, userId);
+  if (gate.error === 'not_found') {
+    res.status(404).json({ error: 'درخواست پیدا نشد' });
+    return;
+  }
+  if (gate.error === 'forbidden') {
+    res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+    return;
+  }
+  if (gate.playdate.status !== 'accepted') {
+    res.status(409).json({ error: 'چت امن فقط برای درخواست پذیرفته‌شده فعال است' });
+    return;
+  }
+  if (gate.playdate.chatEnded) {
+    res.status(409).json({ error: 'این چت قطع شده است' });
+    return;
+  }
+
+  const updated = dbService.setPlaydateChatSecure(playdateId, secure);
+  for (const telegramId of peerTelegramIds(gate.playdate, userId)) {
+    void notifyPlaydateChatSecureTelegram({ toTelegramId: telegramId, secure });
+  }
+  res.json(enrichPlaydate(updated));
 });
 
 playdatesRouter.delete('/:id/messages', (req, res) => {
