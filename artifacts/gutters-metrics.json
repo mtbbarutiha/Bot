@@ -1,0 +1,36 @@
+{
+  "390": {
+    "vw": 390,
+    "expected": 375,
+    "nav": 375,
+    "hero": 375,
+    "about": 375,
+    "services": 375,
+    "svcCard": 375,
+    "pets": 375,
+    "team": 375,
+    "reviews": 375,
+    "faq": 375,
+    "cta": 375,
+    "footer": 375,
+    "navLogo": 375,
+    "aboutCopy": 375
+  },
+  "1440": {
+    "vw": 1440,
+    "expected": 1315,
+    "nav": 1315,
+    "hero": 1315,
+    "about": 1315,
+    "services": 1315,
+    "svcCard": 1315,
+    "pets": 1315,
+    "team": 1315,
+    "reviews": 1315,
+    "faq": 1315,
+    "cta": 1315,
+    "footer": 1315,
+    "navLogo": 1315,
+    "aboutCopy": 1315
+  }
+}

@@ -680,17 +680,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 .pepito-services-section {
   background: var(--pepito-soft);
   padding-block: 120px;
-  /* Full-bleed carousel: cancel section gutters; re-apply on head/track */
-  padding-inline: 0;
   overflow: hidden;
-}
-.pepito-services-section > .pepito-section-head,
-.pepito-services-section > .pepito-services-dots {
-  width: 100%;
-  max-width: var(--pepito-container-max);
-  margin-inline: auto;
-  padding-inline: var(--pepito-container-pad);
-  box-sizing: border-box;
 }
 .pepito-section-head--center {
   text-align: center;
@@ -739,8 +729,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   scroll-behavior: smooth;
   scrollbar-width: none;
   -ms-overflow-style: none;
-  /* Align first card with container; allow cards to bleed past opposite edge */
-  padding-inline: var(--pepito-gutter-x);
+  padding-inline: 0;
   padding-block: 1.75rem 1.25rem; /* room for -15px hover lift */
   box-sizing: border-box;
 }
