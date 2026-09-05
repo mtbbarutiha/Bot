@@ -10,17 +10,16 @@ export function OtpPage() {
   const {
     pendingChannel,
     pendingTarget,
+    pendingDevCode,
     verifyOtp,
     requestOtp,
   } = useAuthStore();
-  const [code, setCode] = useState('');
+  const navDevCode = (location.state as { devCode?: string } | null)?.devCode;
+  const initialDev = navDevCode || pendingDevCode || '';
+  const [code, setCode] = useState(initialDev);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [devHint, setDevHint] = useState(
-    () => (location.state as { devCode?: string } | null)?.devCode
-      ? `کد توسعه: ${(location.state as { devCode?: string }).devCode}`
-      : ''
-  );
+  const [devHint, setDevHint] = useState(() => (initialDev ? `کد توسعه (فقط لوکال): ${initialDev}` : ''));
 
   useEffect(() => {
     if (!pendingChannel || !pendingTarget) navigate('/auth/login', { replace: true });
@@ -54,7 +53,10 @@ export function OtpPage() {
     setError('');
     try {
       const res = await requestOtp(pendingChannel, pendingTarget);
-      if (res.devCode) setDevHint(`کد توسعه: ${res.devCode}`);
+      if (res.devCode) {
+        setDevHint(`کد توسعه (فقط لوکال): ${res.devCode}`);
+        setCode(res.devCode);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ارسال مجدد ناموفق بود');
     } finally {
@@ -69,9 +71,10 @@ export function OtpPage() {
         <BrandMark iconSize={34} className="auth-brand" />
         <h1>کد یکبارمصرف</h1>
         <p className="auth-lead">
-          کد ۵ رقمی به{' '}
+          کد ۵ رقمی برای{' '}
           <strong>{pendingTarget}</strong>{' '}
-          ({pendingChannel === 'phone' ? 'پیامک' : 'ایمیل'}) ارسال شد.
+          آماده شد
+          {pendingChannel === 'phone' ? ' (در حالت توسعه پیامک واقعی ممکن است نرسد)' : ' (ایمیل در لاگ سرور)'}.
         </p>
         <form className="auth-form" onSubmit={onSubmit}>
           <label>

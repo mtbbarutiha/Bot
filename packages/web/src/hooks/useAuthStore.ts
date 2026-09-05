@@ -13,6 +13,7 @@ export function useAuthStore() {
     user: state.user,
     pendingChannel: state.pendingChannel,
     pendingTarget: state.pendingTarget,
+    pendingDevCode: state.pendingDevCode,
     isLoggedIn: authStore.isLoggedIn,
     hasRole: authStore.hasRole,
     isProfileComplete: authStore.isProfileComplete,

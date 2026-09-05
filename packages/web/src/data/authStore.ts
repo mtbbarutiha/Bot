@@ -18,6 +18,7 @@ export interface WebAuthState {
   user?: User;
   pendingChannel?: WebOtpChannel;
   pendingTarget?: string;
+  pendingDevCode?: string;
 }
 
 function load(): WebAuthState {
@@ -84,19 +85,29 @@ class AuthStore {
     return Boolean(u.name?.trim() && u.age && u.gender && u.country && u.city);
   }
 
-  setPending(channel: WebOtpChannel, target: string) {
-    this.data = { ...this.data, pendingChannel: channel, pendingTarget: target };
+  setPending(channel: WebOtpChannel, target: string, devCode?: string) {
+    this.data = {
+      ...this.data,
+      pendingChannel: channel,
+      pendingTarget: target,
+      pendingDevCode: devCode,
+    };
     this.persist();
   }
 
   clearPending() {
-    this.data = { ...this.data, pendingChannel: undefined, pendingTarget: undefined };
+    this.data = {
+      ...this.data,
+      pendingChannel: undefined,
+      pendingTarget: undefined,
+      pendingDevCode: undefined,
+    };
     this.persist();
   }
 
   async requestOtp(channel: WebOtpChannel, target: string) {
     const result = await requestWebOtp(channel, target);
-    this.setPending(channel, result.target);
+    this.setPending(channel, result.target, result.devCode);
     return result;
   }
 

@@ -29,6 +29,7 @@ export function LoginPage() {
     try {
       const res = await requestOtp(channel, target.trim());
       if (res.devCode) setDevHint(`کد توسعه: ${res.devCode}`);
+      // Always go to OTP step; code is also kept in authStore for the next page.
       navigate('/auth/otp', {
         state: res.devCode ? { devCode: res.devCode } : undefined,
       });

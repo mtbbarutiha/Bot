@@ -1,15 +1,27 @@
 import type { OnboardingStatus, PetProfile, PlaydateRequest, PlaydateStatus, User, UserRole } from '@petdate/shared';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+/** Empty = same-origin (Vite proxies /api → API). Override with VITE_API_URL if needed. */
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
-    ...init,
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      headers: { 'Content-Type': 'application/json', ...init?.headers },
+      ...init,
+    });
+  } catch {
+    throw new Error('اتصال به سرور برقرار نشد. مطمئن شو API روشن است.');
+  }
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`API ${res.status}: ${body}`);
+    try {
+      const json = JSON.parse(body) as { error?: string; message?: string };
+      throw new Error(json.error || json.message || body || `خطای ${res.status}`);
+    } catch (err) {
+      if (err instanceof Error && !err.message.startsWith('{') && err.message !== body) throw err;
+      throw new Error(body || `خطای ${res.status}`);
+    }
   }
   return res.json() as Promise<T>;
 }
