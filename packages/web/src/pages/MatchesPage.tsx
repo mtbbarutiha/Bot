@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Check, Clock, Mail, MessageCircle, RefreshCw, Send, X } from 'lucide-react';
 import { userHasRole } from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
@@ -16,6 +16,7 @@ import type { MatchRequest } from '../types';
 type Tab = 'incoming' | 'sent' | 'accepted';
 
 export function MatchesPage() {
+  const navigate = useNavigate();
   const { myPet } = usePetStore();
   const { user } = useUserStore();
   const { user: authUser, isLoggedIn } = useAuthStore();
@@ -82,14 +83,10 @@ export function MatchesPage() {
     setError(null);
     try {
       await updatePlaydateStatus(id, 'accepted');
-      setToast('✅ توافق شد! چت همبازی باز شد.');
-      setTab('accepted');
-      await reload();
+      navigate(`/chats/${id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'قبول درخواست ناموفق بود');
-    } finally {
       setBusyId(null);
-      setTimeout(() => setToast(null), 2800);
     }
   }
 
