@@ -76,6 +76,7 @@ export type {
   PetMedicalField,
   PetMedicalRecord,
   PetSize,
+  PlaydateChatMessage,
   PlaydateRequest,
   PlaydateStatus,
   PetProfile,

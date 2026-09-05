@@ -18,6 +18,7 @@ import type {
   PetProfile,
   PetSize,
   PetSpecies,
+  PlaydateChatMessage,
   PlaydateRequest,
   PlaydateStatus,
   Prescription,
@@ -146,6 +147,14 @@ function initSchema() {
       location TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS playdate_chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playdate_id INTEGER NOT NULL REFERENCES playdate_requests(id) ON DELETE CASCADE,
+      sender_user_id INTEGER NOT NULL REFERENCES users(id),
+      text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
 
     CREATE TABLE IF NOT EXISTS pet_species (
@@ -407,6 +416,19 @@ function migrateSchema() {
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_web_sessions_user ON web_sessions (user_id);`);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS playdate_chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      playdate_id INTEGER NOT NULL REFERENCES playdate_requests(id) ON DELETE CASCADE,
+      sender_user_id INTEGER NOT NULL REFERENCES users(id),
+      text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_playdate_chat_messages_playdate
+      ON playdate_chat_messages (playdate_id, id)`
+  );
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS phone_otps (
@@ -1045,6 +1067,16 @@ function mapPlaydate(row: Record<string, unknown>): PlaydateRequest {
     location: row.location as string | undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
+  };
+}
+
+function mapPlaydateChatMessage(row: Record<string, unknown>): PlaydateChatMessage {
+  return {
+    id: row.id as number,
+    playdateId: row.playdate_id as number,
+    senderUserId: row.sender_user_id as number,
+    text: row.text as string,
+    createdAt: row.created_at as string,
   };
 }
 
@@ -2291,6 +2323,71 @@ export const dbService = {
   updatePlaydateStatus(id: number, status: PlaydateStatus): PlaydateRequest | null {
     db.prepare("UPDATE playdate_requests SET status = ?, updated_at = datetime('now') WHERE id = ?").run(status, id);
     return this.getPlaydateRequest(id);
+  },
+
+  isPlaydateParticipant(req: PlaydateRequest, userId: number): boolean {
+    if (req.fromUserId === userId || req.toUserId === userId) return true;
+    const fromPet = this.getPet(req.fromPetId);
+    const toPet = this.getPet(req.toPetId);
+    return fromPet?.ownerId === userId || toPet?.ownerId === userId;
+  },
+
+  listPlaydateChatMessages(
+    playdateId: number,
+    opts?: { afterId?: number; limit?: number }
+  ): PlaydateChatMessage[] {
+    const limit = Math.min(Math.max(opts?.limit ?? 200, 1), 500);
+    const afterId = opts?.afterId;
+    if (afterId != null && Number.isFinite(afterId)) {
+      return (
+        db
+          .prepare(
+            `SELECT * FROM playdate_chat_messages
+             WHERE playdate_id = ? AND id > ?
+             ORDER BY id ASC
+             LIMIT ?`
+          )
+          .all(playdateId, afterId, limit) as Record<string, unknown>[]
+      ).map(mapPlaydateChatMessage);
+    }
+    return (
+      db
+        .prepare(
+          `SELECT * FROM playdate_chat_messages
+           WHERE playdate_id = ?
+           ORDER BY id ASC
+           LIMIT ?`
+        )
+        .all(playdateId, limit) as Record<string, unknown>[]
+    ).map(mapPlaydateChatMessage);
+  },
+
+  createPlaydateChatMessage(data: {
+    playdateId: number;
+    senderUserId: number;
+    text: string;
+  }): PlaydateChatMessage {
+    const text = data.text.trim();
+    if (!text) throw new Error('EMPTY_TEXT');
+    if (text.length > 4000) throw new Error('TEXT_TOO_LONG');
+    const result = db
+      .prepare(
+        `INSERT INTO playdate_chat_messages (playdate_id, sender_user_id, text)
+         VALUES (?, ?, ?)`
+      )
+      .run(data.playdateId, data.senderUserId, text);
+    return mapPlaydateChatMessage(
+      db
+        .prepare('SELECT * FROM playdate_chat_messages WHERE id = ?')
+        .get(result.lastInsertRowid) as Record<string, unknown>
+    );
+  },
+
+  clearPlaydateChatMessages(playdateId: number): number {
+    const result = db
+      .prepare('DELETE FROM playdate_chat_messages WHERE playdate_id = ?')
+      .run(playdateId);
+    return Number(result.changes ?? 0);
   },
 
   /** سکه روزانه — یک‌بار در هر روز UTC */

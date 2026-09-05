@@ -285,7 +285,8 @@ export async function createPlaydate(data: {
 export async function updatePlaydateStatus(id: number, status: PlaydateStatus): Promise<PlaydateRequest> {
   return request<PlaydateRequest>(`/api/playdate-requests/${id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ status }),
+    // Bot opens owner chat itself — API must not send a second intro.
+    body: JSON.stringify({ status, startOwnerChat: false }),
   });
 }
 
@@ -294,6 +295,45 @@ export async function getPlaydate(id: number): Promise<PlaydateRequest | null> {
     return await request<PlaydateRequest>(`/api/playdate-requests/${id}`);
   } catch {
     return null;
+  }
+}
+
+export type ActiveOwnerChat = {
+  playdateId: number;
+  peerTelegramId: string;
+  peerUserId: number;
+  myPetId: number;
+  peerPetId: number;
+  peerName?: string;
+};
+
+export async function getActiveOwnerChat(telegramId: string): Promise<ActiveOwnerChat | null> {
+  try {
+    return await request<ActiveOwnerChat | null>(
+      `/api/playdate-requests/active-owner-chat?telegramId=${encodeURIComponent(telegramId)}`
+    );
+  } catch {
+    return null;
+  }
+}
+
+/** Persist a Telegram owner-chat line so the web client can poll it. */
+export async function postPlaydateChatMessage(
+  playdateId: number,
+  senderUserId: number,
+  text: string
+): Promise<void> {
+  try {
+    await request(`/api/playdate-requests/${playdateId}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({
+        senderUserId,
+        text,
+        skipTelegram: true,
+      }),
+    });
+  } catch (err) {
+    console.error('Failed to persist playdate chat message:', err);
   }
 }
 

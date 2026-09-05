@@ -7,7 +7,14 @@ import {
   VERIFIED_BADGE,
   normalizeRoles,
 } from '@petdate/shared';
-import { addUserContact, getPet, getUserById, getUserByTelegramId } from '../api-client';
+import {
+  addUserContact,
+  getPet,
+  getUserById,
+  getUserByTelegramId,
+  getActiveOwnerChat,
+  postPlaydateChatMessage,
+} from '../api-client';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 import { formatPet } from '../format';
@@ -414,10 +421,34 @@ async function handleOwnerChatAction(ctx: Context, text: string): Promise<boolea
 export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
   const from = ctx.from;
   if (!from) return false;
-  const session = await getSession(String(from.id));
+  let session = await getSession(String(from.id));
   if (!session || session.step !== 'owner_chat' || !session.ownerChatPeerTelegramId) {
-    return false;
+    // Web accept may have opened chat without writing this process's in-memory session.
+    const active = await getActiveOwnerChat(String(from.id));
+    if (!active?.peerTelegramId) return false;
+    const me = await getCtxUser(ctx);
+    session = await upsertSession(String(from.id), {
+      userId: me?.id,
+      step: 'owner_chat',
+      ownerChatPlaydateId: active.playdateId,
+      ownerChatPeerTelegramId: active.peerTelegramId,
+      ownerChatPeerUserId: active.peerUserId,
+      ownerChatMyPetId: active.myPetId,
+      ownerChatPeerPetId: active.peerPetId,
+      ownerChatSecure: false,
+    });
+    await ctx.reply(
+      [
+        '💬 چت همبازی دوباره فعال شد.',
+        active.peerName ? `طرف مقابل: ${active.peerName}` : null,
+        'پیام‌هایت مستقیم به طرف مقابل می‌رسد.',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      { reply_markup: ownerChatReplyKeyboard(false) }
+    );
   }
+  if (!session.ownerChatPeerTelegramId) return false;
 
   const text = ctx.message?.text?.trim();
   if (text && (OWNER_CHAT_ACTION_BTNS.has(text) || MAIN_MENU_ALIASES.has(text) || text === MAIN_MENU_BTN)) {
@@ -425,8 +456,14 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
   }
 
   const peer = session.ownerChatPeerTelegramId;
+  const playdateId = session.ownerChatPlaydateId;
   const secure = !!session.ownerChatSecure;
   const protect = protectOpts(secure);
+
+  // Messages the API forwarded from the web app — do not re-relay
+  if (text?.startsWith('💬 پیام همبازی از')) {
+    return false;
+  }
 
   try {
     if (ctx.message?.photo?.length) {
@@ -479,6 +516,13 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
     }
     if (text) {
       await ctx.api.sendMessage(peer, text, protect);
+      // Persist so web ChatPage polling sees Telegram → web
+      if (playdateId) {
+        const me = await getCtxUser(ctx);
+        if (me?.id) {
+          await postPlaydateChatMessage(playdateId, me.id, text);
+        }
+      }
       return true;
     }
   } catch (err) {

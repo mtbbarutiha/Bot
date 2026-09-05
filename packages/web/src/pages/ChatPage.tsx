@@ -17,15 +17,19 @@ import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
-import { usePetStore } from '../hooks/usePetStore';
-import { getPlaydateRequest } from '../lib/api';
+import {
+  clearPlaydateChatMessages,
+  getPlaydateRequest,
+  listPlaydateChatMessages,
+  postPlaydateChatMessage,
+} from '../lib/api';
+import type { PlaydateChatMessage } from '@petdate/shared';
 import { playdateToMatchRequest } from '../lib/playdateMap';
 import {
   PET_GENDER_LABELS,
   PET_SIZE_LABELS,
   PET_TYPE_LABELS,
   type MatchRequest,
-  type Pet,
 } from '../types';
 
 type ChatMsg = {
@@ -37,29 +41,16 @@ type ChatMsg = {
 
 type Panel = 'none' | 'owner' | 'pet';
 
-function seedMessages(match: MatchRequest, myPet: Pet): ChatMsg[] {
-  const peer = match.fromPet;
-  const base = Date.now() - 1000 * 60 * 42;
-  return [
-    {
-      id: '1',
-      from: 'peer',
-      text: match.message || `سلام! ${peer.name} آماده‌ی بازیه 🐾`,
-      at: base,
-    },
-    {
-      id: '2',
-      from: 'me',
-      text: `عالی! ${myPet.name} هم خیلی مشتاقه. کی و کجا راحت‌ترید؟`,
-      at: base + 1000 * 60 * 4,
-    },
-    {
-      id: '3',
-      from: 'peer',
-      text: 'پارک نزدیک محله‌مون عصرها خلوت‌تره. اگر خواستی هماهنگ کنیم.',
-      at: base + 1000 * 60 * 9,
-    },
-  ];
+const POLL_MS = 2500;
+
+function toUiMessage(row: PlaydateChatMessage, myUserId: number): ChatMsg {
+  const at = Date.parse(row.createdAt);
+  return {
+    id: String(row.id),
+    from: row.senderUserId === myUserId ? 'me' : 'peer',
+    text: row.text,
+    at: Number.isFinite(at) ? at : Date.now(),
+  };
 }
 
 function formatClock(ts: number) {
@@ -69,7 +60,6 @@ function formatClock(ts: number) {
 export function ChatPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
-  const { myPet } = usePetStore();
   const { user: authUser } = useAuthStore();
   const myUserId = authUser?.id;
 
@@ -81,7 +71,10 @@ export function ChatPage() {
   const [draft, setDraft] = useState('');
   const [ended, setEnded] = useState(false);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
   const scrollerRef = useRef<HTMLDivElement>(null);
+  const lastMsgIdRef = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -125,13 +118,49 @@ export function ChatPage() {
 
   useEffect(() => {
     if (!match) return;
-    setMessages(seedMessages(match, myPet));
+    setMessages([]);
+    lastMsgIdRef.current = 0;
     setSecure(false);
     setContactAdded(false);
     setEnded(false);
     setPanel('none');
     setDraft('');
-  }, [match, myPet]);
+    setSendError(null);
+  }, [match?.id]);
+
+  useEffect(() => {
+    if (!match || !myUserId || ended) return;
+    let cancelled = false;
+
+    async function pull(initial = false) {
+      try {
+        const rows = await listPlaydateChatMessages(
+          match!.id,
+          myUserId!,
+          initial ? undefined : lastMsgIdRef.current || undefined
+        );
+        if (cancelled || !rows.length) return;
+        setMessages((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          const mapped = rows
+            .map((row) => toUiMessage(row, myUserId!))
+            .filter((m) => !seen.has(m.id));
+          if (!mapped.length) return prev;
+          return initial && !prev.length ? mapped : [...prev, ...mapped];
+        });
+        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, ...rows.map((r) => r.id));
+      } catch {
+        /* keep local messages on poll errors */
+      }
+    }
+
+    void pull(true);
+    const timer = window.setInterval(() => void pull(false), POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [match?.id, myUserId, ended]);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -172,22 +201,39 @@ export function ChatPage() {
     );
   }
 
-  function sendMessage(e: FormEvent) {
+  async function sendMessage(e: FormEvent) {
     e.preventDefault();
-    if (ended) return;
+    if (ended || sending || !myUserId || !match) return;
     const text = draft.trim();
     if (!text) return;
-    setMessages((prev) => [
-      ...prev,
-      { id: String(Date.now()), from: 'me', text, at: Date.now() },
-    ]);
+    setSending(true);
+    setSendError(null);
     setDraft('');
+    try {
+      const saved = await postPlaydateChatMessage(match.id, myUserId, text);
+      const ui = toUiMessage(saved, myUserId);
+      setMessages((prev) => (prev.some((m) => m.id === ui.id) ? prev : [...prev, ui]));
+      lastMsgIdRef.current = Math.max(lastMsgIdRef.current, saved.id);
+    } catch (err) {
+      setDraft(text);
+      setSendError(err instanceof Error ? err.message : 'ارسال پیام ناموفق بود');
+    } finally {
+      setSending(false);
+    }
   }
 
-  function endChat() {
+  async function endChat() {
+    if (myUserId && match) {
+      try {
+        await clearPlaydateChatMessages(match.id, myUserId);
+      } catch {
+        /* local end still ok */
+      }
+    }
     setEnded(true);
     setPanel('none');
     setMessages([]);
+    lastMsgIdRef.current = 0;
   }
 
   return (
@@ -325,17 +371,20 @@ export function ChatPage() {
           </div>
 
           {!ended && (
-            <form className="chat-composer" onSubmit={sendMessage}>
-              <input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                placeholder={secure ? 'پیام امن بنویسید…' : 'پیام بنویسید…'}
-                aria-label="متن پیام"
-              />
-              <button type="submit" className="chat-send" disabled={!draft.trim()}>
-                ارسال
-              </button>
-            </form>
+            <>
+              {sendError ? <p className="chat-send-error">{sendError}</p> : null}
+              <form className="chat-composer" onSubmit={(e) => void sendMessage(e)}>
+                <input
+                  value={draft}
+                  onChange={(e) => setDraft(e.target.value)}
+                  placeholder={secure ? 'پیام امن بنویسید…' : 'پیام بنویسید…'}
+                  aria-label="متن پیام"
+                />
+                <button type="submit" className="chat-send" disabled={!draft.trim() || sending}>
+                  ارسال
+                </button>
+              </form>
+            </>
           )}
         </section>
 

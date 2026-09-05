@@ -1,4 +1,4 @@
-import type { OnboardingStatus, PetProfile, PlaydateRequest, PlaydateStatus, User, UserRole } from '@petdate/shared';
+import type { OnboardingStatus, PetProfile, PlaydateChatMessage, PlaydateRequest, PlaydateStatus, User, UserRole } from '@petdate/shared';
 
 /** Empty = same-origin (Vite proxies /api → API). Override with VITE_API_URL if needed. */
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
@@ -156,6 +156,36 @@ export async function updatePlaydateStatus(
   return request<PlaydateRequest>(`/api/playdate-requests/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+  });
+}
+
+export async function listPlaydateChatMessages(
+  playdateId: number,
+  userId: number,
+  afterId?: number
+): Promise<PlaydateChatMessage[]> {
+  const params = new URLSearchParams({ userId: String(userId) });
+  if (afterId != null) params.set('afterId', String(afterId));
+  return request(`/api/playdate-requests/${playdateId}/messages?${params}`);
+}
+
+export async function postPlaydateChatMessage(
+  playdateId: number,
+  senderUserId: number,
+  text: string
+): Promise<PlaydateChatMessage> {
+  return request(`/api/playdate-requests/${playdateId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ senderUserId, text }),
+  });
+}
+
+export async function clearPlaydateChatMessages(
+  playdateId: number,
+  userId: number
+): Promise<{ ok: true; cleared: number }> {
+  return request(`/api/playdate-requests/${playdateId}/messages?userId=${userId}`, {
+    method: 'DELETE',
   });
 }
 

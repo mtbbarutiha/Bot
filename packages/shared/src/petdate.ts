@@ -259,6 +259,15 @@ export interface PlaydateRequest {
   toPet?: PetProfile;
 }
 
+/** پیام چت همبازی (وب ↔ تلگرام) */
+export interface PlaydateChatMessage {
+  id: number;
+  playdateId: number;
+  senderUserId: number;
+  text: string;
+  createdAt: string;
+}
+
 /** وضعیت مشاوره دامپزشک */
 export type VetConsultStatus = 'requested' | 'active' | 'completed' | 'cancelled';
 
