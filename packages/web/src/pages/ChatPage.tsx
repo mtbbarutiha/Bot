@@ -271,9 +271,20 @@ function ConversationListPane({
             </p>
             <Link
               to={scope === 'vet' ? '/vet-consult' : '/explore'}
-              className="tg-chat-link-btn"
+              className={
+                scope === 'vet' ? 'tg-chat-link-btn' : 'pepito-btn button-1 tg-chat-playmate-cta'
+              }
             >
-              {scope === 'vet' ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
+              {scope === 'vet' ? (
+                'رفتن به پنل پزشک'
+              ) : (
+                <>
+                  <span className="pepito-btn-icon" aria-hidden>
+                    <i className="flaticon-pawprint-4" />
+                  </span>
+                  پیدا کردن همبازی
+                </>
+              )}
             </Link>
           </div>
         ) : (
@@ -360,9 +371,18 @@ function ThreadEmptyState({ scope }: { scope: InboxScope }) {
       <h2>{isVet ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
       <Link
         to={isVet ? '/vet-consult' : '/explore'}
-        className="tg-chat-link-btn"
+        className={isVet ? 'tg-chat-link-btn' : 'pepito-btn button-1 tg-chat-playmate-cta'}
       >
-        {isVet ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
+        {isVet ? (
+          'رفتن به پنل پزشک'
+        ) : (
+          <>
+            <span className="pepito-btn-icon" aria-hidden>
+              <i className="flaticon-pawprint-4" />
+            </span>
+            پیدا کردن همبازی
+          </>
+        )}
       </Link>
     </div>
   );

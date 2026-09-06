@@ -4968,6 +4968,14 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   text-decoration: none;
   padding: 0 14px;
 }
+
+/* Same purple pepito CTA + paw hover used on landing/home */
+.tg-chat-list-empty .tg-chat-playmate-cta,
+.tg-thread-empty .tg-chat-playmate-cta,
+a.tg-chat-playmate-cta.pepito-btn {
+  margin-top: 6px;
+  min-height: 0;
+}
 .tg-error {
   margin: 0;
   padding: 6px 12px;

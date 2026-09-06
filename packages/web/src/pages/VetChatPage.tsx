@@ -982,9 +982,22 @@ export function VetChatPage() {
                 </p>
                 <Link
                   to={inboxScope === 'vet' ? '/vet-consult' : '/explore'}
-                  className="tg-chat-link-btn"
+                  className={
+                    inboxScope === 'vet'
+                      ? 'tg-chat-link-btn'
+                      : 'pepito-btn button-1 tg-chat-playmate-cta'
+                  }
                 >
-                  {inboxScope === 'vet' ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
+                  {inboxScope === 'vet' ? (
+                    'رفتن به پنل پزشک'
+                  ) : (
+                    <>
+                      <span className="pepito-btn-icon" aria-hidden>
+                        <i className="flaticon-pawprint-4" />
+                      </span>
+                      پیدا کردن همبازی
+                    </>
+                  )}
                 </Link>
               </div>
             ) : (
@@ -1072,9 +1085,22 @@ export function VetChatPage() {
               <h2>{inboxScope === 'vet' ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
               <Link
                 to={inboxScope === 'vet' ? '/vet-consult' : '/explore'}
-                className="tg-chat-link-btn"
+                className={
+                  inboxScope === 'vet'
+                    ? 'tg-chat-link-btn'
+                    : 'pepito-btn button-1 tg-chat-playmate-cta'
+                }
               >
-                {inboxScope === 'vet' ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
+                {inboxScope === 'vet' ? (
+                  'رفتن به پنل پزشک'
+                ) : (
+                  <>
+                    <span className="pepito-btn-icon" aria-hidden>
+                      <i className="flaticon-pawprint-4" />
+                    </span>
+                    پیدا کردن همبازی
+                  </>
+                )}
               </Link>
             </div>
           ) : loading ? (
