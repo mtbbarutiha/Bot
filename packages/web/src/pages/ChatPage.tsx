@@ -32,7 +32,6 @@ import {
   clearPlaydateChatMessages,
   endPlaydateChat,
   getPlaydateRequest,
-  getUserById,
   listPlaydateChatMessages,
   listPlaydateRequests,
   playdateChatMediaUrl,
