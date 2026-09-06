@@ -9,6 +9,7 @@ import {
 } from '@petdate/shared';
 import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
+import { useUserStore } from '../../hooks/useUserStore';
 import { sanitizeNext } from '../../lib/authRedirect';
 
 const STEPS = [
@@ -22,12 +23,15 @@ const STEPS = [
   'interests',
 ] as const;
 
+/** فیلدهایی که در ربات با «⏭ رد کردن» قابل عبورند */
+const FIELD_SKIPPABLE = new Set<(typeof STEPS)[number]>(['bio', 'interests']);
 
 export function ProfileWizardPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const returnTo = sanitizeNext((location.state as { next?: string } | null)?.next, '/home');
   const { user, saveProfile, isLoggedIn } = useAuthStore();
+  const { saveOnboardingToApi } = useUserStore();
   const [stepIdx, setStepIdx] = useState(0);
   const step = STEPS[stepIdx]!;
   const [busy, setBusy] = useState(false);
@@ -56,6 +60,17 @@ export function ProfileWizardPage() {
     setInterests((prev) =>
       prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item].slice(0, 6)
     );
+  }
+
+  function advanceFrom(idx: number) {
+    if (idx >= STEPS.length - 1) {
+      void finish();
+      return;
+    }
+    let nextIdx = idx + 1;
+    // skip province when not Iran
+    if (STEPS[nextIdx] === 'province' && country !== 'ایران') nextIdx += 1;
+    setStepIdx(nextIdx);
   }
 
   async function finish() {
@@ -87,6 +102,28 @@ export function ProfileWizardPage() {
     }
   }
 
+  /** مثل ربات: «⏭ فعلاً رد کن» — ویزارد را ترک می‌کند، پروفایل ناقص می‌ماند */
+  async function skipWizardLater() {
+    setBusy(true);
+    setError('');
+    try {
+      await saveOnboardingToApi('profile_incomplete');
+      navigate(returnTo, { replace: true });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'رد کردن ناموفق بود');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** رد کردن فیلد اختیاری فعلی (بیو / علایق) */
+  function skipCurrentField() {
+    setError('');
+    if (step === 'bio') setBio('');
+    if (step === 'interests') setInterests([]);
+    advanceFrom(stepIdx);
+  }
+
   function goNext(e?: FormEvent) {
     e?.preventDefault();
     if (step === 'name' && name.trim().length < 2) return setError('نام را درست وارد کن');
@@ -102,14 +139,7 @@ export function ProfileWizardPage() {
     if (step === 'city' && city.trim().length < 2) return setError('شهر را وارد کن');
 
     setError('');
-    if (stepIdx >= STEPS.length - 1) {
-      void finish();
-      return;
-    }
-    let nextIdx = stepIdx + 1;
-    // skip province when not Iran
-    if (STEPS[nextIdx] === 'province' && country !== 'ایران') nextIdx += 1;
-    setStepIdx(nextIdx);
+    advanceFrom(stepIdx);
   }
 
   function back() {
@@ -123,7 +153,7 @@ export function ProfileWizardPage() {
       <p className="pepito-auth-kicker">پروفایل</p>
       <h1>ساخت پروفایل</h1>
       <p className="auth-lead">
-        همان مراحل ربات — مرحله {stepIdx + 1} از {STEPS.length}
+        همان مراحل ربات — مرحله {stepIdx + 1} از {STEPS.length}. اگر الان وقت نداری می‌تونی فعلاً رد کنی.
       </p>
       <div className="wizard-progress">
         <span style={{ width: `${((stepIdx + 1) / STEPS.length) * 100}%` }} />
@@ -251,6 +281,26 @@ export function ProfileWizardPage() {
                 : 'ادامه'}
             </button>
           </div>
+
+          {FIELD_SKIPPABLE.has(step) && (
+            <button
+              type="button"
+              className="pepito-btn pepito-btn--ghost auth-skip-btn"
+              onClick={skipCurrentField}
+              disabled={busy}
+            >
+              ⏭ رد کردن
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="pepito-btn pepito-btn--ghost auth-skip-btn"
+            onClick={() => void skipWizardLater()}
+            disabled={busy}
+          >
+            ⏭ فعلاً رد کن
+          </button>
         </form>
     </AuthShell>
   );

@@ -53,8 +53,8 @@ export function AddPetPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.imageUrl) {
-      setSubmitError('لطفاً یک عکس واقعی از پت آپلود کن');
+    if (!form.name.trim()) {
+      setSubmitError('نام پت الزامی است');
       return;
     }
     setSaving(true);
@@ -62,6 +62,7 @@ export function AddPetPage() {
 
     const ageNum = Number(form.age) || 1;
     const ageMonths = form.ageUnit === 'year' ? ageNum * 12 : ageNum;
+    const resolvedImage = form.imageUrl || previewFallback;
 
     try {
       if (isLoggedIn && ownerId) {
@@ -69,7 +70,7 @@ export function AddPetPage() {
           ownerId,
           name: form.name.trim(),
           species: form.type,
-          breed: form.breed.trim(),
+          breed: form.breed.trim() || undefined,
           gender: form.gender,
           ageMonths,
           size: form.size,
@@ -79,16 +80,16 @@ export function AddPetPage() {
           lookingForPlaymate: form.lookingForPlaymate,
           diseases: form.healthNotes.trim() || undefined,
           personality: form.traits.length ? { traits: form.traits } : undefined,
-          imageUrl: form.imageUrl,
+          imageUrl: form.imageUrl || undefined,
           city: form.city.trim() || authUser?.city,
-          neighborhood: form.neighborhood.trim(),
+          neighborhood: form.neighborhood.trim() || undefined,
         });
       }
 
       addPet({
-        name: form.name,
+        name: form.name.trim(),
         type: form.type,
-        breed: form.breed,
+        breed: form.breed.trim(),
         age: ageNum,
         ageUnit: form.ageUnit,
         size: form.size,
@@ -97,7 +98,7 @@ export function AddPetPage() {
         neighborhood: form.neighborhood,
         ownerName: authUser?.name || myPet.ownerName,
         ownerId: ownerId ?? myPet.ownerId,
-        imageUrl: form.imageUrl,
+        imageUrl: resolvedImage,
         emoji: PET_TYPE_EMOJI[form.type],
         bio: form.bio,
         traits: form.traits,
@@ -119,7 +120,8 @@ export function AddPetPage() {
     }
   };
 
-  const isValid = Boolean(form.name && form.breed && form.neighborhood && form.imageUrl);
+  // مثل ربات: فقط نام اجباری؛ عکس / نژاد / محله اختیاری
+  const isValid = Boolean(form.name.trim());
 
   return (
     <div className="form-page">
@@ -132,14 +134,14 @@ export function AddPetPage() {
       </button>
 
       <h1>ثبت پت جدید</h1>
-      <p className="subtitle">عکس واقعی و اطلاعات پت‌ات رو وارد کن</p>
+      <p className="subtitle">اطلاعات پت رو وارد کن — عکس، نژاد و محله اختیاری‌اند</p>
 
       <PetPhotoUpload
         ownerId={ownerId}
         imageUrl={form.imageUrl}
         placeholderSrc={previewFallback}
         onChange={(url) => update('imageUrl', url)}
-        label="عکس پت *"
+        label="عکس پت (اختیاری)"
       />
 
       <form onSubmit={(e) => void handleSubmit(e)}>
@@ -163,7 +165,7 @@ export function AddPetPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">نژاد *</label>
+          <label className="form-label">نژاد (اختیاری)</label>
           <input
             className="form-input"
             placeholder="مثلاً: گلدن رتریور"
@@ -217,7 +219,7 @@ export function AddPetPage() {
             <input className="form-input" value={form.city} onChange={(e) => update('city', e.target.value)} />
           </div>
           <div className="form-group">
-            <label className="form-label">محله *</label>
+            <label className="form-label">محله (اختیاری)</label>
             <input
               className="form-input"
               placeholder="مثلاً: ونک"
@@ -228,7 +230,7 @@ export function AddPetPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">درباره پت</label>
+          <label className="form-label">درباره پت (اختیاری)</label>
           <textarea
             className="form-textarea"
             placeholder="شخصیت، علاقه‌ها..."

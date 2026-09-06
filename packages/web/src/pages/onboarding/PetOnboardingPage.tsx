@@ -58,10 +58,15 @@ export function PetOnboardingPage() {
     }));
   };
 
+  const goHomeAfterSkip = () => {
+    // مثل ربات: ثبت پت جدا از پروفایل است و اجباری نیست
+    navigate('/home', { replace: true });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.imageUrl) {
-      setSubmitError('لطفاً یک عکس واقعی از پت آپلود کن');
+    if (!form.name.trim()) {
+      setSubmitError('نام پت الزامی است');
       return;
     }
     setSaving(true);
@@ -71,11 +76,12 @@ export function PetOnboardingPage() {
     const ageMonths = form.ageUnit === 'year' ? ageNum * 12 : ageNum;
     const ownerName = authUser?.name || myPet.ownerName;
     const resolvedOwnerId = ownerId ?? myPet.ownerId;
+    const resolvedImage = form.imageUrl || previewFallback;
 
     const petData = {
-      name: form.name,
+      name: form.name.trim(),
       type: form.type,
-      breed: form.breed,
+      breed: form.breed.trim(),
       age: ageNum,
       ageUnit: form.ageUnit,
       size: form.size,
@@ -84,7 +90,7 @@ export function PetOnboardingPage() {
       neighborhood: form.neighborhood,
       ownerName,
       ownerId: resolvedOwnerId,
-      imageUrl: form.imageUrl,
+      imageUrl: resolvedImage,
       emoji: PET_TYPE_EMOJI[form.type],
       bio: form.bio,
       traits: form.traits,
@@ -103,7 +109,7 @@ export function PetOnboardingPage() {
           ownerId,
           name: form.name.trim(),
           species: form.type,
-          breed: form.breed.trim(),
+          breed: form.breed.trim() || undefined,
           gender: form.gender,
           ageMonths,
           size: form.size,
@@ -113,14 +119,14 @@ export function PetOnboardingPage() {
           lookingForPlaymate: form.lookingForPlaymate,
           diseases: form.healthNotes.trim() || undefined,
           personality: form.traits.length ? { traits: form.traits } : undefined,
-          imageUrl: form.imageUrl,
+          imageUrl: form.imageUrl || undefined,
           city: form.city.trim() || authUser?.city,
-          neighborhood: form.neighborhood.trim(),
+          neighborhood: form.neighborhood.trim() || undefined,
         });
         localPatch = {
           ...localPatch,
           ownerId: created.ownerId,
-          imageUrl: created.imageUrl || form.imageUrl,
+          imageUrl: created.imageUrl || resolvedImage,
         };
         // First pet during onboarding becomes the primary local myPet
         updatePet(myPet.id, { ...localPatch, id: created.id });
@@ -141,7 +147,8 @@ export function PetOnboardingPage() {
     }
   };
 
-  const isValid = Boolean(form.name && form.breed && form.neighborhood && form.imageUrl);
+  // مثل ربات: فقط نام (و نوع که پیش‌فرض دارد) اجباری است
+  const isValid = Boolean(form.name.trim());
 
   return (
     <div className="form-page onboarding-pet-page">
@@ -155,14 +162,16 @@ export function PetOnboardingPage() {
       </button>
 
       <h1>پروفایل پت‌ات</h1>
-      <p className="subtitle">عکس واقعی پت و اطلاعاتش رو کامل کن تا همبازی پیدا کنی</p>
+      <p className="subtitle">
+        اطلاعات پت رو وارد کن — عکس، نژاد و محله اختیاری‌اند (مثل ربات می‌تونی رد کنی)
+      </p>
 
       <PetPhotoUpload
         ownerId={ownerId}
         imageUrl={form.imageUrl}
         placeholderSrc={previewFallback}
         onChange={(url) => update('imageUrl', url)}
-        label="عکس پت *"
+        label="عکس پت (اختیاری)"
       />
 
       <form onSubmit={(e) => void handleSubmit(e)}>
@@ -181,7 +190,7 @@ export function PetOnboardingPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">نژاد *</label>
+          <label className="form-label">نژاد (اختیاری)</label>
           <input className="form-input" placeholder="مثلاً: گلدن رتریور" value={form.breed} onChange={(e) => update('breed', e.target.value)} />
         </div>
 
@@ -219,12 +228,12 @@ export function PetOnboardingPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">محله *</label>
+          <label className="form-label">محله (اختیاری)</label>
           <input className="form-input" placeholder="مثلاً: ونک" value={form.neighborhood} onChange={(e) => update('neighborhood', e.target.value)} />
         </div>
 
         <div className="form-group">
-          <label className="form-label">شخصیت و ویژگی‌ها</label>
+          <label className="form-label">شخصیت و ویژگی‌ها (اختیاری)</label>
           <div className="trait-chips">
             {PERSONALITY_TRAITS.map((trait) => (
               <button
@@ -240,7 +249,7 @@ export function PetOnboardingPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">سلامت و یادداشت پزشکی</label>
+          <label className="form-label">سلامت و یادداشت پزشکی (اختیاری)</label>
           <textarea
             className="form-textarea"
             placeholder="آلرژی، دارو، بیماری خاص..."
@@ -250,7 +259,7 @@ export function PetOnboardingPage() {
         </div>
 
         <div className="form-group">
-          <label className="form-label">درباره پت</label>
+          <label className="form-label">درباره پت (اختیاری)</label>
           <textarea className="form-textarea" placeholder="شخصیت، علاقه‌ها..." value={form.bio} onChange={(e) => update('bio', e.target.value)} />
         </div>
 
@@ -277,6 +286,14 @@ export function PetOnboardingPage() {
 
         <button type="submit" className="cta-btn" disabled={!isValid || saving}>
           {saving ? 'در حال ذخیره…' : '✨ تکمیل پروفایل'}
+        </button>
+        <button
+          type="button"
+          className="cta-btn cta-btn--ghost"
+          disabled={saving}
+          onClick={goHomeAfterSkip}
+        >
+          ⏭ فعلاً رد کن
         </button>
       </form>
 

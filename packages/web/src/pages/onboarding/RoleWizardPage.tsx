@@ -148,7 +148,7 @@ export function RoleWizardPage() {
           onClick={() => void handleSkip()}
           disabled={saving}
         >
-          فعلاً رد کن
+          ⏭ فعلاً رد کن
         </button>
       </form>
     </AuthShell>

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import { loginPath, readNextFromSearch, sanitizeNext } from '../lib/authRedirect';
+import { loginPath, postAuthPath, readNextFromSearch, sanitizeNext } from '../lib/authRedirect';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { TelegramSync } from './OnboardingGuard';
 
@@ -10,15 +10,6 @@ const PUBLIC_PREFIXES = ['/auth', '/admin', '/adoption'];
 function isPublic(pathname: string) {
   if (PUBLIC_EXACT.has(pathname)) return true;
   return PUBLIC_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-}
-
-function onboardingPath(pathname: string) {
-  return (
-    pathname.startsWith('/onboarding/role') ||
-    pathname.startsWith('/onboarding/profile') ||
-    pathname.startsWith('/onboarding/pet') ||
-    pathname.startsWith('/onboarding/wizard')
-  );
 }
 
 export function AuthGuard({ children }: { children?: React.ReactNode }) {
@@ -47,19 +38,12 @@ export function AuthGuard({ children }: { children?: React.ReactNode }) {
     return <Navigate to="/onboarding/role" replace state={{ next: nextFromState }} />;
   }
 
-  if (
-    isLoggedIn &&
-    hasRole &&
-    !isProfileComplete &&
-    !onboardingPath(location.pathname)
-  ) {
-    return <Navigate to="/onboarding/profile" replace state={{ next: nextFromState }} />;
-  }
+  // پروفایل ناقص را مثل ربات اجباری نگه نمی‌داریم — «فعلاً رد کن» باید به اپ راه بدهد.
+  // ورود اولیه هنوز از postAuthPath به /onboarding/profile هدایت می‌شود.
 
   if (isLoggedIn && isPublic(location.pathname) && location.pathname.startsWith('/auth')) {
     if (!hasRole) return <Navigate to="/onboarding/role" replace />;
-    if (!isProfileComplete) return <Navigate to="/onboarding/profile" replace />;
-    return <Navigate to={nextFromQuery} replace />;
+    return <Navigate to={postAuthPath({ hasRole, isProfileComplete, next: nextFromQuery })} replace />;
   }
 
   return <>{children ?? <Outlet />}</>;
