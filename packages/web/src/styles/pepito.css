@@ -6950,6 +6950,9 @@ button.chip.is-on {
   flex-direction: column;
   gap: 1.25rem;
   padding: 0.25rem 0 1.5rem;
+  contain: layout;
+  /* Avoid scroll anchoring jumps when soft-refresh updates text/balances */
+  overflow-anchor: none;
 }
 
 .pepito-wallet-hero h1 {
@@ -6971,16 +6974,22 @@ button.chip.is-on {
 
 .pepito-wallet-status {
   margin: 0;
+  min-height: 3.4rem;
+  display: flex;
+  align-items: center;
   font-size: 0.88rem;
   color: var(--pepito-muted);
+  box-sizing: border-box;
+  /* Always reserve warn padding so error flash cannot grow the row */
+  padding: 0.65rem 0.85rem;
+  border: 1px solid transparent;
+  border-radius: 12px;
 }
 
 .pepito-wallet-status--warn {
   color: #9a5b12;
   background: #fff6e8;
-  border: 1px solid rgba(253, 150, 30, 0.35);
-  border-radius: 12px;
-  padding: 0.65rem 0.85rem;
+  border-color: rgba(253, 150, 30, 0.35);
 }
 
 .pepito-wallet-list {
@@ -6990,6 +6999,11 @@ button.chip.is-on {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
+  min-height: 18.5rem;
+}
+
+.pepito-wallet-list--pending .pepito-wallet-row-val {
+  opacity: 0.55;
 }
 
 .pepito-wallet-row {
@@ -6997,11 +7011,13 @@ button.chip.is-on {
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  min-height: 4.35rem;
   padding: 1rem 1.1rem;
   background: #fff;
   border: 1px solid rgba(92, 77, 145, 0.1);
   border-radius: 18px;
   box-shadow: 0 8px 22px rgba(25, 6, 61, 0.05);
+  box-sizing: border-box;
 }
 
 .pepito-wallet-row-main {
@@ -7042,11 +7058,14 @@ button.chip.is-on {
 .pepito-wallet-row-val {
   margin: 0;
   flex: 0 0 auto;
+  min-width: 4.5rem;
+  text-align: end;
   font-family: var(--font-display);
   font-weight: 800;
   font-size: 1.05rem;
   color: var(--pepito-base);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
 }
 
 .pepito-wallet-row-unit {
@@ -7102,10 +7121,25 @@ button.chip.is-on {
 }
 
 .pepito-wallet-tg-body {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(1.5rem, auto) minmax(2.6rem, auto) minmax(2.6rem, auto) minmax(1.2rem, auto);
   gap: 0.65rem;
-  align-items: flex-start;
+  align-items: start;
+  justify-items: start;
+  /* Covers linked (stars+sync) and unlinked (link+sync) without height swap */
+  min-height: 11.25rem;
+}
+
+.pepito-wallet-tg-slot {
+  display: flex;
+  align-items: center;
+  min-height: 2.6rem;
+  width: 100%;
+}
+
+.pepito-wallet-tg-slot--secondary,
+.pepito-wallet-tg-slot--action {
+  min-height: 2.6rem;
 }
 
 .pepito-wallet-tg-status {
@@ -7155,12 +7189,16 @@ button.chip.is-on {
 .pepito-wallet-tg-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.4rem;
+  min-height: 2.6rem;
+  min-width: 12.5rem;
 }
 
 .pepito-wallet-tg-hint,
 .pepito-wallet-tg-meta {
   margin: 0;
+  min-height: 1.2rem;
   font-size: 0.78rem;
   line-height: 1.45;
   color: var(--pepito-muted);

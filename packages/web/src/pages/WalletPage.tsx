@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Link2, RefreshCw, Wallet } from 'lucide-react';
 import {
@@ -19,10 +19,19 @@ function formatBal(n: number): string {
   return toPersianDigits(new Intl.NumberFormat('en-US').format(Math.max(0, Math.floor(n))));
 }
 
+function sameWallet(a: WalletBalances | null, b: WalletBalances): boolean {
+  if (!a) return false;
+  return a.ton === b.ton && a.stars === b.stars && a.coins === b.coins && a.toman === b.toman;
+}
+
 /**
  * Dedicated wallet page — multi-currency balances (same source as WalletChip).
  * Includes Telegram attach + Stars sync (bot wallet_stars, not Telegram Payment API).
  * Route is auth-gated via AuthGuard; landing dock sends guests through login?next=/wallet.
+ *
+ * Layout stability: soft refresh updates state in place (no remount), TG body uses a
+ * fixed slot grid so linked/unlinked swaps cannot shift the page, and fetch runs once
+ * per token (not on every loadWallet identity change).
  */
 export function WalletPage() {
   const { user, token, refreshMe } = useAuthStore();
@@ -30,50 +39,78 @@ export function WalletPage() {
   const [telegramLinked, setTelegramLinked] = useState<boolean>(() => Boolean(user?.telegramId));
   const [telegramId, setTelegramId] = useState<string | null>(user?.telegramId ?? null);
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !user);
   const [syncing, setSyncing] = useState(false);
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkHint, setLinkHint] = useState('');
   const [syncedAt, setSyncedAt] = useState<string | null>(null);
+  const inFlightRef = useRef(false);
+  const hasLocalRef = useRef(Boolean(user));
+  const tokenRef = useRef(token);
+  const refreshMeRef = useRef(refreshMe);
+  tokenRef.current = token;
+  refreshMeRef.current = refreshMe;
 
-  const loadWallet = useCallback(
-    async (opts?: { soft?: boolean }) => {
-      if (!token) return;
-      if (!opts?.soft) setLoading(true);
-      else setSyncing(true);
-      setError('');
-      try {
-        const res = await fetchWallet(token);
-        setWallet(res.wallet);
-        if (res.telegram) {
-          setTelegramLinked(Boolean(res.telegram.linked));
-          setTelegramId(res.telegram.telegramId);
-        } else {
-          const me = await refreshMe().catch(() => null);
-          setTelegramLinked(Boolean(me?.telegramId));
-          setTelegramId(me?.telegramId ?? null);
-        }
-        await refreshMe().catch(() => undefined);
-        setSyncedAt(new Date().toISOString());
-      } catch {
-        setError('نتوانستیم موجودی را از سرور تازه کنیم؛ آخرین موجودی محلی نمایش داده شد.');
-      } finally {
-        setLoading(false);
-        setSyncing(false);
-      }
-    },
-    [token, refreshMe]
-  );
-
+  // Keep TG link flag in sync when auth hydrate/refresh adds telegramId — without remount.
   useEffect(() => {
-    void loadWallet();
-  }, [loadWallet]);
+    if (user?.telegramId) {
+      setTelegramLinked(true);
+      setTelegramId(user.telegramId);
+    }
+  }, [user?.telegramId]);
+
+  const loadWallet = useCallback(async (opts?: { soft?: boolean }) => {
+    const tok = tokenRef.current;
+    if (!tok || inFlightRef.current) return;
+    const soft = opts?.soft ?? hasLocalRef.current;
+    inFlightRef.current = true;
+    if (!soft) setLoading(true);
+    else setSyncing(true);
+    try {
+      const res = await fetchWallet(tok);
+      setWallet((prev) => (sameWallet(prev, res.wallet) ? prev : res.wallet));
+      hasLocalRef.current = true;
+      if (res.telegram) {
+        setTelegramLinked(Boolean(res.telegram.linked));
+        setTelegramId(res.telegram.telegramId);
+      } else if (!soft) {
+        const me = await refreshMeRef.current().catch(() => null);
+        setTelegramLinked(Boolean(me?.telegramId));
+        setTelegramId(me?.telegramId ?? null);
+      }
+      // Soft sync skips refreshMe to avoid auth-store thrash / layout jump.
+      if (!soft && res.telegram) {
+        await refreshMeRef.current().catch(() => undefined);
+      }
+      setSyncedAt(new Date().toISOString());
+      setError('');
+    } catch {
+      setError('نتوانستیم موجودی را از سرور تازه کنیم؛ آخرین موجودی محلی نمایش داده شد.');
+    } finally {
+      setLoading(false);
+      setSyncing(false);
+      inFlightRef.current = false;
+    }
+  }, []);
+
+  // Mount / token only — loadWallet is referentially stable (refs for token/refreshMe).
+  useEffect(() => {
+    if (!token) return;
+    void loadWallet({ soft: hasLocalRef.current });
+  }, [token, loadWallet]);
 
   const balances: WalletBalances =
     wallet ?? (user ? user.wallet ?? walletFromUserFields(user) : { ton: 0, stars: 0, coins: 0, toman: 0 });
 
   const linked = telegramLinked || Boolean(user?.telegramId);
   const tgDisplay = telegramId || user?.telegramId || null;
+  const statusText = error
+    ? error
+    : loading
+      ? 'در حال بارگذاری موجودی…'
+      : syncing
+        ? 'در حال همگام‌سازی…'
+        : '\u00a0';
 
   async function onLinkTelegram() {
     if (!token) return;
@@ -120,8 +157,9 @@ export function WalletPage() {
           </p>
         </div>
 
-        {linked ? (
-          <div className="pepito-wallet-tg-body">
+        {/* Fixed 4-slot body: status → secondary → primary action → meta — same height linked/unlinked */}
+        <div className="pepito-wallet-tg-body">
+          {linked ? (
             <p className="pepito-wallet-tg-status">
               <span className="pepito-wallet-tg-dot" aria-hidden />
               متصل به تلگرام
@@ -129,56 +167,74 @@ export function WalletPage() {
                 <span className="pepito-wallet-tg-id"> · شناسه {toPersianDigits(tgDisplay)}</span>
               ) : null}
             </p>
-            <p className="pepito-wallet-tg-stars">
-              <span aria-hidden>⭐</span>
-              موجودی ستاره مشترک با ربات:{' '}
-              <strong>{formatBal(balances.stars)}</strong>
-            </p>
-            <button
-              type="button"
-              className="pepito-btn button-2 pepito-wallet-tg-sync"
-              onClick={() => void loadWallet({ soft: true })}
-              disabled={syncing || loading}
-            >
-              <RefreshCw size={16} aria-hidden className={syncing ? 'pepito-spin' : undefined} />
-              {syncing ? 'در حال همگام‌سازی…' : 'همگام‌سازی / تازه‌سازی'}
-            </button>
-            {syncedAt ? (
-              <p className="pepito-wallet-tg-meta">آخرین همگام‌سازی از همان کیف پول ربات انجام شد.</p>
-            ) : null}
-          </div>
-        ) : (
-          <div className="pepito-wallet-tg-body">
+          ) : (
             <p className="pepito-wallet-tg-status pepito-wallet-tg-status--off">
               تلگرام هنوز به این حساب وب وصل نشده است.
             </p>
-            <button
-              type="button"
-              className="pepito-btn button-1 pepito-wallet-tg-link"
-              onClick={() => void onLinkTelegram()}
-              disabled={linkBusy}
-            >
-              <Link2 size={16} aria-hidden />
-              {linkBusy ? 'در حال ساخت لینک…' : 'اتصال به تلگرام'}
-            </button>
-            {linkHint ? <p className="pepito-wallet-tg-hint">{linkHint}</p> : null}
+          )}
+
+          <div className="pepito-wallet-tg-slot pepito-wallet-tg-slot--secondary">
+            {linked ? (
+              <p className="pepito-wallet-tg-stars">
+                <span aria-hidden>⭐</span>
+                موجودی ستاره مشترک با ربات:{' '}
+                <strong>{formatBal(balances.stars)}</strong>
+              </p>
+            ) : (
+              <button
+                type="button"
+                className="pepito-btn button-1 pepito-wallet-tg-link"
+                onClick={() => void onLinkTelegram()}
+                disabled={linkBusy}
+              >
+                <Link2 size={16} aria-hidden />
+                {linkBusy ? 'در حال ساخت لینک…' : 'اتصال به تلگرام'}
+              </button>
+            )}
+          </div>
+
+          <div className="pepito-wallet-tg-slot pepito-wallet-tg-slot--action">
             <button
               type="button"
               className="pepito-btn button-2 pepito-wallet-tg-sync"
               onClick={() => void loadWallet({ soft: true })}
               disabled={syncing || loading}
+              aria-busy={syncing || loading}
             >
-              <RefreshCw size={16} aria-hidden />
-              بعد از Start در ربات — همگام‌سازی
+              <RefreshCw size={16} aria-hidden className={syncing ? 'pepito-spin' : undefined} />
+              {linked
+                ? syncing
+                  ? 'در حال همگام‌سازی…'
+                  : 'همگام‌سازی / تازه‌سازی'
+                : 'بعد از Start در ربات — همگام‌سازی'}
             </button>
           </div>
-        )}
+
+          <p
+            className={linked ? 'pepito-wallet-tg-meta' : 'pepito-wallet-tg-hint'}
+            aria-live="polite"
+          >
+            {linked
+              ? syncedAt
+                ? 'آخرین همگام‌سازی از همان کیف پول ربات انجام شد.'
+                : '\u00a0'
+              : linkHint || '\u00a0'}
+          </p>
+        </div>
       </section>
 
-      {loading ? <p className="pepito-wallet-status">در حال بارگذاری موجودی…</p> : null}
-      {error ? <p className="pepito-wallet-status pepito-wallet-status--warn">{error}</p> : null}
+      <p
+        className={`pepito-wallet-status${error ? ' pepito-wallet-status--warn' : ''}`}
+        aria-live="polite"
+      >
+        {statusText}
+      </p>
 
-      <ul className="pepito-wallet-list" aria-label="موجودی‌ها">
+      <ul
+        className={`pepito-wallet-list${loading && !wallet ? ' pepito-wallet-list--pending' : ''}`}
+        aria-label="موجودی‌ها"
+        aria-busy={loading}
+      >
         {ORDER.map((key) => (
           <li key={key} className="pepito-wallet-row">
             <div className="pepito-wallet-row-main">

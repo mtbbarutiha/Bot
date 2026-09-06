@@ -21,9 +21,12 @@ export function AuthGuard({ children }: { children?: React.ReactNode }) {
     nextFromQuery
   );
 
+  // Depend on token only — refreshMe is a stable module-level bind, but keeping
+  // it out of deps prevents accidental re-fetch loops if the hook regresses.
   useEffect(() => {
     if (token) void refreshMe().catch(() => undefined);
-  }, [token, refreshMe]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- token is the sole trigger
+  }, [token]);
 
   if (location.pathname.startsWith('/admin')) {
     return <>{children ?? <Outlet />}</>;

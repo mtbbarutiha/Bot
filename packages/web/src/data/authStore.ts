@@ -136,6 +136,11 @@ class AuthStore {
   async refreshMe() {
     if (!this.data.token) return null;
     const me = await fetchMe(this.data.token);
+    // Skip persist/notify when payload is unchanged — avoids subscriber thrash
+    // (WalletChip / guards re-render storms that look like layout jump).
+    if (this.data.user && JSON.stringify(this.data.user) === JSON.stringify(me.user)) {
+      return me.user;
+    }
     this.data = { ...this.data, user: me.user };
     this.persist();
     return me.user;
