@@ -236,7 +236,21 @@ export function VetConsultPage() {
         vetUserId: user.id,
         status: 'requested',
       });
-      setIncoming(rows);
+      setIncoming((prev) => {
+        if (
+          prev.length === rows.length &&
+          prev.every(
+            (row, i) =>
+              row.id === rows[i]?.id &&
+              row.status === rows[i]?.status &&
+              row.patientName === rows[i]?.patientName &&
+              row.petName === rows[i]?.petName,
+          )
+        ) {
+          return prev;
+        }
+        return rows;
+      });
     } catch {
       setIncoming([]);
     }
@@ -252,7 +266,21 @@ export function VetConsultPage() {
     try {
       const rows = await listVetConsultations({ vetUserId: user.id });
       const done = rows.filter((c) => c.status === 'active' || c.status === 'completed');
-      setRecent(done.slice(0, 8));
+      const next = done.slice(0, 8);
+      setRecent((prev) => {
+        if (
+          prev.length === next.length &&
+          prev.every(
+            (row, i) =>
+              row.id === next[i]?.id &&
+              row.status === next[i]?.status &&
+              row.patientName === next[i]?.patientName,
+          )
+        ) {
+          return prev;
+        }
+        return next;
+      });
     } catch {
       setRecent([]);
     }
@@ -274,7 +302,7 @@ export function VetConsultPage() {
     void loadRecent();
   }, [loadRecent]);
 
-  // Fast ajax refresh on doctor panel (and while patient waits) — ~1.5s + focus/visibility.
+  // Soft ajax refresh on doctor panel / patient wait — gentle so the UI does not thrash.
   useLiveAjaxPoll(
     () => {
       void refreshConsultStatus();
@@ -283,7 +311,7 @@ export function VetConsultPage() {
     },
     {
       enabled: hasVetRole || phase === 'waiting' || phase === 'connected',
-      intervalMs: 1500,
+      intervalMs: 45_000,
     },
   );
 

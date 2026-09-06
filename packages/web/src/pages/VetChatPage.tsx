@@ -187,6 +187,8 @@ export function VetChatPage() {
   const showThread = desktop || hasThread;
 
   const [consult, setConsult] = useState<VetConsultation | null>(null);
+  const consultRef = useRef<VetConsultation | null>(null);
+  consultRef.current = consult;
   const [messages, setMessages] = useState<UiMsg[]>([]);
   const [draft, setDraft] = useState('');
   const [loading, setLoading] = useState(true);
@@ -520,27 +522,55 @@ export function VetChatPage() {
     if (!consult || (consult.status !== 'active' && consult.status !== 'requested')) {
       return;
     }
-    const timer = window.setInterval(() => {
-      if (consult.status === 'active' && !ended) {
-        void syncMessages();
+    // Live socket covers active threads — avoid interval setState that looks like a refresh.
+    if (wsConnected && consult.status === 'active') {
+      return;
+    }
+
+    let cancelled = false;
+    const consultIdLocal = consult.id;
+    const statusLocal = consult.status;
+
+    async function tick() {
+      if (cancelled || document.visibilityState === 'hidden') return;
+      try {
+        if (statusLocal === 'active' && !ended) {
+          await syncMessages();
+        }
+        const next = await loadConsult();
+        if (cancelled || !next || next.id !== consultIdLocal) return;
+
+        const prev = consultRef.current;
+        const merged =
+          prev?.status === 'active' && next.status === 'requested' && prev.id === next.id
+            ? { ...next, status: 'active' as const }
+            : next;
+
+        if (
+          prev &&
+          prev.status === merged.status &&
+          Boolean(prev.chatSecure) === Boolean(merged.chatSecure) &&
+          Boolean(prev.chatEnded) === Boolean(merged.chatEnded)
+        ) {
+          return;
+        }
+
+        setConsult(merged);
+        applyConsultFlags(merged, { announce: true });
+        void reloadConversations({ soft: true });
+      } catch {
+        /* ignore soft poll errors */
       }
-      void loadConsult()
-        .then((next) => {
-          if (!next) return;
-          setConsult((prev) => {
-            if (prev?.status === 'active' && next.status === 'requested' && prev.id === next.id) {
-              return { ...next, status: 'active' };
-            }
-            return next;
-          });
-          if (next.status === 'active' || next.chatEnded) {
-            applyConsultFlags(next, { announce: true });
-          }
-        })
-        .catch(() => undefined);
-      void reloadConversations({ soft: true });
-    }, wsConnected ? FALLBACK_POLL_MS : MESSAGE_FALLBACK_POLL_MS);
-    return () => window.clearInterval(timer);
+    }
+
+    const timer = window.setInterval(
+      () => void tick(),
+      wsConnected ? FALLBACK_POLL_MS : MESSAGE_FALLBACK_POLL_MS,
+    );
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
   }, [
     consult?.status,
     consult?.id,

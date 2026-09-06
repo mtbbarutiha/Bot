@@ -581,7 +581,8 @@ export function ChatPage() {
     onEvent: onChatSocket,
   });
 
-  // Soft fallback poll when WebSocket is down (avoids constant list flicker).
+  // Soft inbox refresh when WebSocket is unavailable (CDN often blocks WS).
+  // Vet inbox on /chats uses the same path — keep soft-only after first paint.
   useLiveAjaxPoll(
     () => {
       void reloadConversations({ soft: true });
