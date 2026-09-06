@@ -7,6 +7,7 @@ export {
   COIN_REASON,
   PROFILE_REWARD_SECTIONS,
   PROFILE_SECTION_LABELS_FA,
+  QUICK_VET_COST,
   formatCoinAwardMessage,
 } from '@petdate/shared';
 export type { CoinAward, ProfileRewardSection } from '@petdate/shared';
@@ -19,8 +20,6 @@ export const DAILY_COIN_REWARD = 10;
 export const REFERRAL_BONUS_COINS = 50;
 /** @deprecated استفاده از SIGNUP_BONUS */
 export const WELCOME_COINS = 20;
-/** هزینه اتصال سریع به دامپزشک آنلاین */
-export const QUICK_VET_COST = 1;
 
 export type CoinPackage = {
   id: string;

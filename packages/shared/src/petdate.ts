@@ -308,6 +308,7 @@ export interface VetConsultation {
   /** غنی‌سازی در API */
   patientName?: string;
   patientCity?: string;
+  vetName?: string;
   petName?: string;
   petSpecies?: string;
   petBreed?: string;

@@ -3818,3 +3818,85 @@ button.chip.is-on {
 .pepito-app-layout:has(.chat-page) {
   max-width: min(1280px, 100%);
 }
+
+/* —— Quick vet consult (bot parity) —— */
+.pepito-vet-consult {
+  padding: 1.75rem 1.35rem 2.5rem;
+  max-width: 720px;
+  margin: 0 auto;
+}
+.pepito-vet-consult-head {
+  margin-bottom: 1.25rem;
+}
+.pepito-vet-consult-head h1 {
+  font-family: var(--pepito-font-display, inherit);
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  margin: 0.2rem 0 0.45rem;
+  color: var(--pepito-dark, #1f2430);
+}
+.pepito-vet-consult-panel {
+  display: grid;
+  gap: 1rem;
+  padding: 1.2rem 1.1rem 1.35rem;
+  border-radius: 18px;
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(21, 204, 160, 0.12), transparent 55%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(244, 244, 247, 0.88));
+  border: 1px solid rgba(31, 36, 48, 0.08);
+}
+.pepito-vet-consult-cost {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.35rem 0.75rem;
+  align-items: center;
+  color: var(--pepito-dark, #1f2430);
+}
+.pepito-vet-consult-cost svg {
+  color: var(--pepito-mint, #15cca0);
+}
+.pepito-vet-consult-cost strong {
+  display: block;
+  font-size: 0.95rem;
+}
+.pepito-vet-consult-cost span {
+  display: block;
+  color: var(--pepito-muted, #757086);
+  font-size: 0.9rem;
+}
+.pepito-vet-consult-cost small {
+  grid-column: 2;
+  color: var(--pepito-muted, #757086);
+  font-size: 0.82rem;
+}
+.pepito-vet-consult-panel .pepito-btn {
+  width: 100%;
+  justify-content: center;
+}
+.pepito-vet-consult-hint,
+.pepito-vet-consult-status,
+.pepito-vet-consult-wait,
+.pepito-vet-consult-connected {
+  margin: 0;
+  color: #435366;
+  font-size: 0.92rem;
+  line-height: 1.7;
+}
+.pepito-vet-consult-status p,
+.pepito-vet-consult-wait p,
+.pepito-vet-consult-connected p {
+  margin: 0 0 0.45rem;
+}
+.pepito-vet-consult-wait,
+.pepito-vet-consult-connected {
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(31, 36, 48, 0.08);
+}
+.pepito-vet-consult-bot {
+  margin-top: -0.25rem;
+}
+
+@media (max-width: 768px) {
+  .pepito-vet-consult {
+    padding: 1.25rem 1rem 6.5rem;
+  }
+}

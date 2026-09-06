@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import fs from 'fs';
-import type { VetConsultStatus } from '@petdate/shared';
+import { QUICK_VET_COST, type VetConsultStatus } from '@petdate/shared';
 import { dbService } from '../db';
 import { createPrescriptionWithDelivery } from '../services/prescription';
 import {
@@ -8,6 +8,8 @@ import {
   prescriptionWebPath,
   renderPrescriptionHtml,
 } from '../services/prescription-html';
+import { notifyVetQuickConsultTelegram } from '../services/telegram-vet-consult-notify';
+import { getUserFromBearer } from '../services/web-otp';
 
 const VALID_STATUSES: VetConsultStatus[] = ['requested', 'active', 'completed', 'cancelled'];
 
@@ -15,10 +17,16 @@ export const consultationsRouter = Router();
 
 consultationsRouter.get('/', (req, res) => {
   const vetUserId = req.query.vetUserId ? Number(req.query.vetUserId) : undefined;
+  const patientUserId = req.query.patientUserId
+    ? Number(req.query.patientUserId)
+    : undefined;
   const status = req.query.status as VetConsultStatus | undefined;
 
-  if (!vetUserId || Number.isNaN(vetUserId)) {
-    res.status(400).json({ error: 'vetUserId الزامی است' });
+  if (
+    (vetUserId == null || Number.isNaN(vetUserId)) &&
+    (patientUserId == null || Number.isNaN(patientUserId))
+  ) {
+    res.status(400).json({ error: 'vetUserId یا patientUserId الزامی است' });
     return;
   }
   if (status && !VALID_STATUSES.includes(status)) {
@@ -26,7 +34,15 @@ consultationsRouter.get('/', (req, res) => {
     return;
   }
 
-  const consultations = dbService.listVetConsultations({ vetUserId, status });
+  const consultations = dbService.listVetConsultations({
+    vetUserId:
+      vetUserId != null && !Number.isNaN(vetUserId) ? vetUserId : undefined,
+    patientUserId:
+      patientUserId != null && !Number.isNaN(patientUserId)
+        ? patientUserId
+        : undefined,
+    status,
+  });
   res.json(consultations);
 });
 
@@ -45,6 +61,124 @@ consultationsRouter.get('/previous-vets', (req, res) => {
     return;
   }
   res.json(dbService.listPreviousVetsForPatient(patientUserId));
+});
+
+/**
+ * اتصال سریع وب — همان سازوکار ربات:
+ * پت اجباری → بررسی سکه → دامپزشک آنلاین → کسر سکه → ایجاد مشاوره + نوتیف تلگرام
+ */
+consultationsRouter.post('/quick-connect', async (req, res) => {
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  const bodyPatientId =
+    req.body?.patientUserId != null ? Number(req.body.patientUserId) : undefined;
+  const patientUserId = session?.user?.id ?? bodyPatientId;
+
+  if (!patientUserId || !Number.isFinite(patientUserId)) {
+    res.status(400).json({ error: 'patientUserId الزامی است', reason: 'missing_patient' });
+    return;
+  }
+  if (session?.user?.id && session.user.id !== patientUserId) {
+    res.status(403).json({ error: 'اجازه دسترسی ندارید', reason: 'forbidden' });
+    return;
+  }
+
+  const patient = dbService.getUserById(patientUserId);
+  if (!patient) {
+    res.status(404).json({ error: 'بیمار پیدا نشد', reason: 'missing_patient' });
+    return;
+  }
+
+  const pets = dbService.listPets({ ownerId: patient.id });
+  if (!pets.length) {
+    res.status(400).json({
+      error: 'برای درخواست ارتباط با پزشک، اول باید حداقل یک پت ثبت کنی.',
+      reason: 'no_pet',
+    });
+    return;
+  }
+
+  const balance = patient.coins ?? 0;
+  if (balance < QUICK_VET_COST) {
+    res.status(400).json({
+      error: `برای اتصال سریع حداقل ${QUICK_VET_COST} سکه لازم داری. موجودی: ${balance}`,
+      reason: 'insufficient_coins',
+      balance,
+      cost: QUICK_VET_COST,
+    });
+    return;
+  }
+
+  let vets = dbService.listVerifiedVets().filter((v) => v.id !== patient.id && v.telegramId);
+  if (!vets.length) {
+    res.status(409).json({
+      error: 'فعلاً دامپزشک آنلاینی برای اتصال پیدا نشد. کمی بعد دوباره امتحان کن.',
+      reason: 'no_online_vets',
+    });
+    return;
+  }
+
+  const debited = dbService.debitCoins(patient.id, QUICK_VET_COST);
+  if (!debited) {
+    res.status(400).json({
+      error: 'سکه کافی نیست',
+      reason: 'insufficient_coins',
+      balance: patient.coins ?? 0,
+      cost: QUICK_VET_COST,
+    });
+    return;
+  }
+
+  const consultations = [];
+  let sent = 0;
+  for (const vet of vets) {
+    try {
+      const consult = dbService.createVetConsultation({
+        vetUserId: vet.id,
+        patientUserId: patient.id,
+        notes: 'اتصال سریع آنلاین',
+      });
+      consultations.push(consult);
+      if (vet.telegramId) {
+        const ok = await notifyVetQuickConsultTelegram({
+          consult,
+          vetTelegramId: vet.telegramId,
+          patient,
+        });
+        if (ok) sent += 1;
+      }
+    } catch (err) {
+      console.warn('create consult for vet failed:', vet.id, err);
+    }
+  }
+
+  if (sent === 0) {
+    dbService.creditCoins(patient.id, QUICK_VET_COST);
+    const refunded = dbService.getUserById(patient.id);
+    res.status(502).json({
+      error: 'ارسال به پزشک‌ها ناموفق بود؛ سکه‌ات برگشت داده شد.',
+      reason: 'notify_failed',
+      refunded: true,
+      cost: QUICK_VET_COST,
+      coins: refunded?.coins ?? 0,
+      consultations,
+    });
+    return;
+  }
+
+  const updatedPatient = dbService.getUserById(patient.id);
+  res.status(201).json({
+    ok: true,
+    sent,
+    cost: QUICK_VET_COST,
+    coins: updatedPatient?.coins ?? 0,
+    consultations,
+    message: [
+      'درخواستت برای پزشک‌های آنلاین ارسال شد.',
+      `پزشک‌های مطلع‌شده: ${sent}`,
+      `سکه کسر شده: ${QUICK_VET_COST}`,
+      'به‌زودی یکی از دامپزشک‌ها باهات هماهنگ می‌کنه.',
+    ].join('\n'),
+  });
 });
 
 consultationsRouter.get('/:id', (req, res) => {

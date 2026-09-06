@@ -1230,6 +1230,7 @@ function mapVetConsultation(row: Record<string, unknown>): VetConsultation {
     createdAt: row.created_at as string,
     patientName: (row.patient_name as string | undefined) ?? undefined,
     patientCity: (row.patient_city as string | undefined) ?? undefined,
+    vetName: (row.vet_name as string | undefined) ?? undefined,
     petName: (row.pet_name as string | undefined) ?? undefined,
     petSpecies: (row.pet_species as string | undefined) ?? undefined,
     petBreed: (row.pet_breed as string | undefined) ?? undefined,
@@ -2883,22 +2884,36 @@ export const dbService = {
   },
 
   listVetConsultations(filters: {
-    vetUserId: number;
+    vetUserId?: number;
+    patientUserId?: number;
     status?: VetConsultStatus;
   }): VetConsultation[] {
+    if (filters.vetUserId == null && filters.patientUserId == null) {
+      return [];
+    }
     let sql = `
       SELECT vc.*,
              patient.name AS patient_name,
              patient.city AS patient_city,
+             vet.name AS vet_name,
              pets.name AS pet_name,
              pets.species AS pet_species,
              pets.breed AS pet_breed
       FROM vet_consultations vc
       LEFT JOIN users patient ON patient.id = vc.patient_user_id
+      LEFT JOIN users vet ON vet.id = vc.vet_user_id
       LEFT JOIN pets ON pets.id = vc.pet_id
-      WHERE vc.vet_user_id = ?
+      WHERE 1 = 1
     `;
-    const params: unknown[] = [filters.vetUserId];
+    const params: unknown[] = [];
+    if (filters.vetUserId != null) {
+      sql += ' AND vc.vet_user_id = ?';
+      params.push(filters.vetUserId);
+    }
+    if (filters.patientUserId != null) {
+      sql += ' AND vc.patient_user_id = ?';
+      params.push(filters.patientUserId);
+    }
     if (filters.status) {
       sql += ' AND vc.status = ?';
       params.push(filters.status);
@@ -2948,11 +2963,13 @@ export const dbService = {
         `SELECT vc.*,
                 pu.name AS patient_name,
                 pu.city AS patient_city,
+                vu.name AS vet_name,
                 p.name AS pet_name,
                 p.species AS pet_species,
                 p.breed AS pet_breed
          FROM vet_consultations vc
          LEFT JOIN users pu ON pu.id = vc.patient_user_id
+         LEFT JOIN users vu ON vu.id = vc.vet_user_id
          LEFT JOIN pets p ON p.id = vc.pet_id
          WHERE vc.id = ?`
       )

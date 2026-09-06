@@ -1,4 +1,14 @@
-import type { OnboardingStatus, PetProfile, PlaydateChatMessage, PlaydateRequest, PlaydateStatus, User, UserRole } from '@petdate/shared';
+import type {
+  OnboardingStatus,
+  PetProfile,
+  PlaydateChatMessage,
+  PlaydateRequest,
+  PlaydateStatus,
+  User,
+  UserRole,
+  VetConsultation,
+  VetConsultStatus,
+} from '@petdate/shared';
 
 /** Empty = same-origin (Vite proxies /api → API). Override with VITE_API_URL if needed. */
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
@@ -373,4 +383,47 @@ export async function patchWebPrimaryRole(token: string, role: UserRole) {
     headers: { Authorization: `Bearer ${token}` },
     body: JSON.stringify({ role, primaryOnly: true }),
   });
+}
+
+export type QuickVetConnectResult = {
+  ok: true;
+  sent: number;
+  cost: number;
+  coins: number;
+  consultations: VetConsultation[];
+  message: string;
+};
+
+export async function quickVetConnect(
+  patientUserId: number,
+  token?: string | null
+): Promise<QuickVetConnectResult> {
+  return request<QuickVetConnectResult>('/api/consultations/quick-connect', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: JSON.stringify({ patientUserId }),
+  });
+}
+
+export async function listVetConsultations(filters: {
+  patientUserId?: number;
+  vetUserId?: number;
+  status?: VetConsultStatus;
+}): Promise<VetConsultation[]> {
+  const params = new URLSearchParams();
+  if (filters.patientUserId) params.set('patientUserId', String(filters.patientUserId));
+  if (filters.vetUserId) params.set('vetUserId', String(filters.vetUserId));
+  if (filters.status) params.set('status', filters.status);
+  const qs = params.toString();
+  return request<VetConsultation[]>(`/api/consultations${qs ? `?${qs}` : ''}`);
+}
+
+export function telegramBotDeepLink(path = ''): string {
+  const username =
+    (import.meta.env.VITE_TELEGRAM_BOT_USERNAME as string | undefined)?.replace(/^@/, '') ||
+    'Petdatebot';
+  const clean = path.replace(/^\//, '');
+  return clean
+    ? `https://t.me/${username}?start=${encodeURIComponent(clean)}`
+    : `https://t.me/${username}`;
 }

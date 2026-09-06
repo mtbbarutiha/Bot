@@ -1,5 +1,8 @@
 /** اقتصاد سکه همبازی — ثابت‌های مشترک API و بات */
 
+/** هزینه اتصال سریع به دامپزشک آنلاین (سکه ربات) — هم‌تراز ربات */
+export const QUICK_VET_COST = 1;
+
 /** موجودی کیف پول چندارزی کاربر */
 export type WalletCurrency = 'ton' | 'stars' | 'coins' | 'toman';
 
