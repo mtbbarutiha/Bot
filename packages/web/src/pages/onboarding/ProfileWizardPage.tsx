@@ -1,6 +1,7 @@
 import { FormEvent, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
+  BRAND,
   IRAN_PROVINCES,
   PROFILE_INTEREST_OPTIONS,
   USER_GENDER_LABELS,
@@ -22,6 +23,17 @@ const STEPS = [
   'bio',
   'interests',
 ] as const;
+
+const STEP_META: Record<(typeof STEPS)[number], { title: string; lead: string }> = {
+  name: { title: 'نام نمایشی', lead: 'همان نامی که در پروفایل و گفتگوها دیده می‌شود.' },
+  age: { title: 'سن', lead: 'برای تجربه مناسب‌تر — فقط عدد.' },
+  gender: { title: 'جنسیت', lead: 'یکی را انتخاب کن.' },
+  country: { title: 'کشور', lead: 'ایران یا سایر.' },
+  province: { title: 'استان', lead: 'استان محل زندگی‌ات.' },
+  city: { title: 'شهر', lead: 'شهر یا محله‌ای که بیشتر آنجا هستی.' },
+  bio: { title: 'درباره من', lead: 'اختیاری — چند خط کوتاه کافی است.' },
+  interests: { title: 'علایق', lead: 'تا ۶ مورد — اختیاری.' },
+};
 
 /** فیلدهایی که در ربات با «⏭ رد کردن» قابل عبورند */
 const FIELD_SKIPPABLE = new Set<(typeof STEPS)[number]>(['bio', 'interests']);
@@ -148,165 +160,170 @@ export function ProfileWizardPage() {
     setStepIdx(Math.max(0, prev));
   }
 
+  const meta = STEP_META[step];
+
   return (
     <AuthShell
       wide
-      bannerTitle="ساخت پروفایل"
-      bannerLead="همان مراحل ربات — داخل همان فضای برند Pepito"
+      bannerTitle={`${BRAND.displayName} — پروفایل`}
+      bannerLead="همان حساب وب و تلگرام — تکمیل پروفایل در فضای برند Pepito"
       bannerImage="/pepito/uploads/5.jpg"
+      backLabel="بازگشت به خانه"
+      backTo="/home"
     >
       <p className="pepito-auth-kicker">پروفایل</p>
-      <h1>اطلاعات تو</h1>
+      <h1>{meta.title}</h1>
       <p className="auth-lead">
-        همان مراحل ربات — مرحله {stepIdx + 1} از {STEPS.length}. اگر الان وقت نداری می‌تونی فعلاً رد کنی.
+        {meta.lead} مرحله {stepIdx + 1} از {STEPS.length}.
       </p>
-      <div className="wizard-progress">
+      <div className="wizard-progress" aria-hidden>
         <span style={{ width: `${((stepIdx + 1) / STEPS.length) * 100}%` }} />
       </div>
 
-      <form className="auth-form" onSubmit={goNext}>
-          {step === 'name' && (
-            <label>
-              نام نمایشی
-              <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
-            </label>
-          )}
-          {step === 'age' && (
-            <label>
-              سن
-              <input
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                inputMode="numeric"
-                required
-                autoFocus
-              />
-            </label>
-          )}
-          {step === 'gender' && (
-            <div className="chip-grid">
-              {(['male', 'female'] as UserGender[]).map((g) => (
-                <button
-                  key={g}
-                  type="button"
-                  className={`chip${gender === g ? ' is-on' : ''}`}
-                  onClick={() => setGender(g)}
-                >
-                  {USER_GENDER_LABELS[g]}
-                </button>
+      <form className="auth-form pepito-wizard-form" onSubmit={goNext}>
+        {step === 'name' && (
+          <label>
+            نام نمایشی
+            <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
+          </label>
+        )}
+        {step === 'age' && (
+          <label>
+            سن
+            <input
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              inputMode="numeric"
+              required
+              autoFocus
+            />
+          </label>
+        )}
+        {step === 'gender' && (
+          <div className="pepito-choice-row" role="group" aria-label="جنسیت">
+            {(['male', 'female'] as UserGender[]).map((g) => (
+              <button
+                key={g}
+                type="button"
+                className={`pepito-choice${gender === g ? ' is-on' : ''}`}
+                onClick={() => setGender(g)}
+              >
+                {USER_GENDER_LABELS[g]}
+              </button>
+            ))}
+          </div>
+        )}
+        {step === 'country' && (
+          <div className="pepito-choice-row" role="group" aria-label="کشور">
+            {['ایران', 'سایر'].map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`pepito-choice${country === c ? ' is-on' : ''}`}
+                onClick={() => {
+                  setCountry(c);
+                  if (c !== 'ایران') setProvince('');
+                }}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+        )}
+        {step === 'province' && (
+          <label>
+            استان
+            <select value={province} onChange={(e) => setProvince(e.target.value)} required>
+              <option value="">انتخاب استان</option>
+              {IRAN_PROVINCES.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
               ))}
-            </div>
-          )}
-          {step === 'country' && (
-            <div className="chip-grid">
-              {['ایران', 'سایر'].map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={`chip${country === c ? ' is-on' : ''}`}
-                  onClick={() => {
-                    setCountry(c);
-                    if (c !== 'ایران') setProvince('');
-                  }}
-                >
-                  {c}
-                </button>
-              ))}
-            </div>
-          )}
-          {step === 'province' && (
-            <label>
-              استان
-              <select value={province} onChange={(e) => setProvince(e.target.value)} required>
-                <option value="">انتخاب استان</option>
-                {IRAN_PROVINCES.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
+            </select>
+          </label>
+        )}
+        {step === 'city' && (
+          <label>
+            شهر
+            {cities.length > 0 ? (
+              <select value={city} onChange={(e) => setCity(e.target.value)} required>
+                <option value="">انتخاب شهر</option>
+                {cities.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
                   </option>
                 ))}
               </select>
-            </label>
-          )}
-          {step === 'city' && (
-            <label>
-              شهر
-              {cities.length > 0 ? (
-                <select value={city} onChange={(e) => setCity(e.target.value)} required>
-                  <option value="">انتخاب شهر</option>
-                  {cities.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input value={city} onChange={(e) => setCity(e.target.value)} required />
-              )}
-            </label>
-          )}
-          {step === 'bio' && (
-            <label>
-              درباره من (اختیاری)
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={4}
-                placeholder="کمی از خودت و پت‌ات بگو…"
-              />
-            </label>
-          )}
-          {step === 'interests' && (
-            <div className="chip-grid">
-              {PROFILE_INTEREST_OPTIONS.map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  className={`chip${interests.includes(item) ? ' is-on' : ''}`}
-                  onClick={() => toggleInterest(item)}
-                >
-                  {item}
-                </button>
-              ))}
-            </div>
-          )}
-
-          {error && <p className="auth-error">{error}</p>}
-
-          <div className="wizard-nav">
-            {stepIdx > 0 && (
-              <button type="button" className="auth-link-btn" onClick={back}>
-                قبلی
-              </button>
+            ) : (
+              <input value={city} onChange={(e) => setCity(e.target.value)} required autoFocus />
             )}
-            <button type="submit" className="pepito-btn button-1 auth-submit" disabled={busy}>
-              {stepIdx >= STEPS.length - 1
-                ? busy
-                  ? 'در حال ذخیره…'
-                  : 'ثبت پروفایل'
-                : 'ادامه'}
-            </button>
+          </label>
+        )}
+        {step === 'bio' && (
+          <label>
+            درباره من (اختیاری)
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              rows={4}
+              placeholder="کمی از خودت و پت‌ات بگو…"
+              autoFocus
+            />
+          </label>
+        )}
+        {step === 'interests' && (
+          <div className="pepito-choice-wrap">
+            {PROFILE_INTEREST_OPTIONS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                className={`pepito-choice pepito-choice--sm${interests.includes(item) ? ' is-on' : ''}`}
+                onClick={() => toggleInterest(item)}
+              >
+                {item}
+              </button>
+            ))}
           </div>
+        )}
 
-          {FIELD_SKIPPABLE.has(step) && (
-            <button
-              type="button"
-              className="pepito-btn pepito-btn--ghost auth-skip-btn"
-              onClick={skipCurrentField}
-              disabled={busy}
-            >
-              ⏭ رد کردن
+        {error && <p className="auth-error">{error}</p>}
+
+        <div className="wizard-nav">
+          {stepIdx > 0 && (
+            <button type="button" className="auth-link-btn" onClick={back}>
+              قبلی
             </button>
           )}
+          <button type="submit" className="pepito-btn button-1 auth-submit" disabled={busy}>
+            {stepIdx >= STEPS.length - 1
+              ? busy
+                ? 'در حال ذخیره…'
+                : 'ثبت پروفایل'
+              : 'ادامه'}
+          </button>
+        </div>
 
+        {FIELD_SKIPPABLE.has(step) && (
           <button
             type="button"
             className="pepito-btn pepito-btn--ghost auth-skip-btn"
-            onClick={() => void skipWizardLater()}
+            onClick={skipCurrentField}
             disabled={busy}
           >
-            ⏭ فعلاً رد کن
+            رد کردن این مرحله
           </button>
-        </form>
+        )}
+
+        <button
+          type="button"
+          className="pepito-btn pepito-btn--ghost auth-skip-btn"
+          onClick={() => void skipWizardLater()}
+          disabled={busy}
+        >
+          فعلاً رد کن
+        </button>
+      </form>
     </AuthShell>
   );
 }

@@ -2412,31 +2412,427 @@ button.chip.is-on {
   padding-bottom: 0.5rem;
 }
 
+/* ── Profile view + edit (Pepito continuity with home) ── */
 .pepito-profile {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1.75rem;
+  background: transparent !important;
 }
-.pepito-profile-hero.profile-hero {
-  background:
-    linear-gradient(145deg, rgba(25, 6, 61, 0.78) 0%, rgba(92, 77, 145, 0.7) 52%, rgba(219, 137, 202, 0.42) 120%),
-    url('/pepito/uploads/2.jpg') center / cover no-repeat !important;
-  border-radius: 24px;
+.pepito-profile-hero {
+  position: relative;
+  min-height: clamp(280px, 44vh, 440px);
+  border-radius: 28px;
   overflow: hidden;
-  animation: pepito-flow-banner-in 0.7s ease both;
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+  animation: pepito-flow-banner-in 0.75s ease both;
 }
-.pepito-profile-body {
-  animation: pepito-flow-rise 0.5s ease 0.08s both;
+.pepito-profile-hero-wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(25, 6, 61, 0.82) 0%,
+    rgba(25, 6, 61, 0.48) 44%,
+    rgba(92, 77, 145, 0.2) 76%,
+    transparent 100%
+  );
+  z-index: 0;
+  pointer-events: none;
 }
-.pepito-profile-panel {
-  border-radius: 20px !important;
-  border: 1px solid rgba(92, 77, 145, 0.1) !important;
-  background: rgba(255, 255, 255, 0.88) !important;
+[dir='rtl'] .pepito-profile-hero-wash {
+  background: linear-gradient(
+    255deg,
+    rgba(25, 6, 61, 0.82) 0%,
+    rgba(25, 6, 61, 0.48) 44%,
+    rgba(92, 77, 145, 0.2) 76%,
+    transparent 100%
+  );
 }
-.pepito-profile .profile-wizard-link.pepito-btn {
-  margin-top: 0.85rem;
+.pepito-profile-hero-inner {
+  position: relative;
+  z-index: 1;
   width: 100%;
+  padding: 2rem 1.5rem 1.75rem;
+  color: #fff;
+  animation: pepito-flow-rise 0.65s ease 0.1s both;
+}
+.pepito-profile-kicker {
+  color: rgba(255, 255, 255, 0.92) !important;
+}
+.pepito-profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.35rem 0 1.15rem;
+}
+.pepito-profile-avatar {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 3px solid rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.18);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 12px 28px rgba(25, 6, 61, 0.28);
+}
+.pepito-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pepito-profile-avatar span {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+.pepito-profile-identity-text {
+  min-width: 0;
+}
+.pepito-profile-identity-text h1 {
+  margin: 0 0 0.3rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 3.4vw, 2.15rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+}
+.pepito-profile-loc {
+  margin: 0 0 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+.pepito-profile-roles {
+  margin: 0;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.78);
+  line-height: 1.4;
+}
+.pepito-profile-cta {
+  margin-top: 0.15rem;
+}
+.pepito-profile-cta .pepito-btn {
+  gap: 0.45rem;
+}
+
+.pepito-profile-block {
+  animation: pepito-flow-rise 0.55s ease 0.12s both;
+}
+.pepito-profile-block--quiet {
+  padding-bottom: 0.25rem;
+}
+.pepito-profile-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0.75rem 1rem;
+  margin: 0 0 1.15rem;
+}
+.pepito-profile-meta > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(92, 77, 145, 0.1);
+}
+.pepito-profile-meta dt {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pepito-muted);
+}
+.pepito-profile-meta dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--pepito-dark);
+}
+.pepito-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.pepito-profile-badge.is-ok {
+  background: rgba(21, 204, 160, 0.14);
+  color: #0b7a5e;
+}
+.pepito-profile-badge.is-warn {
+  background: rgba(253, 150, 30, 0.16);
+  color: #9a5a00;
+}
+.pepito-profile-bio {
+  margin: 0 0 0.85rem;
+  font-size: 1.02rem;
+  line-height: 1.7;
+  color: var(--pepito-dark);
+  max-width: 40rem;
+}
+.pepito-profile-bio--empty {
+  color: var(--pepito-muted);
+  font-size: 0.95rem;
+}
+.pepito-profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.pepito-profile-tags li {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: var(--pepito-lilac);
+  color: var(--pepito-base);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+.pepito-profile-pet {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 1rem 1.05rem;
+  border-radius: 18px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(92, 77, 145, 0.1);
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+}
+.pepito-profile-pet:hover {
+  transform: translateY(-3px);
+  border-color: rgba(92, 77, 145, 0.22);
+  background: #fff;
+}
+.pepito-profile-pet strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  color: var(--pepito-dark);
+}
+.pepito-profile-pet span {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.86rem;
+  color: var(--pepito-muted);
+  line-height: 1.4;
+}
+.pepito-profile-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.7rem 0.2rem;
+  border: 0;
+  background: transparent;
+  color: #9b4d88;
+  font: inherit;
+  font-weight: 700;
+  font-family: var(--font-display);
+  cursor: pointer;
+}
+.pepito-profile-logout:hover {
+  color: var(--pepito-base);
+}
+.pepito-profile-logout:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+/* Edit mode */
+.pepito-profile--edit {
+  gap: 1.35rem;
+  max-width: 720px;
+}
+.pepito-profile-edit-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  animation: pepito-flow-rise 0.45s ease both;
+}
+.pepito-profile-edit-head h1 {
+  margin: 0.15rem 0 0.35rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 2.8vw, 1.75rem);
+  color: var(--pepito-dark);
+}
+.pepito-profile-edit-head > div > p:last-child {
+  margin: 0;
+  color: var(--pepito-muted);
+  font-size: 0.95rem;
+}
+.pepito-profile-icon-btn {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid rgba(92, 77, 145, 0.14);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--pepito-dark);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.pepito-profile-icon-btn:hover {
+  background: #fff;
+  border-color: rgba(92, 77, 145, 0.28);
+}
+.pepito-profile-edit-form {
+  animation: pepito-flow-rise 0.5s ease 0.06s both;
+}
+.pepito-profile-edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.1rem;
+}
+.pepito-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+.pepito-field--full {
+  grid-column: 1 / -1;
+}
+.pepito-field > span {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #4a3d78;
+}
+.pepito-field input,
+.pepito-field select,
+.pepito-field textarea,
+.pepito-wizard-form input,
+.pepito-wizard-form select,
+.pepito-wizard-form textarea {
+  width: 100%;
+  border: 1px solid rgba(92, 77, 145, 0.2);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #fff;
+  font: inherit;
+  color: var(--pepito-dark);
+  box-sizing: border-box;
+}
+.pepito-field input:focus,
+.pepito-field select:focus,
+.pepito-field textarea:focus,
+.pepito-wizard-form input:focus,
+.pepito-wizard-form select:focus,
+.pepito-wizard-form textarea:focus {
+  outline: none;
+  border-color: var(--pepito-base);
+  box-shadow: 0 0 0 3px rgba(92, 77, 145, 0.12);
+}
+.pepito-field textarea {
+  resize: vertical;
+  min-height: 110px;
+  line-height: 1.6;
+}
+.pepito-choice-row,
+.pepito-choice-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pepito-choice {
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  min-height: 44px;
+  padding: 0.55rem 1.1rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(92, 77, 145, 0.22);
+  background: #fff;
+  color: var(--pepito-dark);
+  font: inherit;
+  font-weight: 700;
+  font-family: var(--font-display);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+.pepito-choice--sm {
+  min-height: 38px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.88rem;
+}
+.pepito-choice:hover {
+  border-color: rgba(92, 77, 145, 0.4);
+  transform: translateY(-1px);
+}
+.pepito-choice.is-on {
+  background: var(--pepito-base);
+  border-color: var(--pepito-base);
+  color: #fff;
+}
+.pepito-profile-error {
+  margin: 0.85rem 0 0;
+  color: #b42318;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+.pepito-profile-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1.35rem;
+  padding-top: 0.25rem;
+  position: sticky;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 5;
+}
+@media (min-width: 860px) {
+  .pepito-profile-edit-actions {
+    bottom: 1rem;
+  }
+}
+.pepito-profile-edit-actions .pepito-btn--ghost {
+  background: transparent !important;
+  color: var(--pepito-base) !important;
+  border: 1.5px solid rgba(92, 77, 145, 0.28) !important;
+}
+.pepito-profile-edit-actions .pepito-btn--ghost:hover {
+  background: var(--pepito-lilac) !important;
+  color: var(--pepito-dark) !important;
+}
+
+@media (max-width: 640px) {
+  .pepito-profile-edit-grid {
+    grid-template-columns: 1fr;
+  }
+  .pepito-profile-identity {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pepito-profile-avatar {
+    width: 76px;
+    height: 76px;
+  }
+  .pepito-profile-edit-actions {
+    flex-direction: column;
+  }
+  .pepito-profile-edit-actions .pepito-btn {
+    width: 100%;
+  }
 }
 
 @keyframes pepito-flow-rise {
