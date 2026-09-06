@@ -49,9 +49,11 @@ import type { PlaydateChatMediaKind, PlaydateChatMessage } from '@petdate/shared
 import { playdateToMatchRequest } from '../lib/playdateMap';
 import {
   acceptInboxItem,
+  inboxScopeForUser,
   loadInboxConversations,
   rejectInboxItem,
   type InboxConversation,
+  type InboxScope,
 } from '../lib/inboxConversations';
 import {
   MATCH_STATUS_LABELS,
@@ -197,6 +199,7 @@ function ConversationListPane({
   conversations,
   loading,
   error,
+  scope,
   activeKey,
   busyKey,
   onSelect,
@@ -207,6 +210,7 @@ function ConversationListPane({
   conversations: InboxConversation[];
   loading: boolean;
   error: string | null;
+  scope: InboxScope;
   activeKey?: string;
   busyKey?: string | null;
   onSelect: (item: InboxConversation) => void;
@@ -217,12 +221,16 @@ function ConversationListPane({
   return (
     <aside className="tg-chat-list" aria-label="فهرست گفتگوها">
       <header className="tg-chat-list-head">
-        <Link to="/explore#requests" className="tg-icon-btn" aria-label="بازگشت به همبازی">
+        <Link
+          to={scope === 'vet' ? '/vet-consult' : '/explore#requests'}
+          className="tg-icon-btn"
+          aria-label={scope === 'vet' ? 'بازگشت به پنل پزشک' : 'بازگشت به همبازی'}
+        >
           <ArrowRight size={18} />
         </Link>
         <div>
           <p className="tg-chat-list-kicker">پت‌دیت</p>
-          <h1>گفتگوها</h1>
+          <h1>{scope === 'vet' ? 'گفتگوهای پزشک' : 'گفتگوها'}</h1>
         </div>
         <button
           type="button"
@@ -248,9 +256,16 @@ function ConversationListPane({
           <div className="tg-chat-list-empty">
             <BrandMark iconSize={28} />
             <h2>هنوز گفتگویی نیست</h2>
-            <p>درخواست‌های همبازی، مشاوره و چت‌های پذیرفته‌شده اینجا می‌آیند.</p>
-            <Link to="/explore#requests" className="tg-chat-link-btn">
-              رفتن به همبازی
+            <p>
+              {scope === 'vet'
+                ? 'درخواست‌ها و چت‌های مشاوره دامپزشکی این نقش اینجا می‌آیند.'
+                : 'درخواست‌های همبازی و مشاوره‌های شما به‌عنوان صاحب پت اینجا می‌آیند.'}
+            </p>
+            <Link
+              to={scope === 'vet' ? '/vet-consult' : '/explore#requests'}
+              className="tg-chat-link-btn"
+            >
+              {scope === 'vet' ? 'رفتن به پنل پزشک' : 'رفتن به همبازی'}
             </Link>
           </div>
         ) : (
@@ -345,6 +360,7 @@ export function ChatPage() {
   const desktop = useIsDesktop();
   const { user: authUser, token } = useAuthStore();
   const myUserId = authUser?.id;
+  const inboxScope = inboxScopeForUser(authUser);
   const selectedId = Number(matchId);
   const hasThread = Number.isFinite(selectedId) && selectedId > 0;
 
@@ -412,6 +428,13 @@ export function ChatPage() {
   useEffect(() => {
     void reloadConversations();
   }, [reloadConversations]);
+
+  // Playmate threads belong to owner scope — leave them when acting as vet.
+  useEffect(() => {
+    if (inboxScope === 'vet' && hasThread) {
+      navigate('/chats', { replace: true });
+    }
+  }, [inboxScope, hasThread, navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1038,6 +1061,7 @@ export function ChatPage() {
           conversations={conversations}
           loading={listLoading}
           error={listError}
+          scope={inboxScope}
           activeKey={hasThread ? `playmate:${selectedId}` : undefined}
           busyKey={listActionKey}
           onSelect={onSelectConversation}

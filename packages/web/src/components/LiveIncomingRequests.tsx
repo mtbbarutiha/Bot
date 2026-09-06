@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Stethoscope, X } from 'lucide-react';
-import { userHasRole, type VetConsultation } from '@petdate/shared';
+import { primaryRole, type VetConsultation } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
 import {
   acceptVetConsultation,
@@ -10,6 +10,7 @@ import {
   rejectVetConsultation,
   updatePlaydateStatus,
 } from '../lib/api';
+import { inboxScopeForRole } from '../lib/inboxConversations';
 import { isIncomingPlaydate } from '../lib/playdateMap';
 
 const POLL_MS = 6000;
@@ -19,15 +20,18 @@ type IncomingItem =
   | { kind: 'vet'; id: number; title: string; subtitle: string; photo?: string; href: string };
 
 /**
- * Global poller: new incoming playmate + vet requests surface as a modal
- * (bot ↔ web parity) with accept/reject, without requiring a page refresh.
+ * Role-scoped poller: only surfaces requests for the active primary role.
+ * Vet role → vet consultations; other roles → playmate requests.
  */
 export function LiveIncomingRequests() {
   const navigate = useNavigate();
   const { user, isLoggedIn, token } = useAuthStore();
   const myUserId = user?.id;
+  const activeRole = primaryRole(user?.roles, user?.role);
+  const scope = inboxScopeForRole(activeRole);
   const seenRef = useRef<Set<string>>(new Set());
   const seededRef = useRef(false);
+  const scopeRef = useRef(scope);
   const [queue, setQueue] = useState<IncomingItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,29 +43,39 @@ export function LiveIncomingRequests() {
     setError(null);
   }, []);
 
+  // Role switch: drop the other role's queue and re-seed.
+  useEffect(() => {
+    if (scopeRef.current === scope) return;
+    scopeRef.current = scope;
+    seededRef.current = false;
+    seenRef.current = new Set();
+    setQueue([]);
+    setError(null);
+  }, [scope]);
+
   const poll = useCallback(async () => {
     if (!isLoggedIn || !myUserId) return;
     try {
       const items: IncomingItem[] = [];
 
-      const playdates = await listPlaydateRequests({ userId: myUserId, status: 'pending' });
-      for (const r of playdates) {
-        if (r.status !== 'pending' || !isIncomingPlaydate(r, myUserId)) continue;
-        const fromName = r.fromPet?.name ?? 'یک پت';
-        const toName = r.toPet?.name;
-        items.push({
-          kind: 'playmate',
-          id: r.id,
-          title: toName ? `${fromName} → ${toName}` : fromName,
-          subtitle: r.message?.trim()
-            ? `درخواست همبازی — «${r.message.trim()}»`
-            : 'درخواست همبازی تازه رسید.',
-          photo: r.fromPet?.imageUrl,
-          href: `/chats/${r.id}`,
-        });
-      }
-
-      if (userHasRole(user, 'vet')) {
+      if (scope === 'owner') {
+        const playdates = await listPlaydateRequests({ userId: myUserId, status: 'pending' });
+        for (const r of playdates) {
+          if (r.status !== 'pending' || !isIncomingPlaydate(r, myUserId)) continue;
+          const fromName = r.fromPet?.name ?? 'یک پت';
+          const toName = r.toPet?.name;
+          items.push({
+            kind: 'playmate',
+            id: r.id,
+            title: toName ? `${fromName} → ${toName}` : fromName,
+            subtitle: r.message?.trim()
+              ? `درخواست همبازی — «${r.message.trim()}»`
+              : 'درخواست همبازی تازه رسید.',
+            photo: r.fromPet?.imageUrl,
+            href: `/chats/${r.id}`,
+          });
+        }
+      } else {
         const consults = await listVetConsultations({
           vetUserId: myUserId,
           status: 'requested',
@@ -98,9 +112,9 @@ export function LiveIncomingRequests() {
         return add.length ? [...prev, ...add] : prev;
       });
     } catch {
-      /* silent — avoid spamming UI on transient network blips */
+      /* silent */
     }
-  }, [isLoggedIn, myUserId, user]);
+  }, [isLoggedIn, myUserId, scope]);
 
   useEffect(() => {
     if (!isLoggedIn || !myUserId) {
@@ -162,7 +176,7 @@ export function LiveIncomingRequests() {
 
   function onViewAll() {
     dismissCurrent();
-    navigate(current?.kind === 'vet' ? '/vet-consult' : '/chats');
+    navigate(scope === 'vet' ? '/vet-consult' : '/chats');
   }
 
   if (!current) return null;

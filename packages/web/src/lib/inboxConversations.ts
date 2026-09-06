@@ -1,5 +1,5 @@
-import type { VetConsultation } from '@petdate/shared';
-import { userHasRole, type User } from '@petdate/shared';
+import type { User, UserRole, VetConsultation } from '@petdate/shared';
+import { primaryRole, userHasRole } from '@petdate/shared';
 import type { MatchRequest, Pet } from '../types';
 import {
   acceptVetConsultation,
@@ -11,6 +11,9 @@ import {
 import { playdateToMatchRequest } from './playdateMap';
 
 export type InboxKind = 'playmate' | 'vet';
+
+/** Scope of chats tied to the active primary role (no cross-role mixing). */
+export type InboxScope = 'vet' | 'owner';
 
 export type InboxConversation = {
   key: string;
@@ -27,6 +30,14 @@ export type InboxConversation = {
   href: string;
   peerPet?: Pet;
 };
+
+export function inboxScopeForRole(role?: UserRole | null): InboxScope {
+  return role === 'vet' ? 'vet' : 'owner';
+}
+
+export function inboxScopeForUser(user?: User | null): InboxScope {
+  return inboxScopeForRole(primaryRole(user?.roles, user?.role));
+}
 
 function sortInbox(items: InboxConversation[]): InboxConversation[] {
   return [...items].sort((a, b) => {
@@ -68,23 +79,30 @@ export function playmateToInbox(match: MatchRequest): InboxConversation {
   };
 }
 
-export function vetToInbox(c: VetConsultation, myUserId: number): InboxConversation | null {
+export function vetToInbox(
+  c: VetConsultation,
+  myUserId: number,
+  mode: 'as_vet' | 'as_patient',
+): InboxConversation | null {
   if (c.status === 'cancelled') return null;
 
   const asVet = c.vetUserId === myUserId;
   const asPatient = c.patientUserId === myUserId;
+  if (mode === 'as_vet' && !asVet) return null;
+  if (mode === 'as_patient' && !asPatient) return null;
   if (!asVet && !asPatient) return null;
 
   const pending = c.status === 'requested';
   const ended = c.status === 'completed';
-  const direction: 'incoming' | 'outgoing' = asVet ? 'incoming' : 'outgoing';
+  const direction: 'incoming' | 'outgoing' = mode === 'as_vet' ? 'incoming' : 'outgoing';
 
-  const peerTitle = asVet
-    ? c.patientName?.trim() || (c.petName ? `بیمار · ${c.petName}` : `بیمار #${c.patientUserId}`)
-    : c.vetName?.trim() || `پزشک #${c.vetUserId}`;
+  const peerTitle =
+    mode === 'as_vet'
+      ? c.patientName?.trim() || (c.petName ? `بیمار · ${c.petName}` : `بیمار #${c.patientUserId}`)
+      : c.vetName?.trim() || `پزشک #${c.vetUserId}`;
 
   const preview = pending
-    ? direction === 'incoming'
+    ? mode === 'as_vet'
       ? 'درخواست مشاوره جدید'
       : 'منتظر پاسخ پزشک'
     : ended
@@ -103,16 +121,36 @@ export function vetToInbox(c: VetConsultation, myUserId: number): InboxConversat
     pending,
     ended,
     direction,
-    canDecide: pending && asVet,
+    canDecide: pending && mode === 'as_vet',
     href: `/vet-chats/${c.id}`,
   };
 }
 
-/** فهرست یکپارچه همبازی + مشاوره برای صفحه گفتگوها */
+/**
+ * Role-scoped inbox:
+ * - primary vet → only consultations as veterinarian
+ * - any other primary role → playmate chats + consultations as patient
+ * Never mixes vet-practice threads into owner view (or the reverse).
+ */
 export async function loadInboxConversations(
   myUserId: number,
   user?: User | null,
 ): Promise<InboxConversation[]> {
+  const scope = inboxScopeForUser(user);
+
+  if (scope === 'vet') {
+    if (!userHasRole(user, 'vet')) return [];
+    const rows = await listVetConsultations({ vetUserId: myUserId }).catch(
+      () => [] as VetConsultation[],
+    );
+    const items: InboxConversation[] = [];
+    for (const row of rows) {
+      const item = vetToInbox(row, myUserId, 'as_vet');
+      if (item) items.push(item);
+    }
+    return sortInbox(items);
+  }
+
   const playmatePromise = listPlaydateRequests({ userId: myUserId }).then((rows) =>
     rows
       .filter((r) => {
@@ -127,26 +165,15 @@ export async function loadInboxConversations(
       .map((r) => playmateToInbox(playdateToMatchRequest(r, myUserId))),
   );
 
-  const patientPromise = listVetConsultations({ patientUserId: myUserId }).catch(() => []);
-  const vetPromise =
-    user && userHasRole(user, 'vet')
-      ? listVetConsultations({ vetUserId: myUserId }).catch(() => [])
-      : Promise.resolve([] as VetConsultation[]);
+  const patientPromise = listVetConsultations({ patientUserId: myUserId }).catch(
+    () => [] as VetConsultation[],
+  );
 
-  const [playmates, asPatient, asVet] = await Promise.all([
-    playmatePromise,
-    patientPromise,
-    vetPromise,
-  ]);
-
-  const vetById = new Map<number, VetConsultation>();
-  for (const row of [...asPatient, ...asVet]) {
-    vetById.set(row.id, row);
-  }
+  const [playmates, asPatient] = await Promise.all([playmatePromise, patientPromise]);
 
   const vetItems: InboxConversation[] = [];
-  for (const row of vetById.values()) {
-    const item = vetToInbox(row, myUserId);
+  for (const row of asPatient) {
+    const item = vetToInbox(row, myUserId, 'as_patient');
     if (item) vetItems.push(item);
   }
 
