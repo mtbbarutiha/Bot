@@ -9,9 +9,7 @@ import {
   Server,
   XCircle,
 } from 'lucide-react';
-import { ADMIN_PASSWORD } from '../auth';
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+import { adminFetch } from '../api';
 
 type Check = { ok: boolean; detail?: string; freeGb?: number; totalGb?: number };
 
@@ -67,14 +65,6 @@ function formatUptime(sec: number): string {
   if (d > 0) return `${d}ر ${h}س ${m}د`;
   if (h > 0) return `${h}س ${m}د`;
   return `${m}د ${sec % 60}ث`;
-}
-
-async function adminFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'x-admin-password': ADMIN_PASSWORD },
-  });
-  if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-  return res.json() as Promise<T>;
 }
 
 export function AdminMonitoringPage() {

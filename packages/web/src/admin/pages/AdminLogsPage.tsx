@@ -1,8 +1,6 @@
 import { Fragment, useCallback, useEffect, useState } from 'react';
 import { Activity, AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
-import { ADMIN_PASSWORD } from '../auth';
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+import { adminFetch } from '../api';
 
 type LogRow = {
   id: number;
@@ -22,19 +20,6 @@ type LogStats = {
   warns24h: number;
   lastErrorAt: string | null;
 };
-
-async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-admin-password': ADMIN_PASSWORD,
-      ...(init?.headers || {}),
-    },
-  });
-  if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-  return res.json() as Promise<T>;
-}
 
 export function AdminLogsPage() {
   const [logs, setLogs] = useState<LogRow[]>([]);

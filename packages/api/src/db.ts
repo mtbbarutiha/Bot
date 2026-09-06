@@ -576,6 +576,71 @@ function migrateSchema() {
       updateRoles.run(JSON.stringify(parsed), row.id);
     }
   }
+
+  /** Shop catalog + orders (admin CRUD; schema aligned with web shopCatalog) */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS shop_products (
+      id TEXT PRIMARY KEY,
+      slug TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL,
+      brand_id TEXT NOT NULL,
+      category_slug TEXT NOT NULL,
+      pet_types TEXT NOT NULL DEFAULT '[]',
+      price_toman INTEGER NOT NULL DEFAULT 0,
+      compare_at_toman INTEGER,
+      image TEXT,
+      badge TEXT,
+      in_stock INTEGER NOT NULL DEFAULT 1,
+      stock_qty INTEGER NOT NULL DEFAULT 0,
+      params TEXT NOT NULL DEFAULT '{}',
+      description TEXT NOT NULL DEFAULT '',
+      featured INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS shop_categories (
+      slug TEXT PRIMARY KEY,
+      label_fa TEXT NOT NULL,
+      pet_type TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      emoji TEXT NOT NULL DEFAULT '🛒',
+      sort_order INTEGER NOT NULL DEFAULT 100
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS shop_orders (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      status TEXT NOT NULL DEFAULT 'pending',
+      total_toman INTEGER NOT NULL DEFAULT 0,
+      items_json TEXT NOT NULL DEFAULT '[]',
+      customer_name TEXT,
+      customer_phone TEXT,
+      note TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_announcements (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      body TEXT NOT NULL DEFAULT '',
+      active INTEGER NOT NULL DEFAULT 1,
+      placement TEXT NOT NULL DEFAULT 'landing',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS admin_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT '',
+      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
 }
 
 function seedSpeciesCatalog() {
@@ -2887,8 +2952,14 @@ export const dbService = {
     vetUserId?: number;
     patientUserId?: number;
     status?: VetConsultStatus;
+    /** When true, allow listing without vet/patient filter (admin) */
+    all?: boolean;
   }): VetConsultation[] {
-    if (filters.vetUserId == null && filters.patientUserId == null) {
+    if (
+      !filters.all &&
+      filters.vetUserId == null &&
+      filters.patientUserId == null
+    ) {
       return [];
     }
     let sql = `

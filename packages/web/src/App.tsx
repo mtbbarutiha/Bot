@@ -5,13 +5,20 @@ import { AdminGuard } from './admin/AdminGuard';
 import { AdminLayout } from './admin/AdminLayout';
 import { AdminDashboardPage } from './admin/pages/AdminDashboardPage';
 import { AdminLoginPage } from './admin/pages/AdminLoginPage';
-import { AdminMatchesPage } from './admin/pages/AdminMatchesPage';
-import { AdminPetFormPage } from './admin/pages/AdminPetFormPage';
+import { AdminPlaydatesPage } from './admin/pages/AdminPlaydatesPage';
 import { AdminPetsPage } from './admin/pages/AdminPetsPage';
 import { AdminUsersPage } from './admin/pages/AdminUsersPage';
 import { AdminVerificationPage } from './admin/pages/AdminVerificationPage';
 import { AdminLogsPage } from './admin/pages/AdminLogsPage';
 import { AdminMonitoringPage } from './admin/pages/AdminMonitoringPage';
+import { AdminConsultsPage } from './admin/pages/AdminConsultsPage';
+import { AdminShopProductsPage } from './admin/pages/AdminShopProductsPage';
+import { AdminShopProductFormPage } from './admin/pages/AdminShopProductFormPage';
+import { AdminShopCategoriesPage } from './admin/pages/AdminShopCategoriesPage';
+import { AdminShopOrdersPage } from './admin/pages/AdminShopOrdersPage';
+import { AdminPaymentsPage } from './admin/pages/AdminPaymentsPage';
+import { AdminContentPage } from './admin/pages/AdminContentPage';
+import { AdminSettingsPage } from './admin/pages/AdminSettingsPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { OtpPage } from './pages/auth/OtpPage';
 import { AddPetPage } from './pages/AddPetPage';
@@ -22,11 +29,7 @@ import { HomePage } from './pages/HomePage';
 import { MatchesPage } from './pages/MatchesPage';
 import { PetDetailPage } from './pages/PetDetailPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { ShopCartProvider } from './hooks/useShopCart';
-import { ShopHomePage } from './pages/shop/ShopHomePage';
-import { ShopCategoryPage } from './pages/shop/ShopCategoryPage';
-import { ShopProductPage } from './pages/shop/ShopProductPage';
-import { ShopCartPage } from './pages/shop/ShopCartPage';
+import { ShopPage } from './pages/ShopPage';
 import { VetConsultPage } from './pages/VetConsultPage';
 import { WelcomePage } from './pages/WelcomePage';
 import { AdoptionDetailPage } from './pages/AdoptionDetailPage';
@@ -38,15 +41,10 @@ import { RoleWizardPage } from './pages/onboarding/RoleWizardPage';
 export default function App() {
   return (
     <AppGuards>
-      <ShopCartProvider>
       <Routes>
         <Route index element={<WelcomePage />} />
         <Route path="welcome" element={<WelcomePage />} />
         <Route path="adoption/:slug" element={<AdoptionDetailPage />} />
-        <Route path="shop" element={<ShopHomePage />} />
-        <Route path="shop/c/:category" element={<ShopCategoryPage />} />
-        <Route path="shop/product/:id" element={<ShopProductPage />} />
-        <Route path="shop/cart" element={<ShopCartPage />} />
         <Route path="auth/login" element={<LoginPage />} />
         <Route path="auth/otp" element={<OtpPage />} />
         <Route path="onboarding/role" element={<RoleSelectPage />} />
@@ -63,6 +61,7 @@ export default function App() {
           <Route path="chats/:matchId" element={<ChatPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="clinics" element={<ClinicsPage />} />
+          <Route path="shop" element={<ShopPage />} />
           <Route path="vet-consult" element={<VetConsultPage />} />
         </Route>
 
@@ -71,20 +70,27 @@ export default function App() {
           <Route element={<AdminLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboardPage />} />
-            <Route path="pets" element={<AdminPetsPage />} />
-            <Route path="pets/new" element={<AdminPetFormPage />} />
-            <Route path="pets/:id/edit" element={<AdminPetFormPage />} />
-            <Route path="matches" element={<AdminMatchesPage />} />
             <Route path="users" element={<AdminUsersPage />} />
+            <Route path="pets" element={<AdminPetsPage />} />
+            <Route path="playdates" element={<AdminPlaydatesPage />} />
+            <Route path="matches" element={<Navigate to="/admin/playdates" replace />} />
+            <Route path="consults" element={<AdminConsultsPage />} />
             <Route path="verification" element={<AdminVerificationPage />} />
+            <Route path="shop/products" element={<AdminShopProductsPage />} />
+            <Route path="shop/products/new" element={<AdminShopProductFormPage />} />
+            <Route path="shop/products/:id" element={<AdminShopProductFormPage />} />
+            <Route path="shop/categories" element={<AdminShopCategoriesPage />} />
+            <Route path="shop/orders" element={<AdminShopOrdersPage />} />
+            <Route path="payments" element={<AdminPaymentsPage />} />
+            <Route path="content" element={<AdminContentPage />} />
             <Route path="logs" element={<AdminLogsPage />} />
             <Route path="monitoring" element={<AdminMonitoringPage />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
         </Route>
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-      </ShopCartProvider>
     </AppGuards>
   );
 }

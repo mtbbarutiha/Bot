@@ -9,40 +9,39 @@ export function AdminLoginPage() {
   const navigate = useNavigate();
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loginAdmin(password)) {
-      navigate('/admin/dashboard');
-      return;
-    }
+    setBusy(true);
+    setError('');
+    const ok = await loginAdmin(password);
+    setBusy(false);
+    if (ok) { navigate('/admin/dashboard'); return; }
     setError('رمز عبور اشتباه است');
   };
 
   return (
     <div className="admin-app admin-login-page">
-      <form className="admin-login-card" onSubmit={handleSubmit}>
+      <form className="admin-login-card" onSubmit={(e) => void handleSubmit(e)}>
         <AdminWordmark className="admin-login-brand" size="lg" />
-        <p className="admin-login-subtitle">ورود اپراتور — جدا از اپلیکیشن کاربران</p>
-
+        <p className="admin-login-subtitle">ورود اپراتور — ربات، فروشگاه، وب و محتوا</p>
         <div className="form-group">
-          <label className="form-label">رمز عبور</label>
+          <label className="form-label">رمز عبور ادمین</label>
           <div className="admin-input-icon">
             <Lock size={16} />
-            <input
-              className="form-input"
-              type="password"
-              placeholder="رمز عبور را وارد کنید"
-              value={password}
-              onChange={(e) => { setPassword(e.target.value); setError(''); }}
-            />
+            <input className="form-input" type="password" placeholder="رمز عبور را وارد کنید" value={password}
+              autoComplete="current-password"
+              onChange={(e) => { setPassword(e.target.value); setError(''); }} />
           </div>
         </div>
-
-        {error && <p className="admin-error">{error}</p>}
-
-        <button type="submit" className="cta-btn admin-btn--primary">ورود به کنسول</button>
-        <p className="admin-login-hint">رمز پیش‌فرض: <code>petdate</code></p>
+        {error ? <p className="admin-error">{error}</p> : null}
+        <button type="submit" className="cta-btn admin-btn--primary" disabled={busy}>
+          {busy ? 'در حال ورود…' : 'ورود به کنسول'}
+        </button>
+        <p className="admin-login-hint">
+          رمز از متغیر محیطی <code>ADMIN_PASSWORD</code> خوانده می‌شود (پیش‌فرض توسعه: <code>petdate</code>).
+        </p>
       </form>
     </div>
   );

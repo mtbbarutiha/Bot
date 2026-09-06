@@ -1,0 +1,46 @@
+/** Shared admin API client — password from session (verified against ADMIN_PASSWORD). */
+
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+const PWD_KEY = 'petdate_admin_pwd';
+
+export function getAdminPassword(): string {
+  return sessionStorage.getItem(PWD_KEY) || '';
+}
+
+export function setAdminPassword(password: string) {
+  sessionStorage.setItem(PWD_KEY, password);
+}
+
+export function clearAdminPassword() {
+  sessionStorage.removeItem(PWD_KEY);
+}
+
+export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  const pwd = getAdminPassword();
+  if (pwd) headers.set('x-admin-password', pwd);
+  if (init?.body && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+  const res = await fetch(`${API_BASE}${path}`, { ...init, headers });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const j = (await res.json()) as { error?: string };
+      if (j.error) msg = j.error;
+    } catch {
+      try { msg = (await res.text()) || msg; } catch { /* ignore */ }
+    }
+    throw new Error(msg);
+  }
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+export function formatTomanFa(n: number): string {
+  return new Intl.NumberFormat('fa-IR').format(Math.round(n)) + ' تومان';
+}
+
+export function formatNumFa(n: number): string {
+  return new Intl.NumberFormat('fa-IR').format(n);
+}

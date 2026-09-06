@@ -1,0 +1,165 @@
+import { useCallback, useEffect, useState } from 'react';
+import { adminFetch, formatNumFa } from '../api';
+
+type Ann = {
+  id: number;
+  title: string;
+  body: string;
+  active: boolean;
+  placement: string;
+  createdAt: string;
+};
+
+export function AdminContentPage() {
+  const [items, setItems] = useState<Ann[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [form, setForm] = useState({ title: '', body: '', placement: 'landing', active: true });
+
+  const load = useCallback(async () => {
+    try {
+      const data = await adminFetch<{ announcements: Ann[] }>('/api/admin/content/announcements');
+      setItems(data.announcements);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'خطا');
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await adminFetch('/api/admin/content/announcements', {
+        method: 'POST',
+        body: JSON.stringify(form),
+      });
+      setForm({ title: '', body: '', placement: 'landing', active: true });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'خطا');
+    }
+  };
+
+  const toggle = async (a: Ann) => {
+    try {
+      await adminFetch(`/api/admin/content/announcements/${a.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...a, active: !a.active }),
+      });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'خطا');
+    }
+  };
+
+  const remove = async (id: number) => {
+    if (!confirm('حذف اعلان؟')) return;
+    try {
+      await adminFetch(`/api/admin/content/announcements/${id}`, { method: 'DELETE' });
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'خطا');
+    }
+  };
+
+  return (
+    <div className="admin-page">
+      <header className="admin-header">
+        <div>
+          <h1>محتوا و اعلان‌ها</h1>
+          <p>اسنیپت‌های لندینگ / بنر — {formatNumFa(items.length)} مورد</p>
+        </div>
+      </header>
+
+      {error ? <p className="admin-error">{error}</p> : null}
+
+      <form className="admin-card admin-form" onSubmit={(e) => void save(e)}>
+        <div className="admin-form-grid">
+          <label className="admin-form-span">
+            <span className="form-label">عنوان</span>
+            <input
+              className="form-input"
+              required
+              value={form.title}
+              onChange={(e) => setForm({ ...form, title: e.target.value })}
+            />
+          </label>
+          <label className="admin-form-span">
+            <span className="form-label">متن</span>
+            <textarea
+              className="form-input"
+              rows={3}
+              value={form.body}
+              onChange={(e) => setForm({ ...form, body: e.target.value })}
+            />
+          </label>
+          <label>
+            <span className="form-label">جایگاه</span>
+            <select
+              className="admin-select"
+              value={form.placement}
+              onChange={(e) => setForm({ ...form, placement: e.target.value })}
+            >
+              <option value="landing">لندینگ</option>
+              <option value="shop">فروشگاه</option>
+              <option value="app">اپ</option>
+              <option value="bot">ربات</option>
+            </select>
+          </label>
+        </div>
+        <button type="submit" className="admin-btn admin-btn--primary" style={{ marginTop: 12 }}>
+          انتشار اعلان
+        </button>
+      </form>
+
+      <div className="admin-table-wrap admin-card" style={{ marginTop: 16 }}>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>عنوان</th>
+              <th>جایگاه</th>
+              <th>وضعیت</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((a) => (
+              <tr key={a.id}>
+                <td>
+                  <strong>{a.title}</strong>
+                  <div className="admin-muted">{a.body.slice(0, 80)}</div>
+                </td>
+                <td>{a.placement}</td>
+                <td>
+                  <span className={`admin-badge ${a.active ? 'admin-badge--info' : 'admin-badge--error'}`}>
+                    {a.active ? 'فعال' : 'خاموش'}
+                  </span>
+                </td>
+                <td>
+                  <div className="admin-row-actions">
+                    <button type="button" className="admin-btn admin-btn--ghost" onClick={() => void toggle(a)}>
+                      {a.active ? 'خاموش' : 'روشن'}
+                    </button>
+                    <button type="button" className="admin-btn admin-btn--danger" onClick={() => void remove(a.id)}>
+                      حذف
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {!items.length ? (
+              <tr>
+                <td colSpan={4} className="admin-muted">
+                  اعلانی نیست
+                </td>
+              </tr>
+            ) : null}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

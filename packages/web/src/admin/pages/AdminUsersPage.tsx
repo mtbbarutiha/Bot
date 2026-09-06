@@ -1,39 +1,117 @@
-import { usePetStore } from '../../hooks/usePetStore';
+import { useCallback, useEffect, useState } from 'react';
+import { Search } from 'lucide-react';
+import { USER_ROLES, USER_ROLE_LABELS, type User, type UserRole } from '@petdate/shared';
+import { adminFetch, formatNumFa } from '../api';
 
 export function AdminUsersPage() {
-  const { owners } = usePetStore();
+  const [users, setUsers] = useState<User[]>([]);
+  const [total, setTotal] = useState(0);
+  const [q, setQ] = useState('');
+  const [role, setRole] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<number | null>(null);
+  const [credit, setCredit] = useState<{ userId: number; amount: string; currency: string } | null>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const qs = new URLSearchParams();
+      if (q.trim()) qs.set('q', q.trim());
+      if (role) qs.set('role', role);
+      qs.set('limit', '100');
+      const data = await adminFetch<{ total: number; users: User[] }>(`/api/admin/users?${qs}`);
+      setUsers(data.users); setTotal(data.total); setError(null);
+    } catch (err) { setError(err instanceof Error ? err.message : 'خطا'); }
+  }, [q, role]);
+  useEffect(() => { void load(); }, [load]);
+
+  const toggleBan = async (user: User) => {
+    setBusyId(user.id);
+    try {
+      await adminFetch(`/api/admin/users/${user.id}`, { method: 'PATCH', body: JSON.stringify({ isActive: user.isActive === false }) });
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : 'خطا'); }
+    finally { setBusyId(null); }
+  };
+
+  const setPrimaryRole = async (user: User, next: UserRole) => {
+    setBusyId(user.id);
+    try {
+      await adminFetch(`/api/admin/users/${user.id}`, { method: 'PATCH', body: JSON.stringify({ role: next }) });
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : 'خطا'); }
+    finally { setBusyId(null); }
+  };
+
+  const submitCredit = async () => {
+    if (!credit) return;
+    const amount = Number(credit.amount);
+    if (!Number.isFinite(amount) || amount === 0) { setError('مبلغ نامعتبر'); return; }
+    setBusyId(credit.userId);
+    try {
+      await adminFetch('/api/admin/wallet/credit', { method: 'POST', body: JSON.stringify({ userId: credit.userId, currency: credit.currency, amount }) });
+      setCredit(null); await load();
+    } catch (err) { setError(err instanceof Error ? err.message : 'خطا'); }
+    finally { setBusyId(null); }
+  };
 
   return (
     <div className="admin-page">
-      <header className="admin-header">
-        <div>
-          <h1>کاربران</h1>
-          <p>{owners.length} صاحب پت</p>
-        </div>
-      </header>
-
-      <div className="admin-grid admin-grid--users">
-        {owners.map((owner) => (
-          <article key={owner.id} className="admin-user-card">
-            <div className="admin-user-head">
-              <h3>{owner.name}</h3>
-              <span className="admin-badge">{owner.city}</span>
-            </div>
-            <p className="muted">{owner.pets.length} پت</p>
-            <div className="admin-user-pets">
-              {owner.pets.map((pet) => (
-                <div key={pet.id} className="admin-user-pet">
-                  <img src={pet.imageUrl} alt={pet.name} />
-                  <div>
-                    <strong>{pet.name}</strong>
-                    <small>{pet.breed}</small>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </article>
-        ))}
+      <header className="admin-header"><div><h1>کاربران</h1><p>{formatNumFa(total)} کاربر</p></div></header>
+      <div className="admin-toolbar">
+        <div className="admin-search"><Search size={16} /><input placeholder="جستجو…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <select className="admin-select" value={role} onChange={(e) => setRole(e.target.value)}>
+          <option value="">همه نقش‌ها</option>
+          {USER_ROLES.map((r) => <option key={r} value={r}>{USER_ROLE_LABELS[r]}</option>)}
+        </select>
+        <button type="button" className="admin-btn" onClick={() => void load()}>اعمال</button>
       </div>
+      {error ? <p className="admin-error">{error}</p> : null}
+      <div className="admin-table-wrap admin-card"><table className="admin-table">
+        <thead><tr><th>ID</th><th>نام</th><th>نقش</th><th>کیف پول</th><th>وضعیت</th><th>عملیات</th></tr></thead>
+        <tbody>
+          {users.map((u) => (
+            <tr key={u.id}>
+              <td className="admin-mono">{u.id}</td>
+              <td><strong>{u.name}</strong><div className="admin-muted">{u.username ? `@${u.username}` : u.phone || u.telegramId || '—'}</div></td>
+              <td>
+                <select className="admin-select" value={u.role || ''} disabled={busyId === u.id}
+                  onChange={(e) => void setPrimaryRole(u, e.target.value as UserRole)}>
+                  {USER_ROLES.map((r) => <option key={r} value={r}>{USER_ROLE_LABELS[r]}</option>)}
+                </select>
+              </td>
+              <td className="admin-mono">C:{formatNumFa(u.coins ?? 0)} · T:{formatNumFa(u.walletToman ?? 0)}</td>
+              <td><span className={`admin-badge ${u.isActive === false ? 'admin-badge--error' : 'admin-badge--info'}`}>{u.isActive === false ? 'مسدود' : 'فعال'}</span></td>
+              <td>
+                <div className="admin-row-actions">
+                  <button type="button" className="admin-btn admin-btn--ghost" disabled={busyId === u.id}
+                    onClick={() => setCredit({ userId: u.id, amount: '10000', currency: 'toman' })}>اعتبار</button>
+                  <button type="button" className={`admin-btn ${u.isActive === false ? 'admin-btn--primary' : 'admin-btn--danger'}`}
+                    disabled={busyId === u.id} onClick={() => void toggleBan(u)}>
+                    {u.isActive === false ? 'رفع مسدودی' : 'مسدود'}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+          {!users.length ? <tr><td colSpan={6} className="admin-muted">کاربری یافت نشد</td></tr> : null}
+        </tbody>
+      </table></div>
+      {credit ? (
+        <div className="admin-modal"><div className="admin-modal-card">
+          <h3>واریز / برداشت کیف پول</h3>
+          <p className="admin-muted">کاربر #{credit.userId}</p>
+          <label className="form-label">ارز</label>
+          <select className="admin-select" value={credit.currency} onChange={(e) => setCredit({ ...credit, currency: e.target.value })}>
+            <option value="toman">تومان</option><option value="coins">سکه</option><option value="stars">Stars</option><option value="ton">TON</option>
+          </select>
+          <label className="form-label">مبلغ</label>
+          <input className="form-input" value={credit.amount} onChange={(e) => setCredit({ ...credit, amount: e.target.value })} />
+          <div className="admin-row-actions" style={{ marginTop: 16 }}>
+            <button type="button" className="admin-btn admin-btn--primary" onClick={() => void submitCredit()}>اعمال</button>
+            <button type="button" className="admin-btn admin-btn--ghost" onClick={() => setCredit(null)}>انصراف</button>
+          </div>
+        </div></div>
+      ) : null}
     </div>
   );
 }

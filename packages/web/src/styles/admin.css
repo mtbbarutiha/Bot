@@ -522,3 +522,363 @@
   margin: 0;
   font-size: 1rem;
 }
+
+/* ── Petify-inspired shell upgrades (original CSS, Pepito tokens) ── */
+.admin-app {
+  --admin-accent: #15cca0;
+  --admin-accent-soft: #d8f8ef;
+  --admin-sidebar: #1a1230;
+  --admin-sidebar-text: #b7adc8;
+  --admin-violet: #5c4d91;
+  --admin-orange: #fd961e;
+  --admin-sky: #0ba5f2;
+}
+
+.admin-app .admin-wordmark-badge {
+  background: linear-gradient(145deg, #5c4d91, #15cca0);
+}
+
+.admin-app .admin-nav-group {
+  margin-bottom: 14px;
+}
+.admin-app .admin-nav-group-title {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7c7194;
+  padding: 6px 12px 4px;
+  font-weight: 700;
+}
+.admin-app .admin-nav-item.active {
+  background: rgba(21, 204, 160, 0.22);
+  color: #d8f8ef;
+  box-shadow: inset 3px 0 0 #15cca0;
+}
+
+.admin-app .admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--admin-border);
+  background: rgba(255, 255, 255, 0.86);
+  backdrop-filter: blur(8px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+.admin-app .admin-topbar-start {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.admin-app .admin-topbar-eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--admin-muted);
+}
+.admin-app .admin-topbar-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+}
+.admin-app .admin-topbar-end {
+  display: flex;
+  gap: 8px;
+}
+.admin-app .admin-topbar-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid var(--admin-border);
+}
+.admin-app .admin-topbar-chip--mint {
+  background: var(--admin-accent-soft);
+  color: #0f766e;
+  border-color: #99f6e4;
+}
+.admin-app .admin-icon-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid var(--admin-border);
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.admin-app .admin-icon-btn--mobile { display: none; }
+.admin-app .admin-icon-btn--desktop { display: inline-flex; }
+
+.admin-app--collapsed .admin-sidebar {
+  width: 84px;
+}
+.admin-app--collapsed .admin-nav-group-title,
+.admin-app--collapsed .admin-brand-sub,
+.admin-app--collapsed .admin-wordmark-copy,
+.admin-app--collapsed .admin-nav-item span,
+.admin-app--collapsed .admin-logout {
+  display: none;
+}
+
+.admin-app .admin-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  border: 0;
+  z-index: 30;
+}
+
+.admin-app .admin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.admin-app .admin-header h1 {
+  margin: 0 0 4px;
+}
+.admin-app .admin-header p {
+  margin: 0;
+  color: var(--admin-muted);
+  font-size: 0.9rem;
+}
+
+.admin-app .admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.admin-app .admin-stats--dense {
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+.admin-app .admin-stat {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+}
+.admin-app .admin-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: var(--admin-accent-soft);
+  color: #0f766e;
+}
+.admin-app .admin-stat-value {
+  font-size: 1.05rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+.admin-app .admin-stat-label {
+  font-size: 0.78rem;
+  color: var(--admin-muted);
+}
+.admin-app .admin-stat--violet .admin-stat-icon { background: #ebe7f7; color: #5c4d91; }
+.admin-app .admin-stat--mint .admin-stat-icon { background: #d8f8ef; color: #0f766e; }
+.admin-app .admin-stat--orange .admin-stat-icon { background: #ffedd5; color: #c2410c; }
+.admin-app .admin-stat--sky .admin-stat-icon { background: #e0f2fe; color: #0369a1; }
+.admin-app .admin-stat--slate .admin-stat-icon { background: #e2e8f0; color: #334155; }
+
+.admin-app .admin-dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.admin-app .admin-card {
+  padding: 16px;
+}
+.admin-app .admin-kv {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.admin-app .admin-kv li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--admin-border);
+  font-size: 0.9rem;
+}
+
+.admin-app .admin-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.admin-app .admin-search {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--admin-border);
+  background: #fff;
+  border-radius: 8px;
+  padding: 0 12px;
+}
+.admin-app .admin-search input {
+  border: 0;
+  outline: none;
+  width: 100%;
+  padding: 10px 0;
+  font: inherit;
+  background: transparent;
+}
+
+.admin-app .admin-table-wrap { overflow: auto; }
+.admin-app .admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.admin-app .admin-table th,
+.admin-app .admin-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--admin-border);
+  text-align: start;
+  vertical-align: middle;
+}
+.admin-app .admin-table th {
+  color: var(--admin-muted);
+  font-weight: 650;
+  font-size: 0.78rem;
+}
+.admin-app .admin-thumb {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 8px;
+  background: #f1f5f9;
+}
+.admin-app .admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-app .admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.admin-app .admin-form-span { grid-column: 1 / -1; }
+.admin-app .admin-check-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+}
+
+.admin-app .admin-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 50;
+  padding: 16px;
+}
+.admin-app .admin-modal-card {
+  width: min(420px, 100%);
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--admin-border);
+}
+.admin-app .admin-success {
+  color: #0f766e;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.admin-app .admin-empty-hint {
+  margin-bottom: 12px;
+  color: var(--admin-muted);
+}
+.admin-app .admin-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.admin-app .admin-setting-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+.admin-app .admin-setting-card h3 {
+  margin: 0 0 4px;
+  font-size: 0.98rem;
+}
+.admin-app .admin-toggle {
+  border: 1px solid var(--admin-border);
+  background: #f8fafc;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+  min-width: 72px;
+}
+.admin-app .admin-toggle.is-on {
+  background: var(--admin-accent);
+  color: #fff;
+  border-color: #0d9488;
+}
+.admin-app .admin-status--pending { color: #c2410c; }
+.admin-app .admin-status--accepted { color: #0f766e; }
+.admin-app .admin-status--rejected,
+.admin-app .admin-status--cancelled { color: #b91c1c; }
+
+.admin-app .admin-input-icon {
+  position: relative;
+}
+.admin-app .admin-input-icon svg {
+  position: absolute;
+  inset-inline-start: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+.admin-app .admin-input-icon .form-input {
+  padding-inline-start: 36px;
+}
+
+@media (max-width: 960px) {
+  .admin-app .admin-dash-grid,
+  .admin-app .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .admin-app .admin-icon-btn--mobile { display: inline-flex; }
+  .admin-app .admin-icon-btn--desktop { display: none; }
+  .admin-app .admin-sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    z-index: 40;
+    transform: translateX(110%);
+    transition: transform 0.2s ease;
+    width: min(280px, 86vw);
+  }
+  [dir='rtl'] .admin-app .admin-sidebar,
+  .admin-app .admin-sidebar {
+    transform: translateX(-110%);
+  }
+  .admin-app .admin-sidebar.is-open {
+    transform: translateX(0) !important;
+  }
+}

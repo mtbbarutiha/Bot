@@ -1,90 +1,56 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Search, Trash2 } from 'lucide-react';
-import { usePetStore } from '../../hooks/usePetStore';
-import { PET_TYPE_LABELS, type PetType } from '../../types';
+import { useCallback, useEffect, useState } from 'react';
+import { Search, Trash2 } from 'lucide-react';
+import type { PetProfile } from '@petdate/shared';
+import { adminFetch, formatNumFa } from '../api';
 
 export function AdminPetsPage() {
-  const { pets, deletePet } = usePetStore();
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState<PetType | 'all'>('all');
-
-  const filtered = useMemo(() => {
-    return pets.filter((p) => {
-      if (typeFilter !== 'all' && p.type !== typeFilter) return false;
-      if (!search) return true;
-      return (
-        p.name.includes(search) ||
-        p.breed.includes(search) ||
-        p.neighborhood.includes(search) ||
-        p.ownerName.includes(search)
-      );
-    });
-  }, [pets, search, typeFilter]);
-
+  const [pets, setPets] = useState<PetProfile[]>([]);
+  const [total, setTotal] = useState(0);
+  const [q, setQ] = useState('');
+  const [species, setSpecies] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(async () => {
+    try {
+      const qs = new URLSearchParams();
+      if (q.trim()) qs.set('q', q.trim());
+      if (species) qs.set('species', species);
+      const data = await adminFetch<{ total: number; pets: PetProfile[] }>(`/api/admin/pets?${qs}`);
+      setPets(data.pets); setTotal(data.total); setError(null);
+    } catch (err) { setError(err instanceof Error ? err.message : 'خطا'); }
+  }, [q, species]);
+  useEffect(() => { void load(); }, [load]);
+  const remove = async (pet: PetProfile) => {
+    if (!confirm(`حذف پت «${pet.name}»؟`)) return;
+    try { await adminFetch(`/api/admin/pets/${pet.id}`, { method: 'DELETE' }); await load(); }
+    catch (err) { setError(err instanceof Error ? err.message : 'خطا'); }
+  };
   return (
     <div className="admin-page">
-      <header className="admin-header">
-        <div>
-          <h1>مدیریت پت‌ها</h1>
-          <p>{filtered.length} پت</p>
-        </div>
-        <Link to="/admin/pets/new" className="admin-btn admin-btn--primary">
-          <Plus size={16} />
-          افزودن پت
-        </Link>
-      </header>
-
+      <header className="admin-header"><div><h1>مدیریت پت‌ها</h1><p>{formatNumFa(total)} پت</p></div></header>
       <div className="admin-toolbar">
-        <div className="admin-search">
-          <Search size={16} />
-          <input
-            placeholder="جستجو نام، نژاد، محله..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-        <select
-          className="form-select admin-select"
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value as PetType | 'all')}
-        >
-          <option value="all">همه انواع</option>
-          {(Object.keys(PET_TYPE_LABELS) as PetType[]).map((t) => (
-            <option key={t} value={t}>{PET_TYPE_LABELS[t]}</option>
-          ))}
+        <div className="admin-search"><Search size={16} /><input placeholder="نام، نژاد، شهر…" value={q} onChange={(e) => setQ(e.target.value)} /></div>
+        <select className="admin-select" value={species} onChange={(e) => setSpecies(e.target.value)}>
+          <option value="">همه</option><option value="dog">سگ</option><option value="cat">گربه</option><option value="bird">پرنده</option>
         </select>
+        <button type="button" className="admin-btn" onClick={() => void load()}>جستجو</button>
       </div>
-
-      <div className="admin-grid">
-        {filtered.map((pet) => (
-          <article key={pet.id} className="admin-pet-card">
-            <img src={pet.imageUrl} alt={pet.name} className="admin-pet-card-img" />
-            <div className="admin-pet-card-body">
-              <div className="admin-pet-card-top">
-                <h3>{pet.name}</h3>
-                <span className="admin-badge">{PET_TYPE_LABELS[pet.type]}</span>
-              </div>
-              <p>{pet.breed} · {pet.neighborhood}</p>
-              <p className="muted">{pet.ownerName}</p>
-              <div className="admin-pet-card-actions">
-                <Link to={`/admin/pets/${pet.id}/edit`} className="admin-btn admin-btn--ghost">
-                  ✏️ ویرایش
-                </Link>
-                <button
-                  type="button"
-                  className="admin-btn admin-btn--danger"
-                  onClick={() => {
-                    if (confirm(`🗑 حذف ${pet.name}؟`)) deletePet(pet.id);
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          </article>
-        ))}
-      </div>
+      {error ? <p className="admin-error">{error}</p> : null}
+      <div className="admin-table-wrap admin-card"><table className="admin-table">
+        <thead><tr><th>عکس</th><th>نام</th><th>گونه</th><th>مالک</th><th>شهر</th><th></th></tr></thead>
+        <tbody>
+          {pets.map((pet) => (
+            <tr key={pet.id}>
+              <td>{pet.imageUrl ? <img src={pet.imageUrl} alt="" className="admin-thumb" /> : '—'}</td>
+              <td><strong>{pet.name}</strong><div className="admin-mono">#{pet.id}</div></td>
+              <td>{pet.species} · {pet.breed || '—'}</td>
+              <td>{pet.ownerId}</td>
+              <td>{pet.city || '—'}</td>
+              <td><button type="button" className="admin-btn admin-btn--danger" onClick={() => void remove(pet)}><Trash2 size={14} /></button></td>
+            </tr>
+          ))}
+          {!pets.length ? <tr><td colSpan={6} className="admin-muted">پتی یافت نشد</td></tr> : null}
+        </tbody>
+      </table></div>
     </div>
   );
 }
