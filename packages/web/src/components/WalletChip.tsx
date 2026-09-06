@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   WALLET_CURRENCY_LABELS_FA,
   WALLET_CURRENCY_STATUS,
@@ -120,6 +121,9 @@ export function WalletChip() {
               </li>
             ))}
           </ul>
+          <Link to="/wallet" className="pepito-nav-wallet-page-link" onClick={() => setOpen(false)}>
+            مشاهده کیف پول
+          </Link>
         </div>
       ) : null}
     </div>

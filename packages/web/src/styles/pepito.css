@@ -6298,3 +6298,218 @@ button.chip.is-on {
     object-position: center top;
   }
 }
+
+/* —— Landing mobile dock (4 actions) — hidden on desktop / app shell —— */
+.pepito-landing-mobile-dock {
+  display: none;
+}
+
+.pepito-nav-wallet-page-link {
+  display: block;
+  margin: 0.65rem 0.35rem 0.15rem;
+  padding: 0.55rem 0.75rem;
+  text-align: center;
+  text-decoration: none;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: #fff;
+  background: var(--pepito-base);
+  border-radius: 12px;
+}
+
+.pepito-nav-wallet-page-link:hover {
+  background: var(--pepito-dark);
+}
+
+.pepito-wallet-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.25rem 0 1.5rem;
+}
+
+.pepito-wallet-hero h1 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.45rem, 3vw, 1.85rem);
+  color: var(--pepito-dark);
+  letter-spacing: -0.02em;
+}
+
+.pepito-wallet-lead {
+  margin: 0;
+  max-width: 36rem;
+  color: var(--pepito-muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.pepito-wallet-status {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--pepito-muted);
+}
+
+.pepito-wallet-status--warn {
+  color: #9a5b12;
+  background: #fff6e8;
+  border: 1px solid rgba(253, 150, 30, 0.35);
+  border-radius: 12px;
+  padding: 0.65rem 0.85rem;
+}
+
+.pepito-wallet-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.pepito-wallet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  background: #fff;
+  border: 1px solid rgba(92, 77, 145, 0.1);
+  border-radius: 18px;
+  box-shadow: 0 8px 22px rgba(25, 6, 61, 0.05);
+}
+
+.pepito-wallet-row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.pepito-wallet-row-sym {
+  flex: 0 0 auto;
+  width: 2.1rem;
+  height: 2.1rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--pepito-lilac);
+  color: var(--pepito-base);
+  font-size: 1rem;
+}
+
+.pepito-wallet-row-label {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: var(--pepito-dark);
+}
+
+.pepito-wallet-row-note {
+  margin: 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: var(--pepito-muted);
+}
+
+.pepito-wallet-row-val {
+  margin: 0;
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--pepito-base);
+  font-variant-numeric: tabular-nums;
+}
+
+.pepito-wallet-row-unit {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pepito-muted);
+}
+
+.pepito-wallet-soon {
+  margin: 0.15rem 0 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.88rem;
+  color: #1d6f66;
+}
+
+.pepito-wallet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.pepito-wallet-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 859px) {
+  .pepito-landing-mobile-dock {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    position: fixed;
+    inset-inline: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    z-index: 60;
+    gap: 0.1rem;
+    padding: 0.45rem 0.3rem;
+    background: rgba(255, 255, 255, 0.97);
+    border: 1px solid rgba(92, 77, 145, 0.12);
+    border-radius: 18px;
+    box-shadow: 0 14px 36px rgba(25, 6, 61, 0.14);
+    backdrop-filter: blur(10px);
+  }
+
+  .pepito-landing-mobile-dock-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.2rem;
+    min-width: 0;
+    padding: 0.35rem 0.15rem;
+    color: var(--pepito-muted);
+    text-decoration: none;
+    font-size: 0.62rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  .pepito-landing-mobile-dock-link span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  .pepito-landing-mobile-dock-link.is-active {
+    color: var(--pepito-base);
+  }
+
+  .pepito-landing--with-dock .pepito-footer {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Never stack landing dock on top of the logged-in app shell nav */
+  .pepito-app-shell .pepito-landing-mobile-dock {
+    display: none !important;
+  }
+}
+
+@media (min-width: 860px) {
+  .pepito-landing-mobile-dock {
+    display: none !important;
+  }
+}

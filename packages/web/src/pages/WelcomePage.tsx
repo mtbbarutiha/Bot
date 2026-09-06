@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { SiteFooter } from '../components/SiteFooter';
 import { NavUserCluster } from '../components/NavUserCluster';
+import { LandingMobileDock } from '../components/LandingMobileDock';
 import { ADOPTION_PETS } from '../data/adoptionPets';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
@@ -285,7 +286,7 @@ export function WelcomePage() {
   const current = HERO_SLIDES[slide]!;
 
   return (
-    <div className="pepito-landing">
+    <div className="pepito-landing pepito-landing--with-dock">
       <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${isLoggedIn ? ' pepito-nav--app' : ''}`}>
         <NavUserCluster />
         <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
@@ -816,6 +817,7 @@ export function WelcomePage() {
       </section>
 
       <SiteFooter />
+      <LandingMobileDock />
     </div>
   );
 }

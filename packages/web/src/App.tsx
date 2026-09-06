@@ -36,6 +36,7 @@ import { HomePage } from './pages/HomePage';
 import { MatchesPage } from './pages/MatchesPage';
 import { PetDetailPage } from './pages/PetDetailPage';
 import { ProfilePage } from './pages/ProfilePage';
+import { WalletPage } from './pages/WalletPage';
 import { ShopCartProvider } from './hooks/useShopCart';
 import { ShopHomePage } from './pages/shop/ShopHomePage';
 import { ShopCategoryPage } from './pages/shop/ShopCategoryPage';
@@ -79,6 +80,7 @@ export default function App() {
             <Route path="matches" element={<MatchesPage />} />
             <Route path="chats/:matchId" element={<ChatPage />} />
             <Route path="profile" element={<ProfilePage />} />
+            <Route path="wallet" element={<WalletPage />} />
             <Route path="vet-consult" element={<VetConsultPage />} />
           </Route>
 
