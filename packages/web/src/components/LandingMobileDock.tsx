@@ -1,17 +1,17 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
-import { SITE_NAV_AUTH, SITE_NAV_GUEST } from '../lib/siteNav';
+import { SITE_NAV_GUEST, siteNavMobileForUser } from '../lib/siteNav';
 
 /**
- * Site-wide mobile bottom dock (full primary set).
+ * Site-wide mobile bottom dock — items follow the active primary role.
  * Guest: شاپ / همبازی / سبد / ورود
- * Logged-in: شاپ / همبازی / گفتگو / کیف پول / پروفایل
- * Desktop uses a slimmer SiteDesktopNav + left avatar/wallet/cart cluster.
+ * Owner: شاپ / همبازی / گفتگو / کیف پول / پروفایل
+ * Vet: شاپ / پنل پزشک / گفتگو / کیف پول / پروفایل (بدون همبازی)
  */
 export function LandingMobileDock() {
   const { pathname } = useLocation();
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, user } = useAuthStore();
 
   if (
     pathname.startsWith('/admin') ||
@@ -22,7 +22,7 @@ export function LandingMobileDock() {
     return null;
   }
 
-  const items = isLoggedIn ? SITE_NAV_AUTH : SITE_NAV_GUEST;
+  const items = isLoggedIn ? siteNavMobileForUser(user) : SITE_NAV_GUEST;
 
   return (
     <nav className="pepito-landing-mobile-dock" aria-label="میانبرهای موبایل">

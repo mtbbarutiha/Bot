@@ -1,24 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X } from 'lucide-react';
+import { Check, Stethoscope, X } from 'lucide-react';
+import { userHasRole, type VetConsultation } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
-import { listPlaydateRequests, updatePlaydateStatus } from '../lib/api';
+import {
+  acceptVetConsultation,
+  listPlaydateRequests,
+  listVetConsultations,
+  rejectVetConsultation,
+  updatePlaydateStatus,
+} from '../lib/api';
 import { isIncomingPlaydate } from '../lib/playdateMap';
-import type { PlaydateRequest } from '@petdate/shared';
 
 const POLL_MS = 6000;
 
+type IncomingItem =
+  | { kind: 'playmate'; id: number; title: string; subtitle: string; photo?: string; href: string }
+  | { kind: 'vet'; id: number; title: string; subtitle: string; photo?: string; href: string };
+
 /**
- * Global poller: when logged in on web, new incoming playdate requests
- * surface as a modal (bot ↔ web parity) without requiring a page refresh.
+ * Global poller: new incoming playmate + vet requests surface as a modal
+ * (bot ↔ web parity) with accept/reject, without requiring a page refresh.
  */
 export function LiveIncomingRequests() {
   const navigate = useNavigate();
-  const { user, isLoggedIn } = useAuthStore();
+  const { user, isLoggedIn, token } = useAuthStore();
   const myUserId = user?.id;
-  const seenRef = useRef<Set<number>>(new Set());
+  const seenRef = useRef<Set<string>>(new Set());
   const seededRef = useRef(false);
-  const [queue, setQueue] = useState<PlaydateRequest[]>([]);
+  const [queue, setQueue] = useState<IncomingItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,30 +42,65 @@ export function LiveIncomingRequests() {
   const poll = useCallback(async () => {
     if (!isLoggedIn || !myUserId) return;
     try {
-      const rows = await listPlaydateRequests({ userId: myUserId, status: 'pending' });
-      const incoming = rows.filter(
-        (r) => r.status === 'pending' && isIncomingPlaydate(r, myUserId)
-      );
+      const items: IncomingItem[] = [];
+
+      const playdates = await listPlaydateRequests({ userId: myUserId, status: 'pending' });
+      for (const r of playdates) {
+        if (r.status !== 'pending' || !isIncomingPlaydate(r, myUserId)) continue;
+        const fromName = r.fromPet?.name ?? 'یک پت';
+        const toName = r.toPet?.name;
+        items.push({
+          kind: 'playmate',
+          id: r.id,
+          title: toName ? `${fromName} → ${toName}` : fromName,
+          subtitle: r.message?.trim()
+            ? `درخواست همبازی — «${r.message.trim()}»`
+            : 'درخواست همبازی تازه رسید.',
+          photo: r.fromPet?.imageUrl,
+          href: `/chats/${r.id}`,
+        });
+      }
+
+      if (userHasRole(user, 'vet')) {
+        const consults = await listVetConsultations({
+          vetUserId: myUserId,
+          status: 'requested',
+        }).catch(() => [] as VetConsultation[]);
+        for (const c of consults) {
+          if (c.status !== 'requested' || c.vetUserId !== myUserId) continue;
+          const who =
+            c.patientName?.trim() ||
+            (c.petName ? `بیمار · ${c.petName}` : `بیمار #${c.patientUserId}`);
+          items.push({
+            kind: 'vet',
+            id: c.id,
+            title: who,
+            subtitle: c.petName
+              ? `درخواست مشاوره دامپزشکی · ${c.petName}`
+              : 'درخواست مشاوره دامپزشکی تازه رسید.',
+            href: `/vet-chats/${c.id}`,
+          });
+        }
+      }
 
       if (!seededRef.current) {
-        seenRef.current = new Set(incoming.map((r) => r.id));
+        seenRef.current = new Set(items.map((i) => `${i.kind}:${i.id}`));
         seededRef.current = true;
         return;
       }
 
-      const fresh = incoming.filter((r) => !seenRef.current.has(r.id));
+      const fresh = items.filter((i) => !seenRef.current.has(`${i.kind}:${i.id}`));
       if (!fresh.length) return;
-
-      for (const r of fresh) seenRef.current.add(r.id);
+      for (const i of fresh) seenRef.current.add(`${i.kind}:${i.id}`);
       setQueue((prev) => {
-        const existing = new Set(prev.map((p) => p.id));
-        const add = fresh.filter((r) => !existing.has(r.id));
+        const existing = new Set(prev.map((p) => `${p.kind}:${p.id}`));
+        const add = fresh.filter((i) => !existing.has(`${i.kind}:${i.id}`));
         return add.length ? [...prev, ...add] : prev;
       });
     } catch {
       /* silent — avoid spamming UI on transient network blips */
     }
-  }, [isLoggedIn, myUserId]);
+  }, [isLoggedIn, myUserId, user]);
 
   useEffect(() => {
     if (!isLoggedIn || !myUserId) {
@@ -75,9 +120,14 @@ export function LiveIncomingRequests() {
     setBusy(true);
     setError(null);
     try {
-      await updatePlaydateStatus(current.id, 'accepted', myUserId);
+      if (current.kind === 'playmate') {
+        await updatePlaydateStatus(current.id, 'accepted', myUserId);
+      } else {
+        await acceptVetConsultation(current.id, token);
+      }
+      const href = current.href;
       dismissCurrent();
-      navigate(`/chats/${current.id}`);
+      navigate(href);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'قبول درخواست ناموفق بود');
     } finally {
@@ -90,7 +140,11 @@ export function LiveIncomingRequests() {
     setBusy(true);
     setError(null);
     try {
-      await updatePlaydateStatus(current.id, 'rejected', myUserId);
+      if (current.kind === 'playmate') {
+        await updatePlaydateStatus(current.id, 'rejected', myUserId);
+      } else {
+        await rejectVetConsultation(current.id, token);
+      }
       dismissCurrent();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'رد درخواست ناموفق بود');
@@ -99,23 +153,19 @@ export function LiveIncomingRequests() {
     }
   }
 
-  function onViewAll() {
-    dismissCurrent();
-    navigate('/explore#requests');
-  }
-
   function onOpenInChat() {
     if (!current) return;
-    const id = current.id;
+    const href = current.href;
     dismissCurrent();
-    navigate(`/chats/${id}`);
+    navigate(href);
+  }
+
+  function onViewAll() {
+    dismissCurrent();
+    navigate(current?.kind === 'vet' ? '/vet-consult' : '/chats');
   }
 
   if (!current) return null;
-
-  const fromName = current.fromPet?.name ?? 'یک پت';
-  const toName = current.toPet?.name;
-  const photo = current.fromPet?.imageUrl;
 
   return (
     <div
@@ -125,18 +175,18 @@ export function LiveIncomingRequests() {
       aria-labelledby="live-incoming-title"
     >
       <div className="modal-sheet live-incoming-sheet">
-        <p className="live-incoming-kicker">درخواست همبازی جدید</p>
-        <h2 id="live-incoming-title">
-          {fromName}
-          {toName ? ` → ${toName}` : ''}
-        </h2>
-        <p>
-          درخواست همبازی تازه رسید
-          {current.message ? ` — «${current.message}»` : '.'}
+        <p className="live-incoming-kicker">
+          {current.kind === 'vet' ? 'درخواست مشاوره جدید' : 'درخواست همبازی جدید'}
         </p>
-        {photo ? (
+        <h2 id="live-incoming-title">{current.title}</h2>
+        <p>{current.subtitle}</p>
+        {current.photo ? (
           <div className="live-incoming-photo">
-            <img src={photo} alt={fromName} />
+            <img src={current.photo} alt={current.title} />
+          </div>
+        ) : current.kind === 'vet' ? (
+          <div className="live-incoming-photo live-incoming-photo--icon" aria-hidden>
+            <Stethoscope size={36} strokeWidth={1.75} />
           </div>
         ) : null}
         {error ? (
@@ -163,20 +213,10 @@ export function LiveIncomingRequests() {
             <X size={16} strokeWidth={2.5} />
             رد
           </button>
-          <button
-            type="button"
-            className="btn-profile"
-            disabled={busy}
-            onClick={onOpenInChat}
-          >
+          <button type="button" className="btn-profile" disabled={busy} onClick={onOpenInChat}>
             مشاهده در چت
           </button>
-          <button
-            type="button"
-            className="btn-profile"
-            disabled={busy}
-            onClick={onViewAll}
-          >
+          <button type="button" className="btn-profile" disabled={busy} onClick={onViewAll}>
             همه درخواست‌ها
           </button>
         </div>

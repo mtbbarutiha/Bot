@@ -1,21 +1,23 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
-import { SITE_NAV_DESKTOP_AUTH, SITE_NAV_DESKTOP_GUEST } from '../lib/siteNav';
+import { SITE_NAV_DESKTOP_GUEST, siteNavDesktopForUser } from '../lib/siteNav';
 
 /**
- * Desktop primary actions (≥860px). Slimmer than the mobile dock:
- * cart / wallet chip / circular profile avatar live in NavUserCluster.
+ * Desktop primary actions (≥860px) — follow active primary role.
+ * Owner: شاپ / همبازی / گفتگو
+ * Vet: شاپ / پنل پزشک / گفتگو (بدون همبازی)
+ * Wallet chip + circular profile avatar live in NavUserCluster.
  */
 export function SiteDesktopNav() {
   const { pathname } = useLocation();
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, user } = useAuthStore();
 
   if (pathname.startsWith('/admin') || pathname === '/chats' || pathname.startsWith('/chats/')) {
     return null;
   }
 
-  const items = isLoggedIn ? SITE_NAV_DESKTOP_AUTH : SITE_NAV_DESKTOP_GUEST;
+  const items = isLoggedIn ? siteNavDesktopForUser(user) : SITE_NAV_DESKTOP_GUEST;
 
   return (
     <nav className="pepito-site-desktop-nav" aria-label="میانبرهای اصلی">

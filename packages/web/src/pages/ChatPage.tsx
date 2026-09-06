@@ -22,6 +22,7 @@ import {
   RefreshCw,
   Send,
   Smile,
+  Stethoscope,
   UserPlus,
   UserRound,
   X,
@@ -38,7 +39,6 @@ import {
   getPlaydateRequest,
   getUserById,
   listPlaydateChatMessages,
-  listPlaydateRequests,
   playdateChatMediaUrl,
   postPlaydateChatMessage,
   setPlaydateChatSecure,
@@ -47,6 +47,12 @@ import {
 } from '../lib/api';
 import type { PlaydateChatMediaKind, PlaydateChatMessage } from '@petdate/shared';
 import { playdateToMatchRequest } from '../lib/playdateMap';
+import {
+  acceptInboxItem,
+  loadInboxConversations,
+  rejectInboxItem,
+  type InboxConversation,
+} from '../lib/inboxConversations';
 import {
   MATCH_STATUS_LABELS,
   PET_GENDER_LABELS,
@@ -191,16 +197,22 @@ function ConversationListPane({
   conversations,
   loading,
   error,
-  activeId,
+  activeKey,
+  busyKey,
   onSelect,
   onRefresh,
+  onAccept,
+  onReject,
 }: {
-  conversations: MatchRequest[];
+  conversations: InboxConversation[];
   loading: boolean;
   error: string | null;
-  activeId?: number;
-  onSelect: (id: number) => void;
+  activeKey?: string;
+  busyKey?: string | null;
+  onSelect: (item: InboxConversation) => void;
   onRefresh: () => void;
+  onAccept: (item: InboxConversation) => void;
+  onReject: (item: InboxConversation) => void;
 }) {
   return (
     <aside className="tg-chat-list" aria-label="فهرست گفتگوها">
@@ -236,7 +248,7 @@ function ConversationListPane({
           <div className="tg-chat-list-empty">
             <BrandMark iconSize={28} />
             <h2>هنوز گفتگویی نیست</h2>
-            <p>درخواست‌های همبازی و چت‌های پذیرفته‌شده اینجا دیده می‌شوند.</p>
+            <p>درخواست‌های همبازی، مشاوره و چت‌های پذیرفته‌شده اینجا می‌آیند.</p>
             <Link to="/explore#requests" className="tg-chat-link-btn">
               رفتن به همبازی
             </Link>
@@ -244,39 +256,69 @@ function ConversationListPane({
         ) : (
           <ul className="tg-chat-list-items">
             {conversations.map((c) => {
-              const peer = c.fromPet;
-              const active = activeId === c.id;
-              const pending = c.status === 'pending';
-              const preview = c.chatEnded
-                ? 'چت پایان یافته'
-                : pending
-                  ? c.direction === 'incoming'
-                    ? 'درخواست همبازی جدید'
-                    : 'منتظر پاسخ درخواست'
-                  : c.chatSecure
-                    ? 'چت امن'
-                    : `${peer.name} · ${peer.breed}`;
+              const active = activeKey === c.key;
+              const busy = busyKey === c.key;
+              const peer = c.peerPet;
               return (
-                <li key={c.id}>
+                <li key={c.key} className="tg-chat-list-row">
                   <button
                     type="button"
                     className={`tg-chat-list-item${active ? ' is-active' : ''}${
-                      c.chatEnded ? ' is-ended' : ''
-                    }${pending ? ' is-pending' : ''}`}
-                    onClick={() => onSelect(c.id)}
+                      c.ended ? ' is-ended' : ''
+                    }${c.pending ? ' is-pending' : ''}`}
+                    onClick={() => onSelect(c)}
                   >
-                    <PetAvatar
-                      type={peer.type}
-                      size="md"
-                      imageUrl={peer.imageUrl}
-                      name={peer.name}
-                    />
+                    {peer ? (
+                      <PetAvatar
+                        type={peer.type}
+                        size="md"
+                        imageUrl={peer.imageUrl}
+                        name={peer.name}
+                      />
+                    ) : (
+                      <span className="tg-chat-list-icon" aria-hidden>
+                        <Stethoscope size={22} strokeWidth={2} />
+                      </span>
+                    )}
                     <span className="tg-chat-list-meta">
-                      <strong>{peer.ownerName || peer.name}</strong>
-                      <small>{preview}</small>
+                      <strong>
+                        {c.title}
+                        <em className="tg-chat-list-kind">
+                          {c.kind === 'vet' ? 'مشاوره' : 'همبازی'}
+                        </em>
+                      </strong>
+                      <small>{c.preview}</small>
                     </span>
                     <time className="tg-chat-list-time">{formatTimeAgo(c.createdAt)}</time>
                   </button>
+                  {c.canDecide ? (
+                    <div className="tg-chat-list-actions">
+                      <button
+                        type="button"
+                        className="tg-chat-list-accept"
+                        disabled={Boolean(busy)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAccept(c);
+                        }}
+                      >
+                        <Check size={14} strokeWidth={2.5} />
+                        قبول
+                      </button>
+                      <button
+                        type="button"
+                        className="tg-chat-list-reject"
+                        disabled={Boolean(busy)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onReject(c);
+                        }}
+                      >
+                        <X size={14} strokeWidth={2.5} />
+                        رد
+                      </button>
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -301,12 +343,13 @@ export function ChatPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const desktop = useIsDesktop();
-  const { user: authUser } = useAuthStore();
+  const { user: authUser, token } = useAuthStore();
   const myUserId = authUser?.id;
   const selectedId = Number(matchId);
   const hasThread = Number.isFinite(selectedId) && selectedId > 0;
 
-  const [conversations, setConversations] = useState<MatchRequest[]>([]);
+  const [conversations, setConversations] = useState<InboxConversation[]>([]);
+  const [listActionKey, setListActionKey] = useState<string | null>(null);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
 
@@ -357,33 +400,14 @@ export function ChatPage() {
     setListLoading(true);
     setListError(null);
     try {
-      const rows = await listPlaydateRequests({ userId: myUserId });
-      const mapped = rows
-        .filter((r) => {
-          if (r.status === 'rejected' || r.status === 'cancelled') return false;
-          const owns =
-            r.toUserId === myUserId ||
-            r.fromUserId === myUserId ||
-            r.toPet?.ownerId === myUserId ||
-            r.fromPet?.ownerId === myUserId;
-          return owns;
-        })
-        .map((r) => playdateToMatchRequest(r, myUserId))
-        .sort((a, b) => {
-          const rank = (m: MatchRequest) =>
-            m.status === 'pending' ? 0 : m.chatEnded ? 2 : 1;
-          const ra = rank(a);
-          const rb = rank(b);
-          if (ra !== rb) return ra - rb;
-          return Date.parse(b.createdAt) - Date.parse(a.createdAt);
-        });
+      const mapped = await loadInboxConversations(myUserId, authUser);
       setConversations(mapped);
     } catch (err) {
       setListError(err instanceof Error ? err.message : 'بارگذاری گفتگوها ناموفق بود');
     } finally {
       setListLoading(false);
     }
-  }, [myUserId]);
+  }, [myUserId, authUser]);
 
   useEffect(() => {
     void reloadConversations();
@@ -595,8 +619,12 @@ export function ChatPage() {
         setPeerOwnerLabel(name);
         setConversations((prev) =>
           prev.map((c) =>
-            c.fromPet.ownerId === ownerId
-              ? { ...c, fromPet: { ...c.fromPet, ownerName: name } }
+            c.peerPet?.ownerId === ownerId
+              ? {
+                  ...c,
+                  title: name || c.title,
+                  peerPet: { ...c.peerPet, ownerName: name },
+                }
               : c,
           ),
         );
@@ -667,8 +695,37 @@ export function ChatPage() {
     return blocks;
   }, [messages]);
 
-  function onSelectConversation(id: number) {
-    navigate(`/chats/${id}`);
+  function onSelectConversation(item: InboxConversation) {
+    navigate(item.href);
+  }
+
+  async function onAcceptFromList(item: InboxConversation) {
+    if (!myUserId || listActionKey) return;
+    setListActionKey(item.key);
+    setListError(null);
+    try {
+      await acceptInboxItem(item, myUserId, token);
+      await reloadConversations();
+      navigate(item.href);
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : 'قبول درخواست ناموفق بود');
+    } finally {
+      setListActionKey(null);
+    }
+  }
+
+  async function onRejectFromList(item: InboxConversation) {
+    if (!myUserId || listActionKey) return;
+    setListActionKey(item.key);
+    setListError(null);
+    try {
+      await rejectInboxItem(item, myUserId, token);
+      await reloadConversations();
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : 'رد درخواست ناموفق بود');
+    } finally {
+      setListActionKey(null);
+    }
   }
 
   function onBack() {
@@ -981,9 +1038,12 @@ export function ChatPage() {
           conversations={conversations}
           loading={listLoading}
           error={listError}
-          activeId={hasThread ? selectedId : undefined}
+          activeKey={hasThread ? `playmate:${selectedId}` : undefined}
+          busyKey={listActionKey}
           onSelect={onSelectConversation}
           onRefresh={() => void reloadConversations()}
+          onAccept={(item) => void onAcceptFromList(item)}
+          onReject={(item) => void onRejectFromList(item)}
         />
       ) : null}
 
