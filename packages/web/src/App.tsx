@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { AppGuards } from './components/AuthGuard';
 import { Layout } from './components/Layout';
+import { RouteSeo } from './components/RouteSeo';
 import { AdminGuard } from './admin/AdminGuard';
 import { AdminLayout } from './admin/AdminLayout';
 import { AdminDashboardPage } from './admin/pages/AdminDashboardPage';
@@ -53,6 +54,7 @@ export default function App() {
   return (
     <AppGuards>
       <ShopCartProvider>
+        <RouteSeo />
         <Routes>
           <Route index element={<WelcomePage />} />
           <Route path="welcome" element={<WelcomePage />} />

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, PawPrint } from 'lucide-react';
 import { LandingChrome } from '../components/LandingChrome';
 import { SITE } from '@petdate/shared';
 
 /** ۱۰ پرسش پرتکرار — منطبق با قابلیت‌های واقعی پت‌دیت */
-const FAQ_ITEMS: { q: string; a: string }[] = [
+export const FAQ_ITEMS: { q: string; a: string }[] = [
   {
     q: 'پت‌دیت چیست و برای چه کسانی است؟',
     a: 'پت‌دیت پلتفرم فارسی برای پیدا کردن همبازی پت، خرید از پت‌شاپ، پذیرش پت، و مشاوره دامپزشک است. صاحبان سگ و گربه می‌توانند روی یک حساب مشترک وب و ربات تلگرام همهٔ این خدمات را مدیریت کنند.',
@@ -48,8 +48,36 @@ const FAQ_ITEMS: { q: string; a: string }[] = [
   },
 ];
 
+const FAQ_JSON_LD_ID = 'petdate-faq-jsonld';
+
 export function FaqPage() {
   const [open, setOpen] = useState<number | null>(0);
+
+  useEffect(() => {
+    const data = {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: FAQ_ITEMS.map((item) => ({
+        '@type': 'Question',
+        name: item.q,
+        acceptedAnswer: {
+          '@type': 'Answer',
+          text: item.a,
+        },
+      })),
+    };
+    let el = document.getElementById(FAQ_JSON_LD_ID) as HTMLScriptElement | null;
+    if (!el) {
+      el = document.createElement('script');
+      el.id = FAQ_JSON_LD_ID;
+      el.type = 'application/ld+json';
+      document.head.appendChild(el);
+    }
+    el.textContent = JSON.stringify(data);
+    return () => {
+      document.getElementById(FAQ_JSON_LD_ID)?.remove();
+    };
+  }, []);
 
   return (
     <LandingChrome bannerTitle="سؤالات متداول" bannerLead="پاسخ‌های کوتاه درباره پت‌دیت، همبازی، شاپ و دامپزشک">

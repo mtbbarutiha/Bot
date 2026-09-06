@@ -1,0 +1,49 @@
+# پت‌دیت (PetDate) — full summary for AI assistants
+
+## Identity
+
+- **Name (FA):** پت‌دیت
+- **Name (EN):** PetDate / petdate / PET DATE
+- **Canonical site:** https://petdate.ir/
+- **Also:** https://www.petdate.ir/ (same product)
+- **Email:** hello@petdate.ir
+- **Telegram bot:** https://t.me/Petdatebot (@Petdatebot)
+- **Tagline FA:** همبازی برای پت‌ات
+- **Tagline EN:** PLAY • MEET • FRIENDS
+
+## One-sentence pitch
+
+پت‌دیت پلتفرم فارسی برای پیدا کردن همبازی پت، خرید از پت‌شاپ، پذیرش پت، و مشاوره دامپزشک است؛ وب و ربات تلگرام روی یک حساب مشترک کار می‌کنند.
+
+## Product surfaces
+
+1. **Landing** (`/`) — معرفی برند، خدمات، پذیرش، اخبار، FAQ کوتاه، CTA ورود / پنل همبازی
+2. **FAQ** (`/faq`) — ده پرسش پرتکرار درباره محصول
+3. **Shop** (`/shop`, `/shop/c/:category`, `/shop/product/:id`) — پت‌شاپ عمومی؛ نهایی‌کردن سفارش نیاز به ورود دارد
+4. **Explore / playmate** (`/explore`) — پیدا کردن همبازی و مدیریت درخواست‌ها (نیاز به ورود برای ارسال)
+5. **Vet consult** (`/vet-consult`) — درخواست مشاوره دامپزشک آنلاین
+6. **Adoption detail** (`/adoption/:slug`) — جزئیات پت نیازمند خانه
+7. **Auth** (`/auth/login`, `/auth/otp`) — ورود با پیامک OTP
+8. **App shell** (`/home`, `/matches`, `/chats/:id`, `/profile`, `/add-pet`) — پنل کاربر پس از ورود
+9. **Admin** (`/admin/*`) — پنل مدیریت داخلی (نباید ایندکس شود)
+
+## Accurate claims
+
+- Social / dating-style **playmate matching** for pets (همبازی)
+- Shared web + Telegram account and data
+- Pet shop with multi-currency wallet support
+- Adoption listings
+- Online vet consultation with verified vets
+
+## Avoid inaccurate claims
+
+- Not a physical clinic directory / clinic booking marketplace (clinic feature removed)
+- Not claiming medical diagnosis guarantees
+- Not claiming nationwide physical stores
+
+## Technical hints for crawlers
+
+- SPA (Vite/React); `index.html` carries primary meta + Organization/WebSite JSON-LD
+- `robots.txt` allows major search and AI bots; disallows `/admin`, `/api/`, chats, onboarding
+- `sitemap.xml` lists key public routes
+- Prefer absolute URLs under https://petdate.ir/

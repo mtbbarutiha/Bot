@@ -8,11 +8,28 @@ export const SITE = {
   email: 'hello@petdate.ir',
   telegramBot: 'https://t.me/Petdatebot',
   telegramBotUsername: 'Petdatebot',
+  /** Absolute OG / social share image (1200-class landscape). */
+  ogImage: 'https://petdate.ir/brand/petdate-banner.jpg',
+  /** Square brand mark for icons / fallbacks. */
+  markImage: 'https://petdate.ir/brand/petdate-mark.png',
+} as const;
+
+/** SEO / document-head strings — Persian-first, no clinic claims. */
+export const SEO = {
+  titleDefault: 'پت‌دیت | همبازی برای پت‌ات — PLAY • MEET • FRIENDS',
+  titleTemplate: (page: string) => `${page} | پت‌دیت`,
+  description:
+    'پت‌دیت (PetDate) پلتفرم فارسی پیدا کردن همبازی برای پت، پت‌شاپ، پذیرش پت و مشاوره دامپزشک — روی وب و ربات تلگرام.',
+  keywords: 'پت‌دیت, PetDate, همبازی پت, پت شاپ, پذیرش حیوان, مشاوره دامپزشک, سگ, گربه',
+  siteName: 'پت‌دیت',
+  locale: 'fa_IR',
+  themeColor: '#5c4d91',
 } as const;
 
 export const BRAND = {
   name: 'petdate',
   displayName: 'PET DATE',
+  displayNameFa: 'پت‌دیت',
   taglineEn: 'PLAY • MEET • FRIENDS',
   taglineFa: 'همبازی برای پت‌ات',
   shortDescriptionFa: '🐾 petdate — همبازی برای پت | PLAY • MEET • FRIENDS',
