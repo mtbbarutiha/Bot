@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Bone,
   ChevronLeft,
@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
+import { NavUserCluster } from '../components/NavUserCluster';
 import { ADOPTION_PETS } from '../data/adoptionPets';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
@@ -158,10 +159,10 @@ const RELY_ITEMS_RIGHT = ['مراقبت شخصی', 'آرامش خیال', 'کا�
 
 /** Pepito “Our featured products” — shop grid → real catalog */
 const PRODUCTS = [
-  { name: 'ظرف غذای سگ کوچک', price: '۶۴۴٬۰۰۰ تومان', badge: 'تخفیف', img: `${P}/01-1.png`, to: '/shop/product/steel-pet-bowl' },
-  { name: 'توپ گربه', price: '۱۶۰٬۰۰۰ تومان', badge: 'پرفروش', img: `${P}/1-1.jpg`, to: '/shop/product/cookie-mouse-cat-toy' },
-  { name: 'خاک گربه', price: '۳۹۰٬۰۰۰ تومان', badge: 'ویژه', img: `${P}/03.png`, to: '/shop/product/hello-cat-litter' },
-  { name: 'غذای خشک جوسرا', price: '۳٬۳۰۰٬۰۰۰ تومان', badge: 'پرفروش', img: `${P}/06-1.png`, to: '/shop/product/josera-kitten-dry' },
+  { name: 'ظرف غذای سگ کوچک', price: '۶۴۴٬۰۰۰ تومان', badge: 'تخفیف', img: `${P}/01-1.png`, to: '/shop/product/dog-bowls-1-p41' },
+  { name: 'توپ گربه', price: '۱۶۰٬۰۰۰ تومان', badge: 'پرفروش', img: `${P}/1-1.jpg`, to: '/shop/product/cat-toys-1-p131' },
+  { name: 'خاک گربه', price: '۳۹۰٬۰۰۰ تومان', badge: 'ویژه', img: `${P}/03.png`, to: '/shop/product/cat-litter-1-p161' },
+  { name: 'غذای خشک جوسرا', price: '۳٬۳۰۰٬۰۰۰ تومان', badge: 'پرفروش', img: `${P}/06-1.png`, to: '/shop/product/cat-food-2-p102' },
 ] as const;
 
 /** Pepito “Latest News” / blog1 carousel */
@@ -251,8 +252,7 @@ function PawIcon({ size = 16 }: { size?: number }) {
 }
 
 export function WelcomePage() {
-  const navigate = useNavigate();
-  const { isLoggedIn, hasRole, isProfileComplete } = useAuthStore();
+  const { isLoggedIn } = useAuthStore();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [scrolled, setScrolled] = useState(false);
   const [slide, setSlide] = useState(0);
@@ -270,12 +270,6 @@ export function WelcomePage() {
   };
   const goPrevSlide = () => goToSlide(slide - 1);
   const goNextSlide = () => goToSlide(slide + 1);
-
-  useEffect(() => {
-    if (isLoggedIn && hasRole && isProfileComplete) {
-      navigate('/home', { replace: true });
-    }
-  }, [isLoggedIn, hasRole, isProfileComplete, navigate]);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -331,7 +325,8 @@ export function WelcomePage() {
 
   return (
     <div className="pepito-landing">
-      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}`}>
+      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${isLoggedIn ? ' pepito-nav--app' : ''}`}>
+        <NavUserCluster />
         <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
@@ -344,14 +339,17 @@ export function WelcomePage() {
           <a href="#faq">سؤالات</a>
         </nav>
         <div className="pepito-nav-actions">
-          <Link to={loginPath('/home')} className="pepito-nav-login">
-            ورود
-          </Link>
-          {/* Pepito: Send a message → contact / chat */}
-          <GatedLink to="/explore#requests" className="pepito-btn pepito-btn--nav">
-            <PawIcon size={14} />
-            ارسال پیام
-          </GatedLink>
+          {!isLoggedIn ? (
+            <>
+              <Link to={loginPath('/')} className="pepito-nav-login">
+                ورود
+              </Link>
+              <GatedLink to="/explore#requests" className="pepito-btn pepito-btn--nav">
+                <PawIcon size={14} />
+                ارسال پیام
+              </GatedLink>
+            </>
+          ) : null}
         </div>
       </header>
 

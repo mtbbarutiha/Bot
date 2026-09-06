@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom';
 import {
   Home,
+  LayoutDashboard,
   LayoutGrid,
   PawPrint,
   ShoppingBag,
@@ -10,12 +11,13 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { LandingChrome } from './LandingChrome';
 import { RoleSwitchControl } from './RoleSwitchControl';
-import { useAuthStore } from '../hooks/useAuthStore';
 
 /** Bot-parity destinations — web labels stay clean (icons carry the cue).
+ *  «خانه» is the Pepito landing (`/`); in-app dashboard stays at `/home` as «پنل».
  *  Profile lives in the top-left ProfileMenu (avatar), not this rail. */
 const navItems: { to: string; icon: LucideIcon; label: string }[] = [
-  { to: '/home', icon: Home, label: 'خانه' },
+  { to: '/', icon: Home, label: 'خانه' },
+  { to: '/home', icon: LayoutDashboard, label: 'پنل' },
   { to: '/explore', icon: LayoutGrid, label: 'پیدا کردن همبازی' },
   { to: '/add-pet', icon: PawPrint, label: 'پت‌های من' },
   { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
@@ -24,31 +26,25 @@ const navItems: { to: string; icon: LucideIcon; label: string }[] = [
 ];
 
 const mobileNav = navItems.filter((i) =>
-  ['/home', '/explore', '/add-pet'].includes(i.to)
+  ['/', '/explore', '/add-pet'].includes(i.to)
 );
 
 export function Layout() {
-  const { user } = useAuthStore();
-
   return (
     <LandingChrome
       appNav
       hideBanner
       footer
-      ctaLabel="همبازی"
-      ctaTo="/explore"
       className="pepito-app-shell"
     >
       <div className="pepito-app-layout">
         <aside className="pepito-app-rail" aria-label="منوی بیشتر">
-          <p className="pepito-app-rail-brand">Pet Date</p>
-          <p className="pepito-app-rail-user">{user?.name || 'کاربر Pet Date'}</p>
           <nav className="pepito-app-rail-nav">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
-                end={item.to === '/home'}
+                end={item.to === '/' || item.to === '/home'}
                 className={({ isActive }) => `pepito-app-rail-link${isActive ? ' is-active' : ''}`}
               >
                 <item.icon size={18} strokeWidth={2} />
@@ -68,7 +64,7 @@ export function Layout() {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/home'}
+              end={item.to === '/'}
               className={({ isActive }) => `pepito-app-mobile-link${isActive ? ' is-active' : ''}`}
               aria-label={item.label}
             >

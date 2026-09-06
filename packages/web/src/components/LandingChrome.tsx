@@ -2,8 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
-import { ProfileMenu } from './ProfileMenu';
-import { WalletChip } from './WalletChip';
+import { NavUserCluster } from './NavUserCluster';
 
 const BANNER_IMG = '/pepito/uploads/3.jpg';
 
@@ -85,17 +84,17 @@ export function LandingChrome({
   return (
     <div className={`pepito-landing pepito-flow-page${className ? ` ${className}` : ''}`} dir="rtl">
       <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${appNav ? ' pepito-nav--app' : ''}`}>
-        <Link to={appNav ? '/home' : '/'} className="pepito-nav-logo" aria-label={BRAND.displayName}>
+        {appNav ? <NavUserCluster /> : null}
+        <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
 
         {appNav ? (
           <nav className="pepito-nav-links pepito-nav-links--app" aria-label="منوی اصلی">
-            <NavLink to="/home" end>
+            <NavLink to="/" end>
               خانه
             </NavLink>
-            <NavLink to="/explore">همبازی</NavLink>
-            <NavLink to="/shop">پت شاپ</NavLink>
+            <NavLink to="/explore">پنل همبازی</NavLink>
             <NavLink to="/add-pet">پت‌های من</NavLink>
           </nav>
         ) : (
@@ -123,12 +122,6 @@ export function LandingChrome({
               <PawIcon />
               {ctaLabel}
             </Link>
-          ) : null}
-          {appNav ? (
-            <div className="pepito-nav-user-cluster">
-              <ProfileMenu />
-              <WalletChip />
-            </div>
           ) : null}
         </div>
       </header>

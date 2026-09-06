@@ -5,8 +5,7 @@ import { BRAND } from '@petdate/shared';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { useShopCart } from '../../hooks/useShopCart';
 import { loginPath } from '../../lib/authRedirect';
-import { ProfileMenu } from '../ProfileMenu';
-import { WalletChip } from '../WalletChip';
+import { NavUserCluster } from '../NavUserCluster';
 
 function PawIcon({ size = 14 }: { size?: number }) {
   return (
@@ -50,7 +49,8 @@ export function ShopChrome({
 
   return (
     <div className="pepito-landing pepito-flow-page pd-shop-page" dir="rtl">
-      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''} pepito-nav--app`}>
+      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${isLoggedIn ? ' pepito-nav--app' : ''}`}>
+        <NavUserCluster />
         <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
@@ -64,22 +64,22 @@ export function ShopChrome({
           <Link to="/#services">خدمات</Link>
         </nav>
         <div className="pepito-nav-actions">
-          <Link to="/shop/cart" className="pd-shop-cart-link" aria-label="سبد خرید">
+          <Link
+            to="/shop/cart"
+            className="pd-shop-cart-link"
+            data-shop-cart-target
+            aria-label="سبد خرید"
+          >
             <ShoppingBag size={18} strokeWidth={2} />
             {itemCount > 0 ? (
               <span className="pd-shop-cart-count">{itemCount.toLocaleString('fa-IR')}</span>
             ) : null}
           </Link>
-          {isLoggedIn ? (
-            <div className="pepito-nav-user-cluster">
-              <ProfileMenu />
-              <WalletChip />
-            </div>
-          ) : (
+          {!isLoggedIn ? (
             <Link to={loginPath('/shop')} className="pepito-nav-login">
               ورود
             </Link>
-          )}
+          ) : null}
           <Link to="/shop" className="pepito-btn pepito-btn--nav">
             <PawIcon />
             پت شاپ
@@ -91,7 +91,7 @@ export function ShopChrome({
         <section className="pd-shop-hero pd-shop-hero--full" aria-label={bannerTitle}>
           <img
             className="pd-shop-hero-img"
-            src="/media/shop/petdate-shop-hero.png"
+            src="/media/petdate-shop-hero.png"
             alt="پت دیت شاپ — فضای برند فروشگاه حیوانات خانگی"
           />
           <div className="pd-shop-hero-wash" aria-hidden />
@@ -100,7 +100,7 @@ export function ShopChrome({
               <span className="pepito-kicker-dot" aria-hidden>
                 <PawPrint size={16} />
               </span>
-              پت دیت شاپ
+              PetDate Shop
             </p>
             <h1>{bannerTitle}</h1>
             {bannerLead ? <p>{bannerLead}</p> : null}
