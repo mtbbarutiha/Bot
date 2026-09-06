@@ -61,6 +61,26 @@ authRouter.get('/me', (req, res) => {
   res.json({ ok: true, user: session.user });
 });
 
+/** کیف پول چندارزی — TON / Stars / سکه ربات / تومان */
+authRouter.get('/wallet', (req, res) => {
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  if (!session) {
+    res.status(401).json({ error: 'وارد نشده‌اید' });
+    return;
+  }
+  const wallet = dbService.getWallet(session.user.id);
+  if (!wallet) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json({
+    ok: true,
+    wallet,
+    /** coins همان سکه ربات است؛ برای سازگاری با کلاینت‌های قدیمی */
+    coins: wallet.coins,
+  });
+});
+
 authRouter.post('/logout', (req, res) => {
   const session = getUserFromBearer(req.header('authorization') ?? undefined);
   if (session) dbService.deleteWebSession(session.token);

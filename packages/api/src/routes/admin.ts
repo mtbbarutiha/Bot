@@ -220,3 +220,40 @@ adminRouter.get('/monitoring', async (_req, res) => {
     redisConfigured: hasRedisConfig(),
   });
 });
+
+/** واریز/برداشت تستی کیف پول چندارزی (ادمین) */
+adminRouter.post('/wallet/credit', (req, res) => {
+  const userId = Number(req.body?.userId);
+  const currencyRaw = String(req.body?.currency ?? '').trim().toLowerCase();
+  const amount = Number(req.body?.amount);
+  const currency =
+    currencyRaw === 'ton' ||
+    currencyRaw === 'stars' ||
+    currencyRaw === 'coins' ||
+    currencyRaw === 'toman'
+      ? currencyRaw
+      : null;
+  if (!Number.isFinite(userId) || userId <= 0) {
+    res.status(400).json({ error: 'userId نامعتبر است' });
+    return;
+  }
+  if (!currency) {
+    res.status(400).json({ error: 'currency باید ton | stars | coins | toman باشد' });
+    return;
+  }
+  if (!Number.isFinite(amount) || amount === 0) {
+    res.status(400).json({ error: 'amount نامعتبر است' });
+    return;
+  }
+  const result = dbService.creditWallet(userId, currency, amount);
+  if (!result.ok) {
+    res.status(result.reason === 'missing_user' ? 404 : 400).json({
+      error:
+        result.reason === 'missing_user'
+          ? 'کاربر پیدا نشد'
+          : 'مبلغ یا موجودی کافی نیست',
+    });
+    return;
+  }
+  res.json({ ok: true, user: result.user, wallet: result.user.wallet });
+});

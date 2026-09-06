@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { ProfileMenu } from './ProfileMenu';
+import { WalletChip } from './WalletChip';
 
 const BANNER_IMG = '/pepito/uploads/3.jpg';
 
@@ -123,7 +124,12 @@ export function LandingChrome({
               {ctaLabel}
             </Link>
           ) : null}
-          {appNav ? <ProfileMenu /> : null}
+          {appNav ? (
+            <div className="pepito-nav-user-cluster">
+              <ProfileMenu />
+              <WalletChip />
+            </div>
+          ) : null}
         </div>
       </header>
 

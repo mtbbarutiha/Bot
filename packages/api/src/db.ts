@@ -44,7 +44,9 @@ import {
   PROFILE_REWARD_SECTIONS,
   PROFILE_SECTION_REWARD,
   SIGNUP_BONUS,
+  walletFromUserFields,
   type PetMedicalField,
+  type WalletCurrency,
 } from '@petdate/shared';
 
 /** Absolute DATABASE_PATH wins; relative paths ignored (cwd varies across worktrees). */
@@ -201,6 +203,16 @@ function migrateSchema() {
   if (!names.has('country')) db.exec("ALTER TABLE users ADD COLUMN country TEXT");
   if (!names.has('interests')) db.exec("ALTER TABLE users ADD COLUMN interests TEXT NOT NULL DEFAULT '[]'");
   if (!names.has('coins')) db.exec('ALTER TABLE users ADD COLUMN coins INTEGER NOT NULL DEFAULT 0');
+  /** کیف پول چندارزی — سکه ربات همان coins است؛ TON / Stars / تومان جدا */
+  if (!names.has('wallet_ton')) {
+    db.exec('ALTER TABLE users ADD COLUMN wallet_ton INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!names.has('wallet_stars')) {
+    db.exec('ALTER TABLE users ADD COLUMN wallet_stars INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!names.has('wallet_toman')) {
+    db.exec('ALTER TABLE users ADD COLUMN wallet_toman INTEGER NOT NULL DEFAULT 0');
+  }
   if (!names.has('last_daily_coin_at')) db.exec('ALTER TABLE users ADD COLUMN last_daily_coin_at TEXT');
   if (!names.has('signup_bonus_claimed')) {
     db.exec('ALTER TABLE users ADD COLUMN signup_bonus_claimed INTEGER NOT NULL DEFAULT 0');
@@ -1045,6 +1057,15 @@ function mapUser(row: Record<string, unknown>): User {
     interests: parseInterests(row.interests),
     avatarUrl: row.avatar_url as string | undefined,
     coins: row.coins != null ? Number(row.coins) : 0,
+    walletTon: row.wallet_ton != null ? Number(row.wallet_ton) : 0,
+    walletStars: row.wallet_stars != null ? Number(row.wallet_stars) : 0,
+    walletToman: row.wallet_toman != null ? Number(row.wallet_toman) : 0,
+    wallet: walletFromUserFields({
+      coins: row.coins != null ? Number(row.coins) : 0,
+      walletTon: row.wallet_ton != null ? Number(row.wallet_ton) : 0,
+      walletStars: row.wallet_stars != null ? Number(row.wallet_stars) : 0,
+      walletToman: row.wallet_toman != null ? Number(row.wallet_toman) : 0,
+    }),
     lastDailyCoinAt: (row.last_daily_coin_at as string | undefined) ?? undefined,
     signupBonusClaimed: Boolean(row.signup_bonus_claimed),
     profileRewards: parseProfileRewards(row.profile_rewards),
@@ -1934,6 +1955,55 @@ export const dbService = {
     }
     db.prepare(`UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?`).run(amount, userId);
     return this.getUserById(userId);
+  },
+
+  /** موجودی کیف پول چندارزی (سکه = users.coins) */
+  getWallet(userId: number) {
+    const user = this.getUserById(userId);
+    if (!user) return null;
+    return user.wallet ?? walletFromUserFields(user);
+  },
+
+  /**
+   * افزایش/کاهش موجودی یک ارز کیف پول.
+   * coins → ستون coins؛ بقیه → wallet_*
+   */
+  creditWallet(
+    userId: number,
+    currency: WalletCurrency,
+    amount: number
+  ): { ok: true; user: User } | { ok: false; reason: 'missing_user' | 'bad_amount' } {
+    const safe = Math.floor(Number(amount));
+    if (!Number.isFinite(safe) || safe === 0) {
+      return { ok: false, reason: 'bad_amount' };
+    }
+    if (!this.getUserById(userId)) return { ok: false, reason: 'missing_user' };
+
+    if (currency === 'coins') {
+      if (safe > 0) {
+        db.prepare(`UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?`).run(safe, userId);
+      } else {
+        const debited = this.debitCoins(userId, Math.abs(safe));
+        if (!debited) return { ok: false, reason: 'bad_amount' };
+      }
+      return { ok: true, user: this.getUserById(userId)! };
+    }
+
+    const col =
+      currency === 'ton' ? 'wallet_ton' : currency === 'stars' ? 'wallet_stars' : 'wallet_toman';
+    if (safe > 0) {
+      db.prepare(`UPDATE users SET ${col} = COALESCE(${col}, 0) + ? WHERE id = ?`).run(safe, userId);
+    } else {
+      const abs = Math.abs(safe);
+      const result = db
+        .prepare(
+          `UPDATE users SET ${col} = ${col} - ?
+           WHERE id = ? AND COALESCE(${col}, 0) >= ?`
+        )
+        .run(abs, userId, abs);
+      if (result.changes === 0) return { ok: false, reason: 'bad_amount' };
+    }
+    return { ok: true, user: this.getUserById(userId)! };
   },
 
   /**

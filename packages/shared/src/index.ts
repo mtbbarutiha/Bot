@@ -11,7 +11,7 @@ import type {
   VetCredentialStatus,
 } from './petdate';
 import type { UserGender } from './petdate';
-import type { CoinAward } from './economy';
+import type { CoinAward, WalletBalances } from './economy';
 
 export type GameType =
   | 'football'
@@ -131,7 +131,16 @@ export interface User {
   bio?: string;
   interests?: string[];
   avatarUrl?: string;
+  /** سکه ربات (هم‌تراز wallet.coins) */
   coins?: number;
+  /** موجودی TON (Telegram Toncoin) */
+  walletTon?: number;
+  /** موجودی ستاره‌های تلگرام نگه‌داری‌شده */
+  walletStars?: number;
+  /** موجودی تومان (IRT) */
+  walletToman?: number;
+  /** کیف پول چندارزی — همیشه از mapUser پر می‌شود */
+  wallet?: WalletBalances;
   /** آخرین دریافت سکه روزانه (ISO) */
   lastDailyCoinAt?: string;
   /** هدیه ثبت‌نام یک‌باره واریز شده؟ */

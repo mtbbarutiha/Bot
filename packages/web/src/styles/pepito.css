@@ -3174,17 +3174,197 @@ button.chip.is-on {
   }
 }
 
-/* —— Post-login profile avatar (physical CSS left) —— */
+/* —— Post-login profile avatar + wallet (physical CSS left) —— */
 .pepito-nav--app {
-  /* Room for absolute avatar on physical left */
-  padding-left: calc(var(--pepito-gutter-x) + 3.1rem);
+  /* Room for absolute avatar + wallet chip on physical left */
+  padding-left: calc(var(--pepito-gutter-x) + 9.5rem);
 }
-.pepito-nav-profile {
+.pepito-nav-user-cluster {
   position: absolute;
   left: var(--pepito-gutter-x);
   top: 50%;
   transform: translateY(-50%);
   z-index: 5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.45rem;
+}
+.pepito-nav-profile {
+  position: relative;
+  left: auto;
+  top: auto;
+  transform: none;
+  z-index: 5;
+}
+.pepito-nav-wallet {
+  position: relative;
+  z-index: 5;
+}
+.pepito-nav-wallet-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: min(42vw, 11.5rem);
+  height: 42px;
+  padding: 0 0.65rem 0 0.55rem;
+  border-radius: 999px;
+  border: 1.5px solid rgba(25, 6, 61, 0.12);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.94), rgba(248, 245, 238, 0.92));
+  color: var(--pepito-dark);
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(25, 6, 61, 0.07);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+  font: inherit;
+}
+.pepito-nav-wallet-btn:hover,
+.pepito-nav-wallet-btn[aria-expanded='true'] {
+  border-color: rgba(92, 77, 145, 0.35);
+  box-shadow: 0 8px 18px rgba(25, 6, 61, 0.12);
+  transform: translateY(-1px);
+}
+.pepito-nav-wallet-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #2a9d8f, #1d6f66);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.pepito-nav-wallet-chip-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.22rem;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-display);
+  font-weight: 750;
+  font-size: 0.78rem;
+  line-height: 1;
+  color: var(--pepito-dark);
+}
+.pepito-nav-wallet-chip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  white-space: nowrap;
+}
+.pepito-nav-wallet-chip-sep {
+  color: var(--pepito-muted);
+  opacity: 0.7;
+}
+.pepito-nav-wallet-chip-unit {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--pepito-muted);
+}
+.pepito-nav-wallet-panel {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  left: 0;
+  right: auto;
+  width: min(300px, calc(100vw - 1.5rem));
+  padding: 0.75rem;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(25, 6, 61, 0.1);
+  box-shadow: 0 18px 44px rgba(25, 6, 61, 0.14);
+  animation: pepito-flow-rise 0.28s ease both;
+  z-index: 70;
+  text-align: start;
+}
+.pepito-nav-wallet-panel-head {
+  padding: 0.25rem 0.35rem 0.55rem;
+  border-bottom: 1px solid rgba(25, 6, 61, 0.07);
+  margin-bottom: 0.45rem;
+}
+.pepito-nav-wallet-panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: var(--pepito-dark);
+}
+.pepito-nav-wallet-panel-lead {
+  margin: 0.15rem 0 0;
+  font-size: 0.76rem;
+  color: var(--pepito-muted);
+}
+.pepito-nav-wallet-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.pepito-nav-wallet-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.55rem;
+  border-radius: 12px;
+}
+.pepito-nav-wallet-row:nth-child(odd) {
+  background: rgba(42, 157, 143, 0.06);
+}
+.pepito-nav-wallet-row-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-weight: 700;
+  font-size: 0.86rem;
+  color: var(--pepito-dark);
+}
+.pepito-nav-wallet-row-sym {
+  width: 1.25rem;
+  text-align: center;
+  font-size: 0.92rem;
+}
+.pepito-nav-wallet-row-val {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--pepito-dark);
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+.pepito-nav-wallet-row-unit {
+  font-weight: 700;
+  font-size: 0.72rem;
+  color: var(--pepito-muted);
+}
+.pepito-nav-wallet-soon {
+  margin: 0.65rem 0.35rem 0.35rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: #1d6f66;
+}
+.pepito-nav-wallet-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0.15rem 0.35rem 0.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+.pepito-nav-wallet-notes li {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--pepito-muted);
+}
+.pepito-nav-wallet-notes strong {
+  color: var(--pepito-dark);
+  font-weight: 700;
 }
 .pepito-nav-profile-btn {
   appearance: none;
@@ -3308,13 +3488,26 @@ button.chip.is-on {
 }
 @media (max-width: 900px) {
   .pepito-nav--app {
-    padding-left: calc(var(--pepito-gutter-x) + 2.85rem);
+    padding-left: calc(var(--pepito-gutter-x) + 8.25rem);
+  }
+  .pepito-nav-user-cluster {
+    gap: 0.35rem;
+  }
+  .pepito-nav-profile-btn,
+  .pepito-nav-wallet-btn {
+    height: 38px;
   }
   .pepito-nav-profile-btn {
     width: 38px;
-    height: 38px;
   }
-  .pepito-nav-profile-menu {
+  .pepito-nav-wallet-btn {
+    padding: 0 0.5rem 0 0.4rem;
+  }
+  .pepito-nav-wallet-chip-line {
+    font-size: 0.72rem;
+  }
+  .pepito-nav-profile-menu,
+  .pepito-nav-wallet-panel {
     position: fixed;
     top: calc(var(--pepito-nav-h) + 0.35rem);
     left: 0.75rem;

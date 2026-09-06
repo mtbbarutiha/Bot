@@ -1,5 +1,103 @@
 /** اقتصاد سکه همبازی — ثابت‌های مشترک API و بات */
 
+/** موجودی کیف پول چندارزی کاربر */
+export type WalletCurrency = 'ton' | 'stars' | 'coins' | 'toman';
+
+export interface WalletBalances {
+  /** TON (Telegram Toncoin) — ذخیره و نمایش؛ واریز on-chain فعلاً stub */
+  ton: number;
+  /** ستاره‌های تلگرام نگه‌داری‌شده — جدا از خرید سکه با Stars */
+  stars: number;
+  /** سکه ربات (users.coins) */
+  coins: number;
+  /** تومان (IRT) */
+  toman: number;
+}
+
+export const WALLET_CURRENCY_LABELS_FA: Record<WalletCurrency, string> = {
+  ton: 'تون',
+  stars: 'ستاره‌ها',
+  coins: 'سکه ربات',
+  toman: 'تومان',
+};
+
+export const WALLET_CURRENCY_SYMBOLS: Record<WalletCurrency, string> = {
+  ton: '◆',
+  stars: '⭐',
+  coins: '🪙',
+  toman: 'تومان',
+};
+
+/** وضعیت اتصال هر ارز — برای UI و مستندات */
+export const WALLET_CURRENCY_STATUS: Record<
+  WalletCurrency,
+  { deposit: 'wired' | 'stub' | 'bot_only'; noteFa: string }
+> = {
+  ton: {
+    deposit: 'stub',
+    noteFa: 'نمایش موجودی؛ واریز TON هنوز فعال نیست',
+  },
+  stars: {
+    deposit: 'stub',
+    noteFa: 'نمایش موجودی ستاره؛ پرداخت Stars در ربات برای خرید سکه فعال است',
+  },
+  coins: {
+    deposit: 'wired',
+    noteFa: 'سکه ربات — خرید/جایزه از بات و API',
+  },
+  toman: {
+    deposit: 'stub',
+    noteFa: 'نمایش موجودی تومان؛ واریز بانکی به‌زودی',
+  },
+};
+
+export function emptyWallet(): WalletBalances {
+  return { ton: 0, stars: 0, coins: 0, toman: 0 };
+}
+
+export function normalizeWalletBalances(input: Partial<WalletBalances> | null | undefined): WalletBalances {
+  const n = (v: unknown) => {
+    const x = Math.floor(Number(v ?? 0));
+    return Number.isFinite(x) && x > 0 ? x : 0;
+  };
+  return {
+    ton: n(input?.ton),
+    stars: n(input?.stars),
+    coins: n(input?.coins),
+    toman: n(input?.toman),
+  };
+}
+
+/** ساخت کیف پول از فیلدهای کاربر (coins = سکه ربات) */
+export function walletFromUserFields(user: {
+  coins?: number | null;
+  walletTon?: number | null;
+  walletStars?: number | null;
+  walletToman?: number | null;
+  wallet?: Partial<WalletBalances> | null;
+}): WalletBalances {
+  const pick = (...vals: Array<number | null | undefined>) => {
+    for (const v of vals) {
+      if (v != null) return v;
+    }
+    return 0;
+  };
+  if (user.wallet) {
+    return normalizeWalletBalances({
+      ton: pick(user.wallet.ton, user.walletTon),
+      stars: pick(user.wallet.stars, user.walletStars),
+      coins: pick(user.wallet.coins, user.coins),
+      toman: pick(user.wallet.toman, user.walletToman),
+    });
+  }
+  return normalizeWalletBalances({
+    ton: pick(user.walletTon),
+    stars: pick(user.walletStars),
+    coins: pick(user.coins),
+    toman: pick(user.walletToman),
+  });
+}
+
 /** هدیه یک‌باره ثبت‌نام */
 export const SIGNUP_BONUS = 20;
 /** جایزه تکمیل هر بخش پروفایل (اولین بار) */

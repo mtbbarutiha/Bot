@@ -137,7 +137,7 @@ function formatProfileCard(user: User, petCount: number, petNames: string[] = []
     petsLine,
     '',
     '📊 <b>آمار</b>',
-    `🪙 سکه: ${formatNum(user.coins)}`,
+    `🪙 سکه ربات: ${formatNum(user.coins)}`,
     `👁 بازدید: ${formatNum(user.profileViews)}`,
     `❤️ لایک: ${formatNum(user.likesCount)}`,
     `وضعیت حساب: ${activeLabel}`,
