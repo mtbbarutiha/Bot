@@ -2795,15 +2795,8 @@ button.chip.is-on {
   flex-wrap: wrap;
   gap: 0.65rem;
   margin-top: 1.35rem;
-  padding-top: 0.25rem;
-  position: sticky;
-  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-  z-index: 5;
-}
-@media (min-width: 860px) {
-  .pepito-profile-edit-actions {
-    bottom: 1rem;
-  }
+  padding: 1rem 0 0.25rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.92) 28%, #fff 100%);
 }
 .pepito-profile-edit-actions .pepito-btn--ghost {
   background: transparent !important;
@@ -2813,6 +2806,15 @@ button.chip.is-on {
 .pepito-profile-edit-actions .pepito-btn--ghost:hover {
   background: var(--pepito-lilac) !important;
   color: var(--pepito-dark) !important;
+}
+.pepito-profile-cta .pepito-btn.button-1 {
+  background: var(--pepito-base) !important;
+  color: #fff !important;
+  border: 0 !important;
+  backdrop-filter: none;
+}
+.pepito-profile--edit {
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 
 @media (max-width: 640px) {
@@ -2832,6 +2834,9 @@ button.chip.is-on {
   }
   .pepito-profile-edit-actions .pepito-btn {
     width: 100%;
+  }
+  .pepito-profile--edit {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
 
