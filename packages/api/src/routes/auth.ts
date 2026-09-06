@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import type { OnboardingStatus, UserGender, UserRole } from '@petdate/shared';
-import { USER_ROLES, normalizeRoles, primaryRole } from '@petdate/shared';
+import { USER_ROLES, normalizeRoles } from '@petdate/shared';
 import { dbService } from '../db';
 import {
   getUserFromBearer,
@@ -110,7 +110,28 @@ authRouter.patch('/roles', (req, res) => {
     return;
   }
 
-  const rolesRaw = Array.isArray(req.body?.roles) ? req.body.roles : [];
+  const body = req.body ?? {};
+  const roleCandidate =
+    typeof body.role === 'string' && USER_ROLES.includes(body.role as UserRole)
+      ? (body.role as UserRole)
+      : null;
+
+  // سوییچ نقش فعال بدون تغییر لیست نقش‌ها (مثل ربات: primaryOnly)
+  if (body.primaryOnly === true) {
+    if (!roleCandidate) {
+      res.status(400).json({ error: 'نقش نامعتبر است' });
+      return;
+    }
+    const updated = dbService.setUserPrimaryRole(session.user.id, roleCandidate);
+    if (!updated) {
+      res.status(400).json({ error: 'این نقش جزو نقش‌های شما نیست' });
+      return;
+    }
+    res.json({ ok: true, user: updated });
+    return;
+  }
+
+  const rolesRaw = Array.isArray(body.roles) ? body.roles : [];
   const roles = normalizeRoles(
     rolesRaw.filter((r: unknown): r is UserRole => USER_ROLES.includes(r as UserRole))
   );
@@ -119,14 +140,17 @@ authRouter.patch('/roles', (req, res) => {
     return;
   }
 
+  // setUserRoles نقش فعال قبلی را اگر هنوز در لیست باشد حفظ می‌کند
   let updated = dbService.setUserRoles(session.user.id, roles);
-  const primary = primaryRole(roles);
-  if (primary) {
-    updated = dbService.setUserPrimaryRole(session.user.id, primary) ?? updated;
-  }
   if (!updated) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;
   }
+
+  // اختیاری: نقش فعال مشخص‌شده بعد از به‌روزرسانی لیست
+  if (roleCandidate && roles.includes(roleCandidate)) {
+    updated = dbService.setUserPrimaryRole(session.user.id, roleCandidate) ?? updated;
+  }
+
   res.json({ ok: true, user: updated });
 });

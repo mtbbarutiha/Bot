@@ -3,6 +3,7 @@ import { normalizeRoles, primaryRole } from '@petdate/shared';
 import {
   fetchMe,
   logoutWebSession,
+  patchWebPrimaryRole,
   patchWebProfile,
   patchWebRoles,
   requestWebOtp,
@@ -141,9 +142,18 @@ class AuthStore {
     return res.user;
   }
 
-  async saveRoles(roles: UserRole[]) {
+  async saveRoles(roles: UserRole[], primary?: UserRole) {
     if (!this.data.token) throw new Error('وارد نشده‌اید');
-    const res = await patchWebRoles(this.data.token, roles);
+    const res = await patchWebRoles(this.data.token, roles, primary);
+    this.data = { ...this.data, user: res.user };
+    this.persist();
+    return res.user;
+  }
+
+  /** سوییچ نقش فعال بین نقش‌های موجود (بدون حذف بقیه) */
+  async setPrimaryRole(role: UserRole) {
+    if (!this.data.token) throw new Error('وارد نشده‌اید');
+    const res = await patchWebPrimaryRole(this.data.token, role);
     this.data = { ...this.data, user: res.user };
     this.persist();
     return res.user;

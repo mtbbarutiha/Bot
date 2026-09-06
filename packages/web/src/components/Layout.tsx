@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { LandingChrome } from './LandingChrome';
+import { RoleSwitchControl } from './RoleSwitchControl';
 import { useAuthStore } from '../hooks/useAuthStore';
 
 /** Bot-parity destinations — web labels stay clean (icons carry the cue). */
@@ -64,6 +65,7 @@ export function Layout() {
                 <span>{item.label}</span>
               </NavLink>
             ))}
+            <RoleSwitchControl variant="rail" />
           </nav>
           <button type="button" className="pepito-app-rail-logout" onClick={() => void onLogout()}>
             <LogOut size={16} /> خروج

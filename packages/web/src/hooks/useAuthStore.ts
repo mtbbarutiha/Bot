@@ -22,6 +22,7 @@ export function useAuthStore() {
     refreshMe: authStore.refreshMe.bind(authStore),
     saveProfile: authStore.saveProfile.bind(authStore),
     saveRoles: authStore.saveRoles.bind(authStore),
+    setPrimaryRole: authStore.setPrimaryRole.bind(authStore),
     logout: authStore.logout.bind(authStore),
     setPending: authStore.setPending.bind(authStore),
     clearPending: authStore.clearPending.bind(authStore),

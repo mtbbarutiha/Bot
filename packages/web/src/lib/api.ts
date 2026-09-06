@@ -343,10 +343,19 @@ export async function patchWebProfile(token: string, patch: Record<string, unkno
   });
 }
 
-export async function patchWebRoles(token: string, roles: UserRole[]) {
+export async function patchWebRoles(token: string, roles: UserRole[], primary?: UserRole) {
   return request<{ ok: true; user: User }>('/api/auth/roles', {
     method: 'PATCH',
     headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ roles }),
+    body: JSON.stringify(primary ? { roles, role: primary } : { roles }),
+  });
+}
+
+/** سوییچ نقش فعال بدون حذف بقیه نقش‌ها */
+export async function patchWebPrimaryRole(token: string, role: UserRole) {
+  return request<{ ok: true; user: User }>('/api/auth/roles', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ role, primaryOnly: true }),
   });
 }
