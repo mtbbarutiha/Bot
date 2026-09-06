@@ -77,7 +77,7 @@ export function LoginPage() {
         ورود با اکانت تلگرام
       </a>
       <p className="auth-telegram-hint">
-        ربات باز می‌شود؛ دکمهٔ «ورود به وبسایت» را بزن تا با لینک امن HMAC برگردی.
+        ربات باز می‌شود؛ دکمهٔ «ورود به وبسایت» را بزن تا امن و خودکار وارد وب شوی.
       </p>
 
       <div className="auth-or" role="separator">
