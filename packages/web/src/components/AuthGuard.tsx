@@ -4,7 +4,7 @@ import { loginPath, postAuthPath, readNextFromSearch, sanitizeNext } from '../li
 import { useAuthStore } from '../hooks/useAuthStore';
 import { TelegramSync } from './OnboardingGuard';
 
-const PUBLIC_EXACT = new Set(['/', '/welcome']);
+const PUBLIC_EXACT = new Set(['/', '/welcome', '/faq']);
 const PUBLIC_PREFIXES = ['/auth', '/admin', '/adoption', '/shop'];
 
 function isPublic(pathname: string) {
