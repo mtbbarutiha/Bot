@@ -79,6 +79,14 @@ else
   echo "WARNING: docker not installed — Postgres/Redis probes in admin will fail if DATABASE_URL/REDIS_URL are set."
 fi
 
+# Elasticsearch — admin monitoring + future search.
+# Tries compose profile "search"; falls back to native tarball when registries are blocked.
+if [[ -x ./scripts/ensure-elasticsearch.sh ]]; then
+  sudo ./scripts/ensure-elasticsearch.sh || echo "WARNING: Elasticsearch setup failed — admin will show «پیکربندی نشده» or down."
+else
+  echo "WARNING: scripts/ensure-elasticsearch.sh missing"
+fi
+
 npm install
 npm run build:all
 

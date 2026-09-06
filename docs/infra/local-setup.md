@@ -43,15 +43,21 @@ npm run infra:up
 
 ورود به کنسول MinIO: http://localhost:9001 — کاربر/رمز پیش‌فرض: `petdate` / `petdate_secret`
 
-## ۳. Elasticsearch (اختیاری — فاز بعد)
+## ۳. Elasticsearch (مانیتورینگ ادمین + جستجوی بعدی)
 
-برای جستجوی پیشرفته (هنوز در API استفاده نمی‌شود):
+برای بالا آوردن با Docker:
 
 ```bash
 docker compose --profile search up -d
 ```
 
-آدرس پیش‌فرض: `http://localhost:9200` (`ELASTICSEARCH_URL` در `.env`).
+اگر رجیستری Docker/Elastic از VPS در دسترس نبود، نصب native (heap پیش‌فرض ۵۱۲MB، single-node):
+
+```bash
+sudo ./scripts/ensure-elasticsearch.sh
+```
+
+آدرس پیش‌فرض: `http://localhost:9200` (`ELASTICSEARCH_URL` در `.env`). با ست شدن این متغیر، مانیتورینگ ادمین وضعیت live/`up` را نشان می‌دهد.
 
 ## ۴. مشاهده لاگ‌ها و خاموش کردن
 

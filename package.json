@@ -11,8 +11,10 @@
     "build:all": "npm run build -w @petdate/shared && npm run build -w @petdate/api && npm run build -w @petdate/bot && npm run build -w @petdate/web",
     "preview": "npm run preview -w @petdate/web",
     "infra:up": "docker compose up -d",
+    "infra:up:search": "docker compose --profile search up -d",
     "infra:down": "docker compose down",
-    "infra:logs": "docker compose logs -f"
+    "infra:logs": "docker compose logs -f",
+    "infra:elasticsearch": "bash ./scripts/ensure-elasticsearch.sh"
   },
   "workspaces": [
     "packages/*"
