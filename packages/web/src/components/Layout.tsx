@@ -5,7 +5,6 @@ import {
   PawPrint,
   ShoppingBag,
   Stethoscope,
-  User,
   Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -13,7 +12,8 @@ import { LandingChrome } from './LandingChrome';
 import { RoleSwitchControl } from './RoleSwitchControl';
 import { useAuthStore } from '../hooks/useAuthStore';
 
-/** Bot-parity destinations — web labels stay clean (icons carry the cue). */
+/** Bot-parity destinations — web labels stay clean (icons carry the cue).
+ *  Profile lives in the top-left ProfileMenu (avatar), not this rail. */
 const navItems: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/home', icon: Home, label: 'خانه' },
   { to: '/explore', icon: LayoutGrid, label: 'پیدا کردن همبازی' },
@@ -21,11 +21,10 @@ const navItems: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
   { to: '/clinics', icon: Stethoscope, label: 'کلینیک‌ها' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
-  { to: '/profile', icon: User, label: 'پروفایل' },
 ];
 
 const mobileNav = navItems.filter((i) =>
-  ['/home', '/explore', '/add-pet', '/profile'].includes(i.to)
+  ['/home', '/explore', '/add-pet'].includes(i.to)
 );
 
 export function Layout() {

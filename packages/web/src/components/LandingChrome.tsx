@@ -96,7 +96,6 @@ export function LandingChrome({
             </NavLink>
             <NavLink to="/explore">همبازی</NavLink>
             <NavLink to="/add-pet">پت‌های من</NavLink>
-            <NavLink to="/profile">پروفایل</NavLink>
           </nav>
         ) : (
           <nav className="pepito-nav-links" aria-label="بخش‌ها">
