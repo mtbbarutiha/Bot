@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { Activity, AlertTriangle, RefreshCw, Trash2 } from 'lucide-react';
 import { adminFetch } from '../api';
 
@@ -21,6 +21,8 @@ type LogStats = {
   lastErrorAt: string | null;
 };
 
+const POLL_MS = 5000;
+
 export function AdminLogsPage() {
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [stats, setStats] = useState<LogStats | null>(null);
@@ -28,9 +30,13 @@ export function AdminLogsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+  const [live, setLive] = useState(true);
+  const silentRef = useRef(false);
 
   const load = useCallback(async () => {
-    setLoading(true);
+    const silent = silentRef.current;
+    if (!silent) setLoading(true);
     setError(null);
     try {
       const qs = new URLSearchParams({ limit: '150' });
@@ -40,16 +46,21 @@ export function AdminLogsPage() {
       );
       setStats(data.stats);
       setLogs(data.logs);
+      setUpdatedAt(new Date().toLocaleTimeString('fa-IR'));
+      setLive(true);
     } catch (err) {
+      setLive(false);
       setError(err instanceof Error ? err.message : 'بارگذاری لاگ ناموفق بود');
     } finally {
       setLoading(false);
+      silentRef.current = true;
     }
   }, [level]);
 
   useEffect(() => {
+    silentRef.current = false;
     void load();
-    const t = window.setInterval(() => void load(), 15000);
+    const t = window.setInterval(() => void load(), POLL_MS);
     return () => window.clearInterval(t);
   }, [load]);
 
@@ -57,6 +68,7 @@ export function AdminLogsPage() {
     if (!window.confirm('لاگ‌های قدیمی‌تر از ۷ روز پاک شوند؟')) return;
     try {
       await adminFetch('/api/admin/logs?olderThanDays=7', { method: 'DELETE' });
+      silentRef.current = false;
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'پاک‌سازی ناموفق بود');
@@ -68,13 +80,20 @@ export function AdminLogsPage() {
       <header className="admin-header">
         <div>
           <h1>لاگ خطاها</h1>
-          <p>خطاها و هشدارهای API — هر ۱۵ ثانیه تازه می‌شود</p>
+          <p>
+            خطاها و هشدارهای API و ربات — زنده
+            {updatedAt ? ` · آخرین بروزرسانی ${updatedAt}` : ''}
+            {live ? ' · متصل' : ' · قطع'}
+          </p>
         </div>
         <div className="admin-header-actions">
           <select
             className="admin-select"
             value={level}
-            onChange={(e) => setLevel(e.target.value)}
+            onChange={(e) => {
+              silentRef.current = false;
+              setLevel(e.target.value);
+            }}
             aria-label="فیلتر سطح"
           >
             <option value="">همه سطوح</option>
@@ -82,7 +101,14 @@ export function AdminLogsPage() {
             <option value="warn">warn</option>
             <option value="info">info</option>
           </select>
-          <button type="button" className="admin-btn" onClick={() => void load()}>
+          <button
+            type="button"
+            className="admin-btn"
+            onClick={() => {
+              silentRef.current = false;
+              void load();
+            }}
+          >
             <RefreshCw size={16} />
             بروزرسانی
           </button>

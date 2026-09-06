@@ -3,6 +3,40 @@ import { dbService } from '../db';
 
 export type AppLogLevel = 'error' | 'warn' | 'info';
 
+const recentKeys = new Map<string, number>();
+const DEDUPE_MS = 20_000;
+let persisting = false;
+let consoleBridged = false;
+let processLoggingInstalled = false;
+
+function shouldDedupe(key: string): boolean {
+  const now = Date.now();
+  const prev = recentKeys.get(key);
+  if (prev && now - prev < DEDUPE_MS) return true;
+  recentKeys.set(key, now);
+  if (recentKeys.size > 500) {
+    for (const [k, t] of recentKeys) {
+      if (now - t > DEDUPE_MS) recentKeys.delete(k);
+    }
+  }
+  return false;
+}
+
+function formatConsoleArgs(args: unknown[]): string {
+  return args
+    .map((a) => {
+      if (a instanceof Error) return a.stack || a.message;
+      if (typeof a === 'string') return a;
+      try {
+        return JSON.stringify(a);
+      } catch {
+        return String(a);
+      }
+    })
+    .join(' ')
+    .slice(0, 4000);
+}
+
 export function logAppEvent(opts: {
   level?: AppLogLevel;
   source?: string;
@@ -13,11 +47,20 @@ export function logAppEvent(opts: {
   statusCode?: number | null;
   meta?: Record<string, unknown> | null;
 }): void {
+  const message = (opts.message || '').trim();
+  if (!message) return;
+  const level = opts.level ?? 'error';
+  const source = opts.source ?? 'api';
+  const dedupeKey = `${level}|${source}|${message.slice(0, 240)}|${opts.path ?? ''}`;
+  if (shouldDedupe(dedupeKey)) return;
+
+  if (persisting) return;
+  persisting = true;
   try {
     dbService.createAppErrorLog({
-      level: opts.level ?? 'error',
-      source: opts.source ?? 'api',
-      message: opts.message,
+      level,
+      source,
+      message,
       stack: opts.stack,
       path: opts.path,
       method: opts.method,
@@ -25,8 +68,60 @@ export function logAppEvent(opts: {
       meta: opts.meta,
     });
   } catch (err) {
-    console.error('failed to persist app log:', (err as Error).message);
+    // Use native console to avoid re-entrancy through the bridge.
+    nativeConsoleError('failed to persist app log:', (err as Error).message);
+  } finally {
+    persisting = false;
   }
+}
+
+const nativeConsoleError = console.error.bind(console);
+const nativeConsoleWarn = console.warn.bind(console);
+
+/** Mirror console.error / meaningful console.warn into admin log store. */
+export function installConsoleErrorBridge(source = 'api'): void {
+  if (consoleBridged) return;
+  consoleBridged = true;
+
+  console.error = (...args: unknown[]) => {
+    nativeConsoleError(...args);
+    const message = formatConsoleArgs(args);
+    if (!message || message.startsWith('failed to persist app log:')) return;
+    const err = args.find((a): a is Error => a instanceof Error);
+    logAppEvent({
+      level: 'error',
+      source,
+      message: message.split('\n')[0]!.slice(0, 500),
+      stack: err?.stack ?? (message.includes('\n') ? message : null),
+      meta: { via: 'console.error' },
+    });
+  };
+
+  console.warn = (...args: unknown[]) => {
+    nativeConsoleWarn(...args);
+    const message = formatConsoleArgs(args);
+    if (!message) return;
+    // Only persist operational failures — skip routine noise.
+    const lower = message.toLowerCase();
+    if (
+      !(
+        lower.includes('fail') ||
+        lower.includes('error') ||
+        lower.includes('timeout') ||
+        lower.includes('econnrefused') ||
+        lower.includes('unable') ||
+        lower.includes('cannot')
+      )
+    ) {
+      return;
+    }
+    logAppEvent({
+      level: 'warn',
+      source,
+      message: message.split('\n')[0]!.slice(0, 500),
+      meta: { via: 'console.warn' },
+    });
+  };
 }
 
 /** Express middleware: log 4xx/5xx responses (except common auth noise). */
@@ -34,7 +129,14 @@ export function responseErrorLogger(req: Request, res: Response, next: NextFunct
   const started = Date.now();
   res.on('finish', () => {
     if (res.statusCode < 400) return;
+    // SPA / static 404s and unauthenticated admin probes are noise.
     if (res.statusCode === 404 && !req.path.startsWith('/api/')) return;
+    if (
+      res.statusCode === 401 &&
+      (req.path.startsWith('/api/admin') || req.originalUrl.startsWith('/api/admin'))
+    ) {
+      return;
+    }
     logAppEvent({
       level: res.statusCode >= 500 ? 'error' : 'warn',
       source: 'api',
@@ -57,7 +159,7 @@ export function expressErrorHandler(
 ): void {
   const message = err instanceof Error ? err.message : String(err);
   const stack = err instanceof Error ? err.stack : undefined;
-  console.error('unhandled api error:', message);
+  nativeConsoleError('unhandled api error:', message);
   logAppEvent({
     level: 'error',
     source: 'api',
@@ -72,8 +174,10 @@ export function expressErrorHandler(
 }
 
 export function installProcessErrorLogging(source = 'api'): void {
+  if (processLoggingInstalled) return;
+  processLoggingInstalled = true;
   process.on('uncaughtException', (err) => {
-    console.error('uncaughtException:', err);
+    nativeConsoleError('uncaughtException:', err);
     logAppEvent({
       level: 'error',
       source,
@@ -86,7 +190,7 @@ export function installProcessErrorLogging(source = 'api'): void {
     const message =
       reason instanceof Error ? reason.message : `unhandledRejection: ${String(reason)}`;
     const stack = reason instanceof Error ? reason.stack : undefined;
-    console.error('unhandledRejection:', reason);
+    nativeConsoleError('unhandledRejection:', reason);
     logAppEvent({
       level: 'error',
       source,

@@ -4,6 +4,7 @@ import { applyBotBranding } from './branding';
 import { assertBotToken, config } from './config';
 import { requiredChannels } from './force-join';
 import { registerHandlers } from './handlers';
+import { reportBotError } from './report-error';
 import { connectRedis, disconnectRedis } from './session';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
@@ -13,6 +14,26 @@ try {
 } catch {
   /* older Node */
 }
+
+process.on('uncaughtException', (err) => {
+  console.error('uncaughtException:', err);
+  void reportBotError({
+    message: `uncaughtException: ${err.message}`,
+    stack: err.stack,
+    meta: { type: 'uncaughtException' },
+  });
+});
+process.on('unhandledRejection', (reason) => {
+  const message =
+    reason instanceof Error ? reason.message : `unhandledRejection: ${String(reason)}`;
+  const stack = reason instanceof Error ? reason.stack : undefined;
+  console.error('unhandledRejection:', reason);
+  void reportBotError({
+    message,
+    stack,
+    meta: { type: 'unhandledRejection' },
+  });
+});
 
 async function warnForceJoinAdminRights(bot: Bot): Promise<void> {
   const me = await bot.api.getMe();
@@ -46,8 +67,18 @@ async function main(): Promise<void> {
 
   bot.catch(async (err) => {
     console.error('Bot error:', err.error);
+    const message = err.error instanceof Error ? err.error.message : String(err.error);
+    const stack = err.error instanceof Error ? err.error.stack : undefined;
+    void reportBotError({
+      message: `Bot error: ${message}`,
+      stack,
+      path: err.ctx?.update?.update_id != null ? `update:${err.ctx.update.update_id}` : null,
+      meta: {
+        type: 'bot.catch',
+        updateType: err.ctx?.update ? Object.keys(err.ctx.update).filter((k) => k !== 'update_id')[0] : null,
+      },
+    });
     try {
-      const message = String(err.error);
       if (
         message.includes('fetch failed') ||
         message.includes('ECONNREFUSED') ||
@@ -98,5 +129,9 @@ process.once('SIGTERM', shutdown);
 
 main().catch((err) => {
   console.error(err);
-  process.exit(1);
+  void reportBotError({
+    message: err instanceof Error ? `bot main failed: ${err.message}` : `bot main failed: ${String(err)}`,
+    stack: err instanceof Error ? err.stack : null,
+    meta: { type: 'main' },
+  }).finally(() => process.exit(1));
 });

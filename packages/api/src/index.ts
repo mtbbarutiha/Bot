@@ -27,6 +27,7 @@ import { authRouter } from './routes/auth';
 import { adminRouter } from './routes/admin';
 import {
   expressErrorHandler,
+  installConsoleErrorBridge,
   installProcessErrorLogging,
   responseErrorLogger,
 } from './services/app-logger';
@@ -39,6 +40,7 @@ try {
 }
 
 getDb();
+installConsoleErrorBridge('api');
 installProcessErrorLogging('api');
 
 const app = express();
