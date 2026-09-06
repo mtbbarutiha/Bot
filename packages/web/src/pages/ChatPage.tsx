@@ -28,7 +28,6 @@ import {
   X,
 } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
-import { FindPlaymatePanel } from '../components/FindPlaymatePanel';
 import { EmojiPicker } from '../components/EmojiPicker';
 import { PetAvatar } from '../components/PetAvatar';
 import { RequestCountdown } from '../components/RequestCountdown';
@@ -256,19 +255,20 @@ function ConversationListPane({
             <div className="tg-skeleton tg-skeleton--row" />
           </div>
          ) : conversations.length === 0 ? (
-          <div className="tg-chat-list-empty tg-chat-list-empty--hub">
-            {scope === 'vet' ? (
-              <>
-                <BrandMark iconSize={28} />
-                <h2>هنوز گفتگویی نیست</h2>
-                <p>درخواست‌ها و چت‌های مشاوره دامپزشکی این نقش اینجا می‌آیند.</p>
-                <Link to="/vet-consult" className="tg-chat-link-btn">
-                  رفتن به پنل پزشک
-                </Link>
-              </>
-            ) : (
-              <FindPlaymatePanel compact />
-            )}
+          <div className="tg-chat-list-empty">
+            <BrandMark iconSize={28} />
+            <h2>هنوز گفتگویی نیست</h2>
+            <p>
+              {scope === 'vet'
+                ? 'درخواست‌ها و چت‌های مشاوره دامپزشکی این نقش اینجا می‌آیند.'
+                : 'درخواست‌های همبازی و مشاوره‌های شما به‌عنوان صاحب پت اینجا می‌آیند.'}
+            </p>
+            <Link
+              to={scope === 'vet' ? '/vet-consult' : '/explore'}
+              className="tg-chat-link-btn"
+            >
+              {scope === 'vet' ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
+            </Link>
           </div>
         ) : (
           <ul className="tg-chat-list-items">
@@ -348,20 +348,16 @@ function ConversationListPane({
 
 function ThreadEmptyState({ scope }: { scope: InboxScope }) {
   const isVet = scope === 'vet';
-  if (isVet) {
-    return (
-      <div className="tg-thread-empty">
-        <BrandMark iconSize={36} />
-        <h2>مشاوره‌ای را شروع کن</h2>
-        <Link to="/vet-consult" className="tg-chat-link-btn">
-          رفتن به پنل پزشک
-        </Link>
-      </div>
-    );
-  }
   return (
-    <div className="tg-thread-empty tg-thread-empty--hub">
-      <FindPlaymatePanel />
+    <div className="tg-thread-empty">
+      <BrandMark iconSize={36} />
+      <h2>{isVet ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
+      <Link
+        to={isVet ? '/vet-consult' : '/explore'}
+        className="tg-chat-link-btn"
+      >
+        {isVet ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
+      </Link>
     </div>
   );
 }
