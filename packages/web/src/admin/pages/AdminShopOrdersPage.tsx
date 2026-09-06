@@ -49,7 +49,7 @@ export function AdminShopOrdersPage() {
               <td>{new Date(o.createdAt).toLocaleString('fa-IR')}</td>
             </tr>
           ))}
-          {!orders.length ? <tr><td colSpan={6} className="admin-muted">سفارشی نیست (checkout هنوز به API وصل نشده — stub آماده است)</td></tr> : null}
+          {!orders.length ? <tr><td colSpan={6} className="admin-muted">سفارشی نیست</td></tr> : null}
         </tbody>
       </table></div>
     </div>
