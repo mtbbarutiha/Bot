@@ -3912,7 +3912,99 @@ button.chip.is-on {
 }
 
 .pd-shop-hero {
-  min-height: 240px;
+  position: relative;
+  margin-top: var(--pepito-nav-h);
+  width: 100vw;
+  max-width: 100vw;
+  margin-inline: calc(50% - 50vw);
+  min-height: clamp(300px, 56vh, 620px);
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+  overflow: hidden;
+  background: #1a0f2e;
+  animation: pepito-flow-banner-in 0.7s ease both;
+}
+.pd-shop-hero--full {
+  min-height: clamp(320px, 58vh, 640px);
+}
+.pd-shop-hero-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 35%;
+  display: block;
+  z-index: 0;
+}
+.pd-shop-hero-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    rgba(25, 6, 61, 0.72) 0%,
+    rgba(25, 6, 61, 0.38) 46%,
+    rgba(25, 6, 61, 0.12) 72%,
+    transparent 100%
+  );
+}
+[dir='rtl'] .pd-shop-hero-wash {
+  background: linear-gradient(
+    260deg,
+    rgba(25, 6, 61, 0.72) 0%,
+    rgba(25, 6, 61, 0.38) 46%,
+    rgba(25, 6, 61, 0.12) 72%,
+    transparent 100%
+  );
+}
+.pd-shop-hero-inner {
+  position: relative;
+  z-index: 2;
+  width: min(var(--pepito-container-max, 1120px), 100%);
+  margin-inline: auto;
+  padding-inline: var(--pepito-container-pad, 1.25rem);
+  padding-block: 2.5rem 2.25rem;
+  box-sizing: border-box;
+  color: #fff;
+  animation: pepito-flow-rise 0.65s ease 0.08s both;
+}
+.pd-shop-hero-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.55rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.4vw, 1.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.pd-shop-hero-inner h1 {
+  margin: 0 0 0.45rem;
+  font-size: clamp(1.55rem, 3.4vw, 2.35rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+  font-family: var(--font-display);
+}
+.pd-shop-hero-inner > p:last-child {
+  margin: 0;
+  max-width: 38rem;
+  font-size: 1.05rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.92);
+}
+@media (max-width: 720px) {
+  .pd-shop-hero,
+  .pd-shop-hero--full {
+    min-height: clamp(240px, 48vh, 420px);
+  }
+  .pd-shop-hero-img {
+    object-position: center 28%;
+  }
 }
 
 .pd-shop-cart-link {
