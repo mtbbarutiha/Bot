@@ -12,11 +12,12 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
-      // Bust stale post-login caches that could resurrect removed nearby/suggested UI.
+      // prompt — autoUpdate+skipWaiting was full-reloading open tabs (e.g. /chats)
+      // whenever a new deploy raced the service worker.
+      registerType: 'prompt',
       workbox: {
-        skipWaiting: true,
-        clientsClaim: true,
+        skipWaiting: false,
+        clientsClaim: false,
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff2}'],
       },

@@ -69,8 +69,8 @@ import { formatTimeAgo } from '../data/mock';
 const CHAT_WIPE_HINT =
   'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
-const FALLBACK_POLL_MS = 20_000;
-const MESSAGE_FALLBACK_POLL_MS = 8_000;
+const FALLBACK_POLL_MS = 45_000;
+const MESSAGE_FALLBACK_POLL_MS = 15_000;
 const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 const DESKTOP_MQ = '(min-width: 860px)';
 
@@ -207,6 +207,8 @@ export function VetChatPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [conversations, setConversations] = useState<InboxConversation[]>([]);
   const [listLoading, setListLoading] = useState(true);
+  /** After the first successful inbox load, never flash the skeleton again. */
+  const listReadyRef = useRef(false);
   const [listError, setListError] = useState<string | null>(null);
   const [listActionKey, setListActionKey] = useState<string | null>(null);
 
@@ -257,9 +259,12 @@ export function VetChatPage() {
     if (!u?.id) {
       setConversations([]);
       setListLoading(false);
+      listReadyRef.current = false;
       return;
     }
-    if (!opts?.soft) {
+    // Once painted, stay soft — hard loading looks like a full refresh.
+    const soft = Boolean(opts?.soft || listReadyRef.current);
+    if (!soft) {
       setListLoading(true);
       setListError(null);
     }
@@ -267,7 +272,7 @@ export function VetChatPage() {
       const mapped = await loadInboxConversations(u.id, u);
       setConversations((prev) => {
         if (
-          opts?.soft &&
+          soft &&
           prev.length === mapped.length &&
           prev.every(
             (row, i) =>
@@ -275,20 +280,21 @@ export function VetChatPage() {
               row.preview === mapped[i]?.preview &&
               row.pending === mapped[i]?.pending &&
               row.ended === mapped[i]?.ended &&
-              row.lastActivityAt === mapped[i]?.lastActivityAt,
+              row.title === mapped[i]?.title,
           )
         ) {
           return prev;
         }
         return mapped;
       });
-      if (opts?.soft) setListError(null);
+      listReadyRef.current = true;
+      if (soft) setListError(null);
     } catch (err) {
-      if (!opts?.soft) {
+      if (!soft) {
         setListError(err instanceof Error ? err.message : 'بارگذاری گفتگوها ناموفق بود');
       }
     } finally {
-      if (!opts?.soft) setListLoading(false);
+      if (!soft) setListLoading(false);
     }
   }, []);
 

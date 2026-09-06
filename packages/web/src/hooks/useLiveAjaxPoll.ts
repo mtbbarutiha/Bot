@@ -1,17 +1,22 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Fast ajax-style polling for live inbox / doctor requests.
- * Runs immediately, on interval, and when the tab becomes visible / focused.
+ * Ajax-style polling for live inbox / doctor requests.
+ * Runs on an interval and when the tab becomes visible / focused.
+ * Skips the immediate kick when re-enabled so WS connect/disconnect flicker
+ * does not look like a page refresh.
  */
 export function useLiveAjaxPoll(
   tick: () => void | Promise<void>,
   {
     enabled,
     intervalMs = 1500,
+    runOnEnable = false,
   }: {
     enabled: boolean;
     intervalMs?: number;
+    /** When true, fire once as soon as polling becomes enabled. Default false. */
+    runOnEnable?: boolean;
   },
 ) {
   const tickRef = useRef(tick);
@@ -25,13 +30,14 @@ export function useLiveAjaxPoll(
 
     const run = () => {
       if (cancelled || inFlight) return;
+      if (document.visibilityState === 'hidden') return;
       inFlight = true;
       void Promise.resolve(tickRef.current()).finally(() => {
         inFlight = false;
       });
     };
 
-    run();
+    if (runOnEnable) run();
     const id = window.setInterval(run, intervalMs);
 
     const onFocus = () => run();
@@ -47,5 +53,5 @@ export function useLiveAjaxPoll(
       window.removeEventListener('focus', onFocus);
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [enabled, intervalMs]);
+  }, [enabled, intervalMs, runOnEnable]);
 }

@@ -16,7 +16,7 @@ import { emitIncomingRefresh } from '../lib/liveIncoming';
 import { isIncomingPlaydate } from '../lib/playdateMap';
 
 /** Ajax poll — short so desktop doctor / owner screens update quickly. */
-const FALLBACK_POLL_MS = 20_000;
+const FALLBACK_POLL_MS = 45_000;
 
 type IncomingItem =
   | { kind: 'playmate'; id: number; title: string; subtitle: string; photo?: string; href: string }

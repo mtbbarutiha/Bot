@@ -74,9 +74,9 @@ const CHAT_WIPE_HINT =
   'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
 /** Soft inbox refresh when WebSocket is unavailable (CDN often blocks WS). */
-const FALLBACK_POLL_MS = 20_000;
+const FALLBACK_POLL_MS = 45_000;
 /** Message/status poll when WS is down — keep gentle to avoid UI thrash. */
-const MESSAGE_FALLBACK_POLL_MS = 8_000;
+const MESSAGE_FALLBACK_POLL_MS = 15_000;
 const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 const DESKTOP_MQ = '(min-width: 860px)';
 
@@ -404,6 +404,8 @@ export function ChatPage() {
   const [listActionKey, setListActionKey] = useState<string | null>(null);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
+  /** After the first successful inbox load, never flash the skeleton again. */
+  const listReadyRef = useRef(false);
 
   const [match, setMatch] = useState<MatchRequest | null>(null);
   const [threadLoading, setThreadLoading] = useState(false);
@@ -451,10 +453,14 @@ export function ChatPage() {
     if (!myUserId) {
       setConversations([]);
       setListLoading(false);
+      listReadyRef.current = false;
       setListError('برای دیدن گفتگوها وارد حساب شو.');
       return;
     }
-    if (!opts?.soft) {
+    // Once the list has painted, all subsequent reloads stay soft — hard loading
+    // looks like a full page refresh on /chats.
+    const soft = Boolean(opts?.soft || listReadyRef.current);
+    if (!soft) {
       setListLoading(true);
       setListError(null);
     }
@@ -462,8 +468,10 @@ export function ChatPage() {
       const mapped = await loadInboxConversations(myUserId, authUserRef.current);
       setConversations((prev) => {
         // Skip state write when soft poll returns the same inbox — stops list flicker.
+        // Ignore lastActivityAt: relative timestamps / clock skew were rewriting the
+        // list every poll and felt like a constant refresh.
         if (
-          opts?.soft &&
+          soft &&
           prev.length === mapped.length &&
           prev.every(
             (row, i) =>
@@ -471,20 +479,21 @@ export function ChatPage() {
               row.preview === mapped[i]?.preview &&
               row.pending === mapped[i]?.pending &&
               row.ended === mapped[i]?.ended &&
-              row.lastActivityAt === mapped[i]?.lastActivityAt,
+              row.title === mapped[i]?.title,
           )
         ) {
           return prev;
         }
         return mapped;
       });
-      if (opts?.soft) setListError(null);
+      listReadyRef.current = true;
+      if (soft) setListError(null);
     } catch (err) {
-      if (!opts?.soft) {
+      if (!soft) {
         setListError(err instanceof Error ? err.message : 'بارگذاری گفتگوها ناموفق بود');
       }
     } finally {
-      if (!opts?.soft) setListLoading(false);
+      if (!soft) setListLoading(false);
     }
   }, [myUserId]);
 
