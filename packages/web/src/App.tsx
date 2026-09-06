@@ -43,6 +43,7 @@ import { ShopProductPage } from './pages/shop/ShopProductPage';
 import { ShopCartPage } from './pages/shop/ShopCartPage';
 import { VetConsultPage } from './pages/VetConsultPage';
 import { WelcomePage } from './pages/WelcomePage';
+import { FaqPage } from './pages/FaqPage';
 import { AdoptionDetailPage } from './pages/AdoptionDetailPage';
 import { PetOnboardingPage } from './pages/onboarding/PetOnboardingPage';
 import { ProfileWizardPage } from './pages/onboarding/ProfileWizardPage';
@@ -56,6 +57,7 @@ export default function App() {
         <Routes>
           <Route index element={<WelcomePage />} />
           <Route path="welcome" element={<WelcomePage />} />
+          <Route path="faq" element={<FaqPage />} />
           <Route path="adoption/:slug" element={<AdoptionDetailPage />} />
           <Route path="shop" element={<ShopHomePage />} />
           <Route path="shop/c/:category" element={<ShopCategoryPage />} />

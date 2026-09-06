@@ -16,7 +16,7 @@ const BOTTOM_LINKS: { to: string; label: string }[] = [
   { to: '/shop', label: 'پت شاپ' },
   { to: '/explore', label: 'همبازی' },
   { to: '/#news', label: 'اخبار' },
-  { to: '/#faq', label: 'سؤالات' },
+  { to: '/faq', label: 'سؤالات' },
   { to: '/clinics', label: 'کلینیک‌ها' },
   { to: '/vet-consult', label: 'دامپزشک' },
   { to: '/auth/login', label: 'ورود' },

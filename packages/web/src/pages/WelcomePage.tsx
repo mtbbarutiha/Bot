@@ -345,9 +345,9 @@ export function WelcomePage() {
               <Link to={loginPath('/')} className="pepito-nav-login">
                 ورود
               </Link>
-              <GatedLink to="/explore#requests" className="pepito-btn pepito-btn--nav">
+              <GatedLink to="/explore" className="pepito-btn pepito-btn--nav">
                 <PawIcon size={14} />
-                ارسال پیام
+                پنل همبازی
               </GatedLink>
             </>
           ) : null}
@@ -452,7 +452,28 @@ export function WelcomePage() {
             امکانات ربات، با تجربهٔ دسکتاپ قالب Pepito — داده همان لحظه سینک می‌ماند.
             دامپزشکان و همبازی‌ها روی یک حساب مشترک وب و تلگرام.
           </p>
-          {/* Pepito: Read more → about / services */}
+          <ul className="pepito-about-features">
+            {SERVICES.slice(0, 3).map((s) => {
+              const Icon = s.Icon;
+              return (
+                <li key={s.title} className="pepito-about-feature">
+                  <span className="pepito-about-feature-icon" aria-hidden>
+                    <svg
+                      className={`pepito-service-blob fill-${s.fill}`}
+                      viewBox="0 0 80 72"
+                    >
+                      <path d={BLOB_PATH} />
+                    </svg>
+                    <Icon size={28} strokeWidth={1.4} />
+                  </span>
+                  <span>
+                    <strong>{s.title}</strong>
+                    <span>{s.desc}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
           <a href="#services" className="pepito-btn button-1">
             <PawIcon />
             بیشتر بخوانید

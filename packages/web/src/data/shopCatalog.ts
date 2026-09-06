@@ -33,12 +33,23 @@ export interface ShopProduct {
   /** قیمت قبل از تخفیف (تومان) — اگر بیشتر از price باشد نشان‌دهنده تخفیف */
   compareAtToman?: number;
   image: string;
+  /** گالری تصاویر (Digikala-style) — در صورت خالی بودن از image استفاده می‌شود */
+  images?: string[];
   badge?: 'hot' | 'sale' | 'new' | 'limited';
   inStock: boolean;
-  /** پارامترهای کارت محصول (وزن، رنگ، سایز، …) */
+  /** پارامترهای کارت محصول / جدول مشخصات (وزن، رنگ، سایز، …) */
   params: Record<string, string>;
   description: string;
   featured?: boolean;
+  /** فروشنده نمایشی در باکس خرید (مثل دیجی‌کالا) */
+  sellerName?: string;
+  /** متن گارانتی / اصالت */
+  warranty?: string;
+  /** امتیاز ۰–۵ */
+  rating?: number;
+  reviewCount?: number;
+  /** بولت‌های کوتاه زیر عنوان */
+  highlights?: string[];
 }
 
 export const SHOP_PET_TYPES: { id: ShopPetType; labelFa: string }[] = [
@@ -102,12 +113,20 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
     categorySlug: 'dog-food',
     petTypes: ['dog'],
     priceToman: 4_850_000,
+    compareAtToman: 5_450_000,
     image: `${P}/01-1.png`,
+    images: [`${P}/01-1.png`, `${P}/01-2.jpg`, `${P}/01-3.png`, `${P}/2.jpg`],
     badge: 'hot',
     inStock: true,
-    params: { وزن: '۴ کیلوگرم' },
-    description: 'فرمول تخصصی نژاد متوسط برای انرژی روزانه. — پت دیت شاپ.',
+    params: { وزن: '۴ کیلوگرم', طعم: 'مرغ', مناسب_برای: 'سگ بالغ نژاد متوسط' },
+    description:
+      'فرمول تخصصی نژاد متوسط برای انرژی روزانه. پروتئین باکیفیت، گوارش آسان و مناسب سگ‌های بالغ. — پت دیت شاپ.',
     featured: true,
+    sellerName: 'پت‌دیت شاپ',
+    warranty: 'ضمانت اصالت و سلامت فیزیکی کالا',
+    rating: 4.7,
+    reviewCount: 312,
+    highlights: ['ارسال سریع از انبار پت‌دیت', 'بسته‌بندی بهداشتی کارخانه', 'مناسب سگ بالغ نژاد متوسط'],
   },
   {
     id: 'p2',
@@ -3185,6 +3204,28 @@ export function formatToman(amount: number): string {
 export function productDiscountPercent(p: ShopProduct): number | null {
   if (!p.compareAtToman || p.compareAtToman <= p.priceToman) return null;
   return Math.round(((p.compareAtToman - p.priceToman) / p.compareAtToman) * 100);
+}
+
+/** گالری محصول — حداقل تصویر اصلی */
+export function productGallery(p: ShopProduct): string[] {
+  const list = (p.images ?? []).map((u) => u.trim()).filter(Boolean);
+  if (list.length) return list;
+  return p.image ? [p.image] : [];
+}
+
+export function productSellerName(p: ShopProduct): string {
+  return p.sellerName?.trim() || 'پت‌دیت شاپ';
+}
+
+export function productWarranty(p: ShopProduct): string {
+  return p.warranty?.trim() || 'اصالت و سلامت فیزیکی کالا';
+}
+
+export function productRating(p: ShopProduct): { rating: number; count: number } {
+  return {
+    rating: p.rating != null && p.rating > 0 ? Math.min(5, p.rating) : 4.6,
+    count: p.reviewCount != null && p.reviewCount >= 0 ? p.reviewCount : 128,
+  };
 }
 
 export function getCategory(slug: string): ShopCategory | undefined {
