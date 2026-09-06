@@ -22,11 +22,12 @@ const NAV_GROUPS: NavGroup[] = [
     { to: '/admin/verification', icon: ShieldCheck, label: 'احراز هویت' },
   ]},
   { title: 'مالی', items: [
-
-
-
-
-
+    { to: '/admin/finance', icon: TrendingUp, label: 'داشبورد مالی' },
+    { to: '/admin/finance/pnl', icon: PieChart, label: 'سود و زیان' },
+    { to: '/admin/finance/sales', icon: LineChart, label: 'نمودار فروش' },
+    { to: '/admin/finance/orders', icon: ShoppingBag, label: 'درآمد سفارش' },
+    { to: '/admin/finance/wallet', icon: Wallet, label: 'کیف پول' },
+    { to: '/admin/finance/products', icon: Package, label: 'محصولات برتر' },
   ]},
   { title: 'فروشگاه', items: [
     { to: '/admin/shop/products', icon: Package, label: 'محصولات' },
