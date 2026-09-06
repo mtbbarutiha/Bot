@@ -4645,13 +4645,12 @@ button.chip.is-on {
   text-align: center;
 }
 .pd-shop-dk-circle {
-  --dk-cat: var(--pepito-base);
   width: 4.85rem;
   height: 4.85rem;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--dk-cat);
+  background: var(--dk-cat, var(--pepito-base));
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   transition: transform 0.22s ease, box-shadow 0.22s ease;
 }
