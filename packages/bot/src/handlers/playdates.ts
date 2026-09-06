@@ -323,7 +323,8 @@ async function sendPlaydateNow(
     fromPetId,
     toPetId,
     fromUserId,
-    confirmResend: Boolean(opts?.skipResendConfirm),
+    // Local bot UI already confirmed when needed.
+    confirmResend: true,
   });
   await upsertSession(String(ctx.from!.id), {
     step: 'ready',

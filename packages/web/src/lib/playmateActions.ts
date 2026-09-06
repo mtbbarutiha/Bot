@@ -81,6 +81,8 @@ export async function findAndSendPlaymates(
         fromPetId: source.id,
         toPetId: match.pet.id,
         fromUserId,
+        // Bulk auto-match should not prompt per peer after prior expiries.
+        confirmResend: true,
       });
       sent += 1;
       const locReasons = match.reasons.filter(

@@ -651,7 +651,16 @@ playdatesRouter.post('/', async (req, res) => {
     return;
   }
 
-  const hadExpiredPrior = dbService.hasExpiredPlaydate(Number(fromPetId), Number(toPetId));
+  const confirmResend = Boolean(req.body?.confirmResend);
+  // After a prior expired request to the same pet, require explicit resend confirm.
+  if (!confirmResend && dbService.hasExpiredPlaydate(Number(fromPetId), Number(toPetId))) {
+    res.status(409).json({
+      error: 'میخوای مجدد درخواست بدی به اون شخص؟',
+      code: 'RESEND_CONFIRM_REQUIRED',
+      requiresResendConfirm: true,
+    });
+    return;
+  }
 
   const request = dbService.createPlaydateRequest({
     fromPetId: Number(fromPetId),
@@ -673,7 +682,6 @@ playdatesRouter.post('/', async (req, res) => {
   res.status(201).json({
     ...enriched,
     telegramNotified: true,
-    hadExpiredPrior,
   });
 });
 

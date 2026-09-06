@@ -208,6 +208,7 @@ export async function handleExploreForPet(ctx: Context, petId: number | 'all'): 
           fromPetId: source.id,
           toPetId: match.pet.id,
           fromUserId: user.id,
+          confirmResend: true,
         });
         sent += 1;
         const locReasons = match.reasons.filter(
