@@ -91,7 +91,7 @@ export function ShopChrome({
         <section className="pd-shop-hero pd-shop-hero--full" aria-label={bannerTitle}>
           <img
             className="pd-shop-hero-img"
-            src="/shop/petdate-shop-hero.png"
+            src="/media/shop/petdate-shop-hero.png"
             alt="پت دیت شاپ — فضای برند فروشگاه حیوانات خانگی"
           />
           <div className="pd-shop-hero-wash" aria-hidden />
