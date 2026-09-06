@@ -29,6 +29,14 @@ export async function sendMail(opts: {
     process.env.SMTP_SECURE === 'true' ||
     port === 465;
 
+  const rejectUnauthorized =
+    process.env.SMTP_TLS_REJECT_UNAUTHORIZED === '1'
+      ? true
+      : process.env.SMTP_TLS_REJECT_UNAUTHORIZED === '0'
+        ? false
+        : // Local/unauthenticated relays (often :25) commonly use self-signed certs
+          Boolean(user && pass);
+
   try {
     const transporter = nodemailer.createTransport({
       host,
@@ -38,6 +46,7 @@ export async function sendMail(opts: {
       connectionTimeout: 15_000,
       greetingTimeout: 15_000,
       socketTimeout: 20_000,
+      tls: { rejectUnauthorized },
     });
 
     await transporter.sendMail({
