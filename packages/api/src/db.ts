@@ -2055,41 +2055,33 @@ export const dbService = {
 
   /**
    * هدف‌های اتصال سریع وب/دسکتاپ:
-   * - دامپزشک آنلاین ربات (vet_online=1)
-   * - دامپزشک با نشست فعال وب (آنلاین روی دسکتاپ/وب)
+   * فقط دامپزشک‌هایی که صریحاً آنلاین شده‌اند (vet_online=1) —
+   * چه از ربات، چه از پنل وب. نشست وب به‌تنهایی کافی نیست
+   * (سشن‌ها هفته‌ها زنده می‌مانند و درخواست را به پزشک‌های غیرفعال می‌فرستاد).
    */
   listOnlineVetsForQuickConnect(): User[] {
     const rows = db
       .prepare(
-        `SELECT DISTINCT u.*
+        `SELECT u.*
          FROM users u
-         LEFT JOIN web_sessions ws
-           ON ws.user_id = u.id
-          AND datetime(ws.expires_at) > datetime('now')
          WHERE u.is_active = 1
            AND COALESCE(u.vet_enabled, 1) = 1
+           AND COALESCE(u.vet_online, 0) = 1
            AND (
              u.role = 'vet'
              OR u.roles LIKE '%"vet"%'
            )
-           AND (
-             COALESCE(u.vet_online, 0) = 1
-             OR ws.user_id IS NOT NULL
-           )
          ORDER BY
            CASE WHEN COALESCE(u.phone_verified, 0) = 1 THEN 0 ELSE 1 END,
-           CASE WHEN COALESCE(u.vet_online, 0) = 1 THEN 0 ELSE 1 END,
            u.id DESC`
       )
       .all() as Record<string, unknown>[];
-    const vets = rows
+    return rows
       .map(mapUser)
       .filter((u) => {
         const roles = u.roles?.length ? u.roles : u.role ? [u.role] : [];
         return roles.includes('vet');
       });
-    // همهٔ آنلاین‌های ربات و وب؛ ترجیح phone فقط در ORDER BY است
-    return vets;
   },
 
   /** همهٔ کاربران با نقش دامپزشک (فعال و غیرفعال ادمین) */

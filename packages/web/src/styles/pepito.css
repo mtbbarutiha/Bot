@@ -4864,6 +4864,18 @@ button.chip.is-on {
   min-width: 8.5rem;
 }
 
+/* Dedicated vet dashboard — keep inbox readable on wide desktop */
+.pepito-vet-dashboard {
+  max-width: 780px;
+}
+.pepito-vet-dashboard .pepito-vet-consult-incoming {
+  max-width: none;
+  margin-inline: 0;
+}
+.pepito-vet-dashboard .pepito-vet-consult-incoming + .pepito-vet-consult-incoming {
+  margin-top: 0;
+}
+
 /* Vet web chat (separate from playdate secure chat) */
 .pepito-vet-chat .pepito-vet-chat-card {
   margin: 0.85rem 0.9rem;

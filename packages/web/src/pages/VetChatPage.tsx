@@ -296,50 +296,54 @@ export function VetChatPage() {
           </div>
         </header>
 
-        <div className="tg-thread-scroll">
-          {pending ? (
-            <div className="pepito-vet-chat-card" role="status">
-              <p>
-                {isVetSide
-                  ? `بیمار ${
-                      consult.patientName?.trim() || `#${consult.patientUserId}`
-                    } درخواست مشاوره سریع داده است.`
-                  : 'درخواستت برای پزشک ارسال شده. به‌محض قبول، چت همین‌جا باز می‌شود.'}
-              </p>
-              {isVetSide ? (
-                <div className="pepito-vet-chat-actions">
-                  <button
-                    type="button"
-                    className="pepito-btn button-1"
-                    disabled={acting}
-                    onClick={() => void onAccept()}
-                  >
-                    قبول و ورود به چت
-                  </button>
-                  <button
-                    type="button"
-                    className="pepito-btn pepito-btn--ghost"
-                    disabled={acting}
-                    onClick={() => void onReject()}
-                  >
-                    رد
-                  </button>
-                </div>
-              ) : (
-                <p className="pepito-vet-chat-wait-hint">لطفاً چند لحظه صبر کن…</p>
-              )}
-            </div>
-          ) : null}
+        <div className="tg-chat-wallpaper">
+          <div className="tg-chat-messages">
+            {pending ? (
+              <div className="pepito-vet-chat-card" role="status">
+                <p>
+                  {isVetSide
+                    ? `بیمار ${
+                        consult.patientName?.trim() || `#${consult.patientUserId}`
+                      } درخواست مشاوره سریع داده است.`
+                    : 'درخواستت برای پزشک ارسال شده. به‌محض قبول، چت همین‌جا باز می‌شود.'}
+                </p>
+                {isVetSide ? (
+                  <div className="pepito-vet-chat-actions">
+                    <button
+                      type="button"
+                      className="pepito-btn button-1"
+                      disabled={acting}
+                      onClick={() => void onAccept()}
+                      data-testid="vet-chat-accept"
+                    >
+                      قبول و ورود به چت
+                    </button>
+                    <button
+                      type="button"
+                      className="pepito-btn pepito-btn--ghost"
+                      disabled={acting}
+                      onClick={() => void onReject()}
+                      data-testid="vet-chat-reject"
+                    >
+                      رد
+                    </button>
+                  </div>
+                ) : (
+                  <p className="pepito-vet-chat-wait-hint">لطفاً چند لحظه صبر کن…</p>
+                )}
+              </div>
+            ) : null}
 
-          {messages.map((m) => (
-            <div
-              key={m.id}
-              className={`tg-bubble ${m.from === 'me' ? 'tg-bubble--out' : 'tg-bubble--in'}`}
-            >
-              <p>{m.text}</p>
-            </div>
-          ))}
-          <div ref={bottomRef} />
+            {messages.map((m) => (
+              <div
+                key={m.id}
+                className={`tg-bubble ${m.from === 'me' ? 'tg-bubble--out' : 'tg-bubble--in'}`}
+              >
+                <p>{m.text}</p>
+              </div>
+            ))}
+            <div ref={bottomRef} />
+          </div>
         </div>
 
         {error ? (
@@ -350,7 +354,7 @@ export function VetChatPage() {
 
         {active ? (
           <form className="tg-composer-shell" onSubmit={onSubmit}>
-            <div className="tg-composer" dir="ltr">
+            <div className="tg-composer tg-composer--simple" dir="ltr">
               <textarea
                 dir="auto"
                 rows={1}
@@ -359,12 +363,14 @@ export function VetChatPage() {
                 disabled={sending}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={onKeyDown}
+                data-testid="vet-chat-input"
               />
               <button
                 type="submit"
                 className="tg-send-btn"
                 disabled={sending || !draft.trim()}
                 aria-label="ارسال"
+                data-testid="vet-chat-send"
               >
                 {sending ? <Loader2 size={18} className="tg-spin" /> : <Send size={18} />}
               </button>

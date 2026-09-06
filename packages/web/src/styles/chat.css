@@ -115,6 +115,10 @@ html:has(.tg-chat) body {
   grid-template-columns: auto auto 1fr auto;
 }
 
+.tg-composer.tg-composer--simple {
+  grid-template-columns: 1fr auto;
+}
+
 .tg-composer-shell {
   background: rgba(247, 248, 251, 0.96);
 }

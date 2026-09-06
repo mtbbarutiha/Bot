@@ -41,6 +41,111 @@ function patientLabel(c: VetConsultation): string {
   return pet ? `${name} · ${pet}` : name;
 }
 
+function VetInboxSection({
+  incoming,
+  recent,
+  actingId,
+  onAccept,
+  onReject,
+}: {
+  incoming: VetConsultation[];
+  recent: VetConsultation[];
+  actingId: number | null;
+  onAccept: (id: number) => void;
+  onReject: (id: number) => void;
+}) {
+  return (
+    <>
+      <section
+        className="pepito-vet-consult-incoming"
+        aria-label="درخواست‌های ورودی پزشک"
+        data-testid="vet-incoming-inbox"
+      >
+        <h2>درخواست‌های جدید بیماران</h2>
+        {incoming.length === 0 ? (
+          <p className="pepito-vet-consult-hint">فعلاً درخواست جدیدی نیست.</p>
+        ) : (
+          <ul className="pepito-vet-consult-incoming-list">
+            {incoming.map((c) => (
+              <li key={c.id} data-testid={`vet-incoming-${c.id}`}>
+                <div>
+                  <strong>{patientLabel(c)}</strong>
+                  <span>درخواست مشاوره سریع</span>
+                  {c.createdAt ? (
+                    <small>{formatPersianDateTime(c.createdAt)}</small>
+                  ) : null}
+                </div>
+                <div className="pepito-vet-consult-incoming-actions">
+                  <Link
+                    to={`/vet-chats/${c.id}`}
+                    className="pepito-btn pepito-btn--ghost"
+                    data-testid={`vet-open-chat-${c.id}`}
+                  >
+                    مشاهده درخواست
+                  </Link>
+                  <button
+                    type="button"
+                    className="pepito-btn button-1"
+                    disabled={actingId === c.id}
+                    onClick={() => onAccept(c.id)}
+                    data-testid={`vet-accept-${c.id}`}
+                  >
+                    قبول و ورود به چت
+                  </button>
+                  <button
+                    type="button"
+                    className="pepito-btn pepito-btn--ghost"
+                    disabled={actingId === c.id}
+                    onClick={() => onReject(c.id)}
+                  >
+                    رد
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section
+        className="pepito-vet-consult-incoming"
+        aria-label="آخرین بیمارها"
+        data-testid="vet-recent-patients"
+      >
+        <h2>آخرین بیمارها</h2>
+        {recent.length === 0 ? (
+          <p className="pepito-vet-consult-hint">هنوز بیماری ثبت نشده.</p>
+        ) : (
+          <ul className="pepito-vet-consult-incoming-list">
+            {recent.map((c) => (
+              <li key={c.id}>
+                <div>
+                  <strong>{patientLabel(c)}</strong>
+                  <span>{c.status === 'active' ? 'مشاوره فعال' : 'پایان‌یافته'}</span>
+                  {c.createdAt ? (
+                    <small>{formatPersianDateTime(c.createdAt)}</small>
+                  ) : null}
+                </div>
+                {c.status === 'active' ? (
+                  <div className="pepito-vet-consult-incoming-actions">
+                    <Link
+                      to={`/vet-chats/${c.id}`}
+                      className="pepito-btn button-1"
+                      data-testid={`vet-resume-chat-${c.id}`}
+                    >
+                      ورود به چت
+                    </Link>
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </>
+  );
+}
+
 export function VetConsultPage() {
   const navigate = useNavigate();
   const { user, token, isLoggedIn, refreshMe, setVetOnline } = useAuthStore();
@@ -120,18 +225,20 @@ export function VetConsultPage() {
   }, [user?.id, hasVetRole]);
 
   const loadRecent = useCallback(async () => {
-    if (!user?.id || !isVetDashboard) {
+    // Any owned vet role must see active/recent patients — not only primary=vet.
+    // Dual-role users often keep pet_owner as primary while receiving consults.
+    if (!user?.id || !hasVetRole) {
       setRecent([]);
       return;
     }
     try {
       const rows = await listVetConsultations({ vetUserId: user.id });
       const done = rows.filter((c) => c.status === 'active' || c.status === 'completed');
-      setRecent(done.slice(0, 5));
+      setRecent(done.slice(0, 8));
     } catch {
       setRecent([]);
     }
-  }, [user?.id, isVetDashboard]);
+  }, [user?.id, hasVetRole]);
 
   useEffect(() => {
     void loadPets();
@@ -154,10 +261,10 @@ export function VetConsultPage() {
     const t = window.setInterval(() => {
       void refreshConsultStatus();
       void loadIncoming();
-      if (isVetDashboard) void loadRecent();
+      if (hasVetRole) void loadRecent();
     }, 5000);
     return () => window.clearInterval(t);
-  }, [phase, hasVetRole, isVetDashboard, refreshConsultStatus, loadIncoming, loadRecent]);
+  }, [phase, hasVetRole, refreshConsultStatus, loadIncoming, loadRecent]);
 
   useEffect(() => {
     if (isVetDashboard) return;
@@ -175,7 +282,7 @@ export function VetConsultPage() {
     if (isVetDashboard) {
       return vetOnline
         ? 'آنلاین هستی و آماده پذیرش بیمار — درخواست‌های جدید همین‌جا می‌آیند.'
-        : 'برای پذیرش بیمار آنلاین شو؛ لیست درخواست‌ها و آخرین بیمارها اینجاست.';
+        : 'برای دریافت درخواست جدید آنلاین شو؛ درخواست‌های در انتظار و بیمارهای فعال همین‌جا می‌مانند.';
     }
     if (needsLogin) return 'برای ارتباط سریع با پزشک وارد حساب شو.';
     if (needsPet) return 'برای درخواست ارتباط با پزشک، اول باید حداقل یک پت ثبت کنی.';
@@ -209,7 +316,8 @@ export function VetConsultPage() {
     }
     if (coins < QUICK_VET_COST) {
       setError(
-        `برای اتصال سریع حداقل ${formatCoins(QUICK_VET_COST)} سکه لازم داری.\nموجودی: ${formatCoins(coins)} — از ربات «🪙 سکه» بگیر.`
+        `برای اتصال سریع حداقل ${formatCoins(QUICK_VET_COST)} سکه لازم داری.
+موجودی: ${formatCoins(coins)} — از ربات «🪙 سکه» بگیر.`
       );
       return;
     }
@@ -285,7 +393,11 @@ export function VetConsultPage() {
             <Stethoscope size={20} strokeWidth={2} aria-hidden />
             <div>
               <strong>{vetOnline ? 'آنلاین — آماده پذیرش' : 'آفلاین'}</strong>
-              <span>{vetOnline ? 'در لیست پزشک‌های آماده هستی' : 'بیماران جدید نمی‌بینی'}</span>
+              <span>
+                {vetOnline
+                  ? 'در لیست پزشک‌های آماده هستی'
+                  : 'درخواست جدید نمی‌آید؛ موارد در انتظار همچنان اینجاست'}
+              </span>
             </div>
           </div>
           <button
@@ -308,72 +420,13 @@ export function VetConsultPage() {
           ) : null}
         </section>
 
-        <section className="pepito-vet-consult-incoming" aria-label="درخواست‌های ورودی پزشک">
-          <h2>درخواست‌های جدید بیماران</h2>
-          {incoming.length === 0 ? (
-            <p className="pepito-vet-consult-hint">فعلاً درخواست جدیدی نیست.</p>
-          ) : (
-            <ul className="pepito-vet-consult-incoming-list">
-              {incoming.map((c) => (
-                <li key={c.id}>
-                  <div>
-                    <strong>{patientLabel(c)}</strong>
-                    <span>درخواست مشاوره سریع</span>
-                    {c.createdAt ? (
-                      <small>{formatPersianDateTime(c.createdAt)}</small>
-                    ) : null}
-                  </div>
-                  <div className="pepito-vet-consult-incoming-actions">
-                    <button
-                      type="button"
-                      className="pepito-btn button-1"
-                      disabled={actingId === c.id}
-                      onClick={() => void onAcceptIncoming(c.id)}
-                    >
-                      قبول و ورود به چت
-                    </button>
-                    <button
-                      type="button"
-                      className="pepito-btn pepito-btn--ghost"
-                      disabled={actingId === c.id}
-                      onClick={() => void onRejectIncoming(c.id)}
-                    >
-                      رد
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <section className="pepito-vet-consult-incoming" aria-label="آخرین بیمارها">
-          <h2>آخرین بیمارها</h2>
-          {recent.length === 0 ? (
-            <p className="pepito-vet-consult-hint">هنوز بیماری ثبت نشده.</p>
-          ) : (
-            <ul className="pepito-vet-consult-incoming-list">
-              {recent.map((c) => (
-                <li key={c.id}>
-                  <div>
-                    <strong>{patientLabel(c)}</strong>
-                    <span>{c.status === 'active' ? 'مشاوره فعال' : 'پایان‌یافته'}</span>
-                    {c.createdAt ? (
-                      <small>{formatPersianDateTime(c.createdAt)}</small>
-                    ) : null}
-                  </div>
-                  {c.status === 'active' ? (
-                    <div className="pepito-vet-consult-incoming-actions">
-                      <Link to={`/vet-chats/${c.id}`} className="pepito-btn button-1">
-                        ورود به چت
-                      </Link>
-                    </div>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+        <VetInboxSection
+          incoming={incoming}
+          recent={recent}
+          actingId={actingId}
+          onAccept={(id) => void onAcceptIncoming(id)}
+          onReject={(id) => void onRejectIncoming(id)}
+        />
       </div>
     );
   }
@@ -387,38 +440,15 @@ export function VetConsultPage() {
         <p>{lead}</p>
       </header>
 
-      {hasVetRole && incoming.length > 0 ? (
-        <section className="pepito-vet-consult-incoming" aria-label="درخواست‌های ورودی پزشک">
-          <h2>درخواست‌های جدید بیماران</h2>
-          <ul className="pepito-vet-consult-incoming-list">
-            {incoming.map((c) => (
-              <li key={c.id}>
-                <div>
-                  <strong>{c.patientName?.trim() || `بیمار #${c.patientUserId}`}</strong>
-                  <span>درخواست مشاوره سریع</span>
-                </div>
-                <div className="pepito-vet-consult-incoming-actions">
-                  <button
-                    type="button"
-                    className="pepito-btn button-1"
-                    disabled={actingId === c.id}
-                    onClick={() => void onAcceptIncoming(c.id)}
-                  >
-                    قبول و ورود به چت
-                  </button>
-                  <button
-                    type="button"
-                    className="pepito-btn pepito-btn--ghost"
-                    disabled={actingId === c.id}
-                    onClick={() => void onRejectIncoming(c.id)}
-                  >
-                    رد
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+      {/* Dual-role: keep vet inbox visible even when primary is pet_owner */}
+      {hasVetRole ? (
+        <VetInboxSection
+          incoming={incoming}
+          recent={recent}
+          actingId={actingId}
+          onAccept={(id) => void onAcceptIncoming(id)}
+          onReject={(id) => void onRejectIncoming(id)}
+        />
       ) : null}
 
       <section className="pepito-vet-consult-panel" aria-label="ارتباط سریع با پزشک">
