@@ -39,13 +39,16 @@ import type {
 import {
   COIN_REASON,
   FACE_VERIFY_REWARD,
+  isPendingRequestExpired,
   PET_BREEDS_SEED,
   PET_MEDICAL_FIELD_LABELS,
   PET_SPECIES,
+  PLAYDATE_REQUEST_TTL_MS,
   PROFILE_REWARD_SECTIONS,
   PROFILE_SECTION_REWARD,
   SIGNUP_BONUS,
   USER_ROLES,
+  VET_CONSULT_REQUEST_TTL_MS,
   walletFromUserFields,
   type PetMedicalField,
   type WalletCurrency,
@@ -1523,6 +1526,9 @@ function mapVetConsultation(row: Record<string, unknown>): VetConsultation {
     status: row.status as VetConsultStatus,
     notes: (row.notes as string | undefined) ?? undefined,
     createdAt: row.created_at as string,
+    lastActivityAt:
+      (row.last_activity_at as string | undefined) ??
+      (row.created_at as string | undefined),
     patientName: (row.patient_name as string | undefined) ?? undefined,
     patientCity: (row.patient_city as string | undefined) ?? undefined,
     vetName: (row.vet_name as string | undefined) ?? undefined,
@@ -2643,7 +2649,51 @@ export const dbService = {
     return row ? mapPet(row) : null;
   },
 
+  /** Mark stale pending playmate requests as expired (TTL from created_at). */
+  expireStalePlaydateRequests(): number {
+    const ttlSec = Math.max(1, Math.round(PLAYDATE_REQUEST_TTL_MS / 1000));
+    const result = db
+      .prepare(
+        `UPDATE playdate_requests
+         SET status = 'expired', updated_at = datetime('now')
+         WHERE status = 'pending'
+           AND datetime(created_at) <= datetime('now', ?)`
+      )
+      .run(`-${ttlSec} seconds`);
+    return result.changes;
+  },
+
+  /** Mark stale requested vet consults as expired. */
+  expireStaleVetConsultRequests(): number {
+    const ttlSec = Math.max(1, Math.round(VET_CONSULT_REQUEST_TTL_MS / 1000));
+    const result = db
+      .prepare(
+        `UPDATE vet_consultations
+         SET status = 'expired'
+         WHERE status = 'requested'
+           AND datetime(created_at) <= datetime('now', ?)`
+      )
+      .run(`-${ttlSec} seconds`);
+    return result.changes;
+  },
+
+  /** If this pending request is past TTL, persist expired and return updated row. */
+  ensurePlaydateNotStale(req: PlaydateRequest | null): PlaydateRequest | null {
+    if (!req) return null;
+    if (req.status !== 'pending') return req;
+    if (!isPendingRequestExpired(req.createdAt, PLAYDATE_REQUEST_TTL_MS)) return req;
+    return this.updatePlaydateStatus(req.id, 'expired') ?? { ...req, status: 'expired' };
+  },
+
+  ensureVetConsultNotStale(c: VetConsultation | null): VetConsultation | null {
+    if (!c) return null;
+    if (c.status !== 'requested') return c;
+    if (!isPendingRequestExpired(c.createdAt, VET_CONSULT_REQUEST_TTL_MS)) return c;
+    return this.updateVetConsultationStatus(c.id, 'expired') ?? { ...c, status: 'expired' };
+  },
+
   hasPendingPlaydate(fromPetId: number, toPetId: number): boolean {
+    this.expireStalePlaydateRequests();
     const row = db
       .prepare(
         `SELECT id FROM playdate_requests
@@ -2651,6 +2701,44 @@ export const dbService = {
          LIMIT 1`
       )
       .get(fromPetId, toPetId) as Record<string, unknown> | undefined;
+    return Boolean(row);
+  },
+
+  /** True when a prior expired request exists between the same pets (for resend confirm). */
+  hasExpiredPlaydate(fromPetId: number, toPetId: number): boolean {
+    const row = db
+      .prepare(
+        `SELECT id FROM playdate_requests
+         WHERE from_pet_id = ? AND to_pet_id = ? AND status = 'expired'
+         LIMIT 1`
+      )
+      .get(fromPetId, toPetId) as Record<string, unknown> | undefined;
+    return Boolean(row);
+  },
+
+  /** True when patient has any expired quick-consult (for resend confirm). */
+  hasExpiredVetConsultForPatient(patientUserId: number): boolean {
+    this.expireStaleVetConsultRequests();
+    const row = db
+      .prepare(
+        `SELECT id FROM vet_consultations
+         WHERE patient_user_id = ? AND status = 'expired'
+         LIMIT 1`
+      )
+      .get(patientUserId) as Record<string, unknown> | undefined;
+    return Boolean(row);
+  },
+
+  /** True when patient still has an open requested consult. */
+  hasPendingVetConsultForPatient(patientUserId: number): boolean {
+    this.expireStaleVetConsultRequests();
+    const row = db
+      .prepare(
+        `SELECT id FROM vet_consultations
+         WHERE patient_user_id = ? AND status = 'requested'
+         LIMIT 1`
+      )
+      .get(patientUserId) as Record<string, unknown> | undefined;
     return Boolean(row);
   },
 
@@ -2798,6 +2886,7 @@ export const dbService = {
     petId?: number;
     status?: PlaydateStatus;
   }): PlaydateRequest[] {
+    this.expireStalePlaydateRequests();
     let sql = 'SELECT * FROM playdate_requests WHERE 1=1';
     const params: unknown[] = [];
 
@@ -2819,13 +2908,13 @@ export const dbService = {
       params.push(filters.status);
     }
 
-    sql += ' ORDER BY created_at DESC';
+    sql += ' ORDER BY updated_at DESC, id DESC';
     return (db.prepare(sql).all(...params) as Record<string, unknown>[]).map(mapPlaydate);
   },
 
   getPlaydateRequest(id: number): PlaydateRequest | null {
     const row = db.prepare('SELECT * FROM playdate_requests WHERE id = ?').get(id) as Record<string, unknown> | undefined;
-    return row ? mapPlaydate(row) : null;
+    return this.ensurePlaydateNotStale(row ? mapPlaydate(row) : null);
   },
 
   createPlaydateRequest(data: {
@@ -2932,6 +3021,9 @@ export const dbService = {
         data.fileName ?? null,
         data.storageKey ?? null
       );
+    db.prepare(
+      `UPDATE playdate_requests SET updated_at = datetime('now') WHERE id = ?`,
+    ).run(data.playdateId);
     return mapPlaydateChatMessage(
       db
         .prepare('SELECT * FROM playdate_chat_messages WHERE id = ?')
@@ -3251,6 +3343,7 @@ export const dbService = {
     /** When true, allow listing without vet/patient filter (admin) */
     all?: boolean;
   }): VetConsultation[] {
+    this.expireStaleVetConsultRequests();
     if (
       !filters.all &&
       filters.vetUserId == null &&
@@ -3260,6 +3353,10 @@ export const dbService = {
     }
     let sql = `
       SELECT vc.*,
+             COALESCE(
+               (SELECT MAX(m.created_at) FROM vet_consult_chat_messages m WHERE m.consult_id = vc.id),
+               vc.created_at
+             ) AS last_activity_at,
              patient.name AS patient_name,
              patient.city AS patient_city,
              vet.name AS vet_name,
@@ -3285,7 +3382,10 @@ export const dbService = {
       sql += ' AND vc.status = ?';
       params.push(filters.status);
     }
-    sql += ' ORDER BY vc.created_at DESC, vc.id DESC';
+    sql += ` ORDER BY COALESCE(
+      (SELECT MAX(m.created_at) FROM vet_consult_chat_messages m WHERE m.consult_id = vc.id),
+      vc.created_at
+    ) DESC, vc.id DESC`;
     return (db.prepare(sql).all(...params) as Record<string, unknown>[]).map(mapVetConsultation);
   },
 
@@ -3342,17 +3442,48 @@ export const dbService = {
       )
       .all(id) as Record<string, unknown>[];
     if (!rows.length) return null;
-    return mapVetConsultation(rows[0]!);
+    return this.ensureVetConsultNotStale(mapVetConsultation(rows[0]!));
   },
 
   updateVetConsultationStatus(
     id: number,
     status: VetConsultStatus
   ): VetConsultation | null {
-    const existing = this.getVetConsultation(id);
-    if (!existing) return null;
+    const row = db
+      .prepare(
+        `SELECT vc.*,
+                pu.name AS patient_name,
+                pu.city AS patient_city,
+                vu.name AS vet_name,
+                p.name AS pet_name,
+                p.species AS pet_species,
+                p.breed AS pet_breed
+         FROM vet_consultations vc
+         LEFT JOIN users pu ON pu.id = vc.patient_user_id
+         LEFT JOIN users vu ON vu.id = vc.vet_user_id
+         LEFT JOIN pets p ON p.id = vc.pet_id
+         WHERE vc.id = ?`
+      )
+      .get(id) as Record<string, unknown> | undefined;
+    if (!row) return null;
     db.prepare(`UPDATE vet_consultations SET status = ? WHERE id = ?`).run(status, id);
-    return this.getVetConsultation(id);
+    const updated = db
+      .prepare(
+        `SELECT vc.*,
+                pu.name AS patient_name,
+                pu.city AS patient_city,
+                vu.name AS vet_name,
+                p.name AS pet_name,
+                p.species AS pet_species,
+                p.breed AS pet_breed
+         FROM vet_consultations vc
+         LEFT JOIN users pu ON pu.id = vc.patient_user_id
+         LEFT JOIN users vu ON vu.id = vc.vet_user_id
+         LEFT JOIN pets p ON p.id = vc.pet_id
+         WHERE vc.id = ?`
+      )
+      .get(id) as Record<string, unknown> | undefined;
+    return updated ? mapVetConsultation(updated) : null;
   },
 
   /** وقتی یک پزشک قبول می‌کند، بقیهٔ درخواست‌های هم‌زمان همان بیمار لغو شوند */
@@ -3411,6 +3542,8 @@ export const dbService = {
          VALUES (?, ?, ?)`
       )
       .run(data.consultId, data.senderUserId, text);
+    // Touch parent consult so inbox can surface latest chats first via message time.
+    // (listVetConsultations already sorts by last message / created_at)
     return mapVetConsultChatMessage(
       db
         .prepare('SELECT * FROM vet_consult_chat_messages WHERE id = ?')

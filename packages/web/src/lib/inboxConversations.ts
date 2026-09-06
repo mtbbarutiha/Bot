@@ -22,6 +22,8 @@ export type InboxConversation = {
   title: string;
   preview: string;
   createdAt: string;
+  /** آخرین فعالیت — گفتگوی تازه‌تر بالاتر می‌آید */
+  lastActivityAt: string;
   pending: boolean;
   ended: boolean;
   direction: 'incoming' | 'outgoing';
@@ -39,29 +41,47 @@ export function inboxScopeForUser(user?: User | null): InboxScope {
   return inboxScopeForRole(primaryRole(user?.roles, user?.role));
 }
 
+function activityMs(value: string | undefined | null): number {
+  if (!value) return 0;
+  const raw = value.trim();
+  if (!raw) return 0;
+  const normalized =
+    /^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(raw) && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)
+      ? raw.replace(' ', 'T') + 'Z'
+      : raw;
+  const ms = Date.parse(normalized);
+  return Number.isFinite(ms) ? ms : 0;
+}
+
+/** Newest activity first — آخرین گفتگو همیشه بالاترین ردیف است. */
 function sortInbox(items: InboxConversation[]): InboxConversation[] {
   return [...items].sort((a, b) => {
+    const diff = activityMs(b.lastActivityAt) - activityMs(a.lastActivityAt);
+    if (diff !== 0) return diff;
+    // Pending requests with same timestamp float slightly above ended ones
     const rank = (m: InboxConversation) => (m.pending ? 0 : m.ended ? 2 : 1);
-    const ra = rank(a);
-    const rb = rank(b);
-    if (ra !== rb) return ra - rb;
-    return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+    return rank(a) - rank(b);
   });
 }
 
 export function playmateToInbox(match: MatchRequest): InboxConversation {
   const peer = match.fromPet;
   const pending = match.status === 'pending';
-  const ended = Boolean(match.chatEnded);
-  const preview = ended
-    ? 'چت پایان یافته'
-    : pending
-      ? match.direction === 'incoming'
-        ? 'درخواست همبازی جدید'
-        : 'منتظر پاسخ درخواست'
-      : match.chatSecure
-        ? 'چت امن · همبازی'
-        : `${peer.name} · همبازی`;
+  const expired = match.status === 'expired' || Boolean(match.expired);
+  const ended = Boolean(match.chatEnded) || expired;
+  const preview = expired
+    ? 'درخواست منقضی شده'
+    : ended
+      ? 'چت پایان یافته'
+      : pending
+        ? match.direction === 'incoming'
+          ? 'درخواست همبازی جدید'
+          : 'منتظر پاسخ درخواست'
+        : match.chatSecure
+          ? 'چت امن · همبازی'
+          : `${peer.name} · همبازی`;
+
+  const lastActivityAt = match.updatedAt || match.createdAt;
 
   return {
     key: `playmate:${match.id}`,
@@ -70,6 +90,7 @@ export function playmateToInbox(match: MatchRequest): InboxConversation {
     title: peer.ownerName || peer.name,
     preview,
     createdAt: match.createdAt,
+    lastActivityAt,
     pending,
     ended,
     direction: match.direction === 'outgoing' ? 'outgoing' : 'incoming',
@@ -84,7 +105,7 @@ export function vetToInbox(
   myUserId: number,
   mode: 'as_vet' | 'as_patient',
 ): InboxConversation | null {
-  if (c.status === 'cancelled') return null;
+  if (c.status === 'cancelled' || c.status === 'expired') return null;
 
   const asVet = c.vetUserId === myUserId;
   const asPatient = c.patientUserId === myUserId;
@@ -118,6 +139,7 @@ export function vetToInbox(
     title: peerTitle,
     preview,
     createdAt: c.createdAt,
+    lastActivityAt: c.lastActivityAt || c.createdAt,
     pending,
     ended,
     direction,
@@ -154,7 +176,9 @@ export async function loadInboxConversations(
   const playmatePromise = listPlaydateRequests({ userId: myUserId }).then((rows) =>
     rows
       .filter((r) => {
-        if (r.status === 'rejected' || r.status === 'cancelled') return false;
+        if (r.status === 'rejected' || r.status === 'cancelled' || r.status === 'expired') {
+          return false;
+        }
         const owns =
           r.toUserId === myUserId ||
           r.fromUserId === myUserId ||

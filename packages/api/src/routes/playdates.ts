@@ -20,7 +20,13 @@ import {
 } from '../services/chat-upload-store';
 import { startOwnerChatFromApi } from '../services/telegram-owner-chat-start';
 
-const VALID_STATUSES: PlaydateStatus[] = ['pending', 'accepted', 'rejected', 'cancelled'];
+const VALID_STATUSES: PlaydateStatus[] = [
+  'pending',
+  'accepted',
+  'rejected',
+  'cancelled',
+  'expired',
+];
 
 const chatUpload = multer({
   storage: multer.memoryStorage(),
@@ -115,6 +121,7 @@ playdatesRouter.get('/', (req, res) => {
   const petId = req.query.petId ? Number(req.query.petId) : undefined;
   const status = req.query.status as PlaydateStatus | undefined;
 
+  dbService.expireStalePlaydateRequests();
   const requests = dbService
     .listPlaydateRequests({ userId, petId, status })
     .map((r) => enrichPlaydate(r)!);
@@ -630,13 +637,21 @@ playdatesRouter.post('/', async (req, res) => {
     return;
   }
 
+  dbService.expireStalePlaydateRequests();
+
   if (dbService.hasPendingPlaydate(Number(fromPetId), Number(toPetId))) {
     const existing = dbService
       .listPlaydateRequests({ userId: Number(fromUserId), status: 'pending' })
       .find((r) => r.fromPetId === Number(fromPetId) && r.toPetId === Number(toPetId));
-    res.status(200).json({ ...enrichPlaydate(existing ?? null), telegramNotified: false });
+    res.status(200).json({
+      ...enrichPlaydate(existing ?? null),
+      telegramNotified: false,
+      alreadyPending: true,
+    });
     return;
   }
+
+  const hadExpiredPrior = dbService.hasExpiredPlaydate(Number(fromPetId), Number(toPetId));
 
   const request = dbService.createPlaydateRequest({
     fromPetId: Number(fromPetId),
@@ -655,7 +670,11 @@ playdatesRouter.post('/', async (req, res) => {
     console.warn('playdate telegram notify failed:', (err as Error).message);
   });
   // telegramNotified:true = API owns delivery (async); bot must not double-send
-  res.status(201).json({ ...enriched, telegramNotified: true });
+  res.status(201).json({
+    ...enriched,
+    telegramNotified: true,
+    hadExpiredPrior,
+  });
 });
 
 playdatesRouter.patch('/:id', async (req, res) => {
@@ -692,6 +711,10 @@ playdatesRouter.patch('/:id', async (req, res) => {
       });
       return;
     }
+    if (previous.status === 'expired') {
+      res.status(409).json({ error: 'این درخواست منقضی شده است', code: 'EXPIRED' });
+      return;
+    }
     if (previous.status !== 'pending') {
       res.status(409).json({ error: 'این درخواست قبلاً پاسخ داده شده است' });
       return;
@@ -699,6 +722,12 @@ playdatesRouter.patch('/:id', async (req, res) => {
   } else if (status === 'cancelled') {
     if (!isRecipient && !isSender) {
       res.status(403).json({ error: 'اجازه لغو این درخواست را ندارید' });
+      return;
+    }
+  } else if (status === 'expired') {
+    // System / self-heal path — participants may force-expire a stale pending.
+    if (!isRecipient && !isSender) {
+      res.status(403).json({ error: 'اجازه تغییر این درخواست را ندارید' });
       return;
     }
   } else if (!isRecipient && !isSender) {

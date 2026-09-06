@@ -186,6 +186,20 @@ app.use(expressErrorHandler);
 
 app.listen(PORT, () => {
   console.log(`🐾 petdate API روی پورت ${PORT} اجرا شد`);
+  // Sweep stale pending playmate / vet requests every 30s
+  const sweep = () => {
+    try {
+      const pd = dbService.expireStalePlaydateRequests();
+      const vc = dbService.expireStaleVetConsultRequests();
+      if (pd || vc) {
+        console.log(`⏱ expired pending: playdates=${pd} consults=${vc}`);
+      }
+    } catch (err) {
+      console.warn('request expiry sweep failed:', (err as Error).message);
+    }
+  };
+  sweep();
+  setInterval(sweep, 30_000).unref?.();
 });
 
 export { app, dbService };

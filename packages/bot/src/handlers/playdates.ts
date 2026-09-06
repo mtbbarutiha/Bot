@@ -1,5 +1,6 @@
 import type { Api, Context } from 'grammy';
 import type { PetProfile } from '@petdate/shared';
+import { isPendingRequestExpired, PLAYDATE_REQUEST_TTL_MS } from '@petdate/shared';
 import {
   createPlaydate,
   deletePet,
@@ -19,6 +20,7 @@ import {
   myPetsListKeyboard,
   myPetsSectionKeyboard,
   playdateActionKeyboard,
+  playdateResendConfirmKeyboard,
 } from '../keyboards';
 import { upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
@@ -289,9 +291,40 @@ async function sendPlaydateNow(
   ctx: Context,
   fromPetId: number,
   toPetId: number,
-  fromUserId: number
+  fromUserId: number,
+  opts?: { skipResendConfirm?: boolean }
 ): Promise<void> {
-  const req = await createPlaydate({ fromPetId, toPetId, fromUserId });
+  // After a prior expired request, ask before sending again (unless already confirmed).
+  if (!opts?.skipResendConfirm) {
+    const prior = await listPlaydates({ userId: fromUserId, status: 'expired' }).catch(() => []);
+    const hadExpired = prior.some((r) => r.fromPetId === fromPetId && r.toPetId === toPetId);
+    if (hadExpired) {
+      const toPet = await getPet(toPetId);
+      const name = toPet?.name ?? 'اون شخص';
+      const ask = `میخوای مجدد درخواست بدی به اون شخص؟\n\n🐾 ${name}`;
+      if (ctx.callbackQuery) {
+        try {
+          await ctx.editMessageText(ask, {
+            reply_markup: playdateResendConfirmKeyboard(fromPetId, toPetId),
+          });
+          return;
+        } catch {
+          /* fall through to reply */
+        }
+      }
+      await ctx.reply(ask, {
+        reply_markup: playdateResendConfirmKeyboard(fromPetId, toPetId),
+      });
+      return;
+    }
+  }
+
+  const req = await createPlaydate({
+    fromPetId,
+    toPetId,
+    fromUserId,
+    confirmResend: Boolean(opts?.skipResendConfirm),
+  });
   await upsertSession(String(ctx.from!.id), {
     step: 'ready',
     selectedPetId: undefined,
@@ -334,6 +367,21 @@ async function sendPlaydateNow(
   });
 }
 
+/** تأیید ارسال مجدد بعد از انقضا */
+export async function handlePlaydateResend(
+  ctx: Context,
+  fromPetId: number,
+  toPetId: number
+): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user?.id) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+  await ctx.answerCallbackQuery();
+  await sendPlaydateNow(ctx, fromPetId, toPetId, user.id, { skipResendConfirm: true });
+}
+
 /** @deprecated kept for old inline buttons — sends without message */
 export async function handlePlaydateSend(
   ctx: Context,
@@ -368,6 +416,44 @@ export async function handlePlaydateAction(
     await ctx.answerCallbackQuery({ text: 'این درخواست مال تو نیست', show_alert: true });
     return;
   }
+
+  const stale =
+    existing.status === 'expired' ||
+    (existing.status === 'pending' &&
+      isPendingRequestExpired(existing.createdAt, PLAYDATE_REQUEST_TTL_MS));
+
+  if (stale) {
+    await ctx.answerCallbackQuery({ text: 'این درخواست منقضی شده', show_alert: true });
+    try {
+      await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+    } catch {
+      /* ignore */
+    }
+    try {
+      await ctx.reply(
+        [
+          '⏱ این درخواست همبازی منقضی شده (بیش از ۲ دقیقه).',
+          '',
+          formatPlaydate({ ...existing, status: 'expired' }),
+          '',
+          'اگر می‌خوای دوباره درخواست بدی، از پیدا کردن همبازی اقدام کن.',
+        ].join('\n'),
+        { parse_mode: 'Markdown' }
+      );
+    } catch {
+      /* ignore */
+    }
+    // Soft-expire on API if still pending
+    if (existing.status === 'pending') {
+      try {
+        await updatePlaydateStatus(requestId, 'expired', user.id);
+      } catch {
+        /* ignore */
+      }
+    }
+    return;
+  }
+
   if (existing.status !== 'pending') {
     await ctx.answerCallbackQuery({ text: 'قبلاً پاسخ داده شده', show_alert: true });
     return;

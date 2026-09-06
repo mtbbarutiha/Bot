@@ -29,8 +29,21 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     const body = await res.text();
     try {
-      const json = JSON.parse(body) as { error?: string; message?: string };
-      throw new Error(json.error || json.message || body || `خطای ${res.status}`);
+      const json = JSON.parse(body) as {
+        error?: string;
+        message?: string;
+        code?: string;
+        requiresResendConfirm?: boolean;
+      };
+      const err = new Error(json.error || json.message || body || `خطای ${res.status}`) as Error & {
+        code?: string;
+        requiresResendConfirm?: boolean;
+        status?: number;
+      };
+      err.code = json.code;
+      err.requiresResendConfirm = Boolean(json.requiresResendConfirm || json.code === 'RESEND_CONFIRM_REQUIRED');
+      err.status = res.status;
+      throw err;
     } catch (err) {
       if (err instanceof Error && !err.message.startsWith('{') && err.message !== body) throw err;
       throw new Error(body || `خطای ${res.status}`);
@@ -194,6 +207,7 @@ export async function createPlaydateRequest(data: {
   message?: string;
   scheduledAt?: string;
   location?: string;
+  confirmResend?: boolean;
 }): Promise<PlaydateRequest> {
   return request<PlaydateRequest>('/api/playdate-requests', {
     method: 'POST',
@@ -531,12 +545,16 @@ export type QuickVetConnectResult = {
 
 export async function quickVetConnect(
   patientUserId: number,
-  token?: string | null
+  token?: string | null,
+  opts?: { confirmResend?: boolean }
 ): Promise<QuickVetConnectResult> {
   return request<QuickVetConnectResult>('/api/consultations/quick-connect', {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-    body: JSON.stringify({ patientUserId }),
+    body: JSON.stringify({
+      patientUserId,
+      confirmResend: Boolean(opts?.confirmResend),
+    }),
   });
 }
 

@@ -12,7 +12,13 @@ import {
 import { notifyVetQuickConsultTelegram } from '../services/telegram-vet-consult-notify';
 import { getUserFromBearer } from '../services/web-otp';
 
-const VALID_STATUSES: VetConsultStatus[] = ['requested', 'active', 'completed', 'cancelled'];
+const VALID_STATUSES: VetConsultStatus[] = [
+  'requested',
+  'active',
+  'completed',
+  'cancelled',
+  'expired',
+];
 
 export const consultationsRouter = Router();
 
@@ -42,6 +48,7 @@ consultationsRouter.get('/', (req, res) => {
     return;
   }
 
+  dbService.expireStaleVetConsultRequests();
   const consultations = dbService.listVetConsultations({
     vetUserId:
       vetUserId != null && !Number.isNaN(vetUserId) ? vetUserId : undefined,
@@ -80,6 +87,8 @@ consultationsRouter.post('/quick-connect', async (req, res) => {
   const bodyPatientId =
     req.body?.patientUserId != null ? Number(req.body.patientUserId) : undefined;
   const patientUserId = session?.user?.id ?? bodyPatientId;
+  /** When true, skip the «resend after expiry» confirm gate (client already confirmed). */
+  const confirmResend = Boolean(req.body?.confirmResend);
 
   if (!patientUserId || !Number.isFinite(patientUserId)) {
     res.status(400).json({ error: 'patientUserId الزامی است', reason: 'missing_patient' });
@@ -101,6 +110,28 @@ consultationsRouter.post('/quick-connect', async (req, res) => {
     res.status(400).json({
       error: 'برای درخواست ارتباط با پزشک، اول باید حداقل یک پت ثبت کنی.',
       reason: 'no_pet',
+    });
+    return;
+  }
+
+  dbService.expireStaleVetConsultRequests();
+
+  if (dbService.hasPendingVetConsultForPatient(patient.id)) {
+    res.status(409).json({
+      error: 'هنوز درخواست مشاوره‌ات در انتظار پاسخ پزشک است.',
+      reason: 'already_pending',
+      code: 'ALREADY_PENDING',
+    });
+    return;
+  }
+
+  // After a prior expired consult, require explicit resend confirm (same copy as playmate).
+  if (!confirmResend && dbService.hasExpiredVetConsultForPatient(patient.id)) {
+    res.status(409).json({
+      error: 'میخوای مجدد درخواست بدی به اون شخص؟',
+      reason: 'resend_confirm',
+      code: 'RESEND_CONFIRM_REQUIRED',
+      requiresResendConfirm: true,
     });
     return;
   }
@@ -374,6 +405,10 @@ consultationsRouter.post('/:id/accept', async (req, res) => {
     res.json(consult);
     return;
   }
+  if (consult.status === 'expired') {
+    res.status(409).json({ error: 'این درخواست منقضی شده است', code: 'EXPIRED' });
+    return;
+  }
   if (consult.status !== 'requested') {
     res.status(409).json({ error: 'این درخواست دیگر قابل قبول نیست' });
     return;
@@ -425,6 +460,10 @@ consultationsRouter.post('/:id/reject', (req, res) => {
   }
   if (consult.vetUserId !== session.user.id) {
     res.status(403).json({ error: 'فقط دامپزشک این درخواست می‌تواند رد کند' });
+    return;
+  }
+  if (consult.status === 'expired') {
+    res.status(409).json({ error: 'این درخواست منقضی شده است', code: 'EXPIRED' });
     return;
   }
   if (consult.status !== 'requested') {

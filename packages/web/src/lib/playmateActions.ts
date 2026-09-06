@@ -16,12 +16,34 @@ export async function sendPlaymateRequestNow(opts: {
   fromPetId: number;
   toPetId: number;
   fromUserId: number;
+  confirmResend?: boolean;
 }) {
-  return createPlaydateRequest({
-    fromPetId: opts.fromPetId,
-    toPetId: opts.toPetId,
-    fromUserId: opts.fromUserId,
-  });
+  try {
+    return await createPlaydateRequest({
+      fromPetId: opts.fromPetId,
+      toPetId: opts.toPetId,
+      fromUserId: opts.fromUserId,
+      confirmResend: opts.confirmResend,
+    });
+  } catch (err) {
+    const needsConfirm =
+      err instanceof Error &&
+      ((err as Error & { requiresResendConfirm?: boolean }).requiresResendConfirm ||
+        /میخوای مجدد/.test(err.message));
+    if (!opts.confirmResend && needsConfirm) {
+      const ok =
+        typeof window !== 'undefined' &&
+        window.confirm('میخوای مجدد درخواست بدی به اون شخص؟');
+      if (!ok) throw err;
+      return createPlaydateRequest({
+        fromPetId: opts.fromPetId,
+        toPetId: opts.toPetId,
+        fromUserId: opts.fromUserId,
+        confirmResend: true,
+      });
+    }
+    throw err;
+  }
 }
 
 /**
@@ -55,7 +77,7 @@ export async function findAndSendPlaymates(
 
   for (const match of matches) {
     try {
-      await createPlaydateRequest({
+      await sendPlaymateRequestNow({
         fromPetId: source.id,
         toPetId: match.pet.id,
         fromUserId,

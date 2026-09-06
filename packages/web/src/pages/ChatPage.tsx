@@ -28,8 +28,10 @@ import {
   X,
 } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
+import { FindPlaymatePanel } from '../components/FindPlaymatePanel';
 import { EmojiPicker } from '../components/EmojiPicker';
 import { PetAvatar } from '../components/PetAvatar';
+import { RequestCountdown } from '../components/RequestCountdown';
 import { formatAge, formatTimeAgo } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
 import {
@@ -46,6 +48,7 @@ import {
   uploadPlaydateChatFile,
 } from '../lib/api';
 import type { PlaydateChatMediaKind, PlaydateChatMessage } from '@petdate/shared';
+import { PLAYDATE_REQUEST_TTL_MS, isPendingRequestExpired } from '@petdate/shared';
 import { playdateToMatchRequest } from '../lib/playdateMap';
 import {
   acceptInboxItem,
@@ -222,15 +225,15 @@ function ConversationListPane({
     <aside className="tg-chat-list" aria-label="فهرست گفتگوها">
       <header className="tg-chat-list-head">
         <Link
-          to={scope === 'vet' ? '/vet-consult' : '/explore#requests'}
+          to={scope === 'vet' ? '/vet-consult' : '/home'}
           className="tg-icon-btn"
-          aria-label={scope === 'vet' ? 'بازگشت به پنل پزشک' : 'بازگشت به همبازی'}
+          aria-label={scope === 'vet' ? 'بازگشت به پنل پزشک' : 'بازگشت'}
         >
           <ArrowRight size={18} />
         </Link>
         <div>
           <p className="tg-chat-list-kicker">پت‌دیت</p>
-          <h1>{scope === 'vet' ? 'گفتگوهای پزشک' : 'گفتگوها'}</h1>
+          <h1>{scope === 'vet' ? 'گفتگوهای پزشک' : 'پیدا کردن همبازی'}</h1>
         </div>
         <button
           type="button"
@@ -252,21 +255,20 @@ function ConversationListPane({
             <div className="tg-skeleton tg-skeleton--row" />
             <div className="tg-skeleton tg-skeleton--row" />
           </div>
-        ) : conversations.length === 0 ? (
-          <div className="tg-chat-list-empty">
-            <BrandMark iconSize={28} />
-            <h2>هنوز گفتگویی نیست</h2>
-            <p>
-              {scope === 'vet'
-                ? 'درخواست‌ها و چت‌های مشاوره دامپزشکی این نقش اینجا می‌آیند.'
-                : 'درخواست‌های همبازی و مشاوره‌های شما به‌عنوان صاحب پت اینجا می‌آیند.'}
-            </p>
-            <Link
-              to={scope === 'vet' ? '/vet-consult' : '/explore'}
-              className="tg-chat-link-btn"
-            >
-              {scope === 'vet' ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
-            </Link>
+         ) : conversations.length === 0 ? (
+          <div className="tg-chat-list-empty tg-chat-list-empty--hub">
+            {scope === 'vet' ? (
+              <>
+                <BrandMark iconSize={28} />
+                <h2>هنوز گفتگویی نیست</h2>
+                <p>درخواست‌ها و چت‌های مشاوره دامپزشکی این نقش اینجا می‌آیند.</p>
+                <Link to="/vet-consult" className="tg-chat-link-btn">
+                  رفتن به پنل پزشک
+                </Link>
+              </>
+            ) : (
+              <FindPlaymatePanel compact />
+            )}
           </div>
         ) : (
           <ul className="tg-chat-list-items">
@@ -304,7 +306,7 @@ function ConversationListPane({
                       </strong>
                       <small>{c.preview}</small>
                     </span>
-                    <time className="tg-chat-list-time">{formatTimeAgo(c.createdAt)}</time>
+                    <time className="tg-chat-list-time">{formatTimeAgo(c.lastActivityAt || c.createdAt)}</time>
                   </button>
                   {c.canDecide ? (
                     <div className="tg-chat-list-actions">
@@ -346,16 +348,20 @@ function ConversationListPane({
 
 function ThreadEmptyState({ scope }: { scope: InboxScope }) {
   const isVet = scope === 'vet';
+  if (isVet) {
+    return (
+      <div className="tg-thread-empty">
+        <BrandMark iconSize={36} />
+        <h2>مشاوره‌ای را شروع کن</h2>
+        <Link to="/vet-consult" className="tg-chat-link-btn">
+          رفتن به پنل پزشک
+        </Link>
+      </div>
+    );
+  }
   return (
-    <div className="tg-thread-empty">
-      <BrandMark iconSize={36} />
-      <h2>{isVet ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
-      <Link
-        to={isVet ? '/vet-consult' : '/explore'}
-        className="tg-chat-link-btn"
-      >
-        {isVet ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
-      </Link>
+    <div className="tg-thread-empty tg-thread-empty--hub">
+      <FindPlaymatePanel />
     </div>
   );
 }
@@ -455,7 +461,10 @@ export function ChatPage() {
         const req = await getPlaydateRequest(selectedId);
         if (
           !req ||
-          (req.status !== 'accepted' && req.status !== 'pending' && req.status !== 'rejected')
+          (req.status !== 'accepted' &&
+            req.status !== 'pending' &&
+            req.status !== 'rejected' &&
+            req.status !== 'expired')
         ) {
           if (!cancelled) setMatch(null);
           return;
@@ -515,6 +524,8 @@ export function ChatPage() {
       setMessages([systemMessage('چت همبازی فعال شد — می‌توانی پیام بفرستی.')]);
     } else if (match.status === 'pending') {
       setMessages([]);
+    } else if (match.expired) {
+      setMessages([systemMessage('این درخواست منقضی شده است (مهلت ۲ دقیقه).')]);
     } else if (match.status === 'rejected') {
       setMessages([systemMessage('این درخواست رد شده است.')]);
     }
@@ -537,6 +548,8 @@ export function ChatPage() {
         void reloadConversations();
         if (req.status === 'accepted') {
           setMessages([systemMessage('درخواست پذیرفته شد — چت همبازی فعال شد.')]);
+        } else if (req.status === 'expired') {
+          setMessages([systemMessage('درخواست همبازی منقضی شد (مهلت ۲ دقیقه).')]);
         } else if (req.status === 'rejected') {
           setMessages([systemMessage('درخواست همبازی رد شد.')]);
         }
@@ -705,8 +718,13 @@ export function ChatPage() {
   const peerOwnerName =
     peerOwnerLabel || peerPet?.ownerName || peerPet?.name || 'صاحب پت';
   const peerOwnerId = peerPet?.ownerId;
-  const isPendingRequest = match?.status === 'pending';
-  const isRejectedRequest = match?.status === 'rejected';
+  const isExpiredRequest =
+    Boolean(match?.expired) ||
+    match?.status === 'expired' ||
+    (match?.status === 'pending' &&
+      isPendingRequestExpired(match.createdAt, PLAYDATE_REQUEST_TTL_MS));
+  const isPendingRequest = match?.status === 'pending' && !isExpiredRequest;
+  const isRejectedRequest = match?.status === 'rejected' && !isExpiredRequest;
   const chatUnlocked = match?.status === 'accepted' && !ended;
   const incomingPending = Boolean(isPendingRequest && match?.direction === 'incoming');
 
@@ -762,7 +780,7 @@ export function ChatPage() {
       navigate('/chats');
       return;
     }
-    navigate('/explore#requests');
+    navigate('/chats');
   }
 
   async function onAcceptRequest() {
@@ -1126,6 +1144,8 @@ export function ChatPage() {
                           ? incomingPending
                             ? 'درخواست همبازی جدید'
                             : 'منتظر پاسخ درخواست'
+                          : isExpiredRequest
+                            ? 'درخواست منقضی شده'
                           : isRejectedRequest
                             ? 'درخواست رد شده'
                             : secure
@@ -1247,6 +1267,21 @@ export function ChatPage() {
                           {match.statusLabel ??
                             MATCH_STATUS_LABELS[match.status] ??
                             match.status}
+                          {isPendingRequest ? (
+                            <>
+                              {' · '}
+                              <RequestCountdown
+                                createdAt={match.createdAt}
+                                onExpire={() => {
+                                  void getPlaydateRequest(match.id).then((req) => {
+                                    if (!req || !myUserId) return;
+                                    setMatch(playdateToMatchRequest(req, myUserId));
+                                    void reloadConversations();
+                                  });
+                                }}
+                              />
+                            </>
+                          ) : null}
                         </li>
                         {peerPet.breed ? (
                           <li>
@@ -1283,6 +1318,17 @@ export function ChatPage() {
                         <p className="tg-request-card-wait" role="status">
                           منتظر پاسخ صاحب {peerPet.name} باش.
                         </p>
+                      ) : isExpiredRequest ? (
+                        <div className="tg-request-card-actions">
+                          <p className="tg-request-card-wait" role="status">
+                            این درخواست منقضی شده است.
+                          </p>
+                          {match.direction === 'outgoing' && peerPet.id ? (
+                            <Link to={`/pets/${peerPet.id}`} className="tg-request-accept">
+                              درخواست مجدد
+                            </Link>
+                          ) : null}
+                        </div>
                       ) : match.status === 'accepted' ? (
                         <p className="tg-request-card-wait" role="status">
                           پذیرفته شد — می‌توانی پیام بفرستی.
@@ -1402,6 +1448,8 @@ export function ChatPage() {
                 <div className="tg-request-composer-bar" role="status">
                   {incomingPending
                     ? 'برای شروع چت، درخواست را قبول یا رد کن.'
+                    : isExpiredRequest
+                      ? 'این درخواست منقضی شده است.'
                     : isRejectedRequest
                       ? 'این درخواست رد شده است.'
                       : 'چت بعد از قبول درخواست فعال می‌شود.'}
@@ -1530,7 +1578,7 @@ export function ChatPage() {
                       'پاک کردن کل گفتگو'
                     )}
                   </button>
-                  <Link to="/explore#requests" className="tg-chat-link-btn">
+                  <Link to="/chats" className="tg-chat-link-btn">
                     بازگشت به همبازی
                   </Link>
                 </div>

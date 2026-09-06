@@ -2,7 +2,13 @@ import { useCallback, useEffect, useState } from 'react';
 import type { PlaydateRequest } from '@petdate/shared';
 import { adminFetch, formatNumFa } from '../api';
 
-const STATUS_FA: Record<string, string> = { pending: 'در انتظار', accepted: 'پذیرفته', rejected: 'رد شده', cancelled: 'لغو' };
+const STATUS_FA: Record<string, string> = {
+  pending: 'در انتظار',
+  accepted: 'پذیرفته',
+  rejected: 'رد شده',
+  cancelled: 'لغو',
+  expired: 'منقضی',
+};
 
 export function AdminPlaydatesPage() {
   const [items, setItems] = useState<PlaydateRequest[]>([]);
@@ -28,7 +34,7 @@ export function AdminPlaydatesPage() {
         <div><h1>درخواست‌های همبازی</h1><p>{formatNumFa(items.length)} مورد</p></div>
         <select className="admin-select" value={status} onChange={(e) => setStatus(e.target.value)}>
           <option value="">همه</option><option value="pending">در انتظار</option><option value="accepted">پذیرفته</option>
-          <option value="rejected">رد شده</option><option value="cancelled">لغو</option>
+          <option value="rejected">رد شده</option><option value="cancelled">لغو</option><option value="expired">منقضی</option>
         </select>
       </header>
       {error ? <p className="admin-error">{error}</p> : null}

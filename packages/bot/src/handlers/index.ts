@@ -38,6 +38,7 @@ import {
   handlePlaydateAsk,
   handlePlaydateCancel,
   handlePlaydateFrom,
+  handlePlaydateResend,
   handlePlaydateSend,
   handleRequests,
 } from './playdates';
@@ -319,6 +320,9 @@ export function registerHandlers(bot: Bot): void {
   );
   bot.callbackQuery(/^playdate:send:(\d+):(\d+)$/, (ctx) =>
     handlePlaydateSend(ctx, Number(ctx.match![1]), Number(ctx.match![2]))
+  );
+  bot.callbackQuery(/^playdate:resend:(\d+):(\d+)$/, (ctx) =>
+    handlePlaydateResend(ctx, Number(ctx.match![1]), Number(ctx.match![2]))
   );
   bot.callbackQuery(/^playdate:accept:(\d+)$/, (ctx) =>
     handlePlaydateAction(ctx, Number(ctx.match![1]), 'accept')

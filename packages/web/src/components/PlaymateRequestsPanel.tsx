@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Check, Clock, MessageCircle, RefreshCw, Send, X } from 'lucide-react';
 import { PetAvatar } from './PetAvatar';
+import { RequestCountdown } from './RequestCountdown';
 import { formatTimeAgo } from '../data/mock';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -57,7 +58,9 @@ export function PlaymateRequestsPanel({
           const incoming = r.toUserId === myUserId || r.toPet?.ownerId === myUserId;
           const outgoing = r.fromUserId === myUserId || r.fromPet?.ownerId === myUserId;
           if (!incoming && !outgoing) return false;
-          if (r.status === 'rejected' || r.status === 'cancelled') return false;
+          if (r.status === 'rejected' || r.status === 'cancelled' || r.status === 'expired') {
+            return false;
+          }
           return true;
         })
         .map((r) => playdateToMatchRequest(r, myUserId));
@@ -192,6 +195,12 @@ export function PlaymateRequestsPanel({
                     </h3>
                     <p>
                       #{match.id} · {match.statusLabel ?? 'در انتظار'} · {formatTimeAgo(match.createdAt)}
+                      {match.status === 'pending' ? (
+                        <>
+                          {' · '}
+                          <RequestCountdown createdAt={match.createdAt} onExpire={() => void reload()} />
+                        </>
+                      ) : null}
                     </p>
                   </div>
                 </div>

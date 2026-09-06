@@ -364,3 +364,76 @@ html:has(.tg-chat) body {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+/* Find-playmate hub inside chats */
+.tg-thread-empty--hub,
+.tg-chat-list-empty--hub {
+  align-items: stretch;
+  text-align: start;
+  max-width: min(100%, 420px);
+  width: 100%;
+  margin-inline: auto;
+  padding: 1rem 0.85rem 1.25rem;
+}
+.find-playmate-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+}
+.find-playmate-panel.is-compact .find-playmate-panel__head {
+  display: none;
+}
+.find-playmate-panel__head h2,
+.find-playmate-panel__subhead h3 {
+  margin: 0.15rem 0;
+  font-family: var(--font-display, inherit);
+  color: var(--pepito-dark, #1a0b3c);
+}
+.find-playmate-panel__head p,
+.find-playmate-panel__subhead p,
+.find-playmate-panel__hint {
+  margin: 0;
+  color: var(--pepito-muted, #6b6280);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.find-playmate-panel .find-playmate-one {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+.find-playmate-panel .find-playmate-one__status {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--pepito-muted, #6b6280);
+}
+.find-playmate-pet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.find-playmate-pet-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(92, 77, 145, 0.14);
+  border-radius: 14px;
+  background: #fff;
+  text-align: start;
+  cursor: pointer;
+}
+.find-playmate-pet-btn img {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.find-playmate-pet-btn strong {
+  display: block;
+}
+.find-playmate-pet-btn small {
+  color: var(--pepito-muted, #6b6280);
+}

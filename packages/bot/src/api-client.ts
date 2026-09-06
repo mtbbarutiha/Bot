@@ -293,6 +293,8 @@ export async function createPlaydate(data: {
   toPetId: number;
   fromUserId: number;
   message?: string;
+  /** Skip API resend-confirm gate after a prior expired request. */
+  confirmResend?: boolean;
 }): Promise<PlaydateRequest & { telegramNotified?: boolean }> {
   return request<PlaydateRequest & { telegramNotified?: boolean }>('/api/playdate-requests', {
     method: 'POST',
@@ -438,7 +440,7 @@ export async function createVetConsultation(data: {
 
 export async function updateVetConsultationStatus(
   id: number,
-  status: 'requested' | 'active' | 'completed' | 'cancelled'
+  status: 'requested' | 'active' | 'completed' | 'cancelled' | 'expired'
 ): Promise<VetConsultation> {
   return request<VetConsultation>(`/api/consultations/${id}/status`, {
     method: 'PATCH',

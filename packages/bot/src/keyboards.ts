@@ -760,6 +760,15 @@ export function playdateActionKeyboard(requestId: number): InlineKeyboard {
     .danger();
 }
 
+/** تأیید ارسال مجدد درخواست همبازی بعد از انقضا */
+export function playdateResendConfirmKeyboard(fromPetId: number, toPetId: number): InlineKeyboard {
+  return new InlineKeyboard()
+    .text('بله، مجدد بفرست', `playdate:resend:${fromPetId}:${toPetId}`)
+    .success()
+    .text('انصراف', 'playdate:cancel')
+    .danger();
+}
+
 export function webLinksKeyboard(telegramId: string): InlineKeyboard | undefined {
   const login = telegramWebLoginUrl(telegramId, '/wallet');
   if (login) {

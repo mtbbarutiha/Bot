@@ -247,7 +247,47 @@ export interface PetProfile {
   updatedAt: string;
 }
 
-export type PlaydateStatus = 'pending' | 'accepted' | 'rejected' | 'cancelled';
+export type PlaydateStatus =
+  | 'pending'
+  | 'accepted'
+  | 'rejected'
+  | 'cancelled'
+  | 'expired';
+
+/** Pending playmate / chat requests auto-close after 2 minutes. */
+export const PLAYDATE_REQUEST_TTL_MS = 120_000;
+
+/**
+ * Parse SQLite `datetime('now')` (`YYYY-MM-DD HH:MM:SS`, UTC) or ISO strings.
+ */
+export function parseDbDateMs(value: string | undefined | null): number {
+  const raw = String(value ?? '').trim();
+  if (!raw) return NaN;
+  if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}/.test(raw) && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)) {
+    return Date.parse(raw.replace(' ', 'T') + 'Z');
+  }
+  return Date.parse(raw);
+}
+
+export function isPendingRequestExpired(
+  createdAt: string | undefined | null,
+  ttlMs: number = PLAYDATE_REQUEST_TTL_MS,
+  nowMs: number = Date.now()
+): boolean {
+  const created = parseDbDateMs(createdAt);
+  if (!Number.isFinite(created)) return false;
+  return nowMs - created >= ttlMs;
+}
+
+export function requestRemainingMs(
+  createdAt: string | undefined | null,
+  ttlMs: number = PLAYDATE_REQUEST_TTL_MS,
+  nowMs: number = Date.now()
+): number {
+  const created = parseDbDateMs(createdAt);
+  if (!Number.isFinite(created)) return 0;
+  return Math.max(0, ttlMs - (nowMs - created));
+}
 
 export interface PlaydateRequest {
   id: number;
@@ -296,7 +336,15 @@ export interface PlaydateChatMessage {
 }
 
 /** وضعیت مشاوره دامپزشک */
-export type VetConsultStatus = 'requested' | 'active' | 'completed' | 'cancelled';
+export type VetConsultStatus =
+  | 'requested'
+  | 'active'
+  | 'completed'
+  | 'cancelled'
+  | 'expired';
+
+/** Pending vet consult requests auto-close after 2 minutes (same as playmate). */
+export const VET_CONSULT_REQUEST_TTL_MS = PLAYDATE_REQUEST_TTL_MS;
 
 /** رکورد مشاوره — برای لیست بیماران دامپزشک */
 export interface VetConsultation {
@@ -307,6 +355,8 @@ export interface VetConsultation {
   status: VetConsultStatus;
   notes?: string;
   createdAt: string;
+  /** آخرین پیام یا ایجاد — برای مرتب‌سازی inbox */
+  lastActivityAt?: string;
   /** غنی‌سازی در API */
   patientName?: string;
   patientCity?: string;
@@ -618,6 +668,7 @@ export const PLAYDATE_STATUS_LABELS: Record<PlaydateStatus, string> = {
   accepted: 'پذیرفته',
   rejected: 'رد شده',
   cancelled: 'لغو شده',
+  expired: 'منقضی شده',
 };
 
 export const USER_ROLES: UserRole[] = [

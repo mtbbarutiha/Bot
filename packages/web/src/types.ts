@@ -4,7 +4,7 @@ export type PetSize = 'small' | 'medium' | 'large';
 
 export type PetGender = 'male' | 'female';
 
-export type MatchStatus = 'pending' | 'accepted' | 'rejected';
+export type MatchStatus = 'pending' | 'accepted' | 'rejected' | 'expired';
 
 export interface Pet {
   id: number;
@@ -43,6 +43,8 @@ export interface MatchRequest {
   statusLabel?: string;
   direction?: 'incoming' | 'outgoing';
   createdAt: string;
+  /** آخرین فعالیت برای مرتب‌سازی فهرست گفتگوها */
+  updatedAt?: string;
   scheduledAt?: string;
   location?: string;
   /** نام پت مبدأ در API (برای فرمت ربات: مبدأ → مقصد) */
@@ -50,6 +52,8 @@ export interface MatchRequest {
   rawToName?: string;
   chatSecure?: boolean;
   chatEnded?: boolean;
+  /** درخواست منقضی‌شده (بیش از ۲ دقیقه بدون پاسخ) */
+  expired?: boolean;
 }
 
 export interface OwnerProfile {
@@ -90,4 +94,5 @@ export const MATCH_STATUS_LABELS: Record<MatchStatus, string> = {
   pending: 'در انتظار',
   accepted: 'پذیرفته',
   rejected: 'رد شده',
+  expired: 'منقضی شده',
 };

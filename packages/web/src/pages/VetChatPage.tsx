@@ -8,10 +8,26 @@ import {
   type KeyboardEvent,
 } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowRight, CheckCheck, Loader2, Send, Stethoscope } from 'lucide-react';
-import type { VetConsultChatMessage, VetConsultation } from '@petdate/shared';
-import { userHasRole } from '@petdate/shared';
+import {
+  ArrowRight,
+  Check,
+  CheckCheck,
+  Loader2,
+  RefreshCw,
+  Send,
+  Stethoscope,
+  X,
+} from 'lucide-react';
+import {
+  VET_CONSULT_REQUEST_TTL_MS,
+  isPendingRequestExpired,
+  userHasRole,
+  type VetConsultChatMessage,
+  type VetConsultation,
+} from '@petdate/shared';
 import { BrandMark } from '../components/BrandMark';
+import { PetAvatar } from '../components/PetAvatar';
+import { RequestCountdown } from '../components/RequestCountdown';
 import { useAuthStore } from '../hooks/useAuthStore';
 import {
   acceptVetConsultation,
@@ -21,8 +37,17 @@ import {
   postVetConsultChatMessage,
   rejectVetConsultation,
 } from '../lib/api';
+import {
+  acceptInboxItem,
+  inboxScopeForUser,
+  loadInboxConversations,
+  rejectInboxItem,
+  type InboxConversation,
+} from '../lib/inboxConversations';
+import { formatTimeAgo } from '../data/mock';
 
 const POLL_MS = 2500;
+const DESKTOP_MQ = '(min-width: 860px)';
 
 type UiMsg = {
   id: number;
@@ -43,6 +68,20 @@ function toUi(row: VetConsultChatMessage, myId: number): UiMsg {
 
 function formatClock(ts: number) {
   return new Date(ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function useIsDesktop() {
+  const [desktop, setDesktop] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(DESKTOP_MQ).matches : false,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia(DESKTOP_MQ);
+    const onChange = () => setDesktop(mq.matches);
+    onChange();
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return desktop;
 }
 
 function useChatViewportHeight(active: boolean) {
@@ -71,7 +110,12 @@ export function VetChatPage() {
   const { consultId: consultIdParam } = useParams();
   const consultId = Number(consultIdParam);
   const navigate = useNavigate();
+  const desktop = useIsDesktop();
   const { user, token, isLoggedIn } = useAuthStore();
+  const inboxScope = inboxScopeForUser(user);
+  const hasThread = Number.isFinite(consultId) && consultId > 0;
+  const showList = desktop || !hasThread;
+  const showThread = desktop || hasThread;
 
   const [consult, setConsult] = useState<VetConsultation | null>(null);
   const [messages, setMessages] = useState<UiMsg[]>([]);
@@ -80,6 +124,10 @@ export function VetChatPage() {
   const [sending, setSending] = useState(false);
   const [acting, setActing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<InboxConversation[]>([]);
+  const [listLoading, setListLoading] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
+  const [listActionKey, setListActionKey] = useState<string | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const lastIdRef = useRef(0);
@@ -106,6 +154,23 @@ export function VetChatPage() {
     }
     return pet ? `مشاوره برای ${pet}` : 'مشاوره دامپزشک';
   }, [consult, isVetSide]);
+
+  const reloadConversations = useCallback(async () => {
+    if (!user?.id) {
+      setConversations([]);
+      setListLoading(false);
+      return;
+    }
+    setListLoading(true);
+    setListError(null);
+    try {
+      setConversations(await loadInboxConversations(user.id, user));
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : 'بارگذاری گفتگوها ناموفق بود');
+    } finally {
+      setListLoading(false);
+    }
+  }, [user]);
 
   const loadConsult = useCallback(async () => {
     if (!user?.id || !Number.isFinite(consultId) || consultId <= 0) return null;
@@ -160,18 +225,22 @@ export function VetChatPage() {
   );
 
   useEffect(() => {
+    void reloadConversations();
+  }, [reloadConversations]);
+
+  useEffect(() => {
     if (!isLoggedIn || !user?.id) {
       const next =
-        Number.isFinite(consultId) && consultId > 0 ? `/vet-chats/${consultId}` : '/vet-consult';
+        Number.isFinite(consultId) && consultId > 0 ? `/vet-chats/${consultId}` : '/chats';
       navigate(`/auth/login?next=${encodeURIComponent(next)}`, {
         replace: true,
         state: { from: next },
       });
       return;
     }
-    if (!Number.isFinite(consultId) || consultId <= 0) {
-      setError('شناسه مشاوره نامعتبر است');
+    if (!hasThread) {
       setLoading(false);
+      setConsult(null);
       return;
     }
 
@@ -203,7 +272,7 @@ export function VetChatPage() {
     return () => {
       cancelled = true;
     };
-  }, [isLoggedIn, user?.id, consultId, navigate, loadConsult, syncMessages]);
+  }, [isLoggedIn, user?.id, consultId, hasThread, navigate, loadConsult, syncMessages]);
 
   useEffect(() => {
     if (!consult || (consult.status !== 'active' && consult.status !== 'requested')) {
@@ -215,7 +284,6 @@ export function VetChatPage() {
         .then((next) => {
           if (!next) return;
           setConsult((prev) => {
-            // Never let a stale CDN/list response downgrade an active chat back to requested
             if (prev?.status === 'active' && next.status === 'requested' && prev.id === next.id) {
               return { ...next, status: 'active' };
             }
@@ -223,9 +291,10 @@ export function VetChatPage() {
           });
         })
         .catch(() => undefined);
+      void reloadConversations();
     }, POLL_MS);
     return () => window.clearInterval(timer);
-  }, [consult?.status, consult?.id, syncMessages, loadConsult]);
+  }, [consult?.status, consult?.id, syncMessages, loadConsult, reloadConversations]);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -249,6 +318,35 @@ export function VetChatPage() {
     stickToBottomRef.current = distance < 80;
   }
 
+  async function onAcceptFromList(item: InboxConversation) {
+    if (!user?.id || listActionKey) return;
+    setListActionKey(item.key);
+    setListError(null);
+    try {
+      await acceptInboxItem(item, user.id, token);
+      await reloadConversations();
+      navigate(item.href);
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : 'قبول درخواست ناموفق بود');
+    } finally {
+      setListActionKey(null);
+    }
+  }
+
+  async function onRejectFromList(item: InboxConversation) {
+    if (!user?.id || listActionKey) return;
+    setListActionKey(item.key);
+    setListError(null);
+    try {
+      await rejectInboxItem(item, user.id, token);
+      await reloadConversations();
+    } catch (err) {
+      setListError(err instanceof Error ? err.message : 'رد درخواست ناموفق بود');
+    } finally {
+      setListActionKey(null);
+    }
+  }
+
   async function onAccept() {
     if (!token || !consult) return;
     setActing(true);
@@ -259,6 +357,7 @@ export function VetChatPage() {
       lastIdRef.current = 0;
       stickToBottomRef.current = true;
       await syncMessages({ reset: true });
+      void reloadConversations();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'قبول درخواست ناموفق بود');
     } finally {
@@ -272,7 +371,7 @@ export function VetChatPage() {
     setError(null);
     try {
       await rejectVetConsultation(consult.id, token);
-      navigate('/vet-consult', { replace: true });
+      navigate('/chats', { replace: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'رد درخواست ناموفق بود');
     } finally {
@@ -291,6 +390,7 @@ export function VetChatPage() {
       setMessages((prev) => [...prev, toUi(row, user.id)]);
       lastIdRef.current = Math.max(lastIdRef.current, row.id);
       setDraft('');
+      void reloadConversations();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ارسال پیام ناموفق بود');
     } finally {
@@ -311,193 +411,411 @@ export function VetChatPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="tg-chat tg-chat--shell tg-chat--thread-only pepito-vet-chat" dir="rtl">
-        <div className="tg-thread-empty">
-          <Loader2 className="tg-spin" size={28} />
-          <h2>در حال آماده‌سازی چت پزشک…</h2>
-        </div>
-      </div>
-    );
+  function onBack() {
+    if (!desktop && hasThread) {
+      navigate('/chats');
+      return;
+    }
+    navigate(inboxScope === 'vet' ? '/vet-consult' : '/chats');
   }
 
-  if (!consult) {
-    return (
-      <div className="tg-chat tg-chat--shell tg-chat--thread-only pepito-vet-chat" dir="rtl">
-        <div className="tg-thread-empty">
-          <BrandMark iconSize={28} />
-          <h2>مشاوره پیدا نشد</h2>
-          <p role="alert">{error ?? 'این گفتگو در دسترس نیست.'}</p>
-          <Link to="/vet-consult" className="tg-chat-link-btn">
-            بازگشت به ارتباط با پزشک
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const pending =
+    consult?.status === 'requested' &&
+    !isPendingRequestExpired(consult.createdAt, VET_CONSULT_REQUEST_TTL_MS);
+  const expired =
+    consult?.status === 'expired' ||
+    (consult?.status === 'requested' &&
+      isPendingRequestExpired(consult.createdAt, VET_CONSULT_REQUEST_TTL_MS));
+  const active = consult?.status === 'active';
+  const incomingPending = Boolean(pending && isVetSide);
 
-  const pending = consult.status === 'requested';
-  const active = consult.status === 'active';
-  const statusLabel = pending
-    ? isVetSide
-      ? 'درخواست جدید — قبول یا رد کنید'
-      : 'در انتظار قبول پزشک'
-    : active
-      ? 'چت مشاوره فعال'
-      : consult.status === 'completed'
-        ? 'مشاوره پایان یافته'
-        : `وضعیت: ${consult.status}`;
+  const shellClass = [
+    'tg-chat',
+    'tg-chat--shell',
+    'pepito-vet-chat',
+    showList && showThread ? 'tg-chat--split' : '',
+    !showList && showThread ? 'tg-chat--thread-only' : '',
+    showList && !showThread ? 'tg-chat--list-only' : '',
+    pending ? 'tg-chat--pending' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const statusLabel = expired
+    ? 'درخواست منقضی شده'
+    : pending
+      ? isVetSide
+        ? 'درخواست مشاوره جدید'
+        : 'منتظر پاسخ پزشک'
+      : active
+        ? 'چت مشاوره فعال'
+        : consult?.status === 'completed'
+          ? 'مشاوره پایان یافته'
+          : consult
+            ? `وضعیت: ${consult.status}`
+            : '';
 
   return (
-    <div className="tg-chat tg-chat--shell tg-chat--thread-only pepito-vet-chat" dir="rtl">
-      <section className="tg-thread" aria-label="چت مشاوره دامپزشک">
-        <header className="tg-chat-header">
-          <button
-            type="button"
-            className="tg-chat-back"
-            aria-label="بازگشت به پنل پزشک"
-            onClick={() => navigate('/vet-consult')}
-          >
-            <ArrowRight size={22} strokeWidth={2.2} />
-          </button>
-          <div className="tg-chat-peer" role="group" aria-label={peerName}>
-            <span className="tg-chat-peer-avatar" aria-hidden>
-              <Stethoscope size={18} />
-            </span>
-            <span>
-              <strong>{peerName}</strong>
-              <small>
-                {statusLabel}
-                {peerSub ? ` · ${peerSub}` : ''}
-              </small>
-            </span>
-          </div>
-        </header>
+    <div className={shellClass} dir="rtl">
+      {showList ? (
+        <aside className="tg-chat-list" aria-label="فهرست گفتگوها">
+          <header className="tg-chat-list-head">
+            <Link
+              to={inboxScope === 'vet' ? '/vet-consult' : '/explore#requests'}
+              className="tg-icon-btn"
+              aria-label={inboxScope === 'vet' ? 'بازگشت به پنل پزشک' : 'بازگشت به همبازی'}
+            >
+              <ArrowRight size={18} />
+            </Link>
+            <div>
+              <p className="tg-chat-list-kicker">پت‌دیت</p>
+              <h1>{inboxScope === 'vet' ? 'گفتگوهای پزشک' : 'گفتگوها'}</h1>
+            </div>
+            <button
+              type="button"
+              className="tg-icon-btn"
+              onClick={() => void reloadConversations()}
+              aria-label="بروزرسانی فهرست"
+              title="بروزرسانی"
+            >
+              <RefreshCw size={18} />
+            </button>
+          </header>
 
-        {pending ? (
-          <div className={`tg-status-strip${isVetSide ? '' : ' is-wait'}`} role="status">
-            {isVetSide
-              ? 'درخواست مشاوره در انتظار پاسخ شماست'
-              : 'درخواست ارسال شد — به‌محض قبول پزشک، چت باز می‌شود'}
-          </div>
-        ) : active ? (
-          <div className="tg-status-strip" role="status">
-            چت مشاوره دامپزشک فعال است
-          </div>
-        ) : null}
+          {listError ? <p className="tg-error tg-error--inset">{listError}</p> : null}
 
-        <div className="tg-chat-wallpaper" ref={scrollerRef} onScroll={onScrollerScroll}>
-          <div className="tg-chat-messages">
-            {pending ? (
-              <div className="pepito-vet-chat-card" role="status">
-                <p className="tg-request-card-kicker">
-                  {isVetSide ? 'درخواست جدید بیمار' : 'وضعیت درخواست'}
-                </p>
-                <h3 style={{ margin: '0 0 0.35rem', fontSize: '1.05rem' }}>{peerName}</h3>
-                <p>
-                  {isVetSide
-                    ? `${
-                        consult.petName?.trim()
-                          ? `برای پت «${consult.petName.trim()}» `
-                          : ''
-                      }درخواست مشاوره سریع داده شده. قبول کنید تا چت همین‌جا باز شود.`
-                    : 'درخواستت برای پزشک ارسال شده. به‌محض قبول، چت همین‌جا باز می‌شود.'}
-                </p>
-                {isVetSide ? (
-                  <div className="pepito-vet-chat-actions">
-                    <button
-                      type="button"
-                      className="pepito-btn button-1"
-                      disabled={acting}
-                      onClick={() => void onAccept()}
-                      data-testid="vet-chat-accept"
-                    >
-                      {acting ? 'در حال قبول…' : 'قبول و ورود به چت'}
-                    </button>
-                    <button
-                      type="button"
-                      className="pepito-btn pepito-btn--ghost"
-                      disabled={acting}
-                      onClick={() => void onReject()}
-                      data-testid="vet-chat-reject"
-                    >
-                      رد
-                    </button>
-                  </div>
-                ) : (
-                  <p className="pepito-vet-chat-wait-hint">لطفاً چند لحظه صبر کن…</p>
-                )}
+          <div className="tg-chat-list-body">
+            {listLoading ? (
+              <div className="tg-chat-list-empty">
+                <div className="tg-skeleton tg-skeleton--row" />
+                <div className="tg-skeleton tg-skeleton--row" />
+                <div className="tg-skeleton tg-skeleton--row" />
               </div>
-            ) : null}
+            ) : conversations.length === 0 ? (
+              <div className="tg-chat-list-empty">
+                <BrandMark iconSize={28} />
+                <h2>هنوز گفتگویی نیست</h2>
+                <p>
+                  {inboxScope === 'vet'
+                    ? 'درخواست‌ها و چت‌های مشاوره دامپزشکی این نقش اینجا می‌آیند.'
+                    : 'درخواست‌های همبازی و مشاوره‌های شما به‌عنوان صاحب پت اینجا می‌آیند.'}
+                </p>
+                <Link
+                  to={inboxScope === 'vet' ? '/vet-consult' : '/explore'}
+                  className="tg-chat-link-btn"
+                >
+                  {inboxScope === 'vet' ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
+                </Link>
+              </div>
+            ) : (
+              <ul className="tg-chat-list-items">
+                {conversations.map((c) => {
+                  const activeRow = c.key === `vet:${consultId}`;
+                  const busy = listActionKey === c.key;
+                  const peer = c.peerPet;
+                  return (
+                    <li key={c.key} className="tg-chat-list-row">
+                      <button
+                        type="button"
+                        className={`tg-chat-list-item${activeRow ? ' is-active' : ''}${
+                          c.ended ? ' is-ended' : ''
+                        }${c.pending ? ' is-pending' : ''}`}
+                        onClick={() => navigate(c.href)}
+                      >
+                        {peer ? (
+                          <PetAvatar
+                            type={peer.type}
+                            size="md"
+                            imageUrl={peer.imageUrl}
+                            name={peer.name}
+                          />
+                        ) : (
+                          <span className="tg-chat-list-icon" aria-hidden>
+                            <Stethoscope size={22} strokeWidth={2} />
+                          </span>
+                        )}
+                        <span className="tg-chat-list-meta">
+                          <strong>
+                            {c.title}
+                            <em className="tg-chat-list-kind">
+                              {c.kind === 'vet' ? 'مشاوره' : 'همبازی'}
+                            </em>
+                          </strong>
+                          <small>{c.preview}</small>
+                        </span>
+                        <time className="tg-chat-list-time">
+                          {formatTimeAgo(c.lastActivityAt || c.createdAt)}
+                        </time>
+                      </button>
+                      {c.canDecide ? (
+                        <div className="tg-chat-list-actions">
+                          <button
+                            type="button"
+                            className="tg-chat-list-accept"
+                            disabled={Boolean(busy)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void onAcceptFromList(c);
+                            }}
+                          >
+                            <Check size={14} strokeWidth={2.5} />
+                            قبول
+                          </button>
+                          <button
+                            type="button"
+                            className="tg-chat-list-reject"
+                            disabled={Boolean(busy)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void onRejectFromList(c);
+                            }}
+                          >
+                            <X size={14} strokeWidth={2.5} />
+                            رد
+                          </button>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </aside>
+      ) : null}
 
-            {messages.map((m) => (
-              <div
-                key={m.id}
-                className={`tg-bubble-row${m.from === 'me' ? ' is-out' : ' is-in'}`}
+      {showThread ? (
+        <section className="tg-thread" aria-label="چت مشاوره دامپزشک">
+          {!hasThread ? (
+            <div className="tg-thread-empty">
+              <BrandMark iconSize={36} />
+              <h2>{inboxScope === 'vet' ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
+              <Link
+                to={inboxScope === 'vet' ? '/vet-consult' : '/explore'}
+                className="tg-chat-link-btn"
               >
-                <div className="tg-bubble">
-                  <p className="tg-bubble-text">{m.text}</p>
-                  <footer className="tg-bubble-meta">
-                    <time>{formatClock(m.at)}</time>
-                    {m.from === 'me' ? (
-                      <CheckCheck size={14} className="tg-ticks" aria-hidden />
-                    ) : null}
-                  </footer>
+                {inboxScope === 'vet' ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
+              </Link>
+            </div>
+          ) : loading ? (
+            <div className="tg-thread-empty">
+              <Loader2 className="tg-spin" size={28} />
+              <h2>در حال آماده‌سازی چت پزشک…</h2>
+            </div>
+          ) : !consult ? (
+            <div className="tg-thread-empty">
+              <BrandMark iconSize={28} />
+              <h2>مشاوره پیدا نشد</h2>
+              <p role="alert">{error ?? 'این گفتگو در دسترس نیست.'}</p>
+              <Link to="/chats" className="tg-chat-link-btn">
+                بازگشت به گفتگوها
+              </Link>
+            </div>
+          ) : (
+            <>
+              <header className="tg-chat-header">
+                <button
+                  type="button"
+                  className="tg-chat-back"
+                  aria-label="بازگشت به گفتگوها"
+                  onClick={onBack}
+                >
+                  <ArrowRight size={22} strokeWidth={2.2} />
+                </button>
+                <div className="tg-chat-peer" role="group" aria-label={peerName}>
+                  <span className="tg-chat-peer-avatar" aria-hidden>
+                    <Stethoscope size={18} />
+                  </span>
+                  <span>
+                    <strong>{peerName}</strong>
+                    <small>
+                      {statusLabel}
+                      {peerSub ? ` · ${peerSub}` : ''}
+                    </small>
+                  </span>
+                </div>
+              </header>
+
+              {pending ? (
+                <div className={`tg-status-strip${isVetSide ? '' : ' is-wait'}`} role="status">
+                  {isVetSide
+                    ? 'درخواست مشاوره در انتظار پاسخ شماست'
+                    : 'درخواست ارسال شد — به‌محض قبول پزشک، چت باز می‌شود'}
+                  {' · '}
+                  <RequestCountdown
+                    createdAt={consult.createdAt}
+                    ttlMs={VET_CONSULT_REQUEST_TTL_MS}
+                    onExpire={() => {
+                      setConsult((prev) => (prev ? { ...prev, status: 'expired' } : prev));
+                      void reloadConversations();
+                    }}
+                  />
+                </div>
+              ) : active ? (
+                <div className="tg-status-strip" role="status">
+                  چت مشاوره دامپزشک فعال است
+                </div>
+              ) : null}
+
+              <div className="tg-chat-wallpaper" ref={scrollerRef} onScroll={onScrollerScroll}>
+                <div className="tg-chat-messages">
+                  <article
+                    className={`tg-request-card${
+                      isVetSide ? ' is-incoming' : ' is-outgoing'
+                    }${pending ? ' is-pending' : ''}${expired ? ' is-rejected' : ''}`}
+                    aria-label="کارت درخواست مشاوره"
+                  >
+                    <div className="tg-request-card-body">
+                      <p className="tg-request-card-kicker">
+                        {expired
+                          ? 'درخواست منقضی شد'
+                          : incomingPending
+                            ? 'درخواست مشاوره جدید'
+                            : pending
+                              ? 'درخواست مشاوره ارسال شد'
+                              : active
+                                ? 'مشاوره فعال'
+                                : 'درخواست مشاوره'}
+                      </p>
+                      <h3>
+                        {peerName}
+                        {consult.petName?.trim() ? ` · ${consult.petName.trim()}` : ''}
+                      </h3>
+                      <ul className="tg-request-card-meta">
+                        <li>
+                          #{consult.id} · {statusLabel}
+                        </li>
+                        {consult.petSpecies || consult.petBreed ? (
+                          <li>
+                            {[consult.petSpecies, consult.petBreed].filter(Boolean).join(' · ')}
+                          </li>
+                        ) : null}
+                        {consult.patientCity ? <li>📍 {consult.patientCity}</li> : null}
+                      </ul>
+                      {incomingPending ? (
+                        <div className="tg-request-card-actions">
+                          <button
+                            type="button"
+                            className="tg-request-accept"
+                            disabled={acting}
+                            onClick={() => void onAccept()}
+                            data-testid="vet-chat-accept"
+                          >
+                            <Check size={16} strokeWidth={2.5} />
+                            {acting ? '…' : 'قبول'}
+                          </button>
+                          <button
+                            type="button"
+                            className="tg-request-reject"
+                            disabled={acting}
+                            onClick={() => void onReject()}
+                            data-testid="vet-chat-reject"
+                          >
+                            <X size={16} strokeWidth={2.5} />
+                            رد
+                          </button>
+                        </div>
+                      ) : pending ? (
+                        <p className="tg-request-card-wait" role="status">
+                          منتظر پاسخ پزشک باش.
+                          {' · '}
+                          <RequestCountdown
+                            createdAt={consult.createdAt}
+                            ttlMs={VET_CONSULT_REQUEST_TTL_MS}
+                          />
+                        </p>
+                      ) : expired ? (
+                        <p className="tg-request-card-wait" role="status">
+                          مهلت ۲ دقیقه‌ای این درخواست تمام شد.
+                          {!isVetSide ? (
+                            <>
+                              {' '}
+                              <Link to="/vet-consult" className="tg-chat-link-btn">
+                                درخواست مجدد
+                              </Link>
+                            </>
+                          ) : null}
+                        </p>
+                      ) : active ? (
+                        <p className="tg-request-card-wait" role="status">
+                          پذیرفته شد — می‌توانی پیام بفرستی.
+                        </p>
+                      ) : null}
+                    </div>
+                  </article>
+
+                  {messages.map((m) => (
+                    <div
+                      key={m.id}
+                      className={`tg-bubble-row${m.from === 'me' ? ' is-out' : ' is-in'}`}
+                    >
+                      <div className="tg-bubble">
+                        <p className="tg-bubble-text">{m.text}</p>
+                        <footer className="tg-bubble-meta">
+                          <time>{formatClock(m.at)}</time>
+                          {m.from === 'me' ? (
+                            <CheckCheck size={14} className="tg-ticks" aria-hidden />
+                          ) : null}
+                        </footer>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
 
-        {error ? (
-          <p className="tg-error" role="alert">
-            {error}
-          </p>
-        ) : null}
+              {error ? (
+                <p className="tg-error" role="alert">
+                  {error}
+                </p>
+              ) : null}
 
-        {active ? (
-          <div className="tg-composer-shell">
-            <form className="tg-composer tg-composer--simple" dir="ltr" onSubmit={onSubmit}>
-              <textarea
-                ref={inputRef}
-                dir="auto"
-                rows={1}
-                value={draft}
-                placeholder="پیام به پزشک / بیمار…"
-                disabled={sending}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={onKeyDown}
-                aria-label="متن پیام"
-                enterKeyHint="send"
-                data-testid="vet-chat-input"
-              />
-              <button
-                type="submit"
-                className={`tg-send${sending ? ' is-sending' : ''}`}
-                disabled={sending || !draft.trim()}
-                aria-label="ارسال"
-                data-testid="vet-chat-send"
-              >
-                {sending ? <Loader2 size={18} className="tg-spin" /> : <Send size={18} />}
-              </button>
-            </form>
-          </div>
-        ) : pending ? (
-          <div className="tg-request-composer-bar" role="status">
-            {isVetSide
-              ? 'برای شروع چت، درخواست را قبول یا رد کنید.'
-              : 'چت بعد از قبول پزشک فعال می‌شود.'}
-          </div>
-        ) : (
-          <div className="tg-request-composer-bar" role="status">
-            این مشاوره دیگر فعال نیست.
-            <Link to="/vet-consult" className="tg-chat-link-btn" style={{ marginInlineStart: 8 }}>
-              بازگشت
-            </Link>
-          </div>
-        )}
-      </section>
+              {active ? (
+                <div className="tg-composer-shell">
+                  <form className="tg-composer tg-composer--simple" dir="ltr" onSubmit={onSubmit}>
+                    <textarea
+                      ref={inputRef}
+                      dir="auto"
+                      rows={1}
+                      value={draft}
+                      placeholder="پیام…"
+                      disabled={sending}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onKeyDown={onKeyDown}
+                      aria-label="متن پیام"
+                      enterKeyHint="send"
+                      data-testid="vet-chat-input"
+                    />
+                    <button
+                      type="submit"
+                      className={`tg-send${sending ? ' is-sending' : ''}`}
+                      disabled={sending || !draft.trim()}
+                      aria-label="ارسال"
+                      data-testid="vet-chat-send"
+                    >
+                      {sending ? <Loader2 size={18} className="tg-spin" /> : <Send size={18} />}
+                    </button>
+                  </form>
+                </div>
+              ) : (
+                <div className="tg-request-composer-bar" role="status">
+                  {incomingPending
+                    ? 'برای شروع چت، درخواست را قبول یا رد کن.'
+                    : expired
+                      ? 'این درخواست منقضی شده است.'
+                      : pending
+                        ? 'چت بعد از قبول پزشک فعال می‌شود.'
+                        : 'این مشاوره دیگر فعال نیست.'}
+                  {expired && !isVetSide ? (
+                    <Link to="/vet-consult" className="tg-chat-link-btn" style={{ marginInlineStart: 8 }}>
+                      درخواست مجدد
+                    </Link>
+                  ) : null}
+                </div>
+              )}
+            </>
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }

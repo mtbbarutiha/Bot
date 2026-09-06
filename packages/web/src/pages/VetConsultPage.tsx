@@ -345,7 +345,25 @@ export function VetConsultPage() {
     autoNavRef.current = null;
 
     try {
-      const result = await quickVetConnect(user.id, token);
+      let result;
+      try {
+        result = await quickVetConnect(user.id, token);
+      } catch (err) {
+        const needsConfirm =
+          err instanceof Error &&
+          ((err as Error & { requiresResendConfirm?: boolean }).requiresResendConfirm ||
+            /میخوای مجدد/.test(err.message));
+        if (needsConfirm) {
+          const ok = window.confirm('میخوای مجدد درخواست بدی به اون شخص؟');
+          if (!ok) {
+            setPhase('ready');
+            return;
+          }
+          result = await quickVetConnect(user.id, token, { confirmResend: true });
+        } else {
+          throw err;
+        }
+      }
       setSentCount(result.sent);
       setRequestedIds(result.consultations.map((c) => c.id));
       setStatusLines([

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { VetConsultation } from '@petdate/shared';
 import { adminFetch, formatNumFa } from '../api';
 
-const STATUSES = ['requested', 'active', 'completed', 'cancelled'] as const;
+const STATUSES = ['requested', 'active', 'completed', 'cancelled', 'expired'] as const;
 
 export function AdminConsultsPage() {
   const [items, setItems] = useState<VetConsultation[]>([]);

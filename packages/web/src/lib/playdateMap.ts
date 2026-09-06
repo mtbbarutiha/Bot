@@ -51,6 +51,7 @@ export function petProfileToUiPet(pet?: PetProfile | null): Pet {
 
 function toMatchStatus(status: PlaydateRequest['status']): MatchStatus {
   if (status === 'accepted') return 'accepted';
+  if (status === 'expired') return 'expired';
   if (status === 'rejected' || status === 'cancelled') return 'rejected';
   return 'pending';
 }
@@ -79,11 +80,13 @@ export function playdateToMatchRequest(req: PlaydateRequest, myUserId: number): 
     statusLabel: PLAYDATE_STATUS_LABELS[req.status] ?? req.status,
     direction: incoming ? 'incoming' : 'outgoing',
     createdAt: req.createdAt,
+    updatedAt: req.updatedAt ?? req.createdAt,
     scheduledAt: req.scheduledAt,
     location: req.location,
     rawFromName: req.fromPet?.name ?? `#${req.fromPetId}`,
     rawToName: req.toPet?.name ?? `#${req.toPetId}`,
     chatSecure: Boolean(req.chatSecure),
     chatEnded: Boolean(req.chatEnded),
+    expired: req.status === 'expired',
   };
 }
