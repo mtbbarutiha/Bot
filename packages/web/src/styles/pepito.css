@@ -2485,6 +2485,254 @@ button.chip.is-on {
 }
 .home-service-chip svg { color: var(--pepito-base) !important; }
 
+/* —— Role switch (post-login top nav + soft rail) —— */
+.pepito-role-switch {
+  position: relative;
+  z-index: 70;
+}
+.pepito-role-switch-trigger {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05rem;
+  max-width: 11rem;
+  line-height: 1.2;
+  border: 1px solid rgba(92, 77, 145, 0.14);
+  border-radius: 14px;
+  padding: 0.4rem 0.75rem !important;
+  background: rgba(92, 77, 145, 0.06);
+}
+.pepito-role-switch-trigger-label {
+  font-weight: 800;
+  font-size: 0.82rem;
+  color: var(--pepito-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+.pepito-role-switch-trigger-hint {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--pepito-base);
+}
+.pepito-role-switch-trigger--rail {
+  width: 100%;
+  justify-content: flex-start;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-align: start;
+}
+.pepito-role-switch-trigger--rail .pepito-role-switch-trigger-label {
+  font-size: 0.9rem;
+}
+.pepito-role-switch-trigger--rail .pepito-role-switch-trigger-hint {
+  font-size: 0.72rem;
+}
+.pepito-role-switch--rail .pepito-role-switch-panel {
+  inset-inline-start: 0;
+  inset-inline-end: auto;
+  min-width: min(320px, calc(100vw - 2rem));
+}
+.pepito-role-switch-panel {
+  position: absolute;
+  top: calc(100% + 0.45rem);
+  inset-inline-end: 0;
+  width: min(340px, calc(100vw - 1.5rem));
+  max-height: min(70vh, 520px);
+  overflow: auto;
+  padding: 0.85rem 0.85rem 0.95rem;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(92, 77, 145, 0.12);
+  box-shadow: 0 18px 44px rgba(25, 6, 61, 0.16);
+  animation: pepito-flow-rise 0.28s ease both;
+}
+.pepito-role-switch-panel.is-add {
+  width: min(420px, calc(100vw - 1.25rem));
+}
+.pepito-role-switch-panel-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  color: var(--pepito-dark);
+}
+.pepito-role-switch-panel-active {
+  margin: 0.25rem 0 0.75rem;
+  font-size: 0.82rem;
+  color: var(--pepito-muted);
+}
+.pepito-role-switch-panel-active strong {
+  color: var(--pepito-base);
+  font-weight: 800;
+}
+.pepito-role-switch-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.pepito-role-switch-empty {
+  padding: 0.65rem 0.5rem;
+  font-size: 0.85rem;
+  color: var(--pepito-muted);
+}
+.pepito-role-switch-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid rgba(92, 77, 145, 0.1);
+  border-radius: 14px;
+  background: #faf9fc;
+  color: var(--pepito-dark);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: start;
+}
+.pepito-role-switch-item:hover {
+  border-color: rgba(92, 77, 145, 0.22);
+  background: var(--pepito-lilac);
+}
+.pepito-role-switch-item.is-active {
+  background: linear-gradient(135deg, #5c4d91, #4a3d78);
+  border-color: transparent;
+  color: #fff;
+}
+.pepito-role-switch-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+.pepito-role-switch-footer {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.pepito-role-switch-footer--row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+}
+.pepito-role-switch-add,
+.pepito-role-switch-back {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--pepito-base);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  padding: 0.45rem 0.2rem;
+  text-align: start;
+}
+.pepito-role-switch-confirm {
+  flex: 1;
+  justify-content: center;
+  min-height: 2.5rem;
+  font-size: 0.88rem !important;
+}
+.pepito-role-switch-add-lead {
+  margin: 0 0 0.65rem;
+  font-size: 0.82rem;
+  color: var(--pepito-muted);
+}
+.pepito-role-switch-add-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.4rem;
+  max-height: 42vh;
+  overflow: auto;
+}
+.pepito-role-switch-add-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  border: 1px solid rgba(92, 77, 145, 0.12);
+  background: #fff;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+}
+.pepito-role-switch-add-card.is-on {
+  background: linear-gradient(135deg, #5c4d91, #4a3d78);
+  border-color: transparent;
+  color: #fff;
+}
+.pepito-role-switch-add-label {
+  font-weight: 800;
+  font-size: 0.88rem;
+}
+.pepito-role-switch-add-desc {
+  font-size: 0.72rem;
+  opacity: 0.85;
+  line-height: 1.35;
+}
+.pepito-role-switch-error {
+  margin: 0.55rem 0 0;
+  color: #b42318;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+.pepito-role-switch-toast {
+  position: fixed;
+  inset-inline: 0;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 120;
+  margin-inline: auto;
+  width: fit-content;
+  max-width: calc(100vw - 2rem);
+  padding: 0.7rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(25, 6, 61, 0.92);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.88rem;
+  box-shadow: 0 12px 28px rgba(25, 6, 61, 0.25);
+  animation: pepito-flow-rise 0.3s ease both;
+  pointer-events: none;
+}
+@media (max-width: 859px) {
+  .pepito-role-switch-trigger {
+    max-width: 7.5rem;
+    padding: 0.35rem 0.55rem !important;
+  }
+  .pepito-role-switch-trigger-label {
+    font-size: 0.74rem;
+  }
+  .pepito-role-switch-trigger-hint {
+    font-size: 0.62rem;
+  }
+  .pepito-nav-actions .pepito-btn--nav {
+    display: none;
+  }
+  .pepito-role-switch-panel {
+    position: fixed;
+    top: calc(var(--pepito-nav-h) + 0.35rem);
+    inset-inline: 0.75rem auto;
+    inset-inline-end: 0.75rem;
+    width: auto;
+    max-height: calc(100dvh - var(--pepito-nav-h) - 1.5rem);
+  }
+}
+
 /* —— Find playmate + inline requests —— */
 .pepito-explore {
   padding: 1.75rem 1.35rem 2.5rem;
