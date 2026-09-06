@@ -29,6 +29,7 @@ import { SiteLogo } from '../components/SiteLogo';
 import { PetAvatar } from '../components/PetAvatar';
 import { RequestCountdown } from '../components/RequestCountdown';
 import { useAuthStore } from '../hooks/useAuthStore';
+import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
 import {
   acceptVetConsultation,
   getVetConsultation,
@@ -37,6 +38,7 @@ import {
   postVetConsultChatMessage,
   rejectVetConsultation,
 } from '../lib/api';
+import { subscribeIncomingRefresh } from '../lib/liveIncoming';
 import {
   acceptInboxItem,
   inboxScopeForUser,
@@ -46,7 +48,7 @@ import {
 } from '../lib/inboxConversations';
 import { formatTimeAgo } from '../data/mock';
 
-const POLL_MS = 2500;
+const POLL_MS = 1500;
 const DESKTOP_MQ = '(min-width: 860px)';
 
 type UiMsg = {
@@ -227,6 +229,23 @@ export function VetChatPage() {
   useEffect(() => {
     void reloadConversations();
   }, [reloadConversations]);
+
+  useLiveAjaxPoll(
+    () => {
+      void reloadConversations();
+    },
+    { enabled: Boolean(user?.id), intervalMs: 1500 },
+  );
+
+  useEffect(() => {
+    if (!user?.id) return;
+    return subscribeIncomingRefresh((detail) => {
+      if (detail?.kinds && !detail.kinds.includes('vet') && !detail.kinds.includes('playmate')) {
+        return;
+      }
+      void reloadConversations();
+    });
+  }, [user?.id, reloadConversations]);
 
   useEffect(() => {
     if (!isLoggedIn || !user?.id) {

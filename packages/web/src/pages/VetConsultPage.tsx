@@ -12,6 +12,7 @@ import {
   type VetConsultation,
 } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
+import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
 import {
   acceptVetConsultation,
   listPets,
@@ -20,6 +21,7 @@ import {
   rejectVetConsultation,
   telegramBotDeepLink,
 } from '../lib/api';
+import { subscribeIncomingRefresh } from '../lib/liveIncoming';
 
 type Phase = 'ready' | 'sending' | 'waiting' | 'connected';
 
@@ -272,15 +274,28 @@ export function VetConsultPage() {
     void loadRecent();
   }, [loadRecent]);
 
-  useEffect(() => {
-    if (phase !== 'waiting' && phase !== 'connected' && !hasVetRole) return;
-    const t = window.setInterval(() => {
+  // Fast ajax refresh on doctor panel (and while patient waits) — ~1.5s + focus/visibility.
+  useLiveAjaxPoll(
+    () => {
       void refreshConsultStatus();
       void loadIncoming();
       if (hasVetRole) void loadRecent();
-    }, 5000);
-    return () => window.clearInterval(t);
-  }, [phase, hasVetRole, refreshConsultStatus, loadIncoming, loadRecent]);
+    },
+    {
+      enabled: hasVetRole || phase === 'waiting' || phase === 'connected',
+      intervalMs: 1500,
+    },
+  );
+
+  // Instant list update when global live poller discovers a new request.
+  useEffect(() => {
+    if (!hasVetRole) return;
+    return subscribeIncomingRefresh((detail) => {
+      if (detail?.kinds && !detail.kinds.includes('vet')) return;
+      void loadIncoming();
+      void loadRecent();
+    });
+  }, [hasVetRole, loadIncoming, loadRecent]);
 
   useEffect(() => {
     if (isVetDashboard) return;

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Stethoscope, X } from 'lucide-react';
-import { primaryRole, type VetConsultation } from '@petdate/shared';
+import { userHasRole, type VetConsultation } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
+import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
 import {
   acceptVetConsultation,
   listPlaydateRequests,
@@ -10,28 +11,28 @@ import {
   rejectVetConsultation,
   updatePlaydateStatus,
 } from '../lib/api';
-import { inboxScopeForRole } from '../lib/inboxConversations';
+import { emitIncomingRefresh } from '../lib/liveIncoming';
 import { isIncomingPlaydate } from '../lib/playdateMap';
 
-const POLL_MS = 6000;
+/** Ajax poll — short so desktop doctor / owner screens update quickly. */
+const POLL_MS = 1500;
 
 type IncomingItem =
   | { kind: 'playmate'; id: number; title: string; subtitle: string; photo?: string; href: string }
   | { kind: 'vet'; id: number; title: string; subtitle: string; photo?: string; href: string };
 
 /**
- * Role-scoped poller: only surfaces requests for the active primary role.
- * Vet role → vet consultations; other roles → playmate requests.
+ * Global live inbox toast via ajax polling.
+ * Dual-role users get both playmate and vet requests (not only primary role).
  */
 export function LiveIncomingRequests() {
   const navigate = useNavigate();
   const { user, isLoggedIn, token } = useAuthStore();
   const myUserId = user?.id;
-  const activeRole = primaryRole(user?.roles, user?.role);
-  const scope = inboxScopeForRole(activeRole);
+  const canPlaymate = Boolean(myUserId && userHasRole(user, 'pet_owner'));
+  const canVet = Boolean(myUserId && userHasRole(user, 'vet'));
   const seenRef = useRef<Set<string>>(new Set());
   const seededRef = useRef(false);
-  const scopeRef = useRef(scope);
   const [queue, setQueue] = useState<IncomingItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -43,23 +44,23 @@ export function LiveIncomingRequests() {
     setError(null);
   }, []);
 
-  // Role switch: drop the other role's queue and re-seed.
   useEffect(() => {
-    if (scopeRef.current === scope) return;
-    scopeRef.current = scope;
     seededRef.current = false;
     seenRef.current = new Set();
     setQueue([]);
     setError(null);
-  }, [scope]);
+  }, [myUserId, canPlaymate, canVet]);
 
   const poll = useCallback(async () => {
     if (!isLoggedIn || !myUserId) return;
     try {
       const items: IncomingItem[] = [];
 
-      if (scope === 'owner') {
-        const playdates = await listPlaydateRequests({ userId: myUserId, status: 'pending' });
+      if (canPlaymate) {
+        const playdates = await listPlaydateRequests({
+          userId: myUserId,
+          status: 'pending',
+        });
         for (const r of playdates) {
           if (r.status !== 'pending' || !isIncomingPlaydate(r, myUserId)) continue;
           const fromName = r.fromPet?.name ?? 'یک پت';
@@ -75,7 +76,9 @@ export function LiveIncomingRequests() {
             href: `/chats/${r.id}`,
           });
         }
-      } else {
+      }
+
+      if (canVet) {
         const consults = await listVetConsultations({
           vetUserId: myUserId,
           status: 'requested',
@@ -100,34 +103,48 @@ export function LiveIncomingRequests() {
       if (!seededRef.current) {
         seenRef.current = new Set(items.map((i) => `${i.kind}:${i.id}`));
         seededRef.current = true;
+        if (items.length) {
+          emitIncomingRefresh({
+            kinds: [
+              ...(items.some((i) => i.kind === 'playmate') ? (['playmate'] as const) : []),
+              ...(items.some((i) => i.kind === 'vet') ? (['vet'] as const) : []),
+            ],
+            ids: items.map((i) => i.id),
+          });
+        }
         return;
+      }
+
+      const liveKeys = new Set(items.map((i) => `${i.kind}:${i.id}`));
+      for (const key of [...seenRef.current]) {
+        if (!liveKeys.has(key)) seenRef.current.delete(key);
       }
 
       const fresh = items.filter((i) => !seenRef.current.has(`${i.kind}:${i.id}`));
       if (!fresh.length) return;
+
       for (const i of fresh) seenRef.current.add(`${i.kind}:${i.id}`);
       setQueue((prev) => {
         const existing = new Set(prev.map((p) => `${p.kind}:${p.id}`));
         const add = fresh.filter((i) => !existing.has(`${i.kind}:${i.id}`));
         return add.length ? [...prev, ...add] : prev;
       });
+      emitIncomingRefresh({
+        kinds: [
+          ...(fresh.some((i) => i.kind === 'playmate') ? (['playmate'] as const) : []),
+          ...(fresh.some((i) => i.kind === 'vet') ? (['vet'] as const) : []),
+        ],
+        ids: fresh.map((i) => i.id),
+      });
     } catch {
       /* silent */
     }
-  }, [isLoggedIn, myUserId, scope]);
+  }, [isLoggedIn, myUserId, canPlaymate, canVet]);
 
-  useEffect(() => {
-    if (!isLoggedIn || !myUserId) {
-      seededRef.current = false;
-      seenRef.current = new Set();
-      setQueue([]);
-      return;
-    }
-
-    void poll();
-    const id = window.setInterval(() => void poll(), POLL_MS);
-    return () => window.clearInterval(id);
-  }, [isLoggedIn, myUserId, poll]);
+  useLiveAjaxPoll(poll, {
+    enabled: Boolean(isLoggedIn && myUserId && (canPlaymate || canVet)),
+    intervalMs: POLL_MS,
+  });
 
   async function onAccept() {
     if (!current || !myUserId || busy) return;
@@ -136,8 +153,10 @@ export function LiveIncomingRequests() {
     try {
       if (current.kind === 'playmate') {
         await updatePlaydateStatus(current.id, 'accepted', myUserId);
+        emitIncomingRefresh({ kinds: ['playmate'], ids: [current.id] });
       } else {
         await acceptVetConsultation(current.id, token);
+        emitIncomingRefresh({ kinds: ['vet'], ids: [current.id] });
       }
       const href = current.href;
       dismissCurrent();
@@ -156,8 +175,10 @@ export function LiveIncomingRequests() {
     try {
       if (current.kind === 'playmate') {
         await updatePlaydateStatus(current.id, 'rejected', myUserId);
+        emitIncomingRefresh({ kinds: ['playmate'], ids: [current.id] });
       } else {
         await rejectVetConsultation(current.id, token);
+        emitIncomingRefresh({ kinds: ['vet'], ids: [current.id] });
       }
       dismissCurrent();
     } catch (err) {
@@ -176,7 +197,7 @@ export function LiveIncomingRequests() {
 
   function onViewAll() {
     dismissCurrent();
-    navigate(scope === 'vet' ? '/vet-consult' : '/chats');
+    navigate(current?.kind === 'vet' || canVet ? '/vet-consult' : '/chats');
   }
 
   if (!current) return null;

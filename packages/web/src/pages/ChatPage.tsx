@@ -33,6 +33,7 @@ import { PetAvatar } from '../components/PetAvatar';
 import { RequestCountdown } from '../components/RequestCountdown';
 import { formatAge, formatTimeAgo } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
+import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
 import {
   addUserContact,
   clearPlaydateChatMessages,
@@ -49,6 +50,7 @@ import {
 import type { PlaydateChatMediaKind, PlaydateChatMessage } from '@petdate/shared';
 import { PLAYDATE_REQUEST_TTL_MS, isPendingRequestExpired } from '@petdate/shared';
 import { playdateToMatchRequest } from '../lib/playdateMap';
+import { subscribeIncomingRefresh } from '../lib/liveIncoming';
 import {
   acceptInboxItem,
   inboxScopeForUser,
@@ -68,7 +70,7 @@ import {
 const CHAT_WIPE_HINT =
   'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
-const POLL_MS = 2500;
+const POLL_MS = 1500;
 const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 const DESKTOP_MQ = '(min-width: 860px)';
 
@@ -436,6 +438,21 @@ export function ChatPage() {
   useEffect(() => {
     void reloadConversations();
   }, [reloadConversations]);
+
+  // Keep desktop inbox fresh via ajax (new playmate / vet requests appear quickly).
+  useLiveAjaxPoll(
+    () => {
+      void reloadConversations();
+    },
+    { enabled: Boolean(myUserId), intervalMs: 1500 },
+  );
+
+  useEffect(() => {
+    if (!myUserId) return;
+    return subscribeIncomingRefresh(() => {
+      void reloadConversations();
+    });
+  }, [myUserId, reloadConversations]);
 
   // Playmate threads belong to owner scope — leave them when acting as vet.
   useEffect(() => {
