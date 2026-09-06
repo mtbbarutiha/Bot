@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { LandingChrome } from './LandingChrome';
+import { LiveIncomingRequests } from './LiveIncomingRequests';
 import { RoleSwitchControl } from './RoleSwitchControl';
 
 /** Bot-parity destinations — web labels stay clean (icons carry the cue).
@@ -23,10 +24,6 @@ const navItems: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
 ];
-
-const mobileNav = navItems.filter((i) =>
-  ['/', '/explore', '/add-pet'].includes(i.to)
-);
 
 export function Layout() {
   return (
@@ -56,22 +53,8 @@ export function Layout() {
 
         <main className="pepito-app-main">
           <Outlet />
+          <LiveIncomingRequests />
         </main>
-
-        <nav className="pepito-app-mobile-nav" aria-label="منوی اصلی">
-          {mobileNav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.to === '/'}
-              className={({ isActive }) => `pepito-app-mobile-link${isActive ? ' is-active' : ''}`}
-              aria-label={item.label}
-            >
-              <item.icon size={22} strokeWidth={2} />
-              <span>{item.label}</span>
-            </NavLink>
-          ))}
-        </nav>
       </div>
     </LandingChrome>
   );

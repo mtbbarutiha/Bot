@@ -4,7 +4,7 @@ import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { SiteFooter } from '../components/SiteFooter';
 import { NavUserCluster } from '../components/NavUserCluster';
-import { LandingMobileDock } from '../components/LandingMobileDock';
+import { SiteDesktopNav } from '../components/SiteDesktopNav';
 import { ADOPTION_PETS } from '../data/adoptionPets';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
@@ -286,9 +286,9 @@ export function WelcomePage() {
   const current = HERO_SLIDES[slide]!;
 
   return (
-    <div className="pepito-landing pepito-landing--with-dock">
+    <div className="pepito-landing pepito-landing--with-dock" dir="rtl">
       <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${isLoggedIn ? ' pepito-nav--app' : ''}`}>
-        <NavUserCluster />
+        {/* Logo first so dir=rtl places it at inline-start (right). */}
         <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
@@ -300,20 +300,11 @@ export function WelcomePage() {
           <a href="#news">اخبار</a>
           <a href="#faq">سؤالات</a>
         </nav>
+        <NavUserCluster showCart />
         <div className="pepito-nav-actions">
-          {!isLoggedIn ? (
-            <>
-              <Link to={loginPath('/')} className="pepito-nav-login">
-                ورود
-              </Link>
-              <GatedLink to="/explore" className="pepito-btn pepito-btn--nav">
-                <PawIcon />
-                پنل همبازی
-              </GatedLink>
-            </>
-          ) : null}
+          <SiteDesktopNav />
         </div>
-      </header>
+</header>
 
       <section className="pepito-hero" aria-roledescription="carousel" aria-label="اسلایدر صفحه اصلی">
         <div className="pepito-hero-slides">
@@ -817,7 +808,6 @@ export function WelcomePage() {
       </section>
 
       <SiteFooter />
-      <LandingMobileDock />
     </div>
   );
 }

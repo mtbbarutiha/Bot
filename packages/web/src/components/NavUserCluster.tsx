@@ -1,19 +1,41 @@
+import { Link } from 'react-router-dom';
+import { ShoppingBag } from 'lucide-react';
 import { ProfileMenu } from './ProfileMenu';
 import { WalletChip } from './WalletChip';
 import { useAuthStore } from '../hooks/useAuthStore';
+import { useShopCart } from '../hooks/useShopCart';
 
 /**
- * Logged-in profile + wallet pinned to the physical top-left of the Pepito nav.
- * Order is LTR (avatar, then wallet to its right) regardless of page dir="rtl".
+ * Top-bar account tools: avatar + wallet + cart.
+ * Kept as one in-flow cluster on mobile so nothing overlaps the logo.
  */
-export function NavUserCluster() {
+export function NavUserCluster({ showCart = true }: { showCart?: boolean } = {}) {
   const { isLoggedIn } = useAuthStore();
-  if (!isLoggedIn) return null;
+  const { itemCount } = useShopCart();
+
+  if (!isLoggedIn && !showCart) return null;
 
   return (
-    <div className="pepito-nav-user-cluster" aria-label="حساب کاربری">
-      <ProfileMenu />
-      <WalletChip />
+    <div className="pepito-nav-user-cluster" aria-label="حساب و خرید">
+      {isLoggedIn ? (
+        <>
+          <ProfileMenu />
+          <WalletChip />
+        </>
+      ) : null}
+      {showCart ? (
+        <Link
+          to="/shop/cart"
+          className="pepito-nav-cart-link pd-shop-cart-link"
+          data-shop-cart-target
+          aria-label={itemCount > 0 ? `سبد خرید (${itemCount})` : 'سبد خرید'}
+        >
+          <ShoppingBag size={18} strokeWidth={2.2} aria-hidden />
+          {itemCount > 0 ? (
+            <span className="pepito-nav-cart-count">{itemCount.toLocaleString('fa-IR')}</span>
+          ) : null}
+        </Link>
+      ) : null}
     </div>
   );
 }

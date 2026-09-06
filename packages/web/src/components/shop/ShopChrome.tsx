@@ -1,20 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { PawPrint, ShoppingBag } from 'lucide-react';
+import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { useAuthStore } from '../../hooks/useAuthStore';
-import { useShopCart } from '../../hooks/useShopCart';
-import { loginPath } from '../../lib/authRedirect';
 import { NavUserCluster } from '../NavUserCluster';
+import { SiteDesktopNav } from '../SiteDesktopNav';
 import { SiteFooter } from '../SiteFooter';
 
-function PawIcon({ size = 14 }: { size?: number }) {
-  return (
-    <span className="pepito-btn-icon" aria-hidden>
-      <PawPrint size={size} />
-    </span>
-  );
-}
 
 export function ShopChrome({
   children,
@@ -28,7 +20,6 @@ export function ShopChrome({
   hideBanner?: boolean;
 }) {
   const [scrolled, setScrolled] = useState(false);
-  const { itemCount } = useShopCart();
   const { isLoggedIn } = useAuthStore();
 
   useEffect(() => {
@@ -51,7 +42,7 @@ export function ShopChrome({
   return (
     <div className="pepito-landing pepito-flow-page pd-shop-page" dir="rtl">
       <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${isLoggedIn ? ' pepito-nav--app' : ''}`}>
-        <NavUserCluster />
+        {/* Logo first in DOM so dir=rtl places it at inline-start (right). */}
         <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
@@ -64,36 +55,22 @@ export function ShopChrome({
           <NavLink to="/shop/c/bird-food">پرنده</NavLink>
           <Link to="/#services">خدمات</Link>
         </nav>
+        <NavUserCluster showCart />
         <div className="pepito-nav-actions">
-          <Link
-            to="/shop/cart"
-            className="pd-shop-cart-link"
-            data-shop-cart-target
-            aria-label="سبد خرید"
-          >
-            <ShoppingBag size={18} strokeWidth={2} />
-            {itemCount > 0 ? (
-              <span className="pd-shop-cart-count">{itemCount.toLocaleString('fa-IR')}</span>
-            ) : null}
-          </Link>
-          {!isLoggedIn ? (
-            <Link to={loginPath('/shop')} className="pepito-nav-login">
-              ورود
-            </Link>
-          ) : null}
-          <Link to="/shop" className="pepito-btn pepito-btn--nav">
-            <PawIcon />
-            پت شاپ
-          </Link>
+          <SiteDesktopNav />
         </div>
-      </header>
+</header>
 
       {!hideBanner ? (
         <section className="pd-shop-hero pd-shop-hero--full" aria-label={bannerTitle}>
           <img
             className="pd-shop-hero-img"
-            src="/media/petdate-shop-hero.png"
+            src="/media/shop/petdate-shop-hero.png"
             alt="پت دیت شاپ — فضای برند فروشگاه حیوانات خانگی"
+            width={1600}
+            height={900}
+            decoding="async"
+            fetchPriority="high"
           />
           <div className="pd-shop-hero-wash" aria-hidden />
           <div className="pd-shop-hero-inner">

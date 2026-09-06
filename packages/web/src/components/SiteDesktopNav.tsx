@@ -4,11 +4,10 @@ import { loginPath } from '../lib/authRedirect';
 import { SITE_NAV_AUTH, SITE_NAV_GUEST } from '../lib/siteNav';
 
 /**
- * Site-wide mobile bottom dock (mirrors SiteDesktopNav destinations).
- * Guest: شاپ / همبازی / سبد / ورود
- * Logged-in: شاپ / همبازی / کیف پول / پروفایل
+ * Desktop primary actions — same destinations as the mobile bottom dock.
+ * Visible from 860px up (CSS); hidden on admin/chat.
  */
-export function LandingMobileDock() {
+export function SiteDesktopNav() {
   const { pathname } = useLocation();
   const { isLoggedIn } = useAuthStore();
 
@@ -19,7 +18,7 @@ export function LandingMobileDock() {
   const items = isLoggedIn ? SITE_NAV_AUTH : SITE_NAV_GUEST;
 
   return (
-    <nav className="pepito-landing-mobile-dock" aria-label="میانبرهای موبایل">
+    <nav className="pepito-site-desktop-nav" aria-label="میانبرهای اصلی">
       {items.map((item) => {
         const href = item.gate && !isLoggedIn ? loginPath(item.to) : item.to;
         const active = item.match?.(pathname) ?? pathname === item.to;
@@ -27,11 +26,10 @@ export function LandingMobileDock() {
           <Link
             key={item.key}
             to={href}
-            className={`pepito-landing-mobile-dock-link${active ? ' is-active' : ''}`}
-            aria-label={item.label}
+            className={`pepito-site-desktop-nav-link${active ? ' is-active' : ''}`}
             aria-current={active ? 'page' : undefined}
           >
-            <item.icon size={22} strokeWidth={2} aria-hidden />
+            <item.icon size={16} strokeWidth={2.25} aria-hidden />
             <span>{item.label}</span>
           </Link>
         );

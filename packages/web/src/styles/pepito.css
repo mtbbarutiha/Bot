@@ -3329,7 +3329,7 @@ button.chip.is-on {
     display: none;
   }
   .pepito-app-mobile-nav {
-    display: grid;
+    display: none !important;
     grid-template-columns: repeat(4, 1fr);
     position: fixed;
     inset-inline: 12px;
@@ -6182,9 +6182,60 @@ button.chip.is-on {
   }
   .pd-shop-cart-row {
     grid-template-columns: 72px minmax(0, 1fr);
+    align-items: start;
+    gap: 0.75rem;
+  }
+  .pd-shop-cart-thumb {
+    width: 72px;
+    height: 72px;
+    max-width: 72px;
+    flex-shrink: 0;
+  }
+  .pd-shop-cart-meta {
+    min-width: 0;
+    overflow: hidden;
+  }
+  .pd-shop-cart-meta h3 {
+    font-size: 0.92rem;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+  .pd-shop-qty {
+    flex-wrap: wrap;
+    max-width: 100%;
   }
   .pd-shop-cart-line-total {
     grid-column: 2;
+    justify-self: start;
+    white-space: normal;
+    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .pd-shop-cart-lines,
+  .pd-shop-checkout,
+  .pd-shop-order-ok {
+    padding: 1rem 0.9rem;
+    border-radius: 18px;
+  }
+  .pd-shop-cart-row {
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 0.65rem;
+  }
+  .pd-shop-cart-thumb {
+    width: 64px;
+    height: 64px;
+    max-width: 64px;
+    border-radius: 12px;
+  }
+  .pd-shop-cart-thumb img {
+    padding: 0.2rem;
+    object-fit: cover;
+  }
+  .pd-shop-qty button {
+    width: 30px;
+    height: 30px;
   }
 }
 
@@ -6502,14 +6553,288 @@ button.chip.is-on {
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Never stack landing dock on top of the logged-in app shell nav */
-  .pepito-app-shell .pepito-landing-mobile-dock {
+  /* Site-wide dock: also clear space on app shell / shop */
+  .pepito-app-shell .pepito-footer,
+  .pd-shop-page .pepito-footer,
+  .pepito-landing .pepito-footer {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+  .pepito-app-main,
+  .pd-shop-main,
+  .pepito-flow-panel {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Profile + wallet live in bottom dock on mobile — keep only cart in top cluster */
+  .pepito-nav-user-cluster .pepito-nav-profile,
+  .pepito-nav-user-cluster .pepito-nav-wallet {
     display: none !important;
+  }
+  .pepito-nav--app {
+    padding-left: var(--pepito-gutter-x) !important;
   }
 }
 
 @media (min-width: 860px) {
   .pepito-landing-mobile-dock {
+    display: none !important;
+  }
+}
+
+/* MOBILE_NO_ZOOM */
+@media (max-width: 859px) {
+  html, body, .pepito-landing {
+    touch-action: pan-x pan-y;
+  }
+  .pepito-hero, .pepito-hero-media, img {
+    touch-action: manipulation;
+  }
+}
+
+/* MOBILE_NAV_TOOLS_FIX */
+.pepito-nav-cart-link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  color: var(--pepito-dark);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1.5px solid rgba(92, 77, 145, 0.14);
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.pepito-nav-cart-link:hover {
+  background: var(--pepito-lilac, #f3eefc);
+  color: var(--pepito-base);
+}
+.pepito-nav-cart-count {
+  position: absolute;
+  top: -4px;
+  inset-inline-start: -4px;
+  min-width: 1.1rem;
+  height: 1.1rem;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--pepito-orange, #f4a261);
+  color: #fff;
+  font-size: 0.68rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+@media (max-width: 859px) {
+  .pepito-nav,
+  .pepito-nav--app,
+  .pepito-nav--tools {
+    display: flex !important;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.4rem;
+    overflow: visible !important;
+    padding-left: var(--pepito-gutter-x) !important;
+    padding-right: var(--pepito-gutter-x) !important;
+  }
+
+  /*
+    RTL chrome (dir=rtl on .pepito-landing):
+    - Logo is first in DOM → inline-start (physical right)
+    - Cluster stays in-flow (not absolute) so wallet/cart stay visible
+    - margin-inline-start: auto parks cluster + actions at inline-end (left)
+    Do NOT use order: -1 on the cluster — that forced tools to main-start and
+    shoved the logo left.
+  */
+  .pepito-nav-user-cluster {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    order: 0;
+    max-width: none !important;
+    gap: 0.3rem;
+    margin: 0;
+    /* Cluster sets direction:ltr for avatar/wallet; do NOT use
+       margin-inline-start:auto here — it maps to margin-left and
+       pulls the tools toward the logo on the right. */
+    flex-shrink: 0;
+    z-index: 6;
+  }
+
+  .pepito-nav-logo {
+    flex: 0 0 auto;
+    min-width: 0;
+    justify-content: flex-start;
+    /* Logo inherits rtl → inline-end is physical left; auto margin
+       parks following tools (cluster + actions) on the left. */
+    margin-inline-end: auto;
+  }
+  .pepito-nav-logo img {
+    height: 34px;
+  }
+
+  .pepito-nav-links,
+  .pepito-nav-links--app {
+    display: none !important;
+  }
+
+  .pepito-nav-actions {
+    margin-inline-start: 0 !important;
+    margin-inline-end: 0 !important;
+    gap: 0.3rem;
+    flex-shrink: 0;
+  }
+
+  .pepito-nav-wallet-btn {
+    max-width: 9.25rem !important;
+    height: 36px !important;
+    padding: 0 0.45rem 0 0.35rem !important;
+  }
+  .pepito-nav-wallet-chip-line {
+    font-size: 0.66rem !important;
+  }
+  .pepito-nav-profile-btn,
+  .pepito-nav-cart-link {
+    width: 36px !important;
+    height: 36px !important;
+  }
+
+  .pd-shop-page .pepito-nav-actions .pepito-btn--nav {
+    display: none !important;
+  }
+}
+
+@media (max-width: 420px) {
+  .pepito-nav-wallet-chip-line {
+    display: none !important;
+  }
+  .pepito-nav-wallet-btn {
+    width: 36px !important;
+    max-width: 36px !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+}
+
+/* MOBILE_SHOP_LAYOUT_FIX */
+@media (max-width: 859px) {
+  .pd-shop-page {
+    overflow-x: clip;
+    max-width: 100%;
+  }
+  .pd-shop-hero,
+  .pd-shop-hero--full {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-inline: 0 !important;
+    min-height: clamp(200px, 42vh, 340px) !important;
+  }
+  .pd-shop-hero-img {
+    object-fit: cover !important;
+    object-position: center 30% !important;
+  }
+  .pd-shop-hero-inner {
+    padding-block: 1.35rem 1.25rem !important;
+    padding-inline: 1rem !important;
+  }
+  .pd-shop-hero-inner h1 {
+    font-size: clamp(1.25rem, 6vw, 1.7rem) !important;
+  }
+  .pd-shop-hero-inner > p:last-child {
+    font-size: 0.92rem !important;
+    line-height: 1.5 !important;
+  }
+  .pd-shop-page .pd-shop-main,
+  .pd-shop-main {
+    padding-inline: 0.85rem !important;
+    padding-block: 1.1rem 5.5rem !important;
+    overflow-x: clip;
+  }
+  .pd-shop-journey {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.65rem !important;
+  }
+  .pd-shop-product-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.65rem !important;
+  }
+  .pd-shop-dk-strip,
+  .pd-shop-h-track {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    max-width: 100%;
+  }
+  .pepito-container.pd-shop-home,
+  .pd-shop-home.pepito-container {
+    padding-inline: 0 !important;
+    max-width: 100% !important;
+  }
+}
+
+
+/* Global mobile dock clearance */
+@media (max-width: 859px) {
+  body:has(.pepito-landing-mobile-dock) {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+
+
+
+
+
+/* SITE_DESKTOP_NAV */
+.pepito-site-desktop-nav {
+  display: none;
+}
+
+@media (min-width: 860px) {
+  .pepito-site-desktop-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    max-width: min(46vw, 30rem);
+  }
+
+  .pepito-site-desktop-nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.75rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--pepito-dark);
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(92, 77, 145, 0.14);
+    transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    white-space: nowrap;
+  }
+
+  .pepito-site-desktop-nav-link:hover {
+    background: var(--pepito-lilac, #f3eefc);
+    border-color: rgba(92, 77, 145, 0.28);
+    color: var(--pepito-base);
+  }
+
+  .pepito-site-desktop-nav-link.is-active {
+    background: var(--pepito-base);
+    border-color: var(--pepito-base);
+    color: #fff;
+  }
+
+  .pepito-nav-user-cluster .pepito-nav-profile,
+  .pepito-nav-user-cluster .pepito-nav-wallet {
     display: none !important;
   }
 }

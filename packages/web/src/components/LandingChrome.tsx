@@ -4,6 +4,7 @@ import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { SiteFooter } from './SiteFooter';
 import { NavUserCluster } from './NavUserCluster';
+import { SiteDesktopNav } from './SiteDesktopNav';
 
 const BANNER_IMG = '/pepito/uploads/3.jpg';
 
@@ -84,8 +85,8 @@ export function LandingChrome({
 
   return (
     <div className={`pepito-landing pepito-flow-page${className ? ` ${className}` : ''}`} dir="rtl">
-      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${appNav ? ' pepito-nav--app' : ''}`}>
-        {appNav ? <NavUserCluster /> : null}
+      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${appNav ? ' pepito-nav--app' : ' pepito-nav--tools'}`}>
+        {/* Logo first in DOM so dir=rtl places it at inline-start (right). */}
         <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
@@ -108,7 +109,11 @@ export function LandingChrome({
           </nav>
         )}
 
+        {/* Cluster before actions; mobile CSS parks both at inline-end (left). */}
+        <NavUserCluster showCart />
+
         <div className="pepito-nav-actions">
+          <SiteDesktopNav />
           {actionLabel && onAction ? (
             <button type="button" className="pepito-nav-login pepito-nav-login--btn" onClick={onAction}>
               {actionLabel}

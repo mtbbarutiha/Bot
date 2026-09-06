@@ -38,6 +38,7 @@ import { PetDetailPage } from './pages/PetDetailPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { WalletPage } from './pages/WalletPage';
 import { ShopCartProvider } from './hooks/useShopCart';
+import { LandingMobileDock } from './components/LandingMobileDock';
 import { ShopHomePage } from './pages/shop/ShopHomePage';
 import { ShopCategoryPage } from './pages/shop/ShopCategoryPage';
 import { ShopProductPage } from './pages/shop/ShopProductPage';
@@ -118,6 +119,7 @@ export default function App() {
 
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        <LandingMobileDock />
       </ShopCartProvider>
     </AppGuards>
   );

@@ -1,0 +1,77 @@
+import type { LucideIcon } from 'lucide-react';
+import { LayoutGrid, LogIn, ShoppingBag, ShoppingCart, UserRound, Wallet } from 'lucide-react';
+
+export type SiteNavItem = {
+  key: string;
+  label: string;
+  to: string;
+  icon: LucideIcon;
+  /** Send guests through login when true */
+  gate?: boolean;
+  match?: (pathname: string) => boolean;
+};
+
+/** Guest primary destinations (mobile dock + desktop header). */
+export const SITE_NAV_GUEST: SiteNavItem[] = [
+  {
+    key: 'shop',
+    label: 'شاپ',
+    to: '/shop',
+    icon: ShoppingBag,
+    match: (p) => p === '/shop' || (p.startsWith('/shop/') && p !== '/shop/cart'),
+  },
+  {
+    key: 'playmate',
+    label: 'همبازی',
+    to: '/explore',
+    icon: LayoutGrid,
+    gate: true,
+    match: (p) => p === '/explore' || p.startsWith('/explore'),
+  },
+  {
+    key: 'cart',
+    label: 'سبد خرید',
+    to: '/shop/cart',
+    icon: ShoppingCart,
+    match: (p) => p === '/shop/cart',
+  },
+  {
+    key: 'login',
+    label: 'ورود',
+    to: '/auth/login',
+    icon: LogIn,
+    match: (p) => p.startsWith('/auth'),
+  },
+];
+
+/** Logged-in primary destinations (mobile dock + desktop header). */
+export const SITE_NAV_AUTH: SiteNavItem[] = [
+  {
+    key: 'shop',
+    label: 'شاپ',
+    to: '/shop',
+    icon: ShoppingBag,
+    match: (p) => p === '/shop' || p.startsWith('/shop/'),
+  },
+  {
+    key: 'playmate',
+    label: 'همبازی',
+    to: '/explore',
+    icon: LayoutGrid,
+    match: (p) => p === '/explore' || p.startsWith('/explore'),
+  },
+  {
+    key: 'wallet',
+    label: 'کیف پول',
+    to: '/wallet',
+    icon: Wallet,
+    match: (p) => p === '/wallet' || p.startsWith('/wallet/'),
+  },
+  {
+    key: 'profile',
+    label: 'پروفایل',
+    to: '/profile',
+    icon: UserRound,
+    match: (p) => p === '/profile' || p.startsWith('/profile'),
+  },
+];
