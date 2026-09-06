@@ -18,6 +18,8 @@ export type ShopProductRow = {
   petTypes: string[];
   priceToman: number;
   compareAtToman?: number;
+  /** بهای تمام‌شده / COGS به تومان — برای P&L */
+  costToman?: number;
   image?: string;
   badge?: string;
   inStock: boolean;
@@ -38,6 +40,7 @@ export type ShopProductInput = {
   petTypes?: string[];
   priceToman?: number;
   compareAtToman?: number;
+  costToman?: number | null;
   image?: string;
   badge?: string | null;
   inStock?: boolean;
@@ -74,6 +77,9 @@ export type ShopOrderRow = {
   customerName?: string;
   customerPhone?: string;
   note?: string;
+  paymentCurrency?: string;
+  paymentAmount?: number;
+  cogsToman?: number;
   createdAt: string;
   updatedAt: string;
 };
@@ -115,6 +121,7 @@ function mapShopProduct(row: Record<string, unknown>): ShopProductRow {
     petTypes,
     priceToman: Number(row.price_toman ?? 0),
     compareAtToman: row.compare_at_toman != null ? Number(row.compare_at_toman) : undefined,
+    costToman: row.cost_toman != null ? Number(row.cost_toman) : undefined,
     image: (row.image as string) || undefined,
     badge: (row.badge as string) || undefined,
     inStock: row.in_stock == null ? true : Boolean(row.in_stock),
@@ -155,6 +162,9 @@ function mapShopOrder(row: Record<string, unknown>): ShopOrderRow {
     customerName: (row.customer_name as string) || undefined,
     customerPhone: (row.customer_phone as string) || undefined,
     note: (row.note as string) || undefined,
+    paymentCurrency: (row.payment_currency as string) || 'toman',
+    paymentAmount: row.payment_amount != null ? Number(row.payment_amount) : undefined,
+    cogsToman: row.cogs_toman != null ? Number(row.cogs_toman) : undefined,
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
   };
@@ -318,8 +328,8 @@ export const adminPlatform = {
       .prepare(
         `INSERT INTO shop_products (
         id, slug, title, brand_id, category_slug, pet_types, price_toman, compare_at_toman,
-        image, badge, in_stock, stock_qty, params, description, featured, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        cost_toman, image, badge, in_stock, stock_qty, params, description, featured, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
       ON CONFLICT(id) DO UPDATE SET
         slug = excluded.slug,
         title = excluded.title,
@@ -328,6 +338,7 @@ export const adminPlatform = {
         pet_types = excluded.pet_types,
         price_toman = excluded.price_toman,
         compare_at_toman = excluded.compare_at_toman,
+        cost_toman = excluded.cost_toman,
         image = excluded.image,
         badge = excluded.badge,
         in_stock = excluded.in_stock,
@@ -346,6 +357,7 @@ export const adminPlatform = {
         JSON.stringify(input.petTypes ?? []),
         input.priceToman ?? 0,
         input.compareAtToman ?? null,
+        input.costToman ?? null,
         input.image ?? null,
         input.badge ?? null,
         input.inStock === false ? 0 : 1,
@@ -459,12 +471,16 @@ export const adminPlatform = {
     customerName?: string;
     customerPhone?: string;
     note?: string;
+    paymentCurrency?: string;
+    paymentAmount?: number;
+    cogsToman?: number;
   }): ShopOrderRow {
     const r = db()
       .prepare(
         `INSERT INTO shop_orders (
-          user_id, status, total_toman, items_json, customer_name, customer_phone, note
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`
+          user_id, status, total_toman, items_json, customer_name, customer_phone, note,
+          payment_currency, payment_amount, cogs_toman
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
       )
       .run(
         input.userId ?? null,
@@ -473,7 +489,10 @@ export const adminPlatform = {
         JSON.stringify(input.items ?? []),
         input.customerName ?? null,
         input.customerPhone ?? null,
-        input.note ?? null
+        input.note ?? null,
+        input.paymentCurrency ?? 'toman',
+        input.paymentAmount ?? input.totalToman,
+        input.cogsToman ?? null
       );
     return this.getShopOrder(Number(r.lastInsertRowid))!;
   },

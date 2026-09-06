@@ -5,13 +5,13 @@ import { adminFetch } from '../api';
 
 type FormState = {
   id: string; slug: string; title: string; brandId: string; categorySlug: string; petTypes: string;
-  priceToman: string; compareAtToman: string; image: string; badge: string; inStock: boolean;
+  priceToman: string; compareAtToman: string; costToman: string; image: string; badge: string; inStock: boolean;
   stockQty: string; params: string; description: string; featured: boolean;
 };
 const empty: FormState = {
   id: '', slug: '', title: '', brandId: SHOP_BRANDS[0]?.id || 'petdate',
   categorySlug: SHOP_CATEGORIES[0]?.slug || 'dog-food', petTypes: 'dog', priceToman: '0',
-  compareAtToman: '', image: '', badge: '', inStock: true, stockQty: '10', params: '{}',
+  compareAtToman: '', costToman: '', image: '', badge: '', inStock: true, stockQty: '10', params: '{}',
   description: '', featured: false,
 };
 
@@ -32,6 +32,7 @@ export function AdminShopProductFormPage() {
         petTypes: Array.isArray(prod.petTypes) ? (prod.petTypes as string[]).join(',') : 'dog',
         priceToman: String(prod.priceToman ?? 0),
         compareAtToman: prod.compareAtToman != null ? String(prod.compareAtToman) : '',
+        costToman: prod.costToman != null ? String(prod.costToman) : '',
         image: String(prod.image ?? ''), badge: String(prod.badge ?? ''),
         inStock: Boolean(prod.inStock), stockQty: String(prod.stockQty ?? 0),
         params: JSON.stringify(prod.params ?? {}, null, 2),
@@ -52,6 +53,7 @@ export function AdminShopProductFormPage() {
       petTypes: form.petTypes.split(',').map((s) => s.trim()).filter(Boolean),
       priceToman: Number(form.priceToman),
       compareAtToman: form.compareAtToman ? Number(form.compareAtToman) : undefined,
+      costToman: form.costToman ? Number(form.costToman) : null,
       image: form.image || undefined, badge: form.badge || null, inStock: form.inStock,
       stockQty: Number(form.stockQty), params, description: form.description, featured: form.featured,
     };
@@ -85,6 +87,7 @@ export function AdminShopProductFormPage() {
           </label>
           <label><span className="form-label">نوع پت</span><input className="form-input" value={form.petTypes} onChange={(e) => set({ petTypes: e.target.value })} /></label>
           <label><span className="form-label">قیمت تومان</span><input className="form-input" type="number" value={form.priceToman} onChange={(e) => set({ priceToman: e.target.value })} /></label>
+          <label><span className="form-label">بهای تمام‌شده (COGS)</span><input className="form-input" type="number" value={form.costToman} onChange={(e) => set({ costToman: e.target.value })} placeholder="اختیاری" /></label>
           <label><span className="form-label">موجودی</span><input className="form-input" type="number" value={form.stockQty} onChange={(e) => set({ stockQty: e.target.value })} /></label>
           <label><span className="form-label">نشان</span>
             <select className="admin-select" value={form.badge} onChange={(e) => set({ badge: e.target.value })}>

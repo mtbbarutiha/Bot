@@ -1,9 +1,9 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import {
-  Activity, Bell, ClipboardList, LayoutDashboard, LogOut, Menu, Package,
-  PawPrint, ScrollText, Settings, ShieldCheck, ShoppingBag, Stethoscope,
-  Store, Users, Wallet, X,
+  Activity, Bell, ClipboardList, LayoutDashboard, LineChart, LogOut, Menu, Package,
+  PawPrint, PieChart, ScrollText, Settings, ShieldCheck, ShoppingBag, Stethoscope,
+  Store, TrendingUp, Users, Wallet, X,
 } from 'lucide-react';
 import { AdminWordmark } from './AdminWordmark';
 import { logoutAdmin } from './auth';
@@ -20,6 +20,13 @@ const NAV_GROUPS: NavGroup[] = [
     { to: '/admin/playdates', icon: ClipboardList, label: 'همبازی' },
     { to: '/admin/consults', icon: Stethoscope, label: 'مشاوره دامپزشک' },
     { to: '/admin/verification', icon: ShieldCheck, label: 'احراز هویت' },
+  ]},
+  { title: 'مالی', items: [
+
+
+
+
+
   ]},
   { title: 'فروشگاه', items: [
     { to: '/admin/shop/products', icon: Package, label: 'محصولات' },

@@ -641,6 +641,199 @@ function migrateSchema() {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  /** Finance: product COGS + order payment mix + multi-currency wallet ledger */
+  const shopProductCols = (
+    db.prepare(`PRAGMA table_info(shop_products)`).all() as Array<{ name: string }>
+  ).map((c) => c.name);
+  if (!shopProductCols.includes('cost_toman')) {
+    db.exec('ALTER TABLE shop_products ADD COLUMN cost_toman INTEGER');
+  }
+
+  const shopOrderCols = (
+    db.prepare(`PRAGMA table_info(shop_orders)`).all() as Array<{ name: string }>
+  ).map((c) => c.name);
+  if (!shopOrderCols.includes('payment_currency')) {
+    db.exec(`ALTER TABLE shop_orders ADD COLUMN payment_currency TEXT NOT NULL DEFAULT 'toman'`);
+  }
+  if (!shopOrderCols.includes('payment_amount')) {
+    db.exec('ALTER TABLE shop_orders ADD COLUMN payment_amount INTEGER');
+  }
+  if (!shopOrderCols.includes('cogs_toman')) {
+    db.exec('ALTER TABLE shop_orders ADD COLUMN cogs_toman INTEGER');
+  }
+
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS wallet_ledger (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER,
+      currency TEXT NOT NULL,
+      amount INTEGER NOT NULL,
+      direction TEXT NOT NULL,
+      reason TEXT NOT NULL DEFAULT '',
+      ref_type TEXT,
+      ref_id TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    )
+  `);
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_wallet_ledger_created ON wallet_ledger(created_at DESC)`
+  );
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_wallet_ledger_currency ON wallet_ledger(currency, created_at)`
+  );
+
+  seedFinanceDefaults();
+}
+
+function seedFinanceDefaults() {
+  const upsert = db.prepare(
+    `INSERT INTO admin_settings (key, value, updated_at)
+     VALUES (?, ?, datetime('now'))
+     ON CONFLICT(key) DO NOTHING`
+  );
+  upsert.run('financeMarginPercent', '35');
+  upsert.run('vetConsultFeeToman', '250000');
+  upsert.run('playdateFeeToman', '0');
+  upsert.run('financeOpExMonthlyToman', '5000000');
+
+  const orderCount = Number(
+    (db.prepare('SELECT COUNT(*) as c FROM shop_orders').get() as { c: number } | undefined)?.c ?? 0
+  );
+  if (orderCount > 0) return;
+
+  const productCount = Number(
+    (db.prepare('SELECT COUNT(*) as c FROM shop_products').get() as { c: number } | undefined)?.c ?? 0
+  );
+  if (productCount === 0) {
+    const cats = [
+      ['dog-food', 'غذای سگ', 'dog', 'غذای خشک و کنسرو', '🦴', 10],
+      ['cat-food', 'غذای گربه', 'cat', 'غذای خشک و پوچ', '🐟', 20],
+      ['dog-toys', 'اسباب بازی سگ', 'dog', 'توپ و اسباب‌بازی', '🎾', 30],
+      ['cat-litter', 'لوازم دستشویی گربه', 'cat', 'خاک و سینی', '🚽', 40],
+    ] as const;
+    const insCat = db.prepare(
+      `INSERT OR IGNORE INTO shop_categories (slug, label_fa, pet_type, description, emoji, sort_order)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    );
+    for (const c of cats) insCat.run(...c);
+
+    const products = [
+      ['pd-royal-dog-3', 'royal-canin-dog-3kg', 'رویال کنین سگ ۳کیلو', 'royal-canin', 'dog-food', '["dog"]', 1890000, 1200000],
+      ['pd-whiskas-cat', 'whiskas-cat-dry', 'ویسکاس گربه خشک', 'whiskas', 'cat-food', '["cat"]', 420000, 280000],
+      ['pd-kong-classic', 'kong-classic-m', 'کنگ کلاسیک سایز M', 'kong', 'dog-toys', '["dog"]', 890000, 520000],
+      ['pd-cat-litter', 'cat-litter-10kg', 'خاک گربه ۱۰کیلو', 'petdate', 'cat-litter', '["cat"]', 310000, 190000],
+      ['pd-bird-seed', 'bird-seed-mix', 'مخلوط دان پرنده', 'petdate', 'bird-food', '["bird"]', 185000, 110000],
+    ] as const;
+    db.prepare(
+      `INSERT OR IGNORE INTO shop_categories (slug, label_fa, pet_type, description, emoji, sort_order)
+       VALUES ('bird-food', 'غذای پرنده', 'bird', 'دان و مخلوط', '🐦', 50)`
+    ).run();
+    const insProd = db.prepare(
+      `INSERT OR IGNORE INTO shop_products (
+        id, slug, title, brand_id, category_slug, pet_types, price_toman, cost_toman,
+        in_stock, stock_qty, featured, description
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, 40, 1, 'محصول پت دیت شاپ')`
+    );
+    for (const p of products) insProd.run(...p);
+  } else {
+    db.prepare(
+      `UPDATE shop_products
+       SET cost_toman = CAST(price_toman * 0.65 AS INTEGER)
+       WHERE cost_toman IS NULL AND price_toman > 0`
+    ).run();
+  }
+
+  const products = db
+    .prepare(
+      `SELECT id, title, category_slug, price_toman, COALESCE(cost_toman, CAST(price_toman * 0.65 AS INTEGER)) AS cost_toman
+       FROM shop_products ORDER BY featured DESC LIMIT 8`
+    )
+    .all() as Array<{
+      id: string;
+      title: string;
+      category_slug: string;
+      price_toman: number;
+      cost_toman: number;
+    }>;
+  if (!products.length) return;
+
+  const currencies = ['toman', 'toman', 'toman', 'coins', 'stars', 'ton'] as const;
+  const statuses = ['paid', 'shipped', 'completed', 'paid', 'completed', 'pending', 'cancelled'] as const;
+  const names = ['سارا م.', 'علی ر.', 'مریم ک.', 'رضا ن.', 'نگار پ.', 'حسین ب.'];
+  const insOrder = db.prepare(
+    `INSERT INTO shop_orders (
+      user_id, status, total_toman, items_json, customer_name, customer_phone,
+      payment_currency, payment_amount, cogs_toman, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+  const insLedger = db.prepare(
+    `INSERT INTO wallet_ledger (user_id, currency, amount, direction, reason, ref_type, ref_id, created_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+  );
+
+  const now = Date.now();
+  for (let i = 0; i < 42; i++) {
+    const dayOffset = Math.floor(i * 0.7);
+    const created = new Date(now - dayOffset * 86400000 - (i % 5) * 3600000);
+    const iso = created.toISOString().replace('T', ' ').slice(0, 19);
+    const p = products[i % products.length];
+    const qty = 1 + (i % 3);
+    const total = p.price_toman * qty;
+    const cogs = p.cost_toman * qty;
+    const status = statuses[i % statuses.length];
+    const currency = currencies[i % currencies.length];
+    const items = [
+      {
+        productId: p.id,
+        title: p.title,
+        categorySlug: p.category_slug,
+        qty,
+        priceToman: p.price_toman,
+        costToman: p.cost_toman,
+      },
+    ];
+    const r = insOrder.run(
+      null,
+      status,
+      total,
+      JSON.stringify(items),
+      names[i % names.length],
+      `09${String(100000000 + i).slice(0, 9)}`,
+      currency,
+      total,
+      cogs,
+      iso,
+      iso
+    );
+    if (status !== 'pending' && status !== 'cancelled') {
+      insLedger.run(
+        null,
+        currency,
+        total,
+        'debit',
+        'خرید فروشگاه',
+        'shop_order',
+        String(r.lastInsertRowid),
+        iso
+      );
+    }
+  }
+
+  const ledgerSeed = [
+    ['coins', 500, 'credit', 'جایزه ثبت‌نام', 12],
+    ['coins', 120, 'credit', 'پاداش پروفایل', 10],
+    ['toman', 2000000, 'credit', 'شارژ کیف پول', 8],
+    ['stars', 50, 'credit', 'خرید Stars', 6],
+    ['ton', 2, 'credit', 'واریز TON', 4],
+    ['coins', 80, 'debit', 'هزینه همبازی', 5],
+    ['toman', 250000, 'debit', 'مشاوره دامپزشک', 7],
+  ] as const;
+  for (const [currency, amount, direction, reason, daysAgo] of ledgerSeed) {
+    const created = new Date(now - daysAgo * 86400000).toISOString().replace('T', ' ').slice(0, 19);
+    insLedger.run(null, currency, amount, direction, reason, 'seed', null, created);
+  }
 }
 
 function seedSpeciesCatalog() {

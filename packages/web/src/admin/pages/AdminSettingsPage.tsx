@@ -11,6 +11,13 @@ const FLAGS: { key: string; label: string; hint: string }[] = [
   { key: 'maintenanceMode', label: 'حالت تعمیرات', hint: 'بنر نگهداری (placeholder)' },
 ];
 
+const FINANCE_NUMS: { key: string; label: string; hint: string }[] = [
+  { key: 'financeMarginPercent', label: 'حاشیه سود پیش‌فرض (%)', hint: 'اگر cost محصول خالی باشد برای COGS' },
+  { key: 'vetConsultFeeToman', label: 'کارمزد مشاوره (تومان)', hint: 'درآمد تخمینی هر مشاوره' },
+  { key: 'playdateFeeToman', label: 'کارمزد همبازی (تومان)', hint: 'درآمد تخمینی هر همبازی پذیرفته' },
+  { key: 'financeOpExMonthlyToman', label: 'هزینه عملیاتی ماهانه', hint: 'برای P&L دوره' },
+];
+
 export function AdminSettingsPage() {
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +61,7 @@ export function AdminSettingsPage() {
       <header className="admin-header">
         <div>
           <h1>تنظیمات</h1>
-          <p>فلگ‌های ویژگی و placeholder پرداخت</p>
+          <p>فلگ‌های ویژگی، مالی و placeholder پرداخت</p>
         </div>
         <button type="button" className="admin-btn admin-btn--primary" onClick={() => void save()}>
           ذخیره
@@ -83,6 +90,27 @@ export function AdminSettingsPage() {
           </article>
         ))}
       </div>
+
+      <section className="admin-card" style={{ marginTop: 16, padding: 16 }}>
+        <h2 style={{ marginTop: 0, fontSize: '1rem' }}>پارامترهای مالی</h2>
+        <div className="admin-form-grid" style={{ marginTop: 12 }}>
+          {FINANCE_NUMS.map((f) => (
+            <label key={f.key}>
+              <span className="form-label">{f.label}</span>
+              <input
+                className="form-input"
+                type="number"
+                value={settings[f.key] ?? ''}
+                onChange={(e) => {
+                  setSettings((s) => ({ ...s, [f.key]: e.target.value }));
+                  setSaved(false);
+                }}
+              />
+              <small className="admin-muted">{f.hint}</small>
+            </label>
+          ))}
+        </div>
+      </section>
 
       <section className="admin-card" style={{ marginTop: 16, padding: 16 }}>
         <h2 style={{ marginTop: 0, fontSize: '1rem' }}>یادداشت پرداخت</h2>

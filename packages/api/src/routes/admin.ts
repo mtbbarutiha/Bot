@@ -13,6 +13,7 @@ import {
 } from '../config/infra';
 import { dbService } from '../db';
 import { adminPlatform } from '../admin-platform';
+import { adminFinance } from '../admin-finance';
 import { logAppEvent } from '../services/app-logger';
 
 export const adminRouter = Router();
@@ -204,6 +205,7 @@ adminRouter.post('/shop/products', (req, res) => {
     petTypes: Array.isArray(body.petTypes) ? body.petTypes.map(String) : [],
     priceToman: Number(body.priceToman ?? 0),
     compareAtToman: body.compareAtToman != null ? Number(body.compareAtToman) : undefined,
+    costToman: body.costToman != null ? Number(body.costToman) : undefined,
     image: body.image ? String(body.image) : undefined, badge: body.badge ?? null,
     inStock: body.inStock !== false, stockQty: Number(body.stockQty ?? 0),
     params: body.params && typeof body.params === 'object' ? body.params : {},
@@ -225,6 +227,7 @@ adminRouter.put('/shop/products/:id', (req, res) => {
     petTypes: Array.isArray(body.petTypes) ? body.petTypes.map(String) : existing.petTypes,
     priceToman: body.priceToman != null ? Number(body.priceToman) : existing.priceToman,
     compareAtToman: body.compareAtToman != null ? Number(body.compareAtToman) : existing.compareAtToman,
+    costToman: body.costToman != null ? Number(body.costToman) : existing.costToman ?? null,
     image: body.image != null ? String(body.image) : existing.image,
     badge: body.badge !== undefined ? body.badge : existing.badge,
     inStock: body.inStock != null ? Boolean(body.inStock) : existing.inStock,
@@ -321,7 +324,44 @@ adminRouter.post('/shop/orders', (req, res) => {
     customerName: body.customerName ? String(body.customerName) : undefined,
     customerPhone: body.customerPhone ? String(body.customerPhone) : undefined,
     note: body.note ? String(body.note) : undefined,
+    paymentCurrency: body.paymentCurrency ? String(body.paymentCurrency) : 'toman',
+    paymentAmount: body.paymentAmount != null ? Number(body.paymentAmount) : undefined,
+    cogsToman: body.cogsToman != null ? Number(body.cogsToman) : undefined,
   }));
+});
+
+adminRouter.get('/finance/dashboard', (req, res) => {
+  res.json(adminFinance.getDashboard(req.query.period));
+});
+
+adminRouter.get('/finance/pnl', (req, res) => {
+  res.json(adminFinance.getPnL(req.query.period));
+});
+
+adminRouter.get('/finance/sales', (req, res) => {
+  res.json(adminFinance.getSalesCharts(req.query.period));
+});
+
+adminRouter.get('/finance/orders', (req, res) => {
+  const status = typeof req.query.status === 'string' ? req.query.status : undefined;
+  res.json(adminFinance.getOrdersRevenue(status));
+});
+
+adminRouter.get('/finance/wallet', (_req, res) => {
+  res.json(adminFinance.getWalletOverview());
+});
+
+adminRouter.get('/finance/top-products', (req, res) => {
+  const limit = req.query.limit ? Number(req.query.limit) : 15;
+  res.json(adminFinance.getTopProducts(req.query.period, Number.isFinite(limit) ? limit : 15));
+});
+
+adminRouter.get('/finance/export', (req, res) => {
+  const kind = req.query.kind === 'sales' ? 'sales' : 'pnl';
+  const { filename, csv } = adminFinance.exportCsv(kind, req.query.period);
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send('\uFEFF' + csv);
 });
 
 adminRouter.get('/content/announcements', (_req, res) => {
@@ -362,6 +402,10 @@ adminRouter.get('/settings', (_req, res) => {
   const defaults: Record<string, string> = {
     shopEnabled: '1', playdatesEnabled: '1', vetConsultEnabled: '1', botForceJoin: '1',
     paymentCardEnabled: '1', paymentStarsEnabled: '1', maintenanceMode: '0',
+    financeMarginPercent: '35',
+    vetConsultFeeToman: '250000',
+    playdateFeeToman: '0',
+    financeOpExMonthlyToman: '5000000',
   };
   res.json({ settings: { ...defaults, ...adminPlatform.getSettings() } });
 });
