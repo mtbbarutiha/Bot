@@ -154,6 +154,31 @@ export function vetToInbox(
  * - any other primary role → playmate chats + consultations as patient
  * Never mixes vet-practice threads into owner view (or the reverse).
  */
+/** Soft-reload equality — order-independent, ignores lastActivityAt clock noise. */
+export function inboxRowsEquivalent(
+  prev: InboxConversation[],
+  next: InboxConversation[],
+): boolean {
+  if (prev.length !== next.length) return false;
+  const byKey = new Map(next.map((row) => [row.key, row]));
+  for (const row of prev) {
+    const other = byKey.get(row.key);
+    if (!other) return false;
+    if (
+      row.preview !== other.preview ||
+      row.pending !== other.pending ||
+      row.ended !== other.ended ||
+      row.title !== other.title ||
+      row.canDecide !== other.canDecide ||
+      row.kind !== other.kind ||
+      row.href !== other.href
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export async function loadInboxConversations(
   myUserId: number,
   user?: User | null,

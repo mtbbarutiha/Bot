@@ -37,7 +37,17 @@ export function usePeerPresence(peerUserId?: number | null) {
       return;
     }
     try {
-      setPresence(await getUserPresence(peerUserId));
+      const next = await getUserPresence(peerUserId);
+      setPresence((prev) => {
+        if (
+          prev &&
+          prev.online === next.online &&
+          prev.lastSeenAt === next.lastSeenAt
+        ) {
+          return prev;
+        }
+        return next;
+      });
     } catch {
       /* ignore */
     }

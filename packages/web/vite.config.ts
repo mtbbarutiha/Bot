@@ -14,11 +14,20 @@ export default defineConfig({
     VitePWA({
       // prompt — autoUpdate+skipWaiting was full-reloading open tabs (e.g. /chats)
       // whenever a new deploy raced the service worker.
+      // Registration is handled in src/lib/swRegister.ts so we can force-activate
+      // a waiting worker once and clear stale precaches (phones stuck on 1.5s polls).
       registerType: 'prompt',
+      injectRegister: false,
       workbox: {
-        skipWaiting: false,
-        clientsClaim: false,
+        // One-shot migration: activate this SW immediately so tabs stuck on the
+        // pre-prompt bundle (1.5s /chats polls) finally pick up the new assets.
+        // Subsequent deploys can flip this back to false — swRegister already
+        // marks a bust generation so we do not loop-reload.
+        skipWaiting: true,
+        clientsClaim: true,
         cleanupOutdatedCaches: true,
+        // New cache namespace so stuck clients drop the old 1.5s-poll bundle.
+        cacheId: 'petdate-web-v3',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff2}'],
       },
       includeAssets: [

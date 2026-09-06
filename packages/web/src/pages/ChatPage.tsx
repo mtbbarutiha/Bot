@@ -57,6 +57,7 @@ import { playdateToMatchRequest } from '../lib/playdateMap';
 import { subscribeIncomingRefresh } from '../lib/liveIncoming';
 import {
   acceptInboxItem,
+  inboxRowsEquivalent,
   inboxScopeForUser,
   loadInboxConversations,
   rejectInboxItem,
@@ -450,6 +451,7 @@ export function ChatPage() {
   const authUserRef = useRef(authUser);
   authUserRef.current = authUser;
 
+  const softReloadTimerRef = useRef<number | undefined>(undefined);
   const reloadConversations = useCallback(async (opts?: { soft?: boolean }) => {
     if (!myUserId) {
       setConversations([]);
@@ -469,20 +471,8 @@ export function ChatPage() {
       const mapped = await loadInboxConversations(myUserId, authUserRef.current);
       setConversations((prev) => {
         // Skip state write when soft poll returns the same inbox — stops list flicker.
-        // Ignore lastActivityAt: relative timestamps / clock skew were rewriting the
-        // list every poll and felt like a constant refresh.
-        if (
-          soft &&
-          prev.length === mapped.length &&
-          prev.every(
-            (row, i) =>
-              row.key === mapped[i]?.key &&
-              row.preview === mapped[i]?.preview &&
-              row.pending === mapped[i]?.pending &&
-              row.ended === mapped[i]?.ended &&
-              row.title === mapped[i]?.title,
-          )
-        ) {
+        // Ignore lastActivityAt / sort order: clock skew + reshuffles felt like refresh.
+        if (soft && inboxRowsEquivalent(prev, mapped)) {
           return prev;
         }
         return mapped;
@@ -498,6 +488,17 @@ export function ChatPage() {
     }
   }, [myUserId]);
 
+  const softReloadConversations = useCallback(() => {
+    window.clearTimeout(softReloadTimerRef.current);
+    softReloadTimerRef.current = window.setTimeout(() => {
+      void reloadConversations({ soft: true });
+    }, 400);
+  }, [reloadConversations]);
+
+  useEffect(() => {
+    return () => window.clearTimeout(softReloadTimerRef.current);
+  }, []);
+
   useEffect(() => {
     void reloadConversations();
   }, [reloadConversations]);
@@ -505,7 +506,7 @@ export function ChatPage() {
   const onChatSocket = useCallback(
     (event: ChatSocketEvent) => {
       if (event.type === 'inbox') {
-        void reloadConversations({ soft: true });
+        softReloadConversations();
         return;
       }
       if (!match?.id || !myUserId) return;
@@ -517,7 +518,7 @@ export function ChatPage() {
           return [...prev, toUiMessage(row, myUserId)];
         });
         lastMsgIdRef.current = Math.max(lastMsgIdRef.current, row.id);
-        void reloadConversations({ soft: true });
+        softReloadConversations();
         return;
       }
       if (event.type === 'thread' && event.channel === 'playmate' && event.threadId === match.id) {
@@ -565,10 +566,10 @@ export function ChatPage() {
             }
           });
         }
-        void reloadConversations({ soft: true });
+        softReloadConversations();
       }
     },
-    [match?.id, match?.status, myUserId, reloadConversations],
+    [match?.id, match?.status, myUserId, softReloadConversations],
   );
 
   const { connected: wsConnected } = useChatSocket({
@@ -580,12 +581,14 @@ export function ChatPage() {
         : null,
     onEvent: onChatSocket,
   });
+  const wsConnectedRef = useRef(wsConnected);
+  wsConnectedRef.current = wsConnected;
 
   // Soft inbox refresh when WebSocket is unavailable (CDN often blocks WS).
   // Vet inbox on /chats uses the same path — keep soft-only after first paint.
   useLiveAjaxPoll(
     () => {
-      void reloadConversations({ soft: true });
+      softReloadConversations();
     },
     { enabled: Boolean(myUserId) && !wsConnected, intervalMs: FALLBACK_POLL_MS },
   );
@@ -593,9 +596,9 @@ export function ChatPage() {
   useEffect(() => {
     if (!myUserId) return;
     return subscribeIncomingRefresh(() => {
-      void reloadConversations({ soft: true });
+      softReloadConversations();
     });
-  }, [myUserId, reloadConversations]);
+  }, [myUserId, softReloadConversations]);
 
   // Playmate threads belong to owner scope — leave them when acting as vet.
   useEffect(() => {
@@ -688,8 +691,10 @@ export function ChatPage() {
   }, [match?.id, match?.status, ended]);
 
   // While pending, poll status so both sides unlock when accepted (bot parity).
+  // Live socket already pushes thread/status — skip ajax while connected.
   useEffect(() => {
     if (!match || !myUserId || match.status !== 'pending') return;
+    if (wsConnected) return;
     let cancelled = false;
 
     async function pullStatus() {
@@ -701,7 +706,7 @@ export function ChatPage() {
         setSecure(Boolean(req.chatSecure));
         setEnded(Boolean(req.chatEnded));
         bootstrappedRef.current = null;
-        void reloadConversations({ soft: true });
+        softReloadConversations();
         if (req.status === 'accepted') {
           setMessages([systemMessage('درخواست پذیرفته شد — چت همبازی فعال شد.')]);
         } else if (req.status === 'expired') {
@@ -715,15 +720,17 @@ export function ChatPage() {
     }
 
     void pullStatus();
-    const timer = window.setInterval(() => void pullStatus(), wsConnected ? FALLBACK_POLL_MS : MESSAGE_FALLBACK_POLL_MS);
+    const timer = window.setInterval(() => void pullStatus(), MESSAGE_FALLBACK_POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [match?.id, match?.status, myUserId, reloadConversations, wsConnected]);
+  }, [match?.id, match?.status, myUserId, softReloadConversations, wsConnected]);
 
   useEffect(() => {
     if (!match || !myUserId || ended || match.status !== 'accepted') return;
+    // Socket delivers messages + thread patches — avoid interval setState thrash.
+    if (wsConnected) return;
     let cancelled = false;
 
     async function pull(initial = false) {
@@ -775,7 +782,7 @@ export function ChatPage() {
             ...msgs,
             systemMessage(['چت همبازی قطع شد.', '', CHAT_WIPE_HINT].join('\n')),
           ]);
-          void reloadConversations({ soft: true });
+          softReloadConversations();
         }
       } catch {
         /* ignore */
@@ -784,14 +791,15 @@ export function ChatPage() {
 
     void pull(true);
     const timer = window.setInterval(() => {
+      if (wsConnectedRef.current) return;
       void pull(false);
       void pullMeta();
-    }, wsConnected ? FALLBACK_POLL_MS : MESSAGE_FALLBACK_POLL_MS);
+    }, MESSAGE_FALLBACK_POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [match?.id, myUserId, ended, reloadConversations, wsConnected]);
+  }, [match?.id, myUserId, ended, softReloadConversations, wsConnected]);
 
   useEffect(() => {
     const el = scrollerRef.current;
@@ -1443,7 +1451,7 @@ export function ChatPage() {
                                   void getPlaydateRequest(match.id).then((req) => {
                                     if (!req || !myUserId) return;
                                     setMatch(playdateToMatchRequest(req, myUserId));
-                                    void reloadConversations({ soft: true });
+                                    softReloadConversations();
                                   });
                                 }}
                               />
