@@ -1,4 +1,4 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Home,
   LayoutDashboard,
@@ -26,12 +26,14 @@ const navItems: { to: string; icon: LucideIcon; label: string }[] = [
 ];
 
 export function Layout() {
+  const { pathname } = useLocation();
+  const isChat = pathname === '/chats' || pathname.startsWith('/chats/');
   return (
     <LandingChrome
       appNav
       hideBanner
-      footer
-      className="pepito-app-shell"
+      footer={!isChat}
+      className={`pepito-app-shell${isChat ? ' pepito-app-shell--chat' : ''}`}
     >
       <div className="pepito-app-layout">
         <aside className="pepito-app-rail" aria-label="منوی بیشتر">

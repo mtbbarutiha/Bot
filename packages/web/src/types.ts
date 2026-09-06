@@ -48,6 +48,8 @@ export interface MatchRequest {
   /** نام پت مبدأ در API (برای فرمت ربات: مبدأ → مقصد) */
   rawFromName?: string;
   rawToName?: string;
+  chatSecure?: boolean;
+  chatEnded?: boolean;
 }
 
 export interface OwnerProfile {

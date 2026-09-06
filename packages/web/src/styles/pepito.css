@@ -4649,24 +4649,46 @@ button.chip.is-on {
 }
 
 /* Chat full-bleed inside landing-continuous app shell */
+.pepito-app-shell--chat,
+.pepito-app-shell:has(.tg-chat) {
+  background: #eef2f6;
+}
 .pepito-app-layout:has(.tg-chat) .pepito-app-rail,
 .pepito-app-layout:has(.tg-chat) .pepito-app-mobile-nav,
-.pepito-app-shell:has(.tg-chat) .pepito-nav {
+.pepito-app-shell:has(.tg-chat) .pepito-nav,
+.pepito-app-shell--chat .pepito-nav,
+.pepito-app-shell:has(.tg-chat) .pepito-footer,
+.pepito-app-shell--chat .pepito-footer,
+.pepito-app-shell:has(.tg-chat) .pepito-site-desktop-nav {
   display: none !important;
 }
 .pepito-app-layout:has(.tg-chat) {
   grid-template-columns: 1fr !important;
   max-width: 100% !important;
-  padding-top: 0 !important;
-  min-height: 100dvh !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  min-height: var(--tg-vv-height, 100dvh) !important;
+  gap: 0 !important;
 }
 .pepito-app-main:has(.tg-chat) {
   padding: 0 !important;
+  margin: 0 !important;
   background: transparent !important;
   animation: none;
+  min-height: var(--tg-vv-height, 100dvh) !important;
+  max-width: 100% !important;
 }
 .pepito-app-layout:has(.chat-page) {
   max-width: min(1280px, 100%);
+}
+
+/* Mobile dock padding must not push chat composer under empty space */
+@media (max-width: 859.98px) {
+  .pepito-app-shell--chat .pepito-app-main,
+  .pepito-app-main:has(.tg-chat) {
+    padding-bottom: 0 !important;
+  }
 }
 
 /* —— Quick vet consult (bot parity) —— */

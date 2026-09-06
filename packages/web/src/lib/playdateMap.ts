@@ -83,5 +83,7 @@ export function playdateToMatchRequest(req: PlaydateRequest, myUserId: number): 
     location: req.location,
     rawFromName: req.fromPet?.name ?? `#${req.fromPetId}`,
     rawToName: req.toPet?.name ?? `#${req.toPetId}`,
+    chatSecure: Boolean(req.chatSecure),
+    chatEnded: Boolean(req.chatEnded),
   };
 }

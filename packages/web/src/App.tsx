@@ -81,6 +81,7 @@ export default function App() {
             <Route path="pets/:id" element={<PetDetailPage />} />
             <Route path="add-pet" element={<AddPetPage />} />
             <Route path="matches" element={<MatchesPage />} />
+            <Route path="chats" element={<ChatPage />} />
             <Route path="chats/:matchId" element={<ChatPage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="wallet" element={<WalletPage />} />

@@ -89,7 +89,7 @@ function metaForPath(pathname: string): PageMeta {
   if (p.startsWith('/pets/')) {
     return { title: SEO.titleTemplate('پروفایل پت'), robots: 'noindex,follow' };
   }
-  if (p.startsWith('/chats/')) {
+  if (p === '/chats' || p.startsWith('/chats/')) {
     return { title: SEO.titleTemplate('گفتگو'), robots: 'noindex,nofollow' };
   }
   if (p.startsWith('/onboarding')) {
