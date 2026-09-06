@@ -487,14 +487,21 @@ function checkTcpPort(host: string, port: number, timeoutMs = 1200): Promise<boo
   });
 }
 
+/** Loopback host:port from REDIS_URL etc. means same VPS, not the admin's laptop. */
+function formatServiceEndpoint(host: string, port: number): string {
+  const loopback = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+  return loopback ? `همین سرور · ${host}:${port}` : `${host}:${port}`;
+}
+
 async function probeService(url: string | undefined, defaultPort: number): Promise<ServiceCheck> {
   if (!url) return checkNotConfigured();
   try {
     const u = new URL(url);
     const host = u.hostname || '127.0.0.1';
     const port = Number(u.port || defaultPort);
+    const endpoint = formatServiceEndpoint(host, port);
     const ok = await checkTcpPort(host, port);
-    return ok ? checkUp(`${host}:${port}`) : checkDown(`غیرقابل دسترس ${host}:${port}`);
+    return ok ? checkUp(endpoint) : checkDown(`غیرقابل دسترس ${endpoint}`);
   } catch (err) {
     return checkDown((err as Error).message);
   }
@@ -506,13 +513,14 @@ async function probeHttp(url: string | undefined, healthPath: string, defaultPor
     const base = new URL(url);
     const host = base.hostname || '127.0.0.1';
     const port = Number(base.port || defaultPort);
+    const endpoint = formatServiceEndpoint(host, port);
     const live = new URL(healthPath, `${base.protocol}//${host}:${port}`);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 2000);
     try {
       const res = await fetch(live, { method: 'GET', signal: controller.signal });
-      if (res.ok) return checkUp(`${host}:${port}`);
-      return checkDown(`HTTP ${res.status} ${host}:${port}`);
+      if (res.ok) return checkUp(endpoint);
+      return checkDown(`HTTP ${res.status} ${endpoint}`);
     } finally {
       clearTimeout(timer);
     }
