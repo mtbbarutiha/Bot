@@ -1,18 +1,27 @@
 import { Router } from 'express';
-import { COIN_PRICE_TOMAN, tomanToShopCoins } from '@petdate/shared';
+import { COIN_PRICE_TOMAN, STAR_PRICE_TOMAN, tomanToShopCoins } from '@petdate/shared';
 import { getUserFromBearer } from '../services/web-otp';
-import { checkoutShopWithCoins, quoteShopCoins } from '../services/shop-checkout';
+import {
+  checkoutShopWithCoins,
+  checkoutShopWithStars,
+  quoteShopCoins,
+  quoteShopStars,
+} from '../services/shop-checkout';
 import { adminPlatform } from '../admin-platform';
 import { dbService } from '../db';
 
 export const shopRouter = Router();
 
-function requireSession(req: { header: (name: string) => string | undefined }, res: {
-  status: (code: number) => { json: (body: unknown) => void };
-}) {
+function requireSession(
+  req: { header: (name: string) => string | undefined },
+  res: {
+    status: (code: number) => { json: (body: unknown) => void };
+  },
+  unauthorizedMessage = 'برای پرداخت وارد حساب شوید.'
+) {
   const session = getUserFromBearer(req.header('authorization') ?? undefined);
   if (!session) {
-    res.status(401).json({ error: 'برای پرداخت با سکه وارد حساب شوید.', reason: 'unauthorized' });
+    res.status(401).json({ error: unauthorizedMessage, reason: 'unauthorized' });
     return null;
   }
   return session;
@@ -44,6 +53,7 @@ function publicProduct(p: ReturnType<typeof adminPlatform.getShopProduct>) {
     featured: p.featured,
     coins: tomanToShopCoins(p.priceToman),
     coinPriceToman: COIN_PRICE_TOMAN,
+    starPriceToman: STAR_PRICE_TOMAN,
   };
 }
 
@@ -56,10 +66,16 @@ shopRouter.get('/coin-rate', (_req, res) => {
   });
 });
 
-/**
- * کاتالوگ عمومی — منبع حقیقت مشترک وب و ربات (از DB).
- * GET /api/shop/categories?petType=dog|cat|bird
- */
+/** نرخ ستاره فروشگاه — هم‌تراز اقتصاد ربات (۱ Star = ۱ سکه = ۲٬۰۰۰ تومان) */
+shopRouter.get('/star-rate', (_req, res) => {
+  res.json({
+    ok: true,
+    starPriceToman: STAR_PRICE_TOMAN,
+    coinPriceToman: COIN_PRICE_TOMAN,
+    noteFa: `هر ستاره ≈ ${STAR_PRICE_TOMAN.toLocaleString('fa-IR')} تومان (کیف پول مشترک وب و ربات)`,
+  });
+});
+
 shopRouter.get('/categories', (req, res) => {
   const petType = typeof req.query.petType === 'string' ? req.query.petType.trim() : '';
   let categories = adminPlatform.listShopCategories();
@@ -71,13 +87,10 @@ shopRouter.get('/categories', (req, res) => {
     total: categories.length,
     categories,
     coinPriceToman: COIN_PRICE_TOMAN,
+    starPriceToman: STAR_PRICE_TOMAN,
   });
 });
 
-/**
- * لیست محصولات عمومی از DB.
- * Query: category, petType, q, featured, inStock, limit, offset
- */
 shopRouter.get('/products', (req, res) => {
   const q = typeof req.query.q === 'string' ? req.query.q.trim() : undefined;
   const categorySlug =
@@ -117,10 +130,10 @@ shopRouter.get('/products', (req, res) => {
     limit,
     products: page,
     coinPriceToman: COIN_PRICE_TOMAN,
+    starPriceToman: STAR_PRICE_TOMAN,
   });
 });
 
-/** جزئیات یک محصول از DB */
 shopRouter.get('/products/:idOrSlug', (req, res) => {
   const product = adminPlatform.getShopProduct(req.params.idOrSlug);
   if (!product) {
@@ -133,12 +146,12 @@ shopRouter.get('/products/:idOrSlug', (req, res) => {
     product: publicProduct(product),
     category: category ?? null,
     coinPriceToman: COIN_PRICE_TOMAN,
+    starPriceToman: STAR_PRICE_TOMAN,
   });
 });
 
-/** برآورد هزینه سکه برای سبد (نیاز به ورود) */
 shopRouter.post('/quote-coins', (req, res) => {
-  const session = requireSession(req, res);
+  const session = requireSession(req, res, 'برای پرداخت با سکه وارد حساب شوید.');
   if (!session) return;
 
   const items = Array.isArray(req.body?.items) ? req.body.items : [];
@@ -149,7 +162,7 @@ shopRouter.post('/quote-coins', (req, res) => {
     }))
   );
   if (!quoted.ok) {
-    res.status(400).json(quoted);
+    res.status(200).json(quoted);
     return;
   }
 
@@ -166,12 +179,37 @@ shopRouter.post('/quote-coins', (req, res) => {
   });
 });
 
-/**
- * پرداخت و ثبت سفارش با سکه ربات (وب — Bearer OTP).
- * کسر سکه اتمیک + سفارش status=paid و payment_currency=coins.
- */
+shopRouter.post('/quote-stars', (req, res) => {
+  const session = requireSession(req, res, 'برای پرداخت با ستاره وارد حساب شوید.');
+  if (!session) return;
+
+  const items = Array.isArray(req.body?.items) ? req.body.items : [];
+  const quoted = quoteShopStars(
+    items.map((it: { productId?: string; qty?: number }) => ({
+      productId: String(it?.productId ?? ''),
+      qty: Number(it?.qty ?? 0),
+    }))
+  );
+  if (!quoted.ok) {
+    res.status(200).json(quoted);
+    return;
+  }
+
+  const wallet = dbService.getWallet(session.user.id);
+  const balance = wallet?.stars ?? session.user.walletStars ?? 0;
+  res.json({
+    ok: true,
+    totalToman: quoted.totalToman,
+    stars: quoted.stars,
+    lines: quoted.lines,
+    balance,
+    canAfford: balance >= quoted.stars,
+    starPriceToman: STAR_PRICE_TOMAN,
+  });
+});
+
 shopRouter.post('/checkout/coins', (req, res) => {
-  const session = requireSession(req, res);
+  const session = requireSession(req, res, 'برای پرداخت با سکه وارد حساب شوید.');
   if (!session) return;
 
   const body = req.body ?? {};
@@ -189,8 +227,7 @@ shopRouter.post('/checkout/coins', (req, res) => {
   });
 
   if (!result.ok) {
-    const status = result.reason === 'user_missing' ? 404 : 400;
-    res.status(status).json(result);
+    res.status(200).json(result);
     return;
   }
 
@@ -209,10 +246,44 @@ shopRouter.post('/checkout/coins', (req, res) => {
   });
 });
 
-/**
- * پرداخت با سکه از ربات تلگرام — همان کیف پول و همان کاتالوگ DB.
- * Body: { telegramId, items, customerName, customerPhone, address, note? }
- */
+shopRouter.post('/checkout/stars', (req, res) => {
+  const session = requireSession(req, res, 'برای پرداخت با ستاره وارد حساب شوید.');
+  if (!session) return;
+
+  const body = req.body ?? {};
+  const items = Array.isArray(body.items) ? body.items : [];
+  const result = checkoutShopWithStars({
+    userId: session.user.id,
+    items: items.map((it: { productId?: string; qty?: number }) => ({
+      productId: String(it?.productId ?? ''),
+      qty: Number(it?.qty ?? 0),
+    })),
+    customerName: String(body.customerName ?? body.name ?? ''),
+    customerPhone: String(body.customerPhone ?? body.phone ?? ''),
+    address: String(body.address ?? ''),
+    note: body.note != null ? String(body.note) : undefined,
+  });
+
+  if (!result.ok) {
+    res.status(200).json(result);
+    return;
+  }
+
+  const user = dbService.getUserById(session.user.id);
+  const wallet = user?.wallet ?? dbService.getWallet(session.user.id);
+  res.status(201).json({
+    ok: true,
+    orderId: result.order.id,
+    order: result.order,
+    starsSpent: result.starsSpent,
+    starsRemaining: result.starsRemaining,
+    totalToman: result.totalToman,
+    lines: result.lines,
+    wallet,
+    message: `سفارش #${result.order.id} با ${result.starsSpent.toLocaleString('fa-IR')} ستاره پرداخت شد.`,
+  });
+});
+
 shopRouter.post('/checkout/coins-telegram', (req, res) => {
   const body = req.body ?? {};
   const telegramId = String(body.telegramId ?? '').trim();
@@ -258,5 +329,52 @@ shopRouter.post('/checkout/coins-telegram', (req, res) => {
     wallet: fresh?.wallet ?? dbService.getWallet(user.id),
     coins: result.coinsRemaining,
     message: `سفارش #${result.order.id} با ${result.coinsSpent.toLocaleString('fa-IR')} سکه پرداخت شد.`,
+  });
+});
+
+shopRouter.post('/checkout/stars-telegram', (req, res) => {
+  const body = req.body ?? {};
+  const telegramId = String(body.telegramId ?? '').trim();
+  if (!telegramId) {
+    res.status(400).json({ ok: false, reason: 'bad_user', error: 'telegramId الزامی است.' });
+    return;
+  }
+
+  const user = dbService.getUserByTelegramId(telegramId);
+  if (!user) {
+    res.status(404).json({ ok: false, reason: 'user_missing', error: 'کاربر پیدا نشد. اول /start بزن.' });
+    return;
+  }
+
+  const items = Array.isArray(body.items) ? body.items : [];
+  const result = checkoutShopWithStars({
+    userId: user.id,
+    items: items.map((it: { productId?: string; qty?: number }) => ({
+      productId: String(it?.productId ?? ''),
+      qty: Number(it?.qty ?? 0),
+    })),
+    customerName: String(body.customerName ?? body.name ?? user.name ?? ''),
+    customerPhone: String(body.customerPhone ?? body.phone ?? user.phone ?? ''),
+    address: String(body.address ?? ''),
+    note: body.note != null ? String(body.note) : undefined,
+  });
+
+  if (!result.ok) {
+    const status = result.reason === 'user_missing' ? 404 : 400;
+    res.status(status).json(result);
+    return;
+  }
+
+  const fresh = dbService.getUserById(user.id);
+  res.status(201).json({
+    ok: true,
+    orderId: result.order.id,
+    order: result.order,
+    starsSpent: result.starsSpent,
+    starsRemaining: result.starsRemaining,
+    totalToman: result.totalToman,
+    lines: result.lines,
+    wallet: fresh?.wallet ?? dbService.getWallet(user.id),
+    message: `سفارش #${result.order.id} با ${result.starsSpent.toLocaleString('fa-IR')} ستاره پرداخت شد.`,
   });
 });

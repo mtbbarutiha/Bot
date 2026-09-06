@@ -12,10 +12,13 @@ export {
 } from '@petdate/shared';
 export type { CoinAward, ProfileRewardSection } from '@petdate/shared';
 
-import { COIN_PRICE_TOMAN as SHARED_COIN_PRICE_TOMAN } from '@petdate/shared';
+import {
+  COIN_PRICE_STARS as SHARED_COIN_PRICE_STARS,
+  COIN_PRICE_TOMAN as SHARED_COIN_PRICE_TOMAN,
+} from '@petdate/shared';
 
 export const COIN_PRICE_TOMAN = SHARED_COIN_PRICE_TOMAN;
-export const COIN_PRICE_STARS = 1;
+export const COIN_PRICE_STARS = SHARED_COIN_PRICE_STARS;
 export const COIN_SELL_PRICE_TOMAN = 1_000;
 export const MIN_SELL_COINS = 50;
 export const DAILY_COIN_REWARD = 10;
@@ -72,13 +75,15 @@ export function packagePickerLabel(p: CoinPackage): string {
   return `💰 ${formatNum(p.coins)} سکه · ⭐${formatNum(p.stars)} · ${formatNum(p.toman)}ت`;
 }
 
-export function coinsShopIntroText(balance: number): string {
+export function coinsShopIntroText(balance: number, starsBalance = 0): string {
   return [
     '💰 <b>سکه‌ها</b>',
     '',
-    `موجودی: <b>${formatNum(balance)}</b> سکه`,
+    `موجودی سکه: <b>${formatNum(balance)}</b>`,
+    `موجودی ستاره (کیف پول مشترک وب/ربات): <b>⭐${formatNum(starsBalance)}</b>`,
     '',
     `قیمت هر سکه: ${formatNum(COIN_PRICE_TOMAN)} تومان یا ${formatNum(COIN_PRICE_STARS)} Star`,
+    `نرخ فروشگاه: هر Star ≈ ${formatNum(COIN_PRICE_TOMAN)} تومان (همان کیف پول وب)`,
     `🎁 هر روز ${formatNum(DAILY_COIN_REWARD)} سکه رایگان — دکمه بالای لیست`,
     '',
     'بسته را بزن → پرداخت با ستاره یا کارت به کارت',

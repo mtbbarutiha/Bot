@@ -6666,6 +6666,14 @@ button.chip.is-on {
   flex-direction: column;
   gap: 0.75rem;
 }
+.pd-shop-pay-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.pd-shop-pay-actions .pepito-btn {
+  width: 100%;
+}
 .pd-shop-checkout-form label {
   display: flex;
   flex-direction: column;

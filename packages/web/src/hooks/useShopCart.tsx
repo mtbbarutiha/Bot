@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { tomanToShopCoins } from '@petdate/shared';
+import { tomanToShopCoins, tomanToShopStars } from '@petdate/shared';
 import { getProduct, type ShopProduct } from '../data/shopCatalog';
 
 const STORAGE_KEY = 'petdate.shop.cart.v1';
@@ -22,6 +22,7 @@ export interface CartLineView extends CartLine {
   product: ShopProduct;
   lineTotal: number;
   lineCoins: number;
+  lineStars: number;
 }
 
 export interface ShopOrderStub {
@@ -34,8 +35,9 @@ export interface ShopOrderStub {
   items: CartLine[];
   totalToman: number;
   totalCoins?: number;
+  totalStars?: number;
   status: 'pending' | 'paid';
-  paymentCurrency?: 'coins' | 'toman';
+  paymentCurrency?: 'coins' | 'stars' | 'toman';
 }
 
 function readLines(): CartLine[] {
@@ -70,6 +72,7 @@ interface ShopCartContextValue {
   itemCount: number;
   totalToman: number;
   totalCoins: number;
+  totalStars: number;
   add: (productId: string, qty?: number) => void;
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
@@ -109,11 +112,13 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
         const product = getProduct(l.productId);
         if (!product) return null;
         const unitCoins = tomanToShopCoins(product.priceToman);
+        const unitStars = tomanToShopStars(product.priceToman);
         return {
           ...l,
           product,
           lineTotal: product.priceToman * l.qty,
           lineCoins: unitCoins * l.qty,
+          lineStars: unitStars * l.qty,
         };
       })
       .filter(Boolean) as CartLineView[];
@@ -122,6 +127,7 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
   const itemCount = useMemo(() => lines.reduce((s, l) => s + l.qty, 0), [lines]);
   const totalToman = useMemo(() => views.reduce((s, l) => s + l.lineTotal, 0), [views]);
   const totalCoins = useMemo(() => views.reduce((s, l) => s + l.lineCoins, 0), [views]);
+  const totalStars = useMemo(() => views.reduce((s, l) => s + l.lineStars, 0), [views]);
 
   const add = useCallback((productId: string, qty = 1) => {
     setLines((prev) => {
@@ -179,6 +185,7 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
       itemCount,
       totalToman,
       totalCoins,
+      totalStars,
       add,
       setQty,
       remove,
@@ -191,6 +198,7 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
       itemCount,
       totalToman,
       totalCoins,
+      totalStars,
       add,
       setQty,
       remove,

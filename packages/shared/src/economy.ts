@@ -9,11 +9,33 @@ export const QUICK_VET_COST = 1;
  */
 export const COIN_PRICE_TOMAN = 2_000;
 
+/**
+ * قیمت هر سکه به Star در ربات (coins × COIN_PRICE_STARS).
+ * هم‌تراز packages/bot economy: هر سکه = ۱ Star.
+ */
+export const COIN_PRICE_STARS = 1;
+
+/**
+ * نرخ تومان به‌ازای هر Star در فروشگاه.
+ * از اقتصاد ربات: ۱ Star = ۱ سکه = COIN_PRICE_TOMAN تومان → ۲٬۰۰۰ تومان.
+ */
+export const STAR_PRICE_TOMAN = Math.floor(COIN_PRICE_TOMAN / COIN_PRICE_STARS);
+
 /** تبدیل مبلغ تومان به سکه موردنیاز برای پرداخت فروشگاه (حداقل ۱ برای مبلغ مثبت) */
 export function tomanToShopCoins(toman: number): number {
   const t = Math.floor(Number(toman) || 0);
   if (!Number.isFinite(t) || t <= 0) return 0;
   return Math.max(1, Math.ceil(t / COIN_PRICE_TOMAN));
+}
+
+/**
+ * تبدیل مبلغ تومان به ستاره موردنیاز برای پرداخت فروشگاه.
+ * همان نرخ اقتصاد ربات (۱ Star ≈ ۲٬۰۰۰ تومان).
+ */
+export function tomanToShopStars(toman: number): number {
+  const t = Math.floor(Number(toman) || 0);
+  if (!Number.isFinite(t) || t <= 0) return 0;
+  return Math.max(1, Math.ceil(t / STAR_PRICE_TOMAN));
 }
 
 /** موجودی کیف پول چندارزی کاربر */
@@ -55,7 +77,7 @@ export const WALLET_CURRENCY_STATUS: Record<
   },
   stars: {
     deposit: 'bot_only',
-    noteFa: 'موجودی ستاره مشترک با ربات (wallet_stars) — نه موجودی بومی Stars تلگرام',
+    noteFa: 'موجودی مشترک وب/ربات (wallet_stars)؛ پرداخت فروشگاه — نه موجودی بومی Stars تلگرام',
   },
   coins: {
     deposit: 'wired',

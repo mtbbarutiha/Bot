@@ -3241,6 +3241,10 @@ export function formatShopCoins(amount: number): string {
   return `${amount.toLocaleString('fa-IR')} سکه`;
 }
 
+export function formatShopStars(amount: number): string {
+  return `${amount.toLocaleString('fa-IR')} ستاره`;
+}
+
 /** Live catalog cache — hydrated from /api/shop (same DB as bot). Falls back to static seed. */
 let liveProducts: ShopProduct[] = SHOP_PRODUCTS;
 let liveCategories: ShopCategory[] = SHOP_CATEGORIES;

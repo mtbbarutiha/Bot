@@ -2292,6 +2292,19 @@ export const dbService = {
     return this.getUserById(userId);
   },
 
+  /** کم کردن ستاره کیف پول (wallet_stars) اتمیک؛ اگر موجودی کافی نباشد null */
+  debitStars(userId: number, amount: number): User | null {
+    if (amount <= 0) return this.getUserById(userId);
+    const result = db
+      .prepare(
+        `UPDATE users SET wallet_stars = wallet_stars - ?
+         WHERE id = ? AND COALESCE(wallet_stars, 0) >= ?`
+      )
+      .run(amount, userId, amount);
+    if (result.changes === 0) return null;
+    return this.getUserById(userId);
+  },
+
   creditCoins(userId: number, amount: number, reason?: string): User | null {
     if (amount <= 0) return this.getUserById(userId);
     if (reason) {
@@ -2334,8 +2347,20 @@ export const dbService = {
       return { ok: true, user: this.getUserById(userId)! };
     }
 
-    const col =
-      currency === 'ton' ? 'wallet_ton' : currency === 'stars' ? 'wallet_stars' : 'wallet_toman';
+    if (currency === 'stars') {
+      if (safe > 0) {
+        db.prepare(`UPDATE users SET wallet_stars = COALESCE(wallet_stars, 0) + ? WHERE id = ?`).run(
+          safe,
+          userId
+        );
+      } else {
+        const debited = this.debitStars(userId, Math.abs(safe));
+        if (!debited) return { ok: false, reason: 'bad_amount' };
+      }
+      return { ok: true, user: this.getUserById(userId)! };
+    }
+
+    const col = currency === 'ton' ? 'wallet_ton' : 'wallet_toman';
     if (safe > 0) {
       db.prepare(`UPDATE users SET ${col} = COALESCE(${col}, 0) + ? WHERE id = ?`).run(safe, userId);
     } else {

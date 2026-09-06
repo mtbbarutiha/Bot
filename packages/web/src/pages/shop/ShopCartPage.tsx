@@ -1,15 +1,17 @@
 import { type FormEvent, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { COIN_PRICE_TOMAN, walletFromUserFields } from '@petdate/shared';
-import { formatShopCoins, formatToman } from '../../data/shopCatalog';
+import { COIN_PRICE_TOMAN, STAR_PRICE_TOMAN, walletFromUserFields } from '@petdate/shared';
+import { formatShopCoins, formatShopStars, formatToman } from '../../data/shopCatalog';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { useShopCart } from '../../hooks/useShopCart';
-import { checkoutShopWithCoins } from '../../lib/api';
+import { checkoutShopWithCoins, checkoutShopWithStars } from '../../lib/api';
 import { loginPath } from '../../lib/authRedirect';
 import { ShopChrome } from '../../components/shop/ShopChrome';
 
+type PayMethod = 'coins' | 'stars';
+
 export function ShopCartPage() {
-  const { lines, itemCount, totalToman, totalCoins, setQty, remove, clear, rememberPaidOrder } =
+  const { lines, itemCount, totalToman, totalCoins, totalStars, setQty, remove, clear, rememberPaidOrder } =
     useShopCart();
   const { isLoggedIn, token, user, refreshMe } = useAuthStore();
   const [name, setName] = useState('');
@@ -18,21 +20,28 @@ export function ShopCartPage() {
   const [note, setNote] = useState('');
   const [orderId, setOrderId] = useState<string | null>(null);
   const [paidCoins, setPaidCoins] = useState<number | null>(null);
-  const [submitting, setSubmitting] = useState(false);
+  const [paidStars, setPaidStars] = useState<number | null>(null);
+  const [paidMethod, setPaidMethod] = useState<PayMethod | null>(null);
+  const [submitting, setSubmitting] = useState<PayMethod | null>(null);
   const [error, setError] = useState('');
 
-  const balance = useMemo(() => {
+  const coinBalance = useMemo(() => {
     if (!user) return 0;
     return user.wallet?.coins ?? walletFromUserFields(user).coins ?? user.coins ?? 0;
   }, [user]);
 
-  const canAfford = balance >= totalCoins && totalCoins > 0;
+  const starsBalance = useMemo(() => {
+    if (!user) return 0;
+    return user.wallet?.stars ?? walletFromUserFields(user).stars ?? user.walletStars ?? 0;
+  }, [user]);
 
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const canAffordCoins = coinBalance >= totalCoins && totalCoins > 0;
+  const canAffordStars = starsBalance >= totalStars && totalStars > 0;
+
+  const pay = async (method: PayMethod) => {
     setError('');
     if (!isLoggedIn || !token) {
-      setError('برای پرداخت با سکه وارد حساب شوید.');
+      setError(method === 'stars' ? 'برای پرداخت با ستاره وارد حساب شوید.' : 'برای پرداخت با سکه وارد حساب شوید.');
       return;
     }
     if (!name.trim() || !phone.trim() || !address.trim()) {
@@ -43,38 +52,69 @@ export function ShopCartPage() {
       setError('سبد خالی است.');
       return;
     }
-    if (!canAfford) {
+    if (method === 'coins' && !canAffordCoins) {
       setError(
-        `موجودی سکه کافی نیست. نیاز: ${totalCoins.toLocaleString('fa-IR')} — موجودی: ${balance.toLocaleString('fa-IR')}`
+        `موجودی سکه کافی نیست. نیاز: ${totalCoins.toLocaleString('fa-IR')} — موجودی: ${coinBalance.toLocaleString('fa-IR')}`
+      );
+      return;
+    }
+    if (method === 'stars' && !canAffordStars) {
+      setError(
+        `موجودی ستاره کافی نیست. نیاز: ${totalStars.toLocaleString('fa-IR')} — موجودی: ${starsBalance.toLocaleString('fa-IR')}`
       );
       return;
     }
 
-    setSubmitting(true);
+    setSubmitting(method);
+    const payload = {
+      items: lines.map((l) => ({ productId: l.productId, qty: l.qty })),
+      customerName: name.trim(),
+      customerPhone: phone.trim(),
+      address: address.trim(),
+      note: note.trim() || undefined,
+    };
     try {
-      const result = await checkoutShopWithCoins(token, {
-        items: lines.map((l) => ({ productId: l.productId, qty: l.qty })),
-        customerName: name.trim(),
-        customerPhone: phone.trim(),
-        address: address.trim(),
-        note: note.trim() || undefined,
-      });
-      rememberPaidOrder({
-        id: String(result.orderId),
-        createdAt: new Date().toISOString(),
-        name: name.trim(),
-        phone: phone.trim(),
-        address: address.trim(),
-        note: note.trim() || undefined,
-        items: lines.map((l) => ({ productId: l.productId, qty: l.qty })),
-        totalToman: result.totalToman,
-        totalCoins: result.coinsSpent,
-        status: 'paid',
-        paymentCurrency: 'coins',
-      });
-      clear();
-      setPaidCoins(result.coinsSpent);
-      setOrderId(String(result.orderId));
+      if (method === 'coins') {
+        const result = await checkoutShopWithCoins(token, payload);
+        rememberPaidOrder({
+          id: String(result.orderId),
+          createdAt: new Date().toISOString(),
+          name: name.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+          note: note.trim() || undefined,
+          items: lines.map((l) => ({ productId: l.productId, qty: l.qty })),
+          totalToman: result.totalToman,
+          totalCoins: result.coinsSpent,
+          status: 'paid',
+          paymentCurrency: 'coins',
+        });
+        clear();
+        setPaidCoins(result.coinsSpent);
+        setPaidStars(null);
+        setPaidMethod('coins');
+        setOrderId(String(result.orderId));
+      } else {
+        const result = await checkoutShopWithStars(token, payload);
+        rememberPaidOrder({
+          id: String(result.orderId),
+          createdAt: new Date().toISOString(),
+          name: name.trim(),
+          phone: phone.trim(),
+          address: address.trim(),
+          note: note.trim() || undefined,
+          items: lines.map((l) => ({ productId: l.productId, qty: l.qty })),
+          totalToman: result.totalToman,
+          totalStars: result.starsSpent,
+          status: 'paid',
+          paymentCurrency: 'stars',
+        });
+        clear();
+        setPaidStars(result.starsSpent);
+        setPaidCoins(null);
+        setPaidMethod('stars');
+        setOrderId(String(result.orderId));
+      }
       try {
         await refreshMe();
       } catch {
@@ -83,16 +123,21 @@ export function ShopCartPage() {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'پرداخت ناموفق بود.');
     } finally {
-      setSubmitting(false);
+      setSubmitting(null);
     }
   };
 
+  const onSubmitCoins = (e: FormEvent) => {
+    e.preventDefault();
+    void pay('coins');
+  };
+
   return (
-    <ShopChrome bannerTitle="سبد خرید" bannerLead="پرداخت با سکه ربات — قیمت تومان هم نمایش داده می‌شود">
+    <ShopChrome bannerTitle="سبد خرید" bannerLead="پرداخت با سکه یا ستاره — کیف پول مشترک وب و ربات">
       <div className="pepito-container pd-shop-cart">
         {orderId ? (
           <div className="pd-shop-order-ok">
-            <h2>پرداخت با سکه انجام شد</h2>
+            <h2>{paidMethod === 'stars' ? 'پرداخت با ستاره انجام شد' : 'پرداخت با سکه انجام شد'}</h2>
             <p>
               شماره سفارش: <strong dir="ltr">#{orderId}</strong>
             </p>
@@ -101,7 +146,14 @@ export function ShopCartPage() {
                 مبلغ پرداختی: <strong>{formatShopCoins(paidCoins)}</strong>
               </p>
             ) : null}
-            <p>سفارش به‌عنوان «پرداخت‌شده با سکه» در سرور ثبت شد.</p>
+            {paidStars != null ? (
+              <p>
+                مبلغ پرداختی: <strong>{formatShopStars(paidStars)}</strong>
+              </p>
+            ) : null}
+            <p>
+              سفارش به‌عنوان «پرداخت‌شده با {paidMethod === 'stars' ? 'ستاره' : 'سکه'}» در سرور ثبت شد.
+            </p>
             <Link to="/shop" className="pepito-btn button-1">
               بازگشت به پت شاپ
             </Link>
@@ -130,6 +182,7 @@ export function ShopCartPage() {
                         </Link>
                         <p>{formatToman(l.product.priceToman)}</p>
                         <p className="pd-shop-line-coins">{formatShopCoins(l.lineCoins)}</p>
+                        <p className="pd-shop-line-coins">{formatShopStars(l.lineStars)}</p>
                         <div className="pd-shop-qty">
                           <button type="button" onClick={() => setQty(l.productId, l.qty - 1)}>
                             −
@@ -146,6 +199,7 @@ export function ShopCartPage() {
                       <div className="pd-shop-cart-line-total">
                         <span>{formatToman(l.lineTotal)}</span>
                         <span className="pd-shop-line-coins">{formatShopCoins(l.lineCoins)}</span>
+                        <span className="pd-shop-line-coins">{formatShopStars(l.lineStars)}</span>
                       </div>
                     </li>
                   ))}
@@ -164,22 +218,37 @@ export function ShopCartPage() {
                   (هر سکه ≈ {COIN_PRICE_TOMAN.toLocaleString('fa-IR')} تومان)
                 </span>
               </p>
+              <p className="pd-shop-checkout-coins">
+                معادل ستاره: <strong>{formatShopStars(totalStars)}</strong>
+                <span className="pd-shop-checkout-rate">
+                  (هر ستاره ≈ {STAR_PRICE_TOMAN.toLocaleString('fa-IR')} تومان)
+                </span>
+              </p>
               {!isLoggedIn ? (
                 <div className="pd-shop-soft-gate">
-                  <p>مرور سبد آزاد است. برای پرداخت با سکه وارد شوید.</p>
+                  <p>مرور سبد آزاد است. برای پرداخت با سکه یا ستاره وارد شوید.</p>
                   <Link to={loginPath('/shop/cart')} className="pepito-btn button-1">
-                    ورود برای پرداخت با سکه
+                    ورود برای پرداخت
                   </Link>
                 </div>
               ) : (
-                <form className="pd-shop-checkout-form" onSubmit={onSubmit}>
+                <form className="pd-shop-checkout-form" onSubmit={onSubmitCoins}>
                   <p className="pd-shop-checkout-balance" role="status">
-                    موجودی سکه شما:{' '}
-                    <strong className={canAfford || lines.length === 0 ? undefined : 'pd-shop-balance-low'}>
-                      {formatShopCoins(balance)}
+                    موجودی سکه:{' '}
+                    <strong className={canAffordCoins || lines.length === 0 ? undefined : 'pd-shop-balance-low'}>
+                      {formatShopCoins(coinBalance)}
                     </strong>
-                    {!canAfford && lines.length > 0 ? (
-                      <span className="pd-shop-afford-warn"> — موجودی کافی نیست</span>
+                    {!canAffordCoins && lines.length > 0 ? (
+                      <span className="pd-shop-afford-warn"> — کافی نیست</span>
+                    ) : null}
+                  </p>
+                  <p className="pd-shop-checkout-balance" role="status">
+                    موجودی ستاره:{' '}
+                    <strong className={canAffordStars || lines.length === 0 ? undefined : 'pd-shop-balance-low'}>
+                      {formatShopStars(starsBalance)}
+                    </strong>
+                    {!canAffordStars && lines.length > 0 ? (
+                      <span className="pd-shop-afford-warn"> — کافی نیست</span>
                     ) : null}
                   </p>
                   <label>
@@ -205,15 +274,26 @@ export function ShopCartPage() {
                     <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
                   </label>
                   {error ? <p className="pd-shop-form-error">{error}</p> : null}
-                  <button
-                    type="submit"
-                    className="pepito-btn button-1"
-                    disabled={lines.length === 0 || submitting || !canAfford}
-                  >
-                    {submitting ? 'در حال پرداخت…' : 'پرداخت با سکه'}
-                  </button>
+                  <div className="pd-shop-pay-actions">
+                    <button
+                      type="submit"
+                      className="pepito-btn button-1"
+                      disabled={lines.length === 0 || submitting != null || !canAffordCoins}
+                    >
+                      {submitting === 'coins' ? 'در حال پرداخت…' : 'پرداخت با سکه'}
+                    </button>
+                    <button
+                      type="button"
+                      className="pepito-btn button-2"
+                      disabled={lines.length === 0 || submitting != null || !canAffordStars}
+                      onClick={() => void pay('stars')}
+                    >
+                      {submitting === 'stars' ? 'در حال پرداخت…' : 'پرداخت با ستاره'}
+                    </button>
+                  </div>
                   <p className="pd-shop-soon">
-                    سکه‌ها از کیف پول مشترک وب و ربات کسر می‌شوند. کارت‌به‌کارت وب به‌زودی.
+                    سکه و ستاره از کیف پول مشترک وب و ربات کسر می‌شوند (نرخ ستاره = نرخ سکه، ۲٬۰۰۰ تومان).
+                    کارت‌به‌کارت وب به‌زودی.
                   </p>
                 </form>
               )}

@@ -54,7 +54,8 @@ function escapeHtml(value: string): string {
 export async function handleCoins(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
   const balance = user?.coins ?? 0;
-  await ctx.reply(coinsShopIntroText(balance), {
+  const starsBalance = user?.wallet?.stars ?? user?.walletStars ?? 0;
+  await ctx.reply(coinsShopIntroText(balance, starsBalance), {
     parse_mode: 'HTML',
     reply_markup: coinsShopKeyboard(user?.lastDailyCoinAt),
   });
@@ -85,7 +86,10 @@ export async function handleCoinsDaily(ctx: Context): Promise<void> {
   await ctx.answerCallbackQuery({
     text: `+${formatNum(result.awarded)} سکه 🎁`,
   });
-  const text = coinsShopIntroText(result.user.coins ?? 0);
+  const text = coinsShopIntroText(
+    result.user.coins ?? 0,
+    result.user.wallet?.stars ?? result.user.walletStars ?? 0
+  );
   try {
     await ctx.editMessageText(text, {
       parse_mode: 'HTML',
