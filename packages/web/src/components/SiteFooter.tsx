@@ -1,12 +1,12 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, AtSign, Mail, Send } from 'lucide-react';
-import { BRAND } from '@petdate/shared';
+import { BRAND, SITE } from '@petdate/shared';
 
 const CONTACT_PHONE_DISPLAY = '۰۲۱-۸۸۷۷۶۶۵۵';
 const CONTACT_PHONE_TEL = '+982188776655';
-const CONTACT_EMAIL = 'hello@petdate.app';
-const TELEGRAM_BOT = 'https://t.me/Petdatebot';
+const CONTACT_EMAIL = SITE.email;
+const TELEGRAM_BOT = SITE.telegramBot;
 
 const BOTTOM_LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'خانه' },

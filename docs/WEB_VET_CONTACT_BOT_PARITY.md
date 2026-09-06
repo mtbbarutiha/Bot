@@ -1,6 +1,6 @@
 # Web «ارتباط با پزشک» ↔ Bot «ارتباط سریع با پزشک»
 
-Live URL: http://185.110.189.218/vet-consult
+Live URL: https://petdate.ir/vet-consult
 
 Web mirrors the **production Telegram bot** quick-vet flow (`packages/bot/src/handlers/services.ts`).
 

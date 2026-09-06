@@ -3,7 +3,7 @@ import { BadgeCheck, RefreshCw } from 'lucide-react';
 import type { User } from '@petdate/shared';
 import { VERIFIED_BADGE } from '@petdate/shared';
 
-const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
 async function fetchPending(): Promise<User[]> {
   const res = await fetch(`${API_BASE}/api/users/verification/pending`);

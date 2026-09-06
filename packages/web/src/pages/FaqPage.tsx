@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown, PawPrint } from 'lucide-react';
 import { LandingChrome } from '../components/LandingChrome';
+import { SITE } from '@petdate/shared';
 
 /** ۱۰ پرسش پرتکرار — منطبق با قابلیت‌های واقعی پت‌دیت */
 const FAQ_ITEMS: { q: string; a: string }[] = [
@@ -92,7 +93,7 @@ export function FaqPage() {
         <p className="pepito-faq-page-more">
           هنوز جواب نگرفتید؟ از{' '}
           <Link to="/#faq">سؤالات صفحه اصلی</Link> ببینید یا در{' '}
-          <a href="https://t.me/Petdatebot" target="_blank" rel="noreferrer">
+          <a href={SITE.telegramBot} target="_blank" rel="noreferrer">
             ربات تلگرام
           </a>{' '}
           پیام بگذارید.
