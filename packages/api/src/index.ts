@@ -58,6 +58,7 @@ const corsOrigins = [
   process.env.PUBLIC_WEB_URL,
   'https://petdate.ir',
   'https://www.petdate.ir',
+  'https://ws.petdate.ir',
 ]
   .filter(Boolean)
   .map((u) => String(u).replace(/\/$/, ''));

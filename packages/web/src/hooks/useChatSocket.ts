@@ -32,7 +32,19 @@ export type ChatSocketStatus = 'idle' | 'connecting' | 'open' | 'closed';
 
 type ThreadSub = { channel: 'playmate' | 'vet'; threadId: number } | null | undefined;
 
+/** Dedicated WS host (bypasses main-site CDN when DNS points to origin). */
+const DEFAULT_WS_HOST = 'ws.petdate.ir';
+
 function buildWsUrl(token: string): string {
+  const explicit =
+    (import.meta.env.VITE_WS_URL as string | undefined)?.replace(/\/$/, '') ?? '';
+  if (explicit.startsWith('ws://') || explicit.startsWith('wss://')) {
+    const u = new URL(explicit);
+    if (!u.pathname || u.pathname === '/') u.pathname = '/api/ws/chat';
+    u.search = `token=${encodeURIComponent(token)}`;
+    return u.toString();
+  }
+
   const apiBase = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
   if (apiBase.startsWith('http://') || apiBase.startsWith('https://')) {
     const u = new URL(apiBase);
@@ -41,6 +53,13 @@ function buildWsUrl(token: string): string {
     u.search = `token=${encodeURIComponent(token)}`;
     return u.toString();
   }
+
+  // Production pages on petdate.ir → dedicated websocket subdomain.
+  const host = window.location.hostname;
+  if (host === 'petdate.ir' || host === 'www.petdate.ir' || host === DEFAULT_WS_HOST) {
+    return `wss://${DEFAULT_WS_HOST}/api/ws/chat?token=${encodeURIComponent(token)}`;
+  }
+
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${proto}//${window.location.host}/api/ws/chat?token=${encodeURIComponent(token)}`;
 }
