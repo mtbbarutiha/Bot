@@ -21,11 +21,13 @@ import {
   PawPrint,
   RefreshCw,
   Send,
+  Smile,
   UserPlus,
   UserRound,
   X,
 } from 'lucide-react';
 import { BrandMark } from '../components/BrandMark';
+import { EmojiPicker } from '../components/EmojiPicker';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge, formatTimeAgo } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -317,6 +319,7 @@ export function ChatPage() {
   const [wiping, setWiping] = useState(false);
   const [infoCard, setInfoCard] = useState<InfoCard>('none');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const [peerOwnerLabel, setPeerOwnerLabel] = useState<string | null>(null);
@@ -326,6 +329,7 @@ export function ChatPage() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const selectionRef = useRef<{ start: number; end: number } | null>(null);
   const lastMsgIdRef = useRef(0);
   const bootstrappedRef = useRef<number | null>(null);
   const stickToBottomRef = useRef(true);
@@ -434,6 +438,7 @@ export function ChatPage() {
     setWiped(false);
     setInfoCard('none');
     setMenuOpen(false);
+    setEmojiOpen(false);
     setPendingFile(null);
     setPendingPreview(null);
     setPeerOwnerLabel(null);
@@ -520,7 +525,7 @@ export function ChatPage() {
     requestAnimationFrame(() => {
       el.scrollTo({ top: el.scrollHeight, behavior });
     });
-  }, [messages, ended, infoCard, pendingFile]);
+  }, [messages, ended, infoCard, pendingFile, emojiOpen]);
 
   useEffect(() => {
     const ownerId = match?.fromPet?.ownerId;
@@ -581,6 +586,10 @@ export function ChatPage() {
     ta.style.height = `${Math.min(128, Math.max(44, ta.scrollHeight))}px`;
   }, [draft, hasThread, match?.id]);
 
+  useEffect(() => {
+    if (ended) setEmojiOpen(false);
+  }, [ended]);
+
   const peerPet = match?.fromPet;
   const peerOwnerName =
     peerOwnerLabel || peerPet?.ownerName || peerPet?.name || 'صاحب پت';
@@ -618,6 +627,32 @@ export function ChatPage() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
+  function rememberSelection() {
+    const ta = inputRef.current;
+    if (!ta) return;
+    selectionRef.current = {
+      start: ta.selectionStart ?? draft.length,
+      end: ta.selectionEnd ?? draft.length,
+    };
+  }
+
+  function insertEmoji(emoji: string) {
+    const ta = inputRef.current;
+    const sel = selectionRef.current;
+    const start = sel?.start ?? ta?.selectionStart ?? draft.length;
+    const end = sel?.end ?? ta?.selectionEnd ?? draft.length;
+    const next = draft.slice(0, start) + emoji + draft.slice(end);
+    const caret = start + emoji.length;
+    setDraft(next);
+    selectionRef.current = { start: caret, end: caret };
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    });
+  }
+
   function onPickFile(fileList: FileList | null) {
     const file = fileList?.[0];
     if (!file) return;
@@ -645,6 +680,7 @@ export function ChatPage() {
     if (!text && !file) return;
     setSending(true);
     setSendError(null);
+    setEmojiOpen(false);
     setDraft('');
     clearPendingFile();
     stickToBottomRef.current = true;
@@ -1112,56 +1148,91 @@ export function ChatPage() {
                       </button>
                     </div>
                   ) : null}
-                  <form
-                    className="tg-composer"
-                    onSubmit={(e) => {
-                      void sendMessage(e);
-                    }}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      className="tg-file-input"
-                      accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip,.txt"
-                      onChange={(e) => onPickFile(e.target.files)}
-                      aria-hidden
-                      tabIndex={-1}
+                  {/*
+                    Telegram-style composer: LTR chrome so Send stays on the physical RIGHT.
+                    Attach + emoji on physical LEFT; textarea keeps RTL/auto Persian text.
+                  */}
+                  <div className="tg-composer-shell">
+                    <EmojiPicker
+                      open={emojiOpen}
+                      onClose={() => setEmojiOpen(false)}
+                      onPick={insertEmoji}
                     />
-                    <button
-                      type="button"
-                      className="tg-attach"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={sending}
-                      aria-label="پیوست فایل"
-                      title="پیوست عکس یا فایل"
+                    <form
+                      className="tg-composer"
+                      dir="ltr"
+                      onSubmit={(e) => {
+                        void sendMessage(e);
+                      }}
                     >
-                      <Paperclip size={20} />
-                    </button>
-                    <textarea
-                      ref={inputRef}
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      onKeyDown={onComposerKeyDown}
-                      placeholder={
-                        pendingFile
-                          ? 'کپشن (اختیاری)…'
-                          : secure
-                            ? 'پیام امن…'
-                            : 'پیام…'
-                      }
-                      aria-label="متن پیام"
-                      rows={1}
-                      autoComplete="off"
-                    />
-                    <button
-                      type="submit"
-                      className={`tg-send${sending ? ' is-sending' : ''}`}
-                      disabled={(!draft.trim() && !pendingFile) || sending}
-                      aria-label="ارسال"
-                    >
-                      {sending ? <Loader2 size={18} className="tg-spin" /> : <Send size={18} />}
-                    </button>
-                  </form>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="tg-file-input"
+                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip,.txt"
+                        onChange={(e) => onPickFile(e.target.files)}
+                        aria-hidden
+                        tabIndex={-1}
+                      />
+                      <button
+                        type="button"
+                        className="tg-attach"
+                        onClick={() => {
+                          setEmojiOpen(false);
+                          fileInputRef.current?.click();
+                        }}
+                        disabled={sending}
+                        aria-label="پیوست فایل"
+                        title="پیوست عکس یا فایل"
+                      >
+                        <Paperclip size={20} />
+                      </button>
+                      <button
+                        type="button"
+                        className={`tg-emoji-btn${emojiOpen ? ' is-open' : ''}`}
+                        onClick={() => setEmojiOpen((v) => !v)}
+                        disabled={sending}
+                        aria-label="ایموجی"
+                        aria-expanded={emojiOpen}
+                        title="ایموجی"
+                      >
+                        <Smile size={20} />
+                      </button>
+                      <textarea
+                        ref={inputRef}
+                        dir="auto"
+                        value={draft}
+                        onChange={(e) => {
+                          setDraft(e.target.value);
+                          rememberSelection();
+                        }}
+                        onSelect={rememberSelection}
+                        onClick={rememberSelection}
+                        onKeyUp={rememberSelection}
+                        onBlur={rememberSelection}
+                        onKeyDown={onComposerKeyDown}
+                        placeholder={
+                          pendingFile
+                            ? 'کپشن (اختیاری)…'
+                            : secure
+                              ? 'پیام امن…'
+                              : 'پیام…'
+                        }
+                        aria-label="متن پیام"
+                        rows={1}
+                        autoComplete="off"
+                        enterKeyHint="send"
+                      />
+                      <button
+                        type="submit"
+                        className={`tg-send${sending ? ' is-sending' : ''}`}
+                        disabled={(!draft.trim() && !pendingFile) || sending}
+                        aria-label="ارسال"
+                      >
+                        {sending ? <Loader2 size={18} className="tg-spin" /> : <Send size={18} />}
+                      </button>
+                    </form>
+                  </div>
                 </>
               ) : (
                 <div className="tg-ended-bar">

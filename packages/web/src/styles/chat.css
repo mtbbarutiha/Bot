@@ -111,4 +111,18 @@ html:has(.tg-chat) body {
 
 .tg-composer {
   padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+  direction: ltr;
+  grid-template-columns: auto auto 1fr auto;
+}
+
+.tg-composer-shell {
+  background: rgba(247, 248, 251, 0.96);
+}
+
+.tg-emoji-btn.is-open {
+  color: var(--pepito-mint, #15cca0) !important;
+}
+
+.tg-emoji-picker {
+  border-radius: 16px 16px 0 0;
 }
