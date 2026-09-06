@@ -189,9 +189,15 @@ export async function syncUserProfileFromTelegram(
   }
 
   const shouldRefreshAvatar = !user.avatarCustom;
-  if (shouldRefreshAvatar && profile.photoFileId) {
+  if (!shouldRefreshAvatar) {
+    console.info(`telegram profile sync: skip avatar user=${userId} (avatarCustom)`);
+  } else if (!profile.photoFileId) {
+    console.warn(`telegram profile sync: no photo for tg=${telegramId} user=${userId}`);
+  } else {
     const downloaded = await downloadTelegramFile(profile.photoFileId);
-    if (downloaded) {
+    if (!downloaded) {
+      console.warn(`telegram profile sync: download failed tg=${telegramId} user=${userId}`);
+    } else {
       try {
         const saved = saveUserAvatar({
           userId,
@@ -201,6 +207,7 @@ export async function syncUserProfileFromTelegram(
         });
         patch.avatarUrl = saved.urlPath;
         patch.avatarCustom = false;
+        console.info(`telegram profile sync: avatar saved user=${userId} path=${saved.urlPath}`);
       } catch (err) {
         console.warn('save telegram avatar failed:', (err as Error).message);
       }
