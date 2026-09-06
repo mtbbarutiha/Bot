@@ -551,6 +551,60 @@ export type ShopCoinCheckoutResult = {
   coins?: number;
 };
 
+export type ShopStarsCheckoutResult = {
+  ok: true;
+  orderId: number;
+  order: {
+    id: number;
+    status: string;
+    totalToman: number;
+    paymentCurrency?: string;
+    paymentAmount?: number;
+  };
+  starsSpent: number;
+  starsRemaining: number;
+  totalToman: number;
+  message: string;
+  wallet?: { ton: number; stars: number; coins: number; toman: number };
+};
+
+async function postShopCheckout<T extends { ok?: boolean; error?: string }>(
+  path: string,
+  token: string,
+  payload: {
+    items: ShopCoinCheckoutItem[];
+    customerName: string;
+    customerPhone: string;
+    address: string;
+    note?: string;
+  }
+): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    throw new Error('اتصال به سرور برقرار نشد. مطمئن شو API روشن است.');
+  }
+  const body = await res.text();
+  let json: (T & { error?: string; ok?: boolean }) | null = null;
+  try {
+    json = JSON.parse(body) as T & { error?: string; ok?: boolean };
+  } catch {
+    throw new Error(body || `خطای ${res.status}`);
+  }
+  if (!json || json.ok !== true) {
+    throw new Error(json?.error || body || `خطای ${res.status}`);
+  }
+  return json;
+}
+
 export async function checkoutShopWithCoins(
   token: string,
   payload: {
@@ -561,9 +615,18 @@ export async function checkoutShopWithCoins(
     note?: string;
   }
 ): Promise<ShopCoinCheckoutResult> {
-  return request<ShopCoinCheckoutResult>('/api/shop/checkout/coins', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${token}` },
-    body: JSON.stringify(payload),
-  });
+  return postShopCheckout<ShopCoinCheckoutResult>('/api/shop/checkout/coins', token, payload);
+}
+
+export async function checkoutShopWithStars(
+  token: string,
+  payload: {
+    items: ShopCoinCheckoutItem[];
+    customerName: string;
+    customerPhone: string;
+    address: string;
+    note?: string;
+  }
+): Promise<ShopStarsCheckoutResult> {
+  return postShopCheckout<ShopStarsCheckoutResult>('/api/shop/checkout/stars', token, payload);
 }
