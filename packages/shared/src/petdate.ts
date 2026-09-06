@@ -164,7 +164,11 @@ export interface PetdateUser {
   country?: string;
   bio?: string;
   interests?: string[];
+  /** سکه ربات */
   coins?: number;
+  walletTon?: number;
+  walletStars?: number;
+  walletToman?: number;
   profileViews?: number;
   likesCount?: number;
   isActive?: boolean;

@@ -328,6 +328,21 @@ export async function fetchMe(token: string) {
   });
 }
 
+export async function fetchWallet(token: string) {
+  return request<{
+    ok: true;
+    wallet: {
+      ton: number;
+      stars: number;
+      coins: number;
+      toman: number;
+    };
+    coins: number;
+  }>('/api/auth/wallet', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
 export async function logoutWebSession(token: string) {
   return request<{ ok: true }>('/api/auth/logout', {
     method: 'POST',
