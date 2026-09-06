@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
+import { RoleSwitchControl } from './RoleSwitchControl';
 
 const BANNER_IMG = '/pepito/uploads/3.jpg';
 
@@ -100,6 +101,7 @@ export function LandingChrome({
         )}
 
         <div className="pepito-nav-actions">
+          {appNav ? <RoleSwitchControl /> : null}
           {actionLabel && onAction ? (
             <button type="button" className="pepito-nav-login pepito-nav-login--btn" onClick={onAction}>
               {actionLabel}

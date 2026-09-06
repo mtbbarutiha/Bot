@@ -1359,9 +1359,17 @@ export const dbService = {
       existing?.role && normalized.includes(existing.role) ? existing.role : undefined;
     const primary =
       keepPrimary ?? (normalized.includes('pet_owner') ? 'pet_owner' : normalized[0]!);
-    db.prepare(
-      "UPDATE users SET role = ?, roles = ?, onboarding = 'role_selected' WHERE id = ?"
-    ).run(primary, JSON.stringify(normalized), userId);
+    // افزودن/ویرایش نقش نباید آنبوردینگ کامل‌شده را به عقب برگرداند
+    const onboarding =
+      existing?.onboarding === 'profile_complete' || existing?.onboarding === 'profile_incomplete'
+        ? existing.onboarding
+        : 'role_selected';
+    db.prepare('UPDATE users SET role = ?, roles = ?, onboarding = ? WHERE id = ?').run(
+      primary,
+      JSON.stringify(normalized),
+      onboarding,
+      userId
+    );
     return this.getUserById(userId);
   },
 

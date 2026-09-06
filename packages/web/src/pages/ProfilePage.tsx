@@ -71,7 +71,13 @@ export function ProfilePage() {
       <div className="profile-section pepito-profile-body">
         <div className="profile-status-card pepito-profile-panel">
           <div className="profile-status-row">
-            <span className="profile-status-label">نقش</span>
+            <span className="profile-status-label">نقش فعال</span>
+            <span className="profile-status-value">
+              {mainRole ? USER_ROLE_LABELS[mainRole] : '—'}
+            </span>
+          </div>
+          <div className="profile-status-row">
+            <span className="profile-status-label">نقش‌ها</span>
             <span className="profile-status-value">{roleLabel}</span>
           </div>
           <div className="profile-status-row">
