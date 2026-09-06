@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Filter, PawPrint, ShoppingBag, Sparkles } from 'lucide-react';
+import { ChevronLeft, Filter, PawPrint, ShoppingBag, Sparkles } from 'lucide-react';
 import {
   SHOP_BRANDS,
   SHOP_CATEGORIES,
@@ -13,6 +13,32 @@ import {
 import { useShopCart } from '../../hooks/useShopCart';
 import { ShopChrome } from '../../components/shop/ShopChrome';
 import { ShopProductCard } from '../../components/shop/ShopProductCard';
+
+/** Digikala-style solid circle colors (Pepito-friendly palette) */
+const DK_CAT_COLORS = [
+  '#0ba5f2',
+  '#fd961e',
+  '#15cca0',
+  '#5c4d91',
+  '#db89ca',
+  '#1a4d8f',
+  '#e85d04',
+  '#0c8b6c',
+  '#7b2d8e',
+  '#c9184a',
+  '#2a9d8f',
+  '#457b9d',
+  '#9b5de5',
+  '#f15bb5',
+  '#00bbf9',
+  '#fee440',
+  '#00f5d4',
+  '#9b2226',
+  '#bc6c25',
+  '#386641',
+  '#4a4e69',
+  '#ef476f',
+] as const;
 
 const JOURNEY = [
   {
@@ -64,16 +90,21 @@ export function ShopHomePage() {
           ))}
         </section>
 
-        <section className="pd-shop-block">
-          <div className="pepito-section-head pepito-section-head--center">
-            <p className="pepito-eyebrow">
-              <span className="pepito-eyebrow-icon" aria-hidden>
-                <PawPrint size={18} />
+        <section className="pd-shop-dk-cats" aria-label="دسته‌بندی‌ها">
+          <div className="pd-shop-dk-cats-head">
+            <div className="pd-shop-dk-cats-title">
+              <span className="pd-shop-dk-cats-icon" aria-hidden>
+                <PawPrint size={20} strokeWidth={2.2} />
               </span>
-              دسته‌بندی‌ها
-            </p>
-            <h2>انتخاب کن، فیلتر کن، بخر</h2>
-            <p>نوع حیوان را بزن؛ بعد دسته‌ای که می‌خواهی را باز کن.</p>
+              <div>
+                <h2>دسته‌بندی‌ها</h2>
+                <p>نوع پت را بزن، بعد دسته را انتخاب کن</p>
+              </div>
+            </div>
+            <Link to="/shop/c/all" className="pd-shop-dk-cats-all">
+              مشاهده همه
+              <ChevronLeft size={16} strokeWidth={2.4} aria-hidden />
+            </Link>
           </div>
 
           <div className="pd-shop-pet-tabs" role="tablist" aria-label="نوع حیوان">
@@ -91,19 +122,27 @@ export function ShopHomePage() {
             ))}
           </div>
 
-          <div className="pd-shop-cat-grid">
-            {cats.map((c) => (
-              <Link key={c.slug} to={`/shop/c/${c.slug}`} className="pd-shop-cat-tile">
-                <span className="pd-shop-cat-emoji" aria-hidden>
-                  {c.emoji}
+          <div className="pd-shop-dk-strip" role="list">
+            {cats.map((c, i) => (
+              <Link
+                key={c.slug}
+                to={`/shop/c/${c.slug}`}
+                className="pd-shop-dk-item"
+                role="listitem"
+                style={{ ['--dk-cat' as string]: DK_CAT_COLORS[i % DK_CAT_COLORS.length] }}
+              >
+                <span className="pd-shop-dk-circle" aria-hidden>
+                  <span className="pd-shop-dk-emoji">{c.emoji}</span>
                 </span>
-                <span className="pd-shop-cat-copy">
-                  <span className="pd-shop-cat-label">{c.labelFa}</span>
-                  <span className="pd-shop-cat-desc">{c.description}</span>
-                </span>
-                <span className="pd-shop-cat-cta">مشاهده</span>
+                <span className="pd-shop-dk-label">{c.labelFa}</span>
               </Link>
             ))}
+            <Link to="/shop/c/all" className="pd-shop-dk-item pd-shop-dk-item--more" role="listitem">
+              <span className="pd-shop-dk-circle" aria-hidden>
+                <span className="pd-shop-dk-more-dots">⋯</span>
+              </span>
+              <span className="pd-shop-dk-label">بیشتر</span>
+            </Link>
           </div>
         </section>
 
