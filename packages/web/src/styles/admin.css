@@ -601,6 +601,11 @@
 }
 .admin-app .admin-check.is-ok { border-color: #a7f3d0; }
 .admin-app .admin-check.is-bad { border-color: #fecaca; background: #fff7f7; }
+.admin-app .admin-check.is-idle {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
 .admin-app .admin-check strong { display: block; font-size: 0.92rem; }
 .admin-app .admin-check span { font-size: 0.8rem; color: var(--admin-muted); }
 .admin-app .admin-badge {
@@ -970,6 +975,11 @@
 }
 .admin-app .admin-check.is-ok { border-color: #c8e6c9; }
 .admin-app .admin-check.is-bad { border-color: #ffcdd2; background: #fff8f8; }
+.admin-app .admin-check.is-idle {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  color: #64748b;
+}
 
 @media (max-width: 960px) {
   .admin-app .admin-dash-grid,

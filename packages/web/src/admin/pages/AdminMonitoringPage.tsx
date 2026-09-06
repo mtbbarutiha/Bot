@@ -5,13 +5,21 @@ import {
   Cpu,
   Database,
   HardDrive,
+  MinusCircle,
   RefreshCw,
   Server,
   XCircle,
 } from 'lucide-react';
 import { adminFetch } from '../api';
 
-type Check = { ok: boolean; detail?: string; freeGb?: number; totalGb?: number };
+type CheckStatus = 'up' | 'down' | 'not_configured';
+type Check = {
+  ok: boolean;
+  status?: CheckStatus;
+  detail?: string;
+  freeGb?: number;
+  totalGb?: number;
+};
 
 type Monitoring = {
   ok: boolean;
@@ -46,6 +54,12 @@ type Monitoring = {
   checks: Record<string, Check>;
   unhealthy: string[];
 };
+
+function checkTone(check: Check): 'ok' | 'bad' | 'idle' {
+  if (check.status === 'not_configured') return 'idle';
+  if (check.status === 'up' || (check.status == null && check.ok)) return 'ok';
+  return 'bad';
+}
 
 const CHECK_LABELS: Record<string, string> = {
   api: 'API',
@@ -165,22 +179,33 @@ export function AdminMonitoringPage() {
               <span className="admin-muted">{data.generatedAt}</span>
             </div>
             <div className="admin-checks">
-              {Object.entries(data.checks).map(([key, check]) => (
-                <div key={key} className={`admin-check ${check.ok ? 'is-ok' : 'is-bad'}`}>
-                  {check.ok ? <CheckCircle2 size={18} /> : <XCircle size={18} />}
-                  <div>
-                    <strong>{CHECK_LABELS[key] || key}</strong>
-                    <span>
-                      {check.detail ||
-                        (check.freeGb != null
-                          ? `${check.freeGb} / ${check.totalGb} GB آزاد`
-                          : check.ok
-                            ? 'OK'
-                            : 'DOWN')}
-                    </span>
+              {Object.entries(data.checks).map(([key, check]) => {
+                const tone = checkTone(check);
+                return (
+                  <div key={key} className={`admin-check is-${tone}`}>
+                    {tone === 'ok' ? (
+                      <CheckCircle2 size={18} />
+                    ) : tone === 'idle' ? (
+                      <MinusCircle size={18} />
+                    ) : (
+                      <XCircle size={18} />
+                    )}
+                    <div>
+                      <strong>{CHECK_LABELS[key] || key}</strong>
+                      <span>
+                        {check.detail ||
+                          (check.freeGb != null
+                            ? `${check.freeGb} / ${check.totalGb} GB آزاد`
+                            : tone === 'ok'
+                              ? 'OK'
+                              : tone === 'idle'
+                                ? 'پیکربندی نشده'
+                                : 'DOWN')}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 

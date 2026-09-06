@@ -456,6 +456,26 @@ adminRouter.post('/logs', (req, res) => {
   res.status(201).json({ ok: true });
 });
 
+type CheckStatus = 'up' | 'down' | 'not_configured';
+type ServiceCheck = {
+  ok: boolean;
+  status: CheckStatus;
+  detail: string;
+  freeGb?: number;
+  totalGb?: number;
+};
+
+function checkUp(detail: string, extra: Partial<ServiceCheck> = {}): ServiceCheck {
+  return { ok: true, status: 'up', detail, ...extra };
+}
+function checkDown(detail: string, extra: Partial<ServiceCheck> = {}): ServiceCheck {
+  return { ok: false, status: 'down', detail, ...extra };
+}
+function checkNotConfigured(detail = 'پیکربندی نشده'): ServiceCheck {
+  // Intentional unused services must not look like outages.
+  return { ok: true, status: 'not_configured', detail };
+}
+
 function checkTcpPort(host: string, port: number, timeoutMs = 1200): Promise<boolean> {
   return new Promise((resolve) => {
     const socket = net.connect({ host, port });
@@ -467,54 +487,123 @@ function checkTcpPort(host: string, port: number, timeoutMs = 1200): Promise<boo
   });
 }
 
-async function probeService(url: string | undefined, defaultPort: number): Promise<{ ok: boolean; detail: string }> {
-  if (!url) return { ok: false, detail: 'پیکربندی نشده' };
+async function probeService(url: string | undefined, defaultPort: number): Promise<ServiceCheck> {
+  if (!url) return checkNotConfigured();
   try {
     const u = new URL(url);
     const host = u.hostname || '127.0.0.1';
     const port = Number(u.port || defaultPort);
     const ok = await checkTcpPort(host, port);
-    return { ok, detail: ok ? `${host}:${port}` : `غیرقابل دسترس ${host}:${port}` };
+    return ok ? checkUp(`${host}:${port}`) : checkDown(`غیرقابل دسترس ${host}:${port}`);
   } catch (err) {
-    return { ok: false, detail: (err as Error).message };
+    return checkDown((err as Error).message);
   }
 }
 
-function diskCheck(dir: string) {
+async function probeHttp(url: string | undefined, healthPath: string, defaultPort: number): Promise<ServiceCheck> {
+  if (!url) return checkNotConfigured();
+  try {
+    const base = new URL(url);
+    const host = base.hostname || '127.0.0.1';
+    const port = Number(base.port || defaultPort);
+    const live = new URL(healthPath, `${base.protocol}//${host}:${port}`);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    try {
+      const res = await fetch(live, { method: 'GET', signal: controller.signal });
+      if (res.ok) return checkUp(`${host}:${port}`);
+      return checkDown(`HTTP ${res.status} ${host}:${port}`);
+    } finally {
+      clearTimeout(timer);
+    }
+  } catch (err) {
+    // Fall back to TCP so a blocked health path does not hide a live listener.
+    const tcp = await probeService(url, defaultPort);
+    if (tcp.status === 'up') {
+      return checkUp(`${tcp.detail} (health path failed: ${(err as Error).message})`);
+    }
+    return checkDown((err as Error).message);
+  }
+}
+
+async function probeTelegramBot(): Promise<ServiceCheck> {
+  const token = infra.telegram.botToken;
+  if (!token) return checkNotConfigured('TELEGRAM_BOT_TOKEN نیست');
+  const attempt = async (): Promise<ServiceCheck | null> => {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3500);
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${token}/getMe`, { signal: controller.signal });
+      const body = (await res.json()) as { ok?: boolean; result?: { username?: string; id?: number } };
+      if (res.ok && body.ok && body.result) {
+        const who = body.result.username ? `@${body.result.username}` : `id ${body.result.id ?? '?'}`;
+        return checkUp(`live ${who}`);
+      }
+      return null;
+    } catch {
+      return null;
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const first = await attempt();
+  if (first) return first;
+  const second = await attempt();
+  if (second) return second;
+  return checkDown('توکن هست؛ Telegram getMe ناموفق');
+}
+
+function diskCheck(dir: string): ServiceCheck {
   try {
     const st = fs.statfsSync(dir);
     const total = Number(st.blocks) * Number(st.bsize);
     const free = Number(st.bavail) * Number(st.bsize);
     const freeGb = Math.round((free / 1024 ** 3) * 100) / 100;
     const totalGb = Math.round((total / 1024 ** 3) * 100) / 100;
-    return { ok: free > 512 * 1024 * 1024, detail: `${freeGb} / ${totalGb} GB آزاد`, freeGb, totalGb };
+    const detail = `${freeGb} / ${totalGb} GB آزاد`;
+    return free > 512 * 1024 * 1024
+      ? checkUp(detail, { freeGb, totalGb })
+      : checkDown(detail, { freeGb, totalGb });
   } catch (err) {
-    return { ok: false, detail: (err as Error).message };
+    return checkDown((err as Error).message);
   }
 }
 
 adminRouter.get('/monitoring', async (_req, res) => {
   const mem = process.memoryUsage();
   const loadAvg = os.loadavg().map((n) => Math.round(n * 100) / 100);
-  const [redis, postgres] = await Promise.all([
+  const postgresUrl = process.env.DATABASE_URL?.startsWith('postgres') ? process.env.DATABASE_URL : undefined;
+  const [redis, postgres, s3, elasticsearch, telegramBot] = await Promise.all([
     probeService(process.env.REDIS_URL, 6379),
-    probeService(process.env.DATABASE_URL?.startsWith('postgres') ? process.env.DATABASE_URL : undefined, 5432),
+    probeService(postgresUrl, 5432),
+    hasS3Config()
+      ? probeHttp(infra.s3.endpoint, '/minio/health/live', 9000)
+      : Promise.resolve(checkNotConfigured()),
+    hasElasticsearchConfig()
+      ? probeHttp(infra.elasticsearch.url, '/_cluster/health', 9200)
+      : Promise.resolve(checkNotConfigured()),
+    probeTelegramBot(),
   ]);
   const counts = dbService.getOpsCounts();
   const logStats = dbService.getAppErrorLogStats();
   const disk = diskCheck(process.cwd());
   const dash = adminPlatform.getDashboardStats();
-  const checks: Record<string, { ok: boolean; detail: string; freeGb?: number; totalGb?: number }> = {
-    api: { ok: true, detail: 'فعال' },
-    telegramBot: { ok: Boolean(infra.telegram.botToken), detail: infra.telegram.botToken ? 'توکن تنظیم شده' : 'TELEGRAM_BOT_TOKEN نیست' },
-    sqlite: { ok: true, detail: hasPostgresConfig() ? 'legacy/fallback' : 'اصلی' },
-    postgres, redis,
-    s3: { ok: hasS3Config(), detail: hasS3Config() ? 'پیکربندی شده' : 'پیکربینی نشده' },
-    elasticsearch: { ok: hasElasticsearchConfig(), detail: hasElasticsearchConfig() ? 'پیکربندی شده' : 'پیکربندی نشده' },
+  const checks: Record<string, ServiceCheck> = {
+    api: checkUp('فعال'),
+    telegramBot,
+    sqlite: checkUp(hasPostgresConfig() ? 'legacy/fallback' : 'اصلی'),
+    postgres,
+    redis,
+    s3,
+    elasticsearch,
     disk,
   };
-  const unhealthy = Object.entries(checks).filter(([, v]) => !v.ok).map(([k]) => k);
-  const criticalUnhealthy = unhealthy.filter((k) => !['elasticsearch', 's3', 'postgres', 'redis'].includes(k));
+  const unhealthy = Object.entries(checks)
+    .filter(([, v]) => v.status === 'down')
+    .map(([k]) => k);
+  // Elasticsearch is optional (compose profile: search). Configured infra that is down is critical.
+  const nonCritical = new Set(['elasticsearch']);
+  const criticalUnhealthy = unhealthy.filter((k) => !nonCritical.has(k));
   res.json({
     ok: criticalUnhealthy.length === 0,
     generatedAt: new Date().toISOString(),
@@ -537,7 +626,12 @@ adminRouter.get('/monitoring', async (_req, res) => {
       openGames: counts.openGames, shopOrders: dash.shopOrders, vetConsults: dash.vetConsults,
     },
     logs: { total: logStats.total, errors24h: logStats.errors24h, warns24h: logStats.warns24h, lastErrorAt: logStats.lastErrorAt },
-    checks, unhealthy, redisConfigured: hasRedisConfig(),
+    checks,
+    unhealthy,
+    redisConfigured: hasRedisConfig(),
+    postgresConfigured: hasPostgresConfig(),
+    s3Configured: hasS3Config(),
+    elasticsearchConfigured: hasElasticsearchConfig(),
   });
 });
 
