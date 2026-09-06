@@ -304,17 +304,32 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     min-height: var(--pepito-nav-h);
   }
   .pepito-landing,
-  body:has(.pepito-landing) {
+  body:has(.pepito-landing),
+  html:has(.pepito-landing) {
     overflow-x: clip;
+    max-width: 100%;
   }
-  /* Nav is in normal flow — drop fixed-nav offsets */
-  .pepito-hero,
-  .pepito-flow-banner,
-  .pd-shop-hero {
-    margin-top: 0;
-  }
+  /* Nav is in normal flow — fixed-nav margin-top is desktop-only (see ≥860px) */
   .pepito-hero {
-    min-height: calc(85vh - var(--pepito-nav-h));
+    /* Fill remaining first viewport under the in-flow nav */
+    min-height: calc(100svh - var(--pepito-nav-h));
+    min-height: calc(100dvh - var(--pepito-nav-h));
+  }
+  .pepito-hero-inner {
+    /* Nav no longer overlays the photo — drop the large fixed-nav padding */
+    padding-block: calc(env(safe-area-inset-top, 0px) + 1.5rem) 2.25rem;
+  }
+  .pepito-hero-media {
+    touch-action: manipulation;
+    -webkit-user-drag: none;
+  }
+  .pepito-nav-logo img {
+    height: 36px;
+  }
+  .pepito-nav-actions .pepito-btn--nav {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    white-space: nowrap;
   }
   .pepito-app-layout {
     padding-top: 0;
@@ -384,13 +399,14 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 .pepito-hero {
   position: relative;
   width: 100%;
-  /* Start below fixed nav so the bar never covers the slide image */
-  margin-top: var(--pepito-nav-h);
+  /* Fixed-nav offset only when nav is fixed — see @media (min-width: 860px) */
+  margin-top: 0;
   min-height: calc(93vh - var(--pepito-nav-h));
   display: grid;
   align-items: center;
   overflow: hidden;
   color: #fff;
+  touch-action: pan-y;
 }
 .pepito-hero-slides {
   position: absolute;
@@ -598,7 +614,8 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 
 @media screen and (max-width: 720px) {
   .pepito-hero {
-    min-height: calc(85vh - var(--pepito-nav-h));
+    min-height: calc(100svh - var(--pepito-nav-h));
+    min-height: calc(100dvh - var(--pepito-nav-h));
   }
   .pepito-kicker {
     font-size: 16px;
@@ -609,6 +626,10 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   }
   .pepito-hero h1 {
     font-size: 30px;
+  }
+  .pepito-hero-lead {
+    font-size: 16px;
+    line-height: 1.65;
   }
 }
 
@@ -2446,7 +2467,8 @@ button.chip.is-on {
 .pepito-flow-banner {
   position: relative;
   min-height: clamp(200px, 32vh, 320px);
-  margin-top: var(--pepito-nav-h);
+  /* Fixed-nav offset only when nav is fixed — see @media (min-width: 860px) */
+  margin-top: 0;
   background-position: center top;
   background-size: cover;
   background-repeat: no-repeat;
@@ -4368,10 +4390,11 @@ button.chip.is-on {
 
 .pd-shop-hero {
   position: relative;
-  margin-top: var(--pepito-nav-h);
-  width: 100vw;
-  max-width: 100vw;
-  margin-inline: calc(50% - 50vw);
+  /* Fixed-nav offset only when nav is fixed — see @media (min-width: 860px) */
+  margin-top: 0;
+  width: 100%;
+  max-width: 100%;
+  margin-inline: 0;
   min-height: clamp(300px, 56vh, 620px);
   display: flex;
   align-items: flex-end;
@@ -4379,6 +4402,19 @@ button.chip.is-on {
   overflow: hidden;
   background: #1a0f2e;
   animation: pepito-flow-banner-in 0.7s ease both;
+}
+@media (min-width: 860px) {
+  .pepito-hero,
+  .pepito-flow-banner,
+  .pd-shop-hero {
+    /* Start below fixed nav so the bar never covers the slide / banner image */
+    margin-top: var(--pepito-nav-h);
+  }
+  .pd-shop-hero {
+    width: 100vw;
+    max-width: 100vw;
+    margin-inline: calc(50% - 50vw);
+  }
 }
 .pd-shop-hero--full {
   min-height: clamp(320px, 58vh, 640px);
