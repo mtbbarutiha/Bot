@@ -199,6 +199,9 @@ function migrateSchema() {
   }
   if (!names.has('bio')) db.exec('ALTER TABLE users ADD COLUMN bio TEXT');
   if (!names.has('avatar_url')) db.exec('ALTER TABLE users ADD COLUMN avatar_url TEXT');
+  if (!names.has('avatar_custom')) {
+    db.exec('ALTER TABLE users ADD COLUMN avatar_custom INTEGER NOT NULL DEFAULT 0');
+  }
   if (!names.has('province')) db.exec('ALTER TABLE users ADD COLUMN province TEXT');
   if (!names.has('country')) db.exec("ALTER TABLE users ADD COLUMN country TEXT");
   if (!names.has('interests')) db.exec("ALTER TABLE users ADD COLUMN interests TEXT NOT NULL DEFAULT '[]'");
@@ -1329,6 +1332,7 @@ function mapUser(row: Record<string, unknown>): User {
     bio: row.bio as string | undefined,
     interests: parseInterests(row.interests),
     avatarUrl: row.avatar_url as string | undefined,
+    avatarCustom: row.avatar_custom == null ? false : Boolean(row.avatar_custom),
     coins: row.coins != null ? Number(row.coins) : 0,
     walletTon: row.wallet_ton != null ? Number(row.wallet_ton) : 0,
     walletStars: row.wallet_stars != null ? Number(row.wallet_stars) : 0,
@@ -1701,6 +1705,7 @@ export const dbService = {
     userId: number,
     patch: Partial<{
       name: string;
+      username: string;
       age: number;
       gender: UserGender;
       country: string;
@@ -1711,6 +1716,7 @@ export const dbService = {
       bio: string;
       interests: string[];
       avatarUrl: string;
+      avatarCustom: boolean;
       coins: number;
       onboarding: OnboardingStatus;
       isActive: boolean;
@@ -1722,6 +1728,7 @@ export const dbService = {
     const fields: string[] = [];
     const values: unknown[] = [];
     if (patch.name !== undefined) { fields.push('name = ?'); values.push(patch.name); }
+    if (patch.username !== undefined) { fields.push('username = ?'); values.push(patch.username); }
     if (patch.age !== undefined) { fields.push('age = ?'); values.push(patch.age); }
     if (patch.gender !== undefined) { fields.push('gender = ?'); values.push(patch.gender); }
     if (patch.country !== undefined) { fields.push('country = ?'); values.push(patch.country); }
@@ -1748,6 +1755,10 @@ export const dbService = {
       values.push(JSON.stringify(patch.interests));
     }
     if (patch.avatarUrl !== undefined) { fields.push('avatar_url = ?'); values.push(patch.avatarUrl); }
+    if (patch.avatarCustom !== undefined) {
+      fields.push('avatar_custom = ?');
+      values.push(patch.avatarCustom ? 1 : 0);
+    }
     if (patch.coins !== undefined) { fields.push('coins = ?'); values.push(patch.coins); }
     if (patch.onboarding !== undefined) { fields.push('onboarding = ?'); values.push(patch.onboarding); }
     if (patch.isActive !== undefined) { fields.push('is_active = ?'); values.push(patch.isActive ? 1 : 0); }
@@ -1767,6 +1778,7 @@ export const dbService = {
     telegramId: string,
     patch: Partial<{
       name: string;
+      username: string;
       age: number;
       gender: UserGender;
       country: string;
@@ -1776,6 +1788,7 @@ export const dbService = {
       bio: string;
       interests: string[];
       avatarUrl: string;
+      avatarCustom: boolean;
       coins: number;
       onboarding: OnboardingStatus;
       isActive: boolean;
@@ -1804,6 +1817,7 @@ export const dbService = {
          phone_verified_at = NULL,
          bio = NULL,
          avatar_url = NULL,
+         avatar_custom = 0,
          interests = '[]',
          is_active = 0,
          onboarding = 'role_selected',

@@ -33,8 +33,8 @@ const avatarUpload = multer({
  * Bot deep-link → web session (HMAC with TELEGRAM_BOT_TOKEN).
  * Keeps the same users row so pets/wallet sync between Telegram and the site.
  */
-authRouter.post('/telegram/exchange', (req, res) => {
-  const result = exchangeTelegramWebLink({
+authRouter.post('/telegram/exchange', async (req, res) => {
+  const result = await exchangeTelegramWebLink({
     telegramId: String(req.body?.telegramId ?? req.body?.tg ?? ''),
     exp: req.body?.exp,
     sig: String(req.body?.sig ?? ''),
@@ -69,8 +69,8 @@ authRouter.post('/telegram/link-start', (req, res) => {
  * Bot completes web→Telegram attach after /start wlink_<token>.
  * Auth is the one-time token (same pattern as other bot→API open calls).
  */
-authRouter.post('/telegram/link-complete', (req, res) => {
-  const result = completeTelegramAttach({
+authRouter.post('/telegram/link-complete', async (req, res) => {
+  const result = await completeTelegramAttach({
     token: String(req.body?.token ?? ''),
     telegramId: String(req.body?.telegramId ?? req.body?.tg ?? ''),
     username: req.body?.username != null ? String(req.body.username) : undefined,
@@ -247,6 +247,7 @@ authRouter.post('/avatar', (req, res) => {
       });
       const updated = dbService.updateUserProfile(session.user.id, {
         avatarUrl: saved.urlPath,
+        avatarCustom: true,
       });
       if (!updated) {
         res.status(404).json({ error: 'کاربر پیدا نشد' });

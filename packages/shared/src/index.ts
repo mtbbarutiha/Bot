@@ -131,6 +131,8 @@ export interface User {
   bio?: string;
   interests?: string[];
   avatarUrl?: string;
+  /** true when user uploaded a site avatar — Telegram login must not overwrite it */
+  avatarCustom?: boolean;
   /** سکه ربات (هم‌تراز wallet.coins) */
   coins?: number;
   /** موجودی TON (Telegram Toncoin) */

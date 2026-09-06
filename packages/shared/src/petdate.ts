@@ -157,6 +157,8 @@ export interface PetdateUser {
   onboarding: OnboardingStatus;
   locale: string;
   avatarUrl?: string;
+  /** true when user uploaded a site avatar — Telegram login must not overwrite it */
+  avatarCustom?: boolean;
   age?: number;
   gender?: UserGender;
   city?: string;

@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'crypto';
 import { dbService } from '../db';
 import { infra } from '../config/infra';
+import { syncUserProfileFromTelegram } from './telegram-profile-sync';
 
 const SESSION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 /** Bot→web login links expire quickly so shared URLs die. */
@@ -41,14 +42,16 @@ function safeEqualHex(a: string, b: string): boolean {
 /**
  * Exchange a bot-signed deep link for a web session on the same users row
  * (so pets/chats/wallet stay shared between Telegram and the website).
+ * Also hydrates name/username/avatar from Telegram Bot API when appropriate.
  */
-export function exchangeTelegramWebLink(input: {
+export async function exchangeTelegramWebLink(input: {
   telegramId: string;
   exp: string | number;
   sig: string;
-}):
+}): Promise<
   | { ok: true; token: string; user: NonNullable<ReturnType<typeof dbService.getUserById>> }
-  | { ok: false; reason: string; error: string } {
+  | { ok: false; reason: string; error: string }
+> {
   const token = botToken();
   if (!token) {
     return { ok: false, reason: 'not_configured', error: 'ربات تلگرام پیکربندی نشده است' };
@@ -85,6 +88,13 @@ export function exchangeTelegramWebLink(input: {
       name: 'کاربر تلگرام',
     });
     user = created.user;
+  }
+
+  try {
+    const synced = await syncUserProfileFromTelegram(user.id, telegramId);
+    if (synced) user = synced;
+  } catch (err) {
+    console.warn('telegram profile sync on exchange failed:', (err as Error).message);
   }
 
   const sessionToken = randomBytes(32).toString('hex');
@@ -148,19 +158,20 @@ export function createTelegramAttachLink(userId: number):
 /**
  * Bot completes web→Telegram attach after /start wlink_<token>.
  */
-export function completeTelegramAttach(input: {
+export async function completeTelegramAttach(input: {
   token: string;
   telegramId: string;
   username?: string;
   name?: string;
-}):
+}): Promise<
   | {
       ok: true;
       user: NonNullable<ReturnType<typeof dbService.getUserById>>;
       merged: boolean;
       wallet: NonNullable<ReturnType<typeof dbService.getWallet>>;
     }
-  | { ok: false; reason: string; error: string } {
+  | { ok: false; reason: string; error: string }
+> {
   const rawToken = String(input.token ?? '')
     .trim()
     .replace(/^wlink_/i, '');
@@ -190,10 +201,18 @@ export function completeTelegramAttach(input: {
     return { ok: false, reason: linked.reason, error: linked.error };
   }
 
-  const wallet = dbService.getWallet(linked.user.id);
+  let user = linked.user;
+  try {
+    const synced = await syncUserProfileFromTelegram(user.id, telegramId);
+    if (synced) user = synced;
+  } catch (err) {
+    console.warn('telegram profile sync on attach failed:', (err as Error).message);
+  }
+
+  const wallet = dbService.getWallet(user.id);
   return {
     ok: true,
-    user: linked.user,
+    user,
     merged: linked.merged,
     wallet: wallet ?? { ton: 0, stars: 0, coins: 0, toman: 0 },
   };
