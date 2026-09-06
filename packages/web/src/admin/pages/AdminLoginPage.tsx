@@ -1,15 +1,22 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { AdminWordmark } from '../AdminWordmark';
-import { loginAdmin } from '../auth';
+import { isAdminAuthenticated, loginAdmin } from '../auth';
+import { sanitizeAdminNext } from '../redirect';
 import '../../styles/admin.css';
 
 export function AdminLoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const next = sanitizeAdminNext(searchParams.get('next'));
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+
+  if (isAdminAuthenticated()) {
+    return <Navigate to={next} replace />;
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,7 +24,10 @@ export function AdminLoginPage() {
     setError('');
     const ok = await loginAdmin(password);
     setBusy(false);
-    if (ok) { navigate('/admin/dashboard'); return; }
+    if (ok) {
+      navigate(next);
+      return;
+    }
     setError('رمز عبور اشتباه است');
   };
 
