@@ -7,6 +7,7 @@ type FormState = {
   id: string;
   slug: string;
   title: string;
+  titleEn: string;
   brandId: string;
   categorySlug: string;
   petTypes: string;
@@ -26,12 +27,21 @@ type FormState = {
   rating: string;
   reviewCount: string;
   highlights: string;
+  sku: string;
+  colors: string;
+  sizes: string;
+  shippingNote: string;
+  returnPolicy: string;
+  sellerScore: string;
+  pros: string;
+  cons: string;
 };
 
 const empty: FormState = {
   id: '',
   slug: '',
   title: '',
+  titleEn: '',
   brandId: SHOP_BRANDS[0]?.id || 'petdate',
   categorySlug: SHOP_CATEGORIES[0]?.slug || 'dog-food',
   petTypes: 'dog',
@@ -51,6 +61,14 @@ const empty: FormState = {
   rating: '4.6',
   reviewCount: '128',
   highlights: '',
+  sku: '',
+  colors: '',
+  sizes: '',
+  shippingNote: 'ارسال از انبار پت‌دیت — تحویل ۱ تا ۳ روز کاری',
+  returnPolicy: '۷ روز ضمانت بازگشت کالا',
+  sellerScore: '94',
+  pros: '',
+  cons: '',
 };
 
 function linesToList(raw: string): string[] {
@@ -86,10 +104,33 @@ export function AdminShopProductFormPage() {
         : typeof params.__highlights === 'string'
           ? params.__highlights.split('|').join('\n')
           : '';
+      const colors = Array.isArray(prod.colors)
+        ? (prod.colors as { labelFa: string; hex: string }[])
+            .map((c) => `${c.labelFa}|${c.hex}`)
+            .join('\n')
+        : typeof params.__colors === 'string'
+          ? params.__colors.split('||').join('\n')
+          : '';
+      const sizes = Array.isArray(prod.sizes)
+        ? (prod.sizes as string[]).join('\n')
+        : typeof params.__sizes === 'string'
+          ? params.__sizes.split('|').join('\n')
+          : '';
+      const pros = Array.isArray(prod.pros)
+        ? (prod.pros as string[]).join('\n')
+        : typeof params.__pros === 'string'
+          ? params.__pros.split('|').join('\n')
+          : '';
+      const cons = Array.isArray(prod.cons)
+        ? (prod.cons as string[]).join('\n')
+        : typeof params.__cons === 'string'
+          ? params.__cons.split('|').join('\n')
+          : '';
       setForm({
         id: String(prod.id),
         slug: String(prod.slug),
         title: String(prod.title),
+        titleEn: String(prod.titleEn ?? params.__titleEn ?? ''),
         brandId: String(prod.brandId),
         categorySlug: String(prod.categorySlug),
         petTypes: Array.isArray(prod.petTypes) ? (prod.petTypes as string[]).join(',') : 'dog',
@@ -113,6 +154,14 @@ export function AdminShopProductFormPage() {
         rating: String(prod.rating ?? params.__rating ?? '4.6'),
         reviewCount: String(prod.reviewCount ?? params.__reviewCount ?? '128'),
         highlights,
+        sku: String(prod.sku ?? params.__sku ?? ''),
+        colors,
+        sizes,
+        shippingNote: String(prod.shippingNote ?? params.__shippingNote ?? ''),
+        returnPolicy: String(prod.returnPolicy ?? params.__returnPolicy ?? ''),
+        sellerScore: String(prod.sellerScore ?? params.__sellerScore ?? '94'),
+        pros,
+        cons,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'خطا');
@@ -139,19 +188,44 @@ export function AdminShopProductFormPage() {
     }
     const images = linesToList(form.images);
     const highlights = linesToList(form.highlights);
+    const sizes = linesToList(form.sizes);
+    const pros = linesToList(form.pros);
+    const cons = linesToList(form.cons);
+    const colors = linesToList(form.colors)
+      .map((line) => {
+        const [labelFa, hex] = line.split('|').map((s) => s.trim());
+        if (!labelFa || !hex) return null;
+        return { labelFa, hex };
+      })
+      .filter((c): c is { labelFa: string; hex: string } => Boolean(c));
+
     if (images.length) params.__images = images.join('|');
     else delete params.__images;
     if (highlights.length) params.__highlights = highlights.join('|');
     else delete params.__highlights;
+    if (sizes.length) params.__sizes = sizes.join('|');
+    else delete params.__sizes;
+    if (pros.length) params.__pros = pros.join('|');
+    else delete params.__pros;
+    if (cons.length) params.__cons = cons.join('|');
+    else delete params.__cons;
+    if (colors.length) params.__colors = colors.map((c) => `${c.labelFa}|${c.hex}`).join('||');
+    else delete params.__colors;
     if (form.sellerName.trim()) params.__sellerName = form.sellerName.trim();
     if (form.warranty.trim()) params.__warranty = form.warranty.trim();
     if (form.rating.trim()) params.__rating = form.rating.trim();
     if (form.reviewCount.trim()) params.__reviewCount = form.reviewCount.trim();
+    if (form.titleEn.trim()) params.__titleEn = form.titleEn.trim();
+    if (form.sku.trim()) params.__sku = form.sku.trim();
+    if (form.shippingNote.trim()) params.__shippingNote = form.shippingNote.trim();
+    if (form.returnPolicy.trim()) params.__returnPolicy = form.returnPolicy.trim();
+    if (form.sellerScore.trim()) params.__sellerScore = form.sellerScore.trim();
 
     const payload = {
       id: form.id || undefined,
       slug: form.slug,
       title: form.title,
+      titleEn: form.titleEn.trim() || undefined,
       brandId: form.brandId,
       categorySlug: form.categorySlug,
       petTypes: form.petTypes.split(',').map((s) => s.trim()).filter(Boolean),
@@ -171,6 +245,14 @@ export function AdminShopProductFormPage() {
       rating: form.rating ? Number(form.rating) : undefined,
       reviewCount: form.reviewCount ? Number(form.reviewCount) : undefined,
       highlights: highlights.length ? highlights : undefined,
+      sku: form.sku.trim() || undefined,
+      colors: colors.length ? colors : undefined,
+      sizes: sizes.length ? sizes : undefined,
+      shippingNote: form.shippingNote.trim() || undefined,
+      returnPolicy: form.returnPolicy.trim() || undefined,
+      sellerScore: form.sellerScore ? Number(form.sellerScore) : undefined,
+      pros: pros.length ? pros : undefined,
+      cons: cons.length ? cons : undefined,
     };
     try {
       if (isNew) await adminFetch('/api/admin/shop/products', { method: 'POST', body: JSON.stringify(payload) });
@@ -202,8 +284,28 @@ export function AdminShopProductFormPage() {
             <input className="form-input" required value={form.title} onChange={(e) => set({ title: e.target.value })} />
           </label>
           <label>
+            <span className="form-label">عنوان انگلیسی</span>
+            <input
+              className="form-input"
+              dir="ltr"
+              value={form.titleEn}
+              onChange={(e) => set({ titleEn: e.target.value })}
+              placeholder="Product English title"
+            />
+          </label>
+          <label>
             <span className="form-label">اسلاگ</span>
             <input className="form-input" required value={form.slug} onChange={(e) => set({ slug: e.target.value })} />
+          </label>
+          <label>
+            <span className="form-label">کد کالا (SKU)</span>
+            <input
+              className="form-input"
+              dir="ltr"
+              value={form.sku}
+              onChange={(e) => set({ sku: e.target.value })}
+              placeholder="PD-XXXX"
+            />
           </label>
           <label>
             <span className="form-label">برند</span>
@@ -290,11 +392,38 @@ export function AdminShopProductFormPage() {
             />
           </label>
           <label>
+            <span className="form-label">رضایت فروشنده (٪)</span>
+            <input
+              className="form-input"
+              type="number"
+              min="0"
+              max="100"
+              value={form.sellerScore}
+              onChange={(e) => set({ sellerScore: e.target.value })}
+            />
+          </label>
+          <label>
             <span className="form-label">گارانتی / اصالت</span>
             <input
               className="form-input"
               value={form.warranty}
               onChange={(e) => set({ warranty: e.target.value })}
+            />
+          </label>
+          <label>
+            <span className="form-label">توضیح ارسال</span>
+            <input
+              className="form-input"
+              value={form.shippingNote}
+              onChange={(e) => set({ shippingNote: e.target.value })}
+            />
+          </label>
+          <label>
+            <span className="form-label">شرایط مرجوعی</span>
+            <input
+              className="form-input"
+              value={form.returnPolicy}
+              onChange={(e) => set({ returnPolicy: e.target.value })}
             />
           </label>
           <label>
@@ -341,6 +470,45 @@ export function AdminShopProductFormPage() {
               value={form.highlights}
               onChange={(e) => set({ highlights: e.target.value })}
               placeholder={'ارسال سریع\nبسته‌بندی بهداشتی'}
+            />
+          </label>
+          <label className="admin-form-span">
+            <span className="form-label">رنگ‌ها (هر خط: نام|کدhex)</span>
+            <textarea
+              className="form-input admin-mono"
+              rows={2}
+              dir="ltr"
+              value={form.colors}
+              onChange={(e) => set({ colors: e.target.value })}
+              placeholder={'آبی|#3b82f6\nسبز|#10b981'}
+            />
+          </label>
+          <label className="admin-form-span">
+            <span className="form-label">سایز / وزن (هر خط یک مورد)</span>
+            <textarea
+              className="form-input"
+              rows={2}
+              value={form.sizes}
+              onChange={(e) => set({ sizes: e.target.value })}
+              placeholder={'۴ کیلوگرم\n۱۰ کیلوگرم'}
+            />
+          </label>
+          <label className="admin-form-span">
+            <span className="form-label">نقاط قوت دیدگاه‌ها</span>
+            <textarea
+              className="form-input"
+              rows={2}
+              value={form.pros}
+              onChange={(e) => set({ pros: e.target.value })}
+            />
+          </label>
+          <label className="admin-form-span">
+            <span className="form-label">نقاط ضعف دیدگاه‌ها</span>
+            <textarea
+              className="form-input"
+              rows={2}
+              value={form.cons}
+              onChange={(e) => set({ cons: e.target.value })}
             />
           </label>
           <label className="admin-form-span">

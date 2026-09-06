@@ -50,6 +50,24 @@ export interface ShopProduct {
   reviewCount?: number;
   /** بولت‌های کوتاه زیر عنوان */
   highlights?: string[];
+  /** عنوان انگلیسی (مثل دیجی‌کالا) */
+  titleEn?: string;
+  /** کد کالا / SKU */
+  sku?: string;
+  /** رنگ‌های قابل انتخاب */
+  colors?: { labelFa: string; hex: string }[];
+  /** سایز / وزن بسته‌بندی */
+  sizes?: string[];
+  /** توضیح ارسال */
+  shippingNote?: string;
+  /** شرایط مرجوعی */
+  returnPolicy?: string;
+  /** امتیاز رضایت از فروشنده ۰–۱۰۰ */
+  sellerScore?: number;
+  /** نقاط قوت (نظرات) */
+  pros?: string[];
+  /** نقاط ضعف (نظرات) */
+  cons?: string[];
 }
 
 export const SHOP_PET_TYPES: { id: ShopPetType; labelFa: string }[] = [
@@ -109,6 +127,7 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
     id: 'p1',
     slug: 'dog-food-1-p1',
     title: 'غذای خشک سگ بالغ رویال کنین Medium Adult',
+    titleEn: 'Royal Canin Medium Adult Dry Dog Food',
     brandId: 'royal-canin',
     categorySlug: 'dog-food',
     petTypes: ['dog'],
@@ -118,15 +137,32 @@ export const SHOP_PRODUCTS: ShopProduct[] = [
     images: [`${P}/01-1.png`, `${P}/01-2.jpg`, `${P}/01-3.png`, `${P}/2.jpg`],
     badge: 'hot',
     inStock: true,
-    params: { وزن: '۴ کیلوگرم', طعم: 'مرغ', مناسب_برای: 'سگ بالغ نژاد متوسط' },
+    sku: 'PD-RC-MA-4KG',
+    params: {
+      وزن: '۴ کیلوگرم',
+      طعم: 'مرغ',
+      مناسب_برای: 'سگ بالغ نژاد متوسط',
+      کشور_برند: 'فرانسه',
+      نوع_غذا: 'خشک',
+    },
     description:
-      'فرمول تخصصی نژاد متوسط برای انرژی روزانه. پروتئین باکیفیت، گوارش آسان و مناسب سگ‌های بالغ. — پت دیت شاپ.',
+      'فرمول تخصصی نژاد متوسط برای انرژی روزانه. پروتئین باکیفیت، گوارش آسان و مناسب سگ‌های بالغ. ترکیبات متعادل برای حفظ وزن ایده‌آل و سلامت پوست و مو. — پت دیت شاپ.',
     featured: true,
     sellerName: 'پت‌دیت شاپ',
     warranty: 'ضمانت اصالت و سلامت فیزیکی کالا',
     rating: 4.7,
     reviewCount: 312,
+    sellerScore: 96,
+    shippingNote: 'ارسال از انبار پت‌دیت — امکان تحویل ۱ تا ۳ روز کاری',
+    returnPolicy: '۷ روز ضمانت بازگشت کالا در صورت عدم رضایت از بسته‌بندی',
+    colors: [
+      { labelFa: 'بسته‌بندی آبی', hex: '#3b82f6' },
+      { labelFa: 'بسته‌بندی سبز', hex: '#10b981' },
+    ],
+    sizes: ['۴ کیلوگرم', '۱۰ کیلوگرم', '۱۵ کیلوگرم'],
     highlights: ['ارسال سریع از انبار پت‌دیت', 'بسته‌بندی بهداشتی کارخانه', 'مناسب سگ بالغ نژاد متوسط'],
+    pros: ['گوارش خوب', 'کیفیت برند معتبر', 'بسته‌بندی سالم'],
+    cons: ['قیمت نسبتاً بالا'],
   },
   {
     id: 'p2',
@@ -3226,6 +3262,19 @@ export function productRating(p: ShopProduct): { rating: number; count: number }
     rating: p.rating != null && p.rating > 0 ? Math.min(5, p.rating) : 4.6,
     count: p.reviewCount != null && p.reviewCount >= 0 ? p.reviewCount : 128,
   };
+}
+
+export function productSellerScore(p: ShopProduct): number {
+  if (p.sellerScore != null && p.sellerScore >= 0) return Math.min(100, Math.round(p.sellerScore));
+  return 94;
+}
+
+export function productShippingNote(p: ShopProduct): string {
+  return p.shippingNote?.trim() || 'ارسال از انبار پت‌دیت — تحویل ۱ تا ۳ روز کاری';
+}
+
+export function productReturnPolicy(p: ShopProduct): string {
+  return p.returnPolicy?.trim() || '۷ روز ضمانت بازگشت کالا';
 }
 
 export function getCategory(slug: string): ShopCategory | undefined {

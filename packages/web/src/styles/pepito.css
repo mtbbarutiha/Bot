@@ -5632,6 +5632,200 @@ button.chip.is-on {
   .pd-dk-quick-params {
     grid-template-columns: 1fr 1fr;
   }
+  .pd-shop-detail {
+    padding-bottom: 5.5rem;
+  }
+}
+
+.pd-dk-title-en {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  color: var(--pepito-muted);
+  direction: ltr;
+  text-align: start;
+}
+.pd-dk-meta-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  color: var(--pepito-base);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.pd-dk-sku {
+  font-size: 0.82rem;
+  color: var(--pepito-muted);
+}
+.pd-dk-variants {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.pd-dk-variants-label {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--pepito-muted);
+}
+.pd-dk-variants-label strong {
+  color: var(--pepito-dark);
+}
+.pd-dk-color-row,
+.pd-dk-size-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.pd-dk-color {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px rgba(92, 77, 145, 0.25);
+  cursor: pointer;
+  padding: 0;
+}
+.pd-dk-color.is-active {
+  box-shadow: 0 0 0 2px var(--pepito-base);
+}
+.pd-dk-size {
+  appearance: none;
+  border: 1px solid rgba(92, 77, 145, 0.18);
+  background: #fff;
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--pepito-dark);
+  cursor: pointer;
+}
+.pd-dk-size.is-active {
+  border-color: var(--pepito-base);
+  background: var(--pepito-lilac);
+  color: var(--pepito-base);
+}
+.pd-dk-seller-score {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.78rem;
+  color: #0c8b6c;
+  font-weight: 700;
+}
+.pd-dk-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(92, 77, 145, 0.16);
+  border-radius: 12px;
+  padding: 0.35rem 0.55rem;
+  width: fit-content;
+  font-weight: 800;
+}
+.pd-dk-qty-btn {
+  appearance: none;
+  border: 0;
+  background: var(--pepito-lilac);
+  color: var(--pepito-base);
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.pd-dk-qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pd-dk-reviews {
+  display: grid;
+  gap: 1rem;
+}
+.pd-dk-reviews-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.pd-dk-reviews-score {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 1rem;
+  border-radius: 14px;
+  background: #fafafa;
+  border: 1px solid rgba(92, 77, 145, 0.08);
+}
+.pd-dk-reviews-score strong {
+  font-size: 2rem;
+  color: var(--pepito-dark);
+  line-height: 1;
+}
+.pd-dk-reviews-count {
+  font-size: 0.82rem;
+  color: var(--pepito-muted);
+}
+.pd-dk-proscons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+.pd-dk-proscons h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0 0.55rem;
+  font-size: 0.95rem;
+}
+.pd-dk-proscons ul {
+  margin: 0;
+  padding: 0 1rem 0 0;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  color: var(--pepito-dark);
+}
+.pd-dk-reviews-note {
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
+  color: var(--pepito-muted);
+  line-height: 1.7;
+}
+.pd-dk-mobile-bar {
+  display: none;
+}
+@media (max-width: 720px) {
+  .pd-dk-reviews-summary,
+  .pd-dk-proscons {
+    grid-template-columns: 1fr;
+  }
+  .pd-dk-mobile-bar {
+    position: fixed;
+    inset-inline: 0;
+    bottom: 0;
+    z-index: 55;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.7rem 0.9rem calc(0.7rem + env(safe-area-inset-bottom, 0px));
+    background: rgba(255, 255, 255, 0.96);
+    border-top: 1px solid rgba(92, 77, 145, 0.12);
+    box-shadow: 0 -10px 28px rgba(25, 6, 61, 0.08);
+  }
+  .pd-dk-mobile-bar-price {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 800;
+    color: var(--pepito-dark);
+  }
+  .pd-dk-mobile-bar .pepito-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
 }
 .pd-shop-detail-media {
   position: relative;
