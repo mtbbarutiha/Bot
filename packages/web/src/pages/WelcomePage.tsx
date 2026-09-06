@@ -17,12 +17,6 @@ const CONTACT_PHONE_TEL = '+982188776655';
 const BLOB_PATH =
   'M30,16C46.588,6.484,54.481-2.058,64.3,1.452c3.145,1.125,6.861,3.657,10.212,9.426A40.611,40.611,0,0,1,59.5,66.544,41.151,41.151,0,0,1,3.482,51.629C0.134,45.865-.2,41.289.375,38.125,2.228,27.979,13.544,25.436,30,16Z';
 
-/** Pepito about “We offer services for special pets!” — flaticon-pawprint-4 listext */
-const ABOUT_POINTS = [
-  'بیش از ۲۰ سال تجربه',
-  '۲۰ دامپزشک مستعد آماده کمک به شما',
-] as const;
-
 /** Pepito “Our pet care services” — 12 cards with original Flaticon glyphs */
 const SERVICES: {
   to: string;
@@ -696,11 +690,11 @@ export function WelcomePage() {
             <p className="pepito-eyebrow">عمومی و پرتکرار</p>
             <h2>سؤالات متداول</h2>
             <p>پاسخ‌های کوتاه دربارهٔ حساب مشترک وب و ربات، OTP و همگام‌سازی داده.</p>
-            {/* Pepito: Other FAQs → FAQ page / #faq */}
-            <a href="#faq" className="pepito-btn button-1">
+            {/* Pepito: Other FAQs → dedicated FAQ page */}
+            <Link to="/faq" className="pepito-btn button-1">
               <PawIcon />
               سایر سؤالات
-            </a>
+            </Link>
           </div>
           <div className="pepito-faq">
             {FAQS.map((item, i) => {

@@ -104,7 +104,7 @@ export function LandingChrome({
             <Link to="/#pets">پذیرش</Link>
             <Link to="/shop">پت شاپ</Link>
             <Link to="/#news">اخبار</Link>
-            <Link to="/#faq">سؤالات</Link>
+            <Link to="/faq">سؤالات</Link>
           </nav>
         )}
 
