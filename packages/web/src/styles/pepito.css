@@ -2875,12 +2875,13 @@ button.chip.is-on {
 .pepito-profile {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: 2rem;
   background: transparent !important;
+  max-width: 760px;
 }
 .pepito-profile-hero {
   position: relative;
-  min-height: clamp(280px, 44vh, 440px);
+  min-height: clamp(300px, 46vh, 460px);
   border-radius: 28px;
   overflow: hidden;
   background-position: center top;
@@ -2894,97 +2895,215 @@ button.chip.is-on {
 .pepito-profile-hero-wash {
   position: absolute;
   inset: 0;
-  background: linear-gradient(
-    105deg,
-    rgba(25, 6, 61, 0.82) 0%,
-    rgba(25, 6, 61, 0.48) 44%,
-    rgba(92, 77, 145, 0.2) 76%,
-    transparent 100%
-  );
+  background:
+    radial-gradient(ellipse 70% 55% at 85% 15%, rgba(219, 137, 202, 0.28), transparent 55%),
+    linear-gradient(
+      105deg,
+      rgba(25, 6, 61, 0.88) 0%,
+      rgba(25, 6, 61, 0.55) 42%,
+      rgba(92, 77, 145, 0.22) 74%,
+      transparent 100%
+    );
   z-index: 0;
   pointer-events: none;
 }
 [dir='rtl'] .pepito-profile-hero-wash {
-  background: linear-gradient(
-    255deg,
-    rgba(25, 6, 61, 0.82) 0%,
-    rgba(25, 6, 61, 0.48) 44%,
-    rgba(92, 77, 145, 0.2) 76%,
-    transparent 100%
-  );
+  background:
+    radial-gradient(ellipse 70% 55% at 15% 15%, rgba(219, 137, 202, 0.28), transparent 55%),
+    linear-gradient(
+      255deg,
+      rgba(25, 6, 61, 0.88) 0%,
+      rgba(25, 6, 61, 0.55) 42%,
+      rgba(92, 77, 145, 0.22) 74%,
+      transparent 100%
+    );
 }
 .pepito-profile-hero-inner {
   position: relative;
   z-index: 1;
   width: 100%;
-  padding: 2rem 1.5rem 1.75rem;
+  padding: 2.1rem 1.5rem 1.85rem;
   color: #fff;
   animation: pepito-flow-rise 0.65s ease 0.1s both;
 }
 .pepito-profile-kicker {
-  color: rgba(255, 255, 255, 0.92) !important;
+  color: rgba(255, 255, 255, 0.95) !important;
+}
+.pepito-profile-brand-sub {
+  margin: 0.15rem 0 0.85rem !important;
+  color: rgba(255, 255, 255, 0.78) !important;
+  font-size: 0.95rem !important;
+  font-weight: 600 !important;
 }
 .pepito-profile-identity {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin: 0.35rem 0 1.15rem;
-}
-.pepito-profile-avatar {
-  width: 88px;
-  height: 88px;
-  border-radius: 50%;
-  overflow: hidden;
-  flex-shrink: 0;
-  border: 3px solid rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.18);
-  display: grid;
-  place-items: center;
-  box-shadow: 0 12px 28px rgba(25, 6, 61, 0.28);
-}
-.pepito-profile-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-.pepito-profile-avatar span {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 800;
-  color: #fff;
-  line-height: 1;
+  gap: 1.15rem;
+  margin: 0.2rem 0 1.25rem;
 }
 .pepito-profile-identity-text {
   min-width: 0;
 }
 .pepito-profile-identity-text h1 {
-  margin: 0 0 0.3rem;
+  margin: 0 0 0.35rem;
   font-family: var(--font-display);
-  font-size: clamp(1.55rem, 3.4vw, 2.15rem);
-  font-weight: 700;
-  line-height: 1.25;
+  font-size: clamp(1.65rem, 3.6vw, 2.25rem);
+  font-weight: 800;
+  line-height: 1.2;
   color: #fff;
+  letter-spacing: -0.02em;
 }
 .pepito-profile-loc {
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.45rem;
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
   font-size: 0.95rem;
   color: rgba(255, 255, 255, 0.9);
 }
-.pepito-profile-roles {
+.pepito-profile-active-chip {
   margin: 0;
-  font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.78);
-  line-height: 1.4;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  font-family: var(--font-display);
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #fff;
+  backdrop-filter: blur(6px);
+}
+.pepito-profile-active-chip > span {
+  opacity: 0.72;
+  font-size: 0.72rem;
+  font-weight: 600;
 }
 .pepito-profile-cta {
   margin-top: 0.15rem;
 }
 .pepito-profile-cta .pepito-btn {
   gap: 0.45rem;
+}
+.pepito-profile-cta .pepito-btn.button-1 {
+  background: var(--pepito-base) !important;
+  color: #fff !important;
+  border: 0 !important;
+  backdrop-filter: none;
+}
+
+/* Circular avatar editor (view + edit) */
+.pepito-avatar-editor {
+  position: relative;
+  flex-shrink: 0;
+  width: fit-content;
+}
+.pepito-avatar-editor-ring {
+  width: 112px;
+  height: 112px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid rgba(255, 255, 255, 0.62);
+  background: rgba(255, 255, 255, 0.18);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 14px 32px rgba(25, 6, 61, 0.32);
+  position: relative;
+}
+.pepito-avatar-editor--lg .pepito-avatar-editor-ring {
+  width: 88px;
+  height: 88px;
+}
+.pepito-avatar-editor-ring img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pepito-avatar-editor-initial {
+  font-family: var(--font-display);
+  font-size: 2.35rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+}
+.pepito-avatar-editor-busy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(25, 6, 61, 0.45);
+  color: #fff;
+}
+.pepito-avatar-spin {
+  animation: pepito-avatar-spin 0.9s linear infinite;
+}
+@keyframes pepito-avatar-spin {
+  to { transform: rotate(360deg); }
+}
+.pepito-avatar-editor-actions {
+  position: absolute;
+  inset-inline-end: -2px;
+  bottom: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.pepito-avatar-editor-cam {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: var(--pepito-base);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 14px rgba(25, 6, 61, 0.28);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+.pepito-avatar-editor-cam:hover:not(:disabled) {
+  transform: scale(1.06);
+  background: var(--pepito-dark);
+}
+.pepito-avatar-editor-cam:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.pepito-avatar-editor-cam--alt {
+  display: none;
+}
+.pepito-avatar-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.pepito-avatar-editor-error {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  inset-inline-start: 0;
+  margin: 0;
+  max-width: 12rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #ffd4d0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.pepito-profile--edit .pepito-avatar-editor-ring {
+  border-color: rgba(92, 77, 145, 0.28);
+  background: var(--pepito-lilac);
+  box-shadow: 0 10px 24px rgba(25, 6, 61, 0.12);
+}
+.pepito-profile--edit .pepito-avatar-editor-initial {
+  color: var(--pepito-base);
+}
+.pepito-profile--edit .pepito-avatar-editor-error {
+  color: #b42318;
+  text-shadow: none;
 }
 
 .pepito-profile-block {
@@ -2993,31 +3112,39 @@ button.chip.is-on {
 .pepito-profile-block--quiet {
   padding-bottom: 0.25rem;
 }
-.pepito-profile-meta {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0.75rem 1rem;
-  margin: 0 0 1.15rem;
+.pepito-profile-role-block {
+  margin-top: 0;
 }
-.pepito-profile-meta > div {
+
+/* Facts — no card clutter; hairline rows */
+.pepito-profile-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin: 0 0 1.15rem;
+  border-block: 1px solid rgba(92, 77, 145, 0.12);
+}
+.pepito-profile-facts > div {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
-  padding: 0.85rem 0.95rem;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(92, 77, 145, 0.1);
+  padding: 0.85rem 0.15rem;
+  border-bottom: 1px solid rgba(92, 77, 145, 0.08);
 }
-.pepito-profile-meta dt {
+.pepito-profile-facts > div:nth-last-child(-n + 2) {
+  border-bottom: 0;
+}
+.pepito-profile-facts dt {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 700;
   color: var(--pepito-muted);
+  letter-spacing: 0.01em;
 }
-.pepito-profile-meta dd {
+.pepito-profile-facts dd {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 0.98rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--pepito-dark);
 }
@@ -3065,35 +3192,45 @@ button.chip.is-on {
   font-size: 0.82rem;
   font-weight: 700;
 }
-.pepito-profile-pet {
+
+/* Pet row — interaction link, not a decorative card */
+.pepito-profile-pet-row {
   display: flex;
   align-items: center;
   gap: 0.9rem;
-  padding: 1rem 1.05rem;
-  border-radius: 18px;
+  padding: 0.85rem 0;
+  border-block: 1px solid rgba(92, 77, 145, 0.12);
   text-decoration: none;
   color: inherit;
-  background: rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(92, 77, 145, 0.1);
-  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  transition: color 0.2s ease, opacity 0.2s ease;
 }
-.pepito-profile-pet:hover {
-  transform: translateY(-3px);
-  border-color: rgba(92, 77, 145, 0.22);
-  background: #fff;
+.pepito-profile-pet-row:hover {
+  opacity: 0.88;
 }
-.pepito-profile-pet strong {
+.pepito-profile-pet-row-text {
+  flex: 1;
+  min-width: 0;
+}
+.pepito-profile-pet-row-text strong {
   display: block;
   font-family: var(--font-display);
   font-size: 1.02rem;
   color: var(--pepito-dark);
 }
-.pepito-profile-pet span {
+.pepito-profile-pet-row-text span {
   display: block;
   margin-top: 0.15rem;
   font-size: 0.86rem;
   color: var(--pepito-muted);
   line-height: 1.4;
+}
+.pepito-profile-pet-row-chevron {
+  flex-shrink: 0;
+  color: var(--pepito-base);
+  transform: scaleX(-1);
+}
+[dir='rtl'] .pepito-profile-pet-row-chevron {
+  transform: none;
 }
 .pepito-profile-logout {
   display: inline-flex;
@@ -3116,10 +3253,231 @@ button.chip.is-on {
   cursor: wait;
 }
 
+/* ── Inline role board (profile, mobile + desktop) ── */
+.pepito-role-board {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.pepito-role-board-active {
+  padding: 0 0 1rem;
+  border-bottom: 1px solid rgba(92, 77, 145, 0.12);
+  animation: pepito-flow-rise 0.4s ease both;
+}
+.pepito-role-board-active-label {
+  display: block;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--pepito-muted);
+  margin-bottom: 0.25rem;
+}
+.pepito-role-board-active-value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 2.5vw, 1.45rem);
+  font-weight: 800;
+  color: var(--pepito-dark);
+  letter-spacing: -0.02em;
+}
+.pepito-role-board-active-desc {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: var(--pepito-muted);
+  line-height: 1.55;
+  max-width: 36rem;
+}
+.pepito-role-board-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.pepito-role-board-empty {
+  padding: 0.75rem 0;
+  color: var(--pepito-muted);
+  font-size: 0.92rem;
+}
+.pepito-role-board-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  width: 100%;
+  padding: 0.85rem 0.15rem;
+  border: 0;
+  border-bottom: 1px solid rgba(92, 77, 145, 0.08);
+  background: transparent;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+.pepito-role-board-item:hover:not(:disabled) {
+  background: rgba(92, 77, 145, 0.04);
+}
+.pepito-role-board-item:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.pepito-role-board-item.is-active {
+  background: linear-gradient(
+    90deg,
+    rgba(92, 77, 145, 0.08) 0%,
+    transparent 100%
+  );
+  border-radius: 12px;
+  border-bottom-color: transparent;
+  padding-inline: 0.75rem;
+}
+[dir='rtl'] .pepito-role-board-item.is-active {
+  background: linear-gradient(
+    270deg,
+    rgba(92, 77, 145, 0.08) 0%,
+    transparent 100%
+  );
+}
+.pepito-role-board-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.pepito-role-board-item-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--pepito-dark);
+}
+.pepito-role-board-item-desc {
+  font-size: 0.82rem;
+  color: var(--pepito-muted);
+  line-height: 1.4;
+}
+.pepito-role-board-badge {
+  flex-shrink: 0;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  background: var(--pepito-base);
+  color: #fff;
+  font-size: 0.74rem;
+  font-weight: 800;
+  font-family: var(--font-display);
+}
+.pepito-role-board-switch-hint {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pepito-base);
+  font-family: var(--font-display);
+}
+.pepito-role-board-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  padding: 0.65rem 1.1rem;
+  border-radius: 999px;
+  border: 1.5px dashed rgba(92, 77, 145, 0.35);
+  background: transparent;
+  color: var(--pepito-base);
+  font: inherit;
+  font-weight: 800;
+  font-family: var(--font-display);
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+.pepito-role-board-add-btn:hover:not(:disabled) {
+  background: var(--pepito-lilac);
+  border-style: solid;
+}
+.pepito-role-board-add-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
+  color: var(--pepito-muted);
+}
+.pepito-role-board-add-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 0.55rem;
+}
+.pepito-role-board-add-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 0.55rem;
+  row-gap: 0.15rem;
+  align-items: start;
+  padding: 0.75rem 0.85rem;
+  border-radius: 14px;
+  border: 1.5px solid rgba(92, 77, 145, 0.16);
+  background: #fff;
+  text-align: start;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+.pepito-role-board-add-item:hover:not(:disabled) {
+  border-color: rgba(92, 77, 145, 0.35);
+  transform: translateY(-1px);
+}
+.pepito-role-board-add-item.is-on {
+  border-color: var(--pepito-base);
+  background: rgba(92, 77, 145, 0.06);
+}
+.pepito-role-board-add-check {
+  grid-row: 1 / span 2;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-top: 0.1rem;
+  border-radius: 50%;
+  border: 1.5px solid rgba(92, 77, 145, 0.28);
+  color: #fff;
+  background: transparent;
+}
+.pepito-role-board-add-item.is-on .pepito-role-board-add-check {
+  background: var(--pepito-base);
+  border-color: var(--pepito-base);
+}
+.pepito-role-board-add-label {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: var(--pepito-dark);
+}
+.pepito-role-board-add-desc {
+  grid-column: 2;
+  font-size: 0.78rem;
+  color: var(--pepito-muted);
+  line-height: 1.4;
+}
+.pepito-role-board-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+.pepito-role-board-footer .pepito-btn--ghost {
+  background: transparent !important;
+  color: var(--pepito-base) !important;
+  border: 1.5px solid rgba(92, 77, 145, 0.28) !important;
+}
+
 /* Edit mode */
 .pepito-profile--edit {
   gap: 1.35rem;
   max-width: 720px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
 .pepito-profile-edit-head {
   display: flex;
@@ -3157,6 +3515,28 @@ button.chip.is-on {
 }
 .pepito-profile-edit-form {
   animation: pepito-flow-rise 0.5s ease 0.06s both;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+.pepito-profile-edit-avatar-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.5rem 0 0.25rem;
+}
+.pepito-profile-edit-avatar-hint {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--pepito-muted);
+}
+.pepito-profile-edit-section-title {
+  margin: 0 0 0.75rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--pepito-dark);
 }
 .pepito-profile-edit-grid {
   display: grid;
@@ -3244,7 +3624,7 @@ button.chip.is-on {
   color: #fff;
 }
 .pepito-profile-error {
-  margin: 0.85rem 0 0;
+  margin: 0;
   color: #b42318;
   font-weight: 700;
   font-size: 0.92rem;
@@ -3253,9 +3633,12 @@ button.chip.is-on {
   display: flex;
   flex-wrap: wrap;
   gap: 0.65rem;
-  margin-top: 1.35rem;
+  margin-top: 0.25rem;
   padding: 1rem 0 0.25rem;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.92) 28%, #fff 100%);
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(244, 244, 247, 0) 0%, var(--pepito-soft) 28%, var(--pepito-soft) 100%);
+  z-index: 5;
 }
 .pepito-profile-edit-actions .pepito-btn--ghost {
   background: transparent !important;
@@ -3266,15 +3649,6 @@ button.chip.is-on {
   background: var(--pepito-lilac) !important;
   color: var(--pepito-dark) !important;
 }
-.pepito-profile-cta .pepito-btn.button-1 {
-  background: var(--pepito-base) !important;
-  color: #fff !important;
-  border: 0 !important;
-  backdrop-filter: none;
-}
-.pepito-profile--edit {
-  padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-}
 
 @media (max-width: 640px) {
   .pepito-profile-edit-grid {
@@ -3284,9 +3658,21 @@ button.chip.is-on {
     flex-direction: column;
     align-items: flex-start;
   }
-  .pepito-profile-avatar {
-    width: 76px;
-    height: 76px;
+  .pepito-avatar-editor-ring {
+    width: 96px;
+    height: 96px;
+  }
+  .pepito-profile-facts {
+    grid-template-columns: 1fr;
+  }
+  .pepito-profile-facts > div:nth-last-child(-n + 2) {
+    border-bottom: 1px solid rgba(92, 77, 145, 0.08);
+  }
+  .pepito-profile-facts > div:last-child {
+    border-bottom: 0;
+  }
+  .pepito-role-board-add-grid {
+    grid-template-columns: 1fr;
   }
   .pepito-profile-edit-actions {
     flex-direction: column;
@@ -3435,59 +3821,6 @@ button.chip.is-on {
   inset-inline-start: 0;
   inset-inline-end: auto;
   min-width: min(320px, calc(100vw - 2rem));
-}
-
-/* Profile page — full-width «تغییر نقش» (esp. mobile; rail hidden <860px) */
-.pepito-profile-role-switch-block {
-  margin-top: 0.15rem;
-}
-.pepito-role-switch--profile {
-  width: 100%;
-  z-index: 40;
-}
-.pepito-role-switch-trigger--profile {
-  width: 100%;
-  max-width: none;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.95rem 1.1rem !important;
-  border-radius: 16px;
-  border: 1px solid rgba(92, 77, 145, 0.14);
-  background: rgba(255, 255, 255, 0.88);
-  cursor: pointer;
-  font: inherit;
-  text-align: start;
-  box-shadow: 0 8px 22px rgba(25, 6, 61, 0.06);
-}
-.pepito-role-switch-trigger--profile .pepito-role-switch-trigger-label {
-  font-family: var(--font-display);
-  font-size: 1rem;
-  font-weight: 800;
-  max-width: none;
-}
-.pepito-role-switch-trigger--profile .pepito-role-switch-trigger-hint {
-  flex-shrink: 0;
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: #fff;
-  background: linear-gradient(135deg, #5c4d91, #4a3d78);
-  padding: 0.35rem 0.75rem;
-  border-radius: 999px;
-}
-.pepito-role-switch--profile .pepito-role-switch-panel {
-  inset-inline: 0;
-  width: 100%;
-  min-width: 0;
-  max-width: none;
-}
-
-/* Desktop already has role switch in the app rail — avoid duplicate clutter */
-@media (min-width: 860px) {
-  .pepito-profile-role-switch-block {
-    display: none;
-  }
 }
 
 .pepito-role-switch-panel {
@@ -3674,16 +4007,6 @@ button.chip.is-on {
   .pepito-role-switch-trigger-hint {
     font-size: 0.62rem;
   }
-  .pepito-role-switch-trigger--profile {
-    max-width: none;
-    padding: 0.95rem 1.1rem !important;
-  }
-  .pepito-role-switch-trigger--profile .pepito-role-switch-trigger-label {
-    font-size: 1rem;
-  }
-  .pepito-role-switch-trigger--profile .pepito-role-switch-trigger-hint {
-    font-size: 0.82rem;
-  }
   .pepito-nav-actions .pepito-btn--nav {
     display: inline-flex;
     padding: 0.4rem 0.7rem;
@@ -3696,14 +4019,6 @@ button.chip.is-on {
     inset-inline-end: 0.75rem;
     width: auto;
     max-height: calc(100dvh - var(--pepito-nav-h) - 1.5rem);
-  }
-  /* Keep profile panel anchored under the control (not floating under top nav) */
-  .pepito-role-switch--profile .pepito-role-switch-panel {
-    position: absolute;
-    top: calc(100% + 0.45rem);
-    inset-inline: 0;
-    width: 100%;
-    max-height: min(70vh, 520px);
   }
 }
 

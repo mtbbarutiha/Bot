@@ -405,6 +405,37 @@ export async function patchWebProfile(token: string, patch: Record<string, unkno
   });
 }
 
+/** Upload user profile avatar; returns public URL under /api/auth/avatar/... and updated user. */
+export async function uploadUserAvatar(
+  token: string,
+  file: File
+): Promise<{ ok: true; url: string; storageKey: string; mimeType?: string; user: User }> {
+  const form = new FormData();
+  form.append('file', file);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/auth/avatar`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+  } catch {
+    throw new Error('اتصال به سرور برقرار نشد. مطمئن شو API روشن است.');
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    try {
+      const json = JSON.parse(body) as { error?: string; message?: string };
+      throw new Error(json.error || json.message || body || `خطای ${res.status}`);
+    } catch (err) {
+      if (err instanceof Error && !err.message.startsWith('{') && err.message !== body) throw err;
+      throw new Error(body || `خطای ${res.status}`);
+    }
+  }
+  return res.json();
+}
+
 export async function patchWebRoles(token: string, roles: UserRole[], primary?: UserRole) {
   return request<{ ok: true; user: User }>('/api/auth/roles', {
     method: 'PATCH',

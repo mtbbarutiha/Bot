@@ -29,6 +29,7 @@ rsync -az --delete \
   --exclude 'packages/api/data/*.db*' \
   --exclude 'packages/api/data/chat-uploads' \
   --exclude 'packages/api/data/pet-photos' \
+  --exclude 'packages/api/data/user-avatars' \
   "$ROOT/" "$TARGET:$REMOTE_DIR/"
 
 ssh "$TARGET" bash -s <<EOF

@@ -7,6 +7,7 @@ import {
   patchWebProfile,
   patchWebRoles,
   requestWebOtp,
+  uploadUserAvatar,
   verifyWebOtp,
   type WebOtpChannel,
 } from '../lib/api';
@@ -146,6 +147,14 @@ class AuthStore {
     this.data = { ...this.data, user: res.user };
     this.persist();
     return res.user;
+  }
+
+  async uploadAvatar(file: File) {
+    if (!this.data.token) throw new Error('وارد نشده‌اید');
+    const res = await uploadUserAvatar(this.data.token, file);
+    this.data = { ...this.data, user: res.user };
+    this.persist();
+    return res;
   }
 
   async saveRoles(roles: UserRole[], primary?: UserRole) {

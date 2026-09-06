@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  ChevronLeft,
   LogOut,
   MapPin,
   PawPrint,
@@ -21,6 +22,7 @@ import {
   type UserGender,
 } from '@petdate/shared';
 import { PetAvatar } from '../components/PetAvatar';
+import { ProfileAvatarEditor } from '../components/ProfileAvatarEditor';
 import { RoleSwitchControl } from '../components/RoleSwitchControl';
 import { formatAge } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -82,16 +84,11 @@ export function ProfilePage() {
       ? 'شروع نشده'
       : ONBOARDING_STATUS_LABELS[user.onboarding] ?? user.onboarding;
 
-  const roles = normalizeRoles(user.roles, user.role);
-  const mainRole = primaryRole(roles, user.role);
+  const mainRole = primaryRole(normalizeRoles(user.roles, user.role), user.role);
   const needsWizard = !isProfileComplete;
   const isPetOwner = userHasRole(user, 'pet_owner');
-  const roleLabel = roles.length
-    ? roles.map((r) => USER_ROLE_LABELS[r]).join(' · ')
-    : 'انتخاب نشده';
   const locationLabel = [user.city, user.province, user.country].filter(Boolean).join('، ') || '—';
   const avatarSrc = user.avatarUrl || (isPetOwner && myPet.imageUrl ? myPet.imageUrl : '');
-  const initial = (user.name || 'پ').trim().slice(0, 1);
   const hasPetName = Boolean(myPet?.name && myPet.name !== 'پت من');
   const genderLabel = user.gender ? USER_GENDER_LABELS[user.gender] : null;
 
@@ -173,9 +170,9 @@ export function ProfilePage() {
       <div className="pepito-profile pepito-profile--edit">
         <header className="pepito-profile-edit-head">
           <div>
-            <p className="pepito-eyebrow">ویرایش</p>
-            <h1>پروفایل من</h1>
-            <p>همان زبان Pepito — فیلدها را کامل کن و ذخیره کن.</p>
+            <p className="pepito-eyebrow">{BRAND.displayName}</p>
+            <h1>ویرایش پروفایل</h1>
+            <p>عکس، مشخصات و علایق را یک‌جا به‌روز کن.</p>
           </div>
           <button
             type="button"
@@ -188,118 +185,136 @@ export function ProfilePage() {
         </header>
 
         <form className="pepito-profile-edit-form" onSubmit={(e) => void onSave(e)} noValidate>
-          <div className="pepito-profile-edit-grid">
-            <label className="pepito-field">
-              <span>نام نمایشی</span>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
-                required
-              />
-            </label>
+          <section className="pepito-profile-edit-avatar-block" aria-label="عکس پروفایل">
+            <ProfileAvatarEditor imageUrl={avatarSrc} name={user.name} size="xl" />
+            <p className="pepito-profile-edit-avatar-hint">برای تغییر عکس، روی آیکون دوربین بزن.</p>
+          </section>
 
-            <label className="pepito-field">
-              <span>سن</span>
-              <input
-                value={age}
-                onChange={(e) => setAge(e.target.value)}
-                inputMode="numeric"
-                required
-              />
-            </label>
-
-            <div className="pepito-field pepito-field--full">
-              <span>جنسیت</span>
-              <div className="pepito-choice-row" role="group" aria-label="جنسیت">
-                {(['male', 'female'] as UserGender[]).map((g) => (
-                  <button
-                    key={g}
-                    type="button"
-                    className={`pepito-choice${gender === g ? ' is-on' : ''}`}
-                    onClick={() => setGender(g)}
-                  >
-                    {USER_GENDER_LABELS[g]}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="pepito-field pepito-field--full">
-              <span>کشور</span>
-              <div className="pepito-choice-row" role="group" aria-label="کشور">
-                {['ایران', 'سایر'].map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    className={`pepito-choice${country === c ? ' is-on' : ''}`}
-                    onClick={() => {
-                      setCountry(c);
-                      if (c !== 'ایران') setProvince('');
-                    }}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {country === 'ایران' ? (
+          <section className="pepito-profile-edit-section" aria-label="مشخصات">
+            <h2 className="pepito-profile-edit-section-title">مشخصات</h2>
+            <div className="pepito-profile-edit-grid">
               <label className="pepito-field">
-                <span>استان</span>
-                <select value={province} onChange={(e) => setProvince(e.target.value)} required>
-                  <option value="">انتخاب استان</option>
-                  {IRAN_PROVINCES.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
+                <span>نام نمایشی</span>
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  autoComplete="name"
+                  required
+                />
               </label>
-            ) : null}
 
-            <label className={`pepito-field${country !== 'ایران' ? ' pepito-field--full' : ''}`}>
-              <span>شهر</span>
-              {cities.length > 0 ? (
-                <select value={city} onChange={(e) => setCity(e.target.value)} required>
-                  <option value="">انتخاب شهر</option>
-                  {cities.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
+              <label className="pepito-field">
+                <span>سن</span>
+                <input
+                  value={age}
+                  onChange={(e) => setAge(e.target.value)}
+                  inputMode="numeric"
+                  required
+                />
+              </label>
+
+              <div className="pepito-field pepito-field--full">
+                <span>جنسیت</span>
+                <div className="pepito-choice-row" role="group" aria-label="جنسیت">
+                  {(['male', 'female'] as UserGender[]).map((g) => (
+                    <button
+                      key={g}
+                      type="button"
+                      className={`pepito-choice${gender === g ? ' is-on' : ''}`}
+                      onClick={() => setGender(g)}
+                    >
+                      {USER_GENDER_LABELS[g]}
+                    </button>
                   ))}
-                </select>
-              ) : (
-                <input value={city} onChange={(e) => setCity(e.target.value)} required />
-              )}
-            </label>
-
-            <label className="pepito-field pepito-field--full">
-              <span>درباره من</span>
-              <textarea
-                value={bio}
-                onChange={(e) => setBio(e.target.value)}
-                rows={4}
-                placeholder="کمی از خودت و پت‌ات بگو…"
-              />
-            </label>
-
-            <div className="pepito-field pepito-field--full">
-              <span>علایق (تا ۶ مورد)</span>
-              <div className="pepito-choice-wrap">
-                {PROFILE_INTEREST_OPTIONS.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    className={`pepito-choice pepito-choice--sm${interests.includes(item) ? ' is-on' : ''}`}
-                    onClick={() => toggleInterest(item)}
-                  >
-                    {item}
-                  </button>
-                ))}
+                </div>
               </div>
             </div>
-          </div>
+          </section>
+
+          <section className="pepito-profile-edit-section" aria-label="موقعیت">
+            <h2 className="pepito-profile-edit-section-title">موقعیت</h2>
+            <div className="pepito-profile-edit-grid">
+              <div className="pepito-field pepito-field--full">
+                <span>کشور</span>
+                <div className="pepito-choice-row" role="group" aria-label="کشور">
+                  {['ایران', 'سایر'].map((c) => (
+                    <button
+                      key={c}
+                      type="button"
+                      className={`pepito-choice${country === c ? ' is-on' : ''}`}
+                      onClick={() => {
+                        setCountry(c);
+                        if (c !== 'ایران') setProvince('');
+                      }}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {country === 'ایران' ? (
+                <label className="pepito-field">
+                  <span>استان</span>
+                  <select value={province} onChange={(e) => setProvince(e.target.value)} required>
+                    <option value="">انتخاب استان</option>
+                    {IRAN_PROVINCES.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+
+              <label className={`pepito-field${country !== 'ایران' ? ' pepito-field--full' : ''}`}>
+                <span>شهر</span>
+                {cities.length > 0 ? (
+                  <select value={city} onChange={(e) => setCity(e.target.value)} required>
+                    <option value="">انتخاب شهر</option>
+                    {cities.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input value={city} onChange={(e) => setCity(e.target.value)} required />
+                )}
+              </label>
+            </div>
+          </section>
+
+          <section className="pepito-profile-edit-section" aria-label="درباره">
+            <h2 className="pepito-profile-edit-section-title">درباره من</h2>
+            <div className="pepito-profile-edit-grid">
+              <label className="pepito-field pepito-field--full">
+                <span>بیو</span>
+                <textarea
+                  value={bio}
+                  onChange={(e) => setBio(e.target.value)}
+                  rows={4}
+                  placeholder="کمی از خودت و پت‌ات بگو…"
+                />
+              </label>
+
+              <div className="pepito-field pepito-field--full">
+                <span>علایق (تا ۶ مورد)</span>
+                <div className="pepito-choice-wrap">
+                  {PROFILE_INTEREST_OPTIONS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className={`pepito-choice pepito-choice--sm${interests.includes(item) ? ' is-on' : ''}`}
+                      onClick={() => toggleInterest(item)}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </section>
 
           {error ? <p className="pepito-profile-error">{error}</p> : null}
 
@@ -324,6 +339,7 @@ export function ProfilePage() {
 
   return (
     <div className="pepito-profile">
+      {/* 1. Identity — brand + avatar + name */}
       <section
         className="pepito-profile-hero"
         style={{ backgroundImage: `url(${HERO_IMG})` }}
@@ -335,25 +351,24 @@ export function ProfilePage() {
             <span className="pepito-kicker-dot" aria-hidden>
               <PawPrint size={16} />
             </span>
-            {BRAND.taglineFa}
+            {BRAND.displayName}
           </p>
-          <p className="pepito-home-brand">{BRAND.displayName}</p>
+          <p className="pepito-home-brand pepito-profile-brand-sub">{BRAND.taglineFa}</p>
 
           <div className="pepito-profile-identity">
-            <div className="pepito-profile-avatar" aria-hidden>
-              {avatarSrc ? (
-                <img src={avatarSrc} alt="" />
-              ) : (
-                <span>{initial}</span>
-              )}
-            </div>
+            <ProfileAvatarEditor imageUrl={avatarSrc} name={user.name} size="xl" />
             <div className="pepito-profile-identity-text">
-              <h1>{user.name}</h1>
+              <h1>{user.name || 'پروفایل من'}</h1>
               <p className="pepito-profile-loc">
                 <MapPin size={15} strokeWidth={2} aria-hidden />
                 {locationLabel}
               </p>
-              <p className="pepito-profile-roles">{roleLabel}</p>
+              {mainRole ? (
+                <p className="pepito-profile-active-chip">
+                  <span>نقش فعال</span>
+                  {USER_ROLE_LABELS[mainRole]}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -366,40 +381,37 @@ export function ProfilePage() {
             ) : (
               <button type="button" className="pepito-btn button-1" onClick={openEdit}>
                 <Pencil size={16} strokeWidth={2.25} aria-hidden />
-                ویرایش
+                ویرایش پروفایل
               </button>
             )}
             {isPetOwner ? (
               <Link to="/add-pet" className="pepito-btn pepito-btn--ghost pepito-home-cta-ghost">
-                پت‌ها
+                پت‌های من
               </Link>
             ) : null}
           </div>
         </div>
       </section>
 
-      <section className="pepito-profile-block" aria-label="جزئیات">
+      {/* 2. Role switch — always visible, mobile + desktop */}
+      <section className="pepito-profile-block pepito-profile-role-block" aria-label="تغییر نقش">
+        <header className="pepito-home-section-head">
+          <p className="pepito-eyebrow">نقش</p>
+          <h2>نقش‌های من</h2>
+          <p>نقش فعال را ببین و با یک لمس عوض کن.</p>
+        </header>
+        <RoleSwitchControl variant="profile" />
+      </section>
+
+      {/* 3. About — one composition */}
+      <section className="pepito-profile-block" aria-label="درباره">
         <header className="pepito-home-section-head">
           <p className="pepito-eyebrow">درباره</p>
           <h2>شناسنامه کوتاه</h2>
-          <p>نقش، وضعیت و چند خط از تو — بدون شلوغی.</p>
+          <p>سن، جنسیت، وضعیت و چند خط از تو.</p>
         </header>
 
-        <dl className="pepito-profile-meta">
-          <div>
-            <dt>نقش فعال</dt>
-            <dd>{mainRole ? USER_ROLE_LABELS[mainRole] : '—'}</dd>
-          </div>
-          <div>
-            <dt>وضعیت</dt>
-            <dd>
-              <span
-                className={`pepito-profile-badge${needsWizard ? ' is-warn' : ' is-ok'}`}
-              >
-                {onboardingLabel}
-              </span>
-            </dd>
-          </div>
+        <dl className="pepito-profile-facts">
           {user.age ? (
             <div>
               <dt>سن</dt>
@@ -412,6 +424,14 @@ export function ProfilePage() {
               <dd>{genderLabel}</dd>
             </div>
           ) : null}
+          <div>
+            <dt>وضعیت</dt>
+            <dd>
+              <span className={`pepito-profile-badge${needsWizard ? ' is-warn' : ' is-ok'}`}>
+                {onboardingLabel}
+              </span>
+            </dd>
+          </div>
           {user.phone ? (
             <div>
               <dt>موبایل</dt>
@@ -437,18 +457,7 @@ export function ProfilePage() {
         ) : null}
       </section>
 
-      <section
-        className="pepito-profile-block pepito-profile-role-switch-block"
-        aria-label="تغییر نقش"
-      >
-        <header className="pepito-home-section-head">
-          <p className="pepito-eyebrow">نقش</p>
-          <h2>تغییر نقش</h2>
-          <p>نقش فعال را عوض کن یا نقش جدید اضافه کن.</p>
-        </header>
-        <RoleSwitchControl variant="profile" />
-      </section>
-
+      {/* 4. Pets link */}
       {isPetOwner ? (
         <section className="pepito-profile-block" aria-label="پت‌های من">
           <header className="pepito-home-section-head">
@@ -457,14 +466,14 @@ export function ProfilePage() {
             <p>خلاصه پت ثبت‌شده — مدیریت کامل از مسیر پت‌ها.</p>
           </header>
 
-          <Link to="/add-pet" className="pepito-profile-pet">
+          <Link to="/add-pet" className="pepito-profile-pet-row">
             <PetAvatar
               type={myPet.type}
               size="sm"
               imageUrl={myPet.imageUrl}
               name={myPet.name}
             />
-            <div>
+            <div className="pepito-profile-pet-row-text">
               <strong>{hasPetName ? myPet.name : 'هنوز پتی ثبت نشده'}</strong>
               <span>
                 {hasPetName
@@ -472,10 +481,12 @@ export function ProfilePage() {
                   : 'اولین پت را اضافه کن'}
               </span>
             </div>
+            <ChevronLeft size={18} strokeWidth={2.25} className="pepito-profile-pet-row-chevron" aria-hidden />
           </Link>
         </section>
       ) : null}
 
+      {/* 5. Account */}
       <section className="pepito-profile-block pepito-profile-block--quiet" aria-label="حساب">
         <button
           type="button"

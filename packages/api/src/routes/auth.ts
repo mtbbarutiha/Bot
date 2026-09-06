@@ -1,4 +1,6 @@
+import fs from 'fs';
 import { Router } from 'express';
+import multer from 'multer';
 import type { OnboardingStatus, UserGender, UserRole } from '@petdate/shared';
 import { USER_ROLES, normalizeRoles } from '@petdate/shared';
 import { dbService } from '../db';
@@ -8,6 +10,12 @@ import {
   exchangeTelegramWebLink,
 } from '../services/telegram-web-link';
 import {
+  MAX_USER_AVATAR_BYTES,
+  mimeFromUserAvatarKey,
+  resolveUserAvatarPath,
+  saveUserAvatar,
+} from '../services/user-avatar-store';
+import {
   getUserFromBearer,
   requestWebOtp,
   verifyWebOtp,
@@ -15,6 +23,11 @@ import {
 } from '../services/web-otp';
 
 export const authRouter = Router();
+
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_USER_AVATAR_BYTES, files: 1 },
+});
 
 /**
  * Bot deep-link → web session (HMAC with TELEGRAM_BOT_TOKEN).
@@ -197,6 +210,83 @@ authRouter.patch('/profile', (req, res) => {
     return;
   }
   res.json({ ok: true, user: updated });
+});
+
+/** Upload profile avatar (multipart field: `file`). Auth required. Sets user.avatarUrl. */
+authRouter.post('/avatar', (req, res) => {
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  if (!session) {
+    res.status(401).json({ error: 'وارد نشده‌اید' });
+    return;
+  }
+
+  avatarUpload.single('file')(req, res, (uploadErr) => {
+    if (uploadErr) {
+      const tooLarge =
+        uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE';
+      res.status(tooLarge ? 413 : 400).json({
+        error: tooLarge
+          ? 'حجم عکس بیش از حد مجاز است (حداکثر ۸ مگابایت)'
+          : 'آپلود عکس ناموفق بود',
+      });
+      return;
+    }
+
+    const file = req.file;
+    if (!file?.buffer?.length) {
+      res.status(400).json({ error: 'فایل عکس الزامی است' });
+      return;
+    }
+
+    try {
+      const saved = saveUserAvatar({
+        userId: session.user.id,
+        originalName: file.originalname || 'avatar.jpg',
+        mimeType: file.mimetype,
+        buffer: file.buffer,
+      });
+      const updated = dbService.updateUserProfile(session.user.id, {
+        avatarUrl: saved.urlPath,
+      });
+      if (!updated) {
+        res.status(404).json({ error: 'کاربر پیدا نشد' });
+        return;
+      }
+      res.status(201).json({
+        ok: true,
+        url: saved.urlPath,
+        storageKey: saved.storageKey,
+        mimeType: file.mimetype,
+        user: updated,
+      });
+    } catch (err) {
+      if (err instanceof Error && err.message === 'FILE_TOO_LARGE') {
+        res.status(413).json({ error: 'حجم عکس بیش از حد مجاز است (حداکثر ۸ مگابایت)' });
+        return;
+      }
+      if (err instanceof Error && err.message === 'INVALID_MIME') {
+        res.status(400).json({ error: 'فقط عکس (JPG، PNG، WebP، GIF) مجاز است' });
+        return;
+      }
+      console.warn('user avatar upload failed:', (err as Error).message);
+      res.status(500).json({ error: 'ذخیره عکس ناموفق بود' });
+    }
+  });
+});
+
+/** Serve an uploaded user avatar by storage key `userId/filename`. */
+authRouter.get('/avatar/:userId/:filename', (req, res) => {
+  const userId = String(req.params.userId || '');
+  const filename = String(req.params.filename || '');
+  const storageKey = `${userId}/${filename}`;
+  const abs = resolveUserAvatarPath(storageKey);
+  if (!abs || !fs.existsSync(abs)) {
+    res.status(404).json({ error: 'عکس پیدا نشد' });
+    return;
+  }
+  res.setHeader('Content-Type', mimeFromUserAvatarKey(storageKey));
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.send(fs.readFileSync(abs));
 });
 
 authRouter.patch('/roles', (req, res) => {

@@ -22,6 +22,7 @@ export function useAuthStore() {
     acceptSession: authStore.acceptSession.bind(authStore),
     refreshMe: authStore.refreshMe.bind(authStore),
     saveProfile: authStore.saveProfile.bind(authStore),
+    uploadAvatar: authStore.uploadAvatar.bind(authStore),
     saveRoles: authStore.saveRoles.bind(authStore),
     setPrimaryRole: authStore.setPrimaryRole.bind(authStore),
     logout: authStore.logout.bind(authStore),
