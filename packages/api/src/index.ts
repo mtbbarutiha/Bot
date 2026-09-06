@@ -25,6 +25,7 @@ import { sectionsRouter } from './routes/sections';
 import { usersRouter } from './routes/users';
 import { authRouter } from './routes/auth';
 import { adminRouter } from './routes/admin';
+import { shopRouter } from './routes/shop';
 import {
   expressErrorHandler,
   installConsoleErrorBridge,
@@ -114,6 +115,7 @@ app.use('/api/playdate-requests', playdatesRouter);
 app.use('/api/sections', sectionsRouter);
 app.use('/api/auth', authRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/shop', shopRouter);
 app.use('/api/admin', adminRouter);
 
 app.get('/api/games-for-section/:sectionId', (req, res) => {

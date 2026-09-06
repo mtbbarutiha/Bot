@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { tomanToShopCoins } from '@petdate/shared';
 import { getProduct, type ShopProduct } from '../data/shopCatalog';
 
 const STORAGE_KEY = 'petdate.shop.cart.v1';
@@ -20,6 +21,7 @@ export interface CartLine {
 export interface CartLineView extends CartLine {
   product: ShopProduct;
   lineTotal: number;
+  lineCoins: number;
 }
 
 export interface ShopOrderStub {
@@ -31,7 +33,9 @@ export interface ShopOrderStub {
   note?: string;
   items: CartLine[];
   totalToman: number;
-  status: 'pending';
+  totalCoins?: number;
+  status: 'pending' | 'paid';
+  paymentCurrency?: 'coins' | 'toman';
 }
 
 function readLines(): CartLine[] {
@@ -65,16 +69,19 @@ interface ShopCartContextValue {
   lines: CartLineView[];
   itemCount: number;
   totalToman: number;
+  totalCoins: number;
   add: (productId: string, qty?: number) => void;
   setQty: (productId: string, qty: number) => void;
   remove: (productId: string) => void;
   clear: () => void;
+  /** @deprecated local stub — prefer API coin checkout */
   placeOrderStub: (form: {
     name: string;
     phone: string;
     address: string;
     note?: string;
   }) => ShopOrderStub;
+  rememberPaidOrder: (order: ShopOrderStub) => void;
 }
 
 const ShopCartContext = createContext<ShopCartContextValue | null>(null);
@@ -101,10 +108,12 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
       .map((l) => {
         const product = getProduct(l.productId);
         if (!product) return null;
+        const unitCoins = tomanToShopCoins(product.priceToman);
         return {
           ...l,
           product,
           lineTotal: product.priceToman * l.qty,
+          lineCoins: unitCoins * l.qty,
         };
       })
       .filter(Boolean) as CartLineView[];
@@ -112,6 +121,7 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
 
   const itemCount = useMemo(() => lines.reduce((s, l) => s + l.qty, 0), [lines]);
   const totalToman = useMemo(() => views.reduce((s, l) => s + l.lineTotal, 0), [views]);
+  const totalCoins = useMemo(() => views.reduce((s, l) => s + l.lineCoins, 0), [views]);
 
   const add = useCallback((productId: string, qty = 1) => {
     setLines((prev) => {
@@ -138,6 +148,10 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
 
   const clear = useCallback(() => setLines([]), []);
 
+  const rememberPaidOrder = useCallback((order: ShopOrderStub) => {
+    localStorage.setItem(ORDERS_KEY, JSON.stringify([order, ...readOrders()]));
+  }, []);
+
   const placeOrderStub = useCallback(
     (form: { name: string; phone: string; address: string; note?: string }) => {
       const order: ShopOrderStub = {
@@ -149,13 +163,14 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
         note: form.note,
         items: lines,
         totalToman,
+        totalCoins,
         status: 'pending',
       };
-      localStorage.setItem(ORDERS_KEY, JSON.stringify([order, ...readOrders()]));
+      rememberPaidOrder(order);
       clear();
       return order;
     },
-    [lines, totalToman, clear]
+    [lines, totalToman, totalCoins, clear, rememberPaidOrder]
   );
 
   const value = useMemo(
@@ -163,13 +178,26 @@ export function ShopCartProvider({ children }: { children: ReactNode }) {
       lines: views,
       itemCount,
       totalToman,
+      totalCoins,
       add,
       setQty,
       remove,
       clear,
       placeOrderStub,
+      rememberPaidOrder,
     }),
-    [views, itemCount, totalToman, add, setQty, remove, clear, placeOrderStub]
+    [
+      views,
+      itemCount,
+      totalToman,
+      totalCoins,
+      add,
+      setQty,
+      remove,
+      clear,
+      placeOrderStub,
+      rememberPaidOrder,
+    ]
   );
 
   return <ShopCartContext.Provider value={value}>{children}</ShopCartContext.Provider>;

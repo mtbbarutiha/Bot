@@ -12,7 +12,9 @@ export {
 } from '@petdate/shared';
 export type { CoinAward, ProfileRewardSection } from '@petdate/shared';
 
-export const COIN_PRICE_TOMAN = 2_000;
+import { COIN_PRICE_TOMAN as SHARED_COIN_PRICE_TOMAN } from '@petdate/shared';
+
+export const COIN_PRICE_TOMAN = SHARED_COIN_PRICE_TOMAN;
 export const COIN_PRICE_STARS = 1;
 export const COIN_SELL_PRICE_TOMAN = 1_000;
 export const MIN_SELL_COINS = 50;

@@ -6080,14 +6080,48 @@ button.chip.is-on {
   border-color: rgba(180, 35, 24, 0.25) !important;
 }
 .pd-shop-cart-line-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.15rem;
   font-weight: 800;
   font-family: var(--font-display);
   color: var(--pepito-dark);
   white-space: nowrap;
 }
 .pd-shop-checkout-total {
-  margin: 0 0 1rem;
+  margin: 0 0 0.35rem;
   font-size: 1.05rem;
+}
+.pd-shop-checkout-coins {
+  margin: 0 0 1rem;
+  font-size: 0.98rem;
+  color: #3d3558;
+}
+.pd-shop-checkout-rate {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  color: #7a7199;
+}
+.pd-shop-checkout-balance {
+  margin: 0 0 0.85rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(92, 77, 145, 0.06);
+  font-size: 0.95rem;
+}
+.pd-shop-balance-low,
+.pd-shop-afford-warn {
+  color: #b42318;
+}
+.pd-shop-line-coins {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.85rem;
+  color: #5c4d91;
+  font-weight: 600;
+  font-family: var(--font-body, inherit);
 }
 .pd-shop-checkout-form {
   display: flex;

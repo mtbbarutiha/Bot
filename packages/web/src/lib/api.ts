@@ -427,3 +427,40 @@ export function telegramBotDeepLink(path = ''): string {
     ? `https://t.me/${username}?start=${encodeURIComponent(clean)}`
     : `https://t.me/${username}`;
 }
+
+export type ShopCoinCheckoutItem = { productId: string; qty: number };
+
+export type ShopCoinCheckoutResult = {
+  ok: true;
+  orderId: number;
+  order: {
+    id: number;
+    status: string;
+    totalToman: number;
+    paymentCurrency?: string;
+    paymentAmount?: number;
+  };
+  coinsSpent: number;
+  coinsRemaining: number;
+  totalToman: number;
+  message: string;
+  wallet?: { ton: number; stars: number; coins: number; toman: number };
+  coins?: number;
+};
+
+export async function checkoutShopWithCoins(
+  token: string,
+  payload: {
+    items: ShopCoinCheckoutItem[];
+    customerName: string;
+    customerPhone: string;
+    address: string;
+    note?: string;
+  }
+): Promise<ShopCoinCheckoutResult> {
+  return request<ShopCoinCheckoutResult>('/api/shop/checkout/coins', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(payload),
+  });
+}

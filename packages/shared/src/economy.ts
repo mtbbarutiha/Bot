@@ -3,6 +3,19 @@
 /** هزینه اتصال سریع به دامپزشک آنلاین (سکه ربات) — هم‌تراز ربات */
 export const QUICK_VET_COST = 1;
 
+/**
+ * نرخ تبدیل خرید سکه (تومان به‌ازای هر سکه) — هم‌تراز ربات.
+ * برای پرداخت فروشگاه با سکه: ceil(قیمت_تومان / این_نرخ).
+ */
+export const COIN_PRICE_TOMAN = 2_000;
+
+/** تبدیل مبلغ تومان به سکه موردنیاز برای پرداخت فروشگاه (حداقل ۱ برای مبلغ مثبت) */
+export function tomanToShopCoins(toman: number): number {
+  const t = Math.floor(Number(toman) || 0);
+  if (!Number.isFinite(t) || t <= 0) return 0;
+  return Math.max(1, Math.ceil(t / COIN_PRICE_TOMAN));
+}
+
 /** موجودی کیف پول چندارزی کاربر */
 export type WalletCurrency = 'ton' | 'stars' | 'coins' | 'toman';
 

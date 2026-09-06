@@ -3237,6 +3237,10 @@ export function formatToman(amount: number): string {
   return `${amount.toLocaleString('fa-IR')} تومان`;
 }
 
+export function formatShopCoins(amount: number): string {
+  return `${amount.toLocaleString('fa-IR')} سکه`;
+}
+
 export function productDiscountPercent(p: ShopProduct): number | null {
   if (!p.compareAtToman || p.compareAtToman <= p.priceToman) return null;
   return Math.round(((p.compareAtToman - p.priceToman) / p.compareAtToman) * 100);
