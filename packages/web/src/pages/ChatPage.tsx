@@ -12,6 +12,8 @@ import {
   ArrowRight,
   Check,
   CheckCheck,
+  ImageOff,
+  Loader2,
   Lock,
   LockOpen,
   MoreVertical,
@@ -32,6 +34,7 @@ import {
   clearPlaydateChatMessages,
   endPlaydateChat,
   getPlaydateRequest,
+  getUserById,
   listPlaydateChatMessages,
   listPlaydateRequests,
   playdateChatMediaUrl,
@@ -316,6 +319,8 @@ export function ChatPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [peerOwnerLabel, setPeerOwnerLabel] = useState<string | null>(null);
+  const [brokenMedia, setBrokenMedia] = useState<Record<string, boolean>>({});
 
   const scrollerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -324,6 +329,7 @@ export function ChatPage() {
   const lastMsgIdRef = useRef(0);
   const bootstrappedRef = useRef<number | null>(null);
   const stickToBottomRef = useRef(true);
+  const smoothScrollRef = useRef(false);
 
   const showList = desktop || !hasThread;
   const showThread = desktop || hasThread;
@@ -430,6 +436,8 @@ export function ChatPage() {
     setMenuOpen(false);
     setPendingFile(null);
     setPendingPreview(null);
+    setPeerOwnerLabel(null);
+    setBrokenMedia({});
     stickToBottomRef.current = true;
     if (!ended) {
       setMessages([systemMessage('چت همبازی فعال شد — می‌توانی پیام بفرستی.')]);
@@ -507,8 +515,45 @@ export function ChatPage() {
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el || !stickToBottomRef.current) return;
-    el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
-  }, [messages, ended, infoCard]);
+    const behavior = smoothScrollRef.current ? 'smooth' : 'auto';
+    smoothScrollRef.current = false;
+    requestAnimationFrame(() => {
+      el.scrollTo({ top: el.scrollHeight, behavior });
+    });
+  }, [messages, ended, infoCard, pendingFile]);
+
+  useEffect(() => {
+    const ownerId = match?.fromPet?.ownerId;
+    if (!ownerId) {
+      setPeerOwnerLabel(null);
+      return;
+    }
+    let cancelled = false;
+    void getUserById(ownerId)
+      .then((user) => {
+        if (cancelled || !user?.name?.trim()) return;
+        const name = user.name.trim();
+        setPeerOwnerLabel(name);
+        setConversations((prev) =>
+          prev.map((c) =>
+            c.fromPet.ownerId === ownerId
+              ? { ...c, fromPet: { ...c.fromPet, ownerName: name } }
+              : c,
+          ),
+        );
+        setMatch((prev) =>
+          prev && prev.fromPet.ownerId === ownerId
+            ? { ...prev, fromPet: { ...prev.fromPet, ownerName: name } }
+            : prev,
+        );
+      })
+      .catch(() => {
+        /* keep fallback */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [match?.id, match?.fromPet?.ownerId]);
 
   useEffect(() => {
     if (!pendingFile || !pendingFile.type.startsWith('image/')) {
@@ -537,7 +582,8 @@ export function ChatPage() {
   }, [draft, hasThread, match?.id]);
 
   const peerPet = match?.fromPet;
-  const peerOwnerName = peerPet?.ownerName || peerPet?.name || 'صاحب پت';
+  const peerOwnerName =
+    peerOwnerLabel || peerPet?.ownerName || peerPet?.name || 'صاحب پت';
   const peerOwnerId = peerPet?.ownerId;
 
   const messageBlocks = useMemo(() => {
@@ -602,6 +648,7 @@ export function ChatPage() {
     setDraft('');
     clearPendingFile();
     stickToBottomRef.current = true;
+    smoothScrollRef.current = true;
     try {
       const saved = file
         ? await uploadPlaydateChatFile(match.id, myUserId, file, text)
@@ -722,11 +769,27 @@ export function ChatPage() {
   function renderMedia(msg: ChatMsg) {
     const hasFile = Boolean(msg.telegramFileId || msg.storageKey);
     if (!msg.mediaKind || !hasFile || !myUserId || !match) return null;
+    if (brokenMedia[msg.id]) {
+      return (
+        <div className="tg-media-broken" role="img" aria-label={mediaLabel(msg.mediaKind)}>
+          <ImageOff size={18} aria-hidden />
+          <span>{mediaLabel(msg.mediaKind)} در دسترس نیست</span>
+        </div>
+      );
+    }
     const src = playdateChatMediaUrl(match.id, msg.numericId, myUserId);
+    const markBroken = () =>
+      setBrokenMedia((prev) => (prev[msg.id] ? prev : { ...prev, [msg.id]: true }));
     if (msg.mediaKind === 'photo' || msg.mediaKind === 'sticker') {
       return (
         <a className="tg-media-link" href={src} target="_blank" rel="noreferrer">
-          <img className="tg-media-image" src={src} alt={mediaLabel(msg.mediaKind)} />
+          <img
+            className="tg-media-image"
+            src={src}
+            alt={mediaLabel(msg.mediaKind)}
+            loading="lazy"
+            onError={markBroken}
+          />
         </a>
       );
     }
@@ -736,13 +799,27 @@ export function ChatPage() {
       msg.mediaKind === 'video_note'
     ) {
       return (
-        <video className="tg-media-video" src={src} controls playsInline>
+        <video
+          className="tg-media-video"
+          src={src}
+          controls
+          playsInline
+          onError={markBroken}
+        >
           ویدیو پشتیبانی نمی‌شود
         </video>
       );
     }
     if (msg.mediaKind === 'voice' || msg.mediaKind === 'audio') {
-      return <audio className="tg-media-audio" src={src} controls preload="metadata" />;
+      return (
+        <audio
+          className="tg-media-audio"
+          src={src}
+          controls
+          preload="metadata"
+          onError={markBroken}
+        />
+      );
     }
     return (
       <a className="tg-media-file" href={src} target="_blank" rel="noreferrer">
@@ -1082,7 +1159,7 @@ export function ChatPage() {
                       disabled={(!draft.trim() && !pendingFile) || sending}
                       aria-label="ارسال"
                     >
-                      <Send size={18} />
+                      {sending ? <Loader2 size={18} className="tg-spin" /> : <Send size={18} />}
                     </button>
                   </form>
                 </>
