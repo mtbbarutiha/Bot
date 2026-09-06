@@ -6896,35 +6896,89 @@ button.chip.is-on {
 
 
 
-/* SITE_DESKTOP_NAV */
+/* SITE_DESKTOP_NAV
+   Desktop overlap root cause: NavUserCluster was position:absolute on the
+   physical left while .pepito-nav-actions used margin-inline-start:auto
+   (also left in RTL) — SiteDesktopNav sat on top of avatar/wallet/cart.
+   Fix: keep cluster in flex flow on ≥860px; order logo → links → actions
+   → cluster so tools stay leftmost without absolute collisions. */
 .pepito-site-desktop-nav {
   display: none;
 }
 
 @media (min-width: 860px) {
+  .pepito-nav,
+  .pepito-nav--app,
+  .pepito-nav--tools {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.65rem;
+    /* Cancel absolute-cluster padding reservation — cluster is in-flow */
+    padding-left: var(--pepito-gutter-x) !important;
+    padding-right: var(--pepito-gutter-x);
+  }
+
+  .pepito-nav-logo {
+    order: 0;
+    flex: 0 0 auto;
+  }
+
+  .pepito-nav-links,
+  .pepito-nav-links--app {
+    order: 1;
+    display: flex;
+    flex: 0 1 auto;
+    min-width: 0;
+    gap: 0.95rem;
+    margin-inline-start: 0.65rem;
+  }
+
+  .pepito-nav-actions {
+    order: 2;
+    margin-inline-start: auto !important;
+    margin-inline-end: 0 !important;
+    flex: 0 0 auto;
+    gap: 0.4rem;
+  }
+
+  /* Physical left: avatar → wallet → cart (direction:ltr on cluster) */
+  .pepito-nav-user-cluster {
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    order: 3;
+    flex: 0 0 auto;
+    z-index: 6;
+    margin: 0;
+    gap: 0.4rem;
+    max-width: none;
+  }
+
   .pepito-site-desktop-nav {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    flex-wrap: wrap;
-    max-width: min(46vw, 30rem);
+    gap: 0.3rem;
+    flex-wrap: nowrap;
+    max-width: none;
   }
 
   .pepito-site-desktop-nav-link {
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.75rem;
+    gap: 0.3rem;
+    padding: 0.4rem 0.7rem;
     border-radius: 999px;
     text-decoration: none;
     font-family: var(--font-display);
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.8rem;
     color: var(--pepito-dark);
     background: rgba(255, 255, 255, 0.72);
     border: 1px solid rgba(92, 77, 145, 0.14);
     transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     white-space: nowrap;
+    flex-shrink: 0;
   }
 
   .pepito-site-desktop-nav-link:hover {
@@ -6953,5 +7007,43 @@ button.chip.is-on {
     height: 100%;
     object-fit: cover;
     border-radius: 50%;
+  }
+}
+
+/* Narrow desktop: hide lower-priority section links so primary CTAs +
+   left cluster never collide (860–1099). */
+@media (min-width: 860px) and (max-width: 1099px) {
+  .pepito-nav-links a:nth-child(n + 4),
+  .pepito-nav-links--app a:nth-child(n + 3) {
+    display: none;
+  }
+
+  .pepito-nav-links,
+  .pepito-nav-links--app {
+    gap: 0.75rem;
+  }
+
+  .pepito-site-desktop-nav-link {
+    padding: 0.35rem 0.55rem;
+    font-size: 0.76rem;
+  }
+
+  .pepito-nav-wallet-btn {
+    max-width: 8.5rem;
+  }
+}
+
+@media (min-width: 860px) and (max-width: 959px) {
+  .pepito-nav-links a:nth-child(n + 3),
+  .pepito-nav-links--app a:nth-child(n + 2) {
+    display: none;
+  }
+
+  .pepito-site-desktop-nav-link span {
+    display: none;
+  }
+
+  .pepito-site-desktop-nav-link {
+    padding: 0.4rem;
   }
 }
