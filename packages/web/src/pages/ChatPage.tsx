@@ -262,10 +262,10 @@ function ConversationListPane({
                 : 'درخواست‌های همبازی و مشاوره‌های شما به‌عنوان صاحب پت اینجا می‌آیند.'}
             </p>
             <Link
-              to={scope === 'vet' ? '/vet-consult' : '/explore#requests'}
+              to={scope === 'vet' ? '/vet-consult' : '/explore'}
               className="tg-chat-link-btn"
             >
-              {scope === 'vet' ? 'رفتن به پنل پزشک' : 'رفتن به همبازی'}
+              {scope === 'vet' ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
             </Link>
           </div>
         ) : (
@@ -344,12 +344,18 @@ function ConversationListPane({
   );
 }
 
-function ThreadEmptyState() {
+function ThreadEmptyState({ scope }: { scope: InboxScope }) {
+  const isVet = scope === 'vet';
   return (
     <div className="tg-thread-empty">
       <BrandMark iconSize={36} />
-      <h2>یک گفتگو را انتخاب کن</h2>
-      <p>از فهرست سمت راست، چت همبازی را باز کن و پیام بفرست.</p>
+      <h2>{isVet ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
+      <Link
+        to={isVet ? '/vet-consult' : '/explore'}
+        className="tg-chat-link-btn"
+      >
+        {isVet ? 'رفتن به پنل پزشک' : 'پیدا کردن همبازی'}
+      </Link>
     </div>
   );
 }
@@ -1074,7 +1080,7 @@ export function ChatPage() {
       {showThread ? (
         <section className="tg-thread" aria-label="پنجره گفتگو">
           {!hasThread ? (
-            <ThreadEmptyState />
+            <ThreadEmptyState scope={inboxScope} />
           ) : threadLoading ? (
             <div className="tg-thread-empty">
               <BrandMark iconSize={28} />
