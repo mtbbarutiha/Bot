@@ -18,8 +18,8 @@ function PawIcon({ size = 14 }: { size?: number }) {
 
 export function ShopChrome({
   children,
-  bannerTitle = 'پت شاپ',
-  bannerLead = 'غذا، لوازم و اسباب‌بازی با قیمت تومان — طراحی PetDate',
+  bannerTitle = 'پت دیت شاپ',
+  bannerLead = 'غذا، لوازم و اسباب‌بازی با قیمت تومان — پت دیت شاپ',
   hideBanner = false,
 }: {
   children: ReactNode;
@@ -54,9 +54,9 @@ export function ShopChrome({
         <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
-        <nav className="pepito-nav-links pepito-nav-links--app" aria-label="پت شاپ">
+        <nav className="pepito-nav-links pepito-nav-links--app" aria-label="پت دیت شاپ">
           <NavLink to="/shop" end>
-            پت شاپ
+            پت دیت شاپ
           </NavLink>
           <NavLink to="/shop/c/dog-food">سگ</NavLink>
           <NavLink to="/shop/c/cat-food">گربه</NavLink>
@@ -82,24 +82,25 @@ export function ShopChrome({
           )}
           <Link to="/shop" className="pepito-btn pepito-btn--nav">
             <PawIcon />
-            فروشگاه
+            پت شاپ
           </Link>
         </div>
       </header>
 
       {!hideBanner ? (
-        <section
-          className="pepito-flow-banner pd-shop-hero"
-          style={{ backgroundImage: 'url(/pepito/uploads/3.jpg)' }}
-          aria-label={bannerTitle}
-        >
-          <div className="pepito-flow-banner-wash" aria-hidden />
-          <div className="pepito-flow-banner-inner">
-            <p className="pepito-flow-banner-brand">
+        <section className="pd-shop-hero pd-shop-hero--full" aria-label={bannerTitle}>
+          <img
+            className="pd-shop-hero-img"
+            src="/shop/petdate-shop-hero.png"
+            alt="پت دیت شاپ — فضای برند فروشگاه حیوانات خانگی"
+          />
+          <div className="pd-shop-hero-wash" aria-hidden />
+          <div className="pd-shop-hero-inner">
+            <p className="pd-shop-hero-brand">
               <span className="pepito-kicker-dot" aria-hidden>
                 <PawPrint size={16} />
               </span>
-              {BRAND.displayName}
+              PetDate Shop
             </p>
             <h1>{bannerTitle}</h1>
             {bannerLead ? <p>{bannerLead}</p> : null}
@@ -114,7 +115,7 @@ export function ShopChrome({
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
         <p>
-          پت شاپ {BRAND.displayName} — قیمت‌ها به تومان
+          پت دیت شاپ — قیمت‌ها به تومان
           <br />
           {BRAND.taglineEn}
         </p>

@@ -38,7 +38,7 @@ export function ShopProductPage() {
     >
       <div className="pepito-container pd-shop-detail">
         <nav className="pd-shop-breadcrumb" aria-label="مسیر">
-          <Link to="/shop">پت شاپ</Link>
+          <Link to="/shop">پت دیت شاپ</Link>
           {category ? (
             <>
               <span>/</span>
@@ -84,12 +84,12 @@ export function ShopProductPage() {
             <div className="pd-shop-detail-actions">
               <button
                 type="button"
-                className="pepito-btn button-1"
+                className="pepito-btn button-1 pd-shop-buy-btn"
                 disabled={!product.inStock}
                 onClick={() => add(product.id)}
               >
                 <ShoppingBag size={16} strokeWidth={2} aria-hidden />
-                {product.inStock ? 'افزودن به سبد' : 'ناموجود'}
+                {product.inStock ? 'بخر — افزودن به سبد' : 'ناموجود'}
               </button>
               <Link to="/shop/cart" className="pepito-btn button-3">
                 <span className="pepito-btn-icon" aria-hidden>

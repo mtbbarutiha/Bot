@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Filter, RotateCcw, Search, X } from 'lucide-react';
 import {
   SHOP_BRANDS,
   SHOP_CATEGORIES,
@@ -73,26 +74,64 @@ export function ShopCategoryPage() {
     setSearchParams(sp, { replace: true });
   };
 
+  const resetFilters = () => {
+    setPetType(catMeta ? catMeta.petType : 'all');
+    setBrandId('');
+    setMinPrice(0);
+    setMaxPrice(SHOP_PRICE_MAX);
+    setQ('');
+    setInStockOnly(false);
+    setSearchParams({}, { replace: true });
+  };
+
+  const activeFilterCount =
+    (brandId ? 1 : 0) +
+    (q.trim() ? 1 : 0) +
+    (inStockOnly ? 1 : 0) +
+    (minPrice > 0 || maxPrice < SHOP_PRICE_MAX ? 1 : 0) +
+    (petType !== 'all' && (!catMeta || petType !== catMeta.petType) ? 1 : 0);
+
+  const visibleCategories = SHOP_CATEGORIES.filter(
+    (c) => petType === 'all' || c.petType === petType
+  );
+
   const sidebar = (
-    <aside className={`pd-shop-filters${filtersOpen ? ' is-open' : ''}`}>
+    <aside className={`pd-shop-filters${filtersOpen ? ' is-open' : ''}`} aria-label="فیلترها">
       <div className="pd-shop-filters-head">
-        <h2>فیلترها</h2>
-        <button type="button" className="pd-shop-filters-close" onClick={() => setFiltersOpen(false)}>
-          بستن
-        </button>
+        <h2>
+          <Filter size={18} strokeWidth={2.2} aria-hidden />
+          فیلترها
+        </h2>
+        <div className="pd-shop-filters-head-actions">
+          <button type="button" className="pd-shop-filters-reset" onClick={resetFilters}>
+            <RotateCcw size={14} strokeWidth={2.2} aria-hidden />
+            پاک کردن
+          </button>
+          <button
+            type="button"
+            className="pd-shop-filters-close"
+            onClick={() => setFiltersOpen(false)}
+            aria-label="بستن فیلترها"
+          >
+            <X size={18} strokeWidth={2.2} />
+          </button>
+        </div>
       </div>
 
       <label className="pd-shop-filter-field">
         <span>جستجو</span>
-        <input
-          type="search"
-          value={q}
-          placeholder="نام محصول یا برند…"
-          onChange={(e) => {
-            setQ(e.target.value);
-            syncUrl({ q: e.target.value });
-          }}
-        />
+        <span className="pd-shop-filter-search">
+          <Search size={16} strokeWidth={2.2} aria-hidden />
+          <input
+            type="search"
+            value={q}
+            placeholder="نام محصول یا برند…"
+            onChange={(e) => {
+              setQ(e.target.value);
+              syncUrl({ q: e.target.value });
+            }}
+          />
+        </span>
       </label>
 
       <fieldset className="pd-shop-filter-group">
@@ -121,14 +160,20 @@ export function ShopCategoryPage() {
             to={`/shop/c/all${brandId ? `?brand=${brandId}` : ''}`}
             className={!catMeta ? 'is-active' : ''}
           >
-            همه
+            <span className="pd-shop-filter-link-emoji" aria-hidden>
+              ✨
+            </span>
+            همه دسته‌ها
           </Link>
-          {SHOP_CATEGORIES.filter((c) => petType === 'all' || c.petType === petType).map((c) => (
+          {visibleCategories.map((c) => (
             <Link
               key={c.slug}
               to={`/shop/c/${c.slug}${brandId ? `?brand=${brandId}` : ''}`}
               className={category === c.slug ? 'is-active' : ''}
             >
+              <span className="pd-shop-filter-link-emoji" aria-hidden>
+                {c.emoji}
+              </span>
               {c.labelFa}
             </Link>
           ))}
@@ -172,6 +217,7 @@ export function ShopCategoryPage() {
             <input
               type="number"
               min={0}
+              inputMode="numeric"
               value={minPrice}
               onChange={(e) => setMinPrice(Number(e.target.value) || 0)}
             />
@@ -181,6 +227,7 @@ export function ShopCategoryPage() {
             <input
               type="number"
               min={0}
+              inputMode="numeric"
               value={maxPrice}
               onChange={(e) => setMaxPrice(Number(e.target.value) || SHOP_PRICE_MAX)}
             />
@@ -196,21 +243,53 @@ export function ShopCategoryPage() {
         />
         فقط موجود
       </label>
+
+      <button
+        type="button"
+        className="pd-shop-filters-apply"
+        onClick={() => setFiltersOpen(false)}
+      >
+        نمایش {products.length.toLocaleString('fa-IR')} محصول
+      </button>
     </aside>
   );
 
   return (
     <ShopChrome bannerTitle={title} bannerLead={lead}>
       <div className="pepito-container pd-shop-listing">
+        <nav className="pd-shop-breadcrumb" aria-label="مسیر">
+          <Link to="/shop">پت دیت شاپ</Link>
+          <span>/</span>
+          <span>{title}</span>
+        </nav>
+
         <div className="pd-shop-listing-toolbar">
-          <p>
-            {products.length.toLocaleString('fa-IR')} محصول
-            {catMeta ? ` در «${catMeta.labelFa}»` : ''}
-          </p>
-          <button type="button" className="pd-shop-filters-toggle" onClick={() => setFiltersOpen(true)}>
+          <div className="pd-shop-listing-toolbar-copy">
+            <p>
+              {products.length.toLocaleString('fa-IR')} محصول
+              {catMeta ? ` در «${catMeta.labelFa}»` : ''}
+            </p>
+            {activeFilterCount > 0 ? (
+              <span className="pd-shop-listing-active">
+                {activeFilterCount.toLocaleString('fa-IR')} فیلتر فعال
+              </span>
+            ) : null}
+          </div>
+          <button
+            type="button"
+            className="pd-shop-filters-toggle"
+            onClick={() => setFiltersOpen(true)}
+          >
+            <Filter size={16} strokeWidth={2.2} aria-hidden />
             فیلترها
+            {activeFilterCount > 0 ? (
+              <span className="pd-shop-filters-toggle-count">
+                {activeFilterCount.toLocaleString('fa-IR')}
+              </span>
+            ) : null}
           </button>
         </div>
+
         <div className="pd-shop-listing-layout">
           {sidebar}
           {filtersOpen ? (
@@ -223,7 +302,12 @@ export function ShopCategoryPage() {
           ) : null}
           <div className="pd-shop-listing-results">
             {products.length === 0 ? (
-              <p className="pd-shop-empty">محصولی با این فیلترها پیدا نشد.</p>
+              <div className="pd-shop-empty">
+                <p>محصولی با این فیلترها پیدا نشد.</p>
+                <button type="button" className="pepito-btn button-3" onClick={resetFilters}>
+                  پاک کردن فیلترها
+                </button>
+              </div>
             ) : (
               <div className="pd-shop-product-grid">
                 {products.map((p) => (
