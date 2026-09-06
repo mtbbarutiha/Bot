@@ -422,21 +422,12 @@ export function WelcomePage() {
       </section>
 
       <section className="pepito-section pepito-about" id="about">
-        <div className="pepito-about-copy">
-          <p className="pepito-eyebrow">عاشق حیواناتیم</p>
-          <h2>خدماتی برای پت‌های خاص شما!</h2>
-          <p>
-            امکانات ربات، با تجربهٔ دسکتاپ قالب Pepito — داده همان لحظه سینک می‌ماند.
-            دامپزشکان و همبازی‌ها روی یک حساب مشترک وب و تلگرام.
-          </p>
-          {/* Pepito: Read more → about / services */}
-          <a href="#services" className="pepito-btn button-1">
-            <PawIcon />
-            بیشتر بخوانید
-          </a>
-        </div>
+        {/* Media first in RTL grid → physical right; copy stays on the left */}
         <div className="pepito-about-media">
           <div className="pepito-about-item">
+            <div className="pepito-about-photo">
+              <img src={`${P}/about.jpg`} alt="" loading="lazy" />
+            </div>
             {/* Pepito `.note.vert-move` floating quote on the about photo */}
             <aside className="pepito-about-note pepito-vert-move" aria-label="نظر">
               <div className="pepito-about-note-stars" aria-hidden>
@@ -452,8 +443,20 @@ export function WelcomePage() {
                 اولیویا مارتین
               </p>
             </aside>
-            <img src={`${P}/about.jpg`} alt="" loading="lazy" />
           </div>
+        </div>
+        <div className="pepito-about-copy">
+          <p className="pepito-eyebrow">عاشق حیواناتیم</p>
+          <h2>خدماتی برای پت‌های خاص شما!</h2>
+          <p>
+            امکانات ربات، با تجربهٔ دسکتاپ قالب Pepito — داده همان لحظه سینک می‌ماند.
+            دامپزشکان و همبازی‌ها روی یک حساب مشترک وب و تلگرام.
+          </p>
+          {/* Pepito: Read more → about / services */}
+          <a href="#services" className="pepito-btn button-1">
+            <PawIcon />
+            بیشتر بخوانید
+          </a>
         </div>
       </section>
 
