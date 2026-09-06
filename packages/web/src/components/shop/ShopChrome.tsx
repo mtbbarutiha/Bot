@@ -3,6 +3,7 @@ import { Link, NavLink } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { useAuthStore } from '../../hooks/useAuthStore';
+import { useShopCatalogSync } from '../../hooks/useShopCatalogSync';
 import { NavUserCluster } from '../NavUserCluster';
 import { SiteDesktopNav } from '../SiteDesktopNav';
 import { SiteFooter } from '../SiteFooter';
@@ -21,6 +22,7 @@ export function ShopChrome({
 }) {
   const [scrolled, setScrolled] = useState(false);
   const { isLoggedIn } = useAuthStore();
+  const { ready } = useShopCatalogSync();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -83,7 +85,9 @@ export function ShopChrome({
         </section>
       ) : null}
 
-      <main className="pd-shop-main">{children}</main>
+      <main className="pd-shop-main" key={ready ? 'shop-live' : 'shop-static'}>
+        {children}
+      </main>
 
       <SiteFooter />
     </div>

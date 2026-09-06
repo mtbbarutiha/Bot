@@ -426,6 +426,20 @@ export interface BotSession {
   prescriptionPetId?: number;
   /** پیش‌نویس متن نسخه (پیشنهاد دارو / دستی) قبل از تأیید صدور */
   prescriptionDraft?: string;
+  /** پت‌شاپ — سبد موقت ربات (هم‌تراز کاتالوگ وب/DB) */
+  shopCart?: Array<{ productId: string; qty: number }>;
+  /** پت‌شاپ — فیلتر مرور */
+  shopPetType?: 'dog' | 'cat' | 'bird' | 'all';
+  shopCategorySlug?: string;
+  shopPage?: number;
+  /** پت‌شاپ — پیش‌نویس چک‌اوت */
+  shopCheckout?: {
+    productId: string;
+    qty: number;
+    name?: string;
+    phone?: string;
+    address?: string;
+  };
   updatedAt: string;
 }
 
@@ -575,6 +589,9 @@ export type BotStep =
   | 'vet_medical_note'
   | 'vet_prescription'
   | 'owner_chat'
+  | 'shop_checkout_name'
+  | 'shop_checkout_phone'
+  | 'shop_checkout_address'
   | 'ready';
 
 export interface PetDraft {

@@ -85,13 +85,26 @@ import {
   handleComingSoon,
   handleInviteFriends,
   handleMedical,
-  handlePetShop,
   handleQuickVet,
   handleQuickVetConnect,
   handleQuickVetReconnect,
   handleServices,
   handleVetConsultDecision,
 } from './services';
+import {
+  handlePetShop,
+  handleShopBackCategories,
+  handleShopBuy,
+  handleShopCategory,
+  handleShopCheckoutText,
+  handleShopFeatured,
+  handleShopHome,
+  handleShopNoop,
+  handleShopPage,
+  handleShopPay,
+  handleShopPetType,
+  handleShopView,
+} from './shop';
 import {
   handleVetChatMedicalPetPick,
   handleVetChatNotePetPick,
@@ -555,7 +568,25 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery('vchat:rxmanual', (ctx) => handleVetChatRxManual(ctx));
   bot.callbackQuery('vchat:rxok', (ctx) => handleVetChatRxConfirm(ctx));
   bot.callbackQuery(/^vet:/, (ctx) => handleComingSoon(ctx, 'مشاوره دامپزشک'));
-  bot.callbackQuery(/^shop:/, (ctx) => handleComingSoon(ctx, 'پت شاپ'));
+  bot.callbackQuery('shop:home', (ctx) => handleShopHome(ctx));
+  bot.callbackQuery('shop:featured', (ctx) => handleShopFeatured(ctx));
+  bot.callbackQuery('shop:backcat', (ctx) => handleShopBackCategories(ctx));
+  bot.callbackQuery('shop:noop', (ctx) => handleShopNoop(ctx));
+  bot.callbackQuery(/^shop:pet:(dog|cat|bird)$/, (ctx) =>
+    handleShopPetType(ctx, ctx.match![1]!)
+  );
+  bot.callbackQuery(/^shop:c:(.+)$/, (ctx) => handleShopCategory(ctx, ctx.match![1]!));
+  bot.callbackQuery(/^shop:page:([^:]+):(\d+)$/, (ctx) =>
+    handleShopPage(ctx, ctx.match![1]!, Number(ctx.match![2]))
+  );
+  bot.callbackQuery(/^shop:v:(.+)$/, (ctx) => handleShopView(ctx, ctx.match![1]!));
+  bot.callbackQuery(/^shop:buy:([^:]+):(\d+)$/, (ctx) =>
+    handleShopBuy(ctx, ctx.match![1]!, Number(ctx.match![2]))
+  );
+  bot.callbackQuery(/^shop:pay:([^:]+):(\d+)$/, (ctx) =>
+    handleShopPay(ctx, ctx.match![1]!, Number(ctx.match![2]))
+  );
+  bot.callbackQuery(/^shop:/, (ctx) => handleShopHome(ctx));
   bot.callbackQuery(/^svc:/, (ctx) => handleComingSoon(ctx, 'خدمات'));
 
   bot.callbackQuery('coins:daily', (ctx) => handleCoinsDaily(ctx));
@@ -727,6 +758,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
   if (await handleAdminPasswordText(ctx, text)) return;
   if (await handleAdminMenuText(ctx, text)) return;
   if (await handleAdminRejectReasonText(ctx, text)) return;
+  if (await handleShopCheckoutText(ctx, text)) return;
   if (await handlePhoneVerifyText(ctx, text)) return;
   if (await handleEarnCardText(ctx, text)) return;
   if (await handleSearchBreedText(ctx, text)) return;

@@ -374,37 +374,6 @@ function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-export async function handlePetShop(ctx: Context): Promise<void> {
-  const user = await getCtxUser(ctx);
-  await ctx.reply(
-    [
-      '🛒 **پت شاپ**',
-      '',
-      'دسته‌بندی‌ها:',
-      '• 🍖 غذا و خوراک',
-      '• 🧸 اسباب‌بازی',
-      '• 🧴 بهداشتی',
-      '• 🛏️ لوازم نگهداری',
-      '',
-      '_فروشگاه به‌زودی کامل می‌شه._',
-    ].join('\n'),
-    {
-      parse_mode: 'Markdown',
-      reply_markup: new InlineKeyboard()
-        .text('🍖 غذا', 'shop:food')
-        .primary()
-        .text('🧸 اسباب‌بازی', 'shop:toys')
-        .primary()
-        .row()
-        .text('🧴 بهداشتی', 'shop:hygiene')
-        .primary()
-        .text('🛏️ لوازم', 'shop:supplies')
-        .primary(),
-    }
-  );
-  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
-}
-
 export async function handleServices(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
   await ctx.reply(

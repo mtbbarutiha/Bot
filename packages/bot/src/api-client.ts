@@ -932,3 +932,100 @@ export async function addUserContact(
   const data = (await res.json()) as { ok: true; created: boolean };
   return data;
 }
+
+/* —— پت شاپ (کاتالوگ مشترک با وب از DB) —— */
+
+export type ShopApiCategory = {
+  slug: string;
+  labelFa: string;
+  petType: string;
+  description: string;
+  emoji: string;
+  sortOrder: number;
+};
+
+export type ShopApiProduct = {
+  id: string;
+  slug: string;
+  title: string;
+  brandId: string;
+  categorySlug: string;
+  petTypes: string[];
+  priceToman: number;
+  compareAtToman?: number;
+  image?: string;
+  badge?: string;
+  inStock: boolean;
+  stockQty: number;
+  params: Record<string, string>;
+  description: string;
+  featured: boolean;
+  coins?: number;
+};
+
+export async function fetchShopCategories(petType?: string): Promise<{
+  total: number;
+  categories: ShopApiCategory[];
+  coinPriceToman?: number;
+}> {
+  const qs = petType && petType !== 'all' ? `?petType=${encodeURIComponent(petType)}` : '';
+  return request(`/api/shop/categories${qs}`);
+}
+
+export async function fetchShopProducts(filters?: {
+  category?: string;
+  petType?: string;
+  q?: string;
+  featured?: boolean;
+  inStock?: boolean;
+  limit?: number;
+  offset?: number;
+}): Promise<{
+  total: number;
+  products: ShopApiProduct[];
+  coinPriceToman?: number;
+}> {
+  const params = new URLSearchParams();
+  if (filters?.category) params.set('category', filters.category);
+  if (filters?.petType) params.set('petType', filters.petType);
+  if (filters?.q) params.set('q', filters.q);
+  if (filters?.featured) params.set('featured', '1');
+  if (filters?.inStock === true) params.set('inStock', '1');
+  if (filters?.inStock === false) params.set('inStock', '0');
+  if (filters?.limit != null) params.set('limit', String(filters.limit));
+  if (filters?.offset != null) params.set('offset', String(filters.offset));
+  const qs = params.toString() ? `?${params}` : '';
+  return request(`/api/shop/products${qs}`);
+}
+
+export async function fetchShopProduct(idOrSlug: string): Promise<{
+  product: ShopApiProduct;
+  category: ShopApiCategory | null;
+} | null> {
+  try {
+    return await request(`/api/shop/products/${encodeURIComponent(idOrSlug)}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function checkoutShopWithCoinsTelegram(payload: {
+  telegramId: string;
+  items: Array<{ productId: string; qty: number }>;
+  customerName: string;
+  customerPhone: string;
+  address: string;
+  note?: string;
+}): Promise<{
+  ok: true;
+  orderId: number;
+  coinsSpent: number;
+  coinsRemaining: number;
+  totalToman: number;
+  message?: string;
+}> {
+  return request('/api/shop/checkout/coins-telegram', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}

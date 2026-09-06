@@ -690,3 +690,56 @@ export async function checkoutShopWithStars(
 ): Promise<ShopStarsCheckoutResult> {
   return postShopCheckout<ShopStarsCheckoutResult>('/api/shop/checkout/stars', token, payload);
 }
+
+export type PublicShopProduct = {
+  id: string;
+  slug: string;
+  title: string;
+  brandId: string;
+  categorySlug: string;
+  petTypes: string[];
+  priceToman: number;
+  compareAtToman?: number;
+  image?: string;
+  badge?: string;
+  inStock: boolean;
+  stockQty: number;
+  params: Record<string, string>;
+  description: string;
+  featured: boolean;
+  coins?: number;
+};
+
+export type PublicShopCategory = {
+  slug: string;
+  labelFa: string;
+  petType: string;
+  description: string;
+  emoji: string;
+  sortOrder?: number;
+};
+
+/** Public shop catalog from API/DB — same source the Telegram bot uses. */
+export async function fetchPublicShopCatalog(): Promise<{
+  products: PublicShopProduct[];
+  categories: PublicShopCategory[];
+  coinPriceToman?: number;
+}> {
+  const [productsRes, categoriesRes] = await Promise.all([
+    request<{
+      ok?: boolean;
+      products: PublicShopProduct[];
+      coinPriceToman?: number;
+    }>('/api/shop/products?limit=300'),
+    request<{
+      ok?: boolean;
+      categories: PublicShopCategory[];
+      coinPriceToman?: number;
+    }>('/api/shop/categories'),
+  ]);
+  return {
+    products: productsRes.products ?? [],
+    categories: categoriesRes.categories ?? [],
+    coinPriceToman: productsRes.coinPriceToman ?? categoriesRes.coinPriceToman,
+  };
+}

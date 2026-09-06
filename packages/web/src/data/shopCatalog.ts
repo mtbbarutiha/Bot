@@ -3241,6 +3241,122 @@ export function formatShopCoins(amount: number): string {
   return `${amount.toLocaleString('fa-IR')} سکه`;
 }
 
+/** Live catalog cache — hydrated from /api/shop (same DB as bot). Falls back to static seed. */
+let liveProducts: ShopProduct[] = SHOP_PRODUCTS;
+let liveCategories: ShopCategory[] = SHOP_CATEGORIES;
+let liveHydrated = false;
+
+export function isShopCatalogHydrated(): boolean {
+  return liveHydrated;
+}
+
+export function getLiveProducts(): ShopProduct[] {
+  return liveProducts;
+}
+
+export function getLiveCategories(): ShopCategory[] {
+  return liveCategories;
+}
+
+/**
+ * Merge API/DB rows onto the static Pepito catalog so prices/stock stay in sync
+ * while keeping rich product media for the web UI.
+ */
+export function applyLiveShopCatalog(input: {
+  products: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    brandId: string;
+    categorySlug: string;
+    petTypes?: string[];
+    priceToman: number;
+    compareAtToman?: number;
+    image?: string;
+    badge?: string;
+    inStock: boolean;
+    stockQty?: number;
+    params?: Record<string, string>;
+    description?: string;
+    featured?: boolean;
+  }>;
+  categories?: Array<{
+    slug: string;
+    labelFa: string;
+    petType: string;
+    description?: string;
+    emoji?: string;
+  }>;
+}): void {
+  const byId = new Map(SHOP_PRODUCTS.map((p) => [p.id, p]));
+  const bySlug = new Map(SHOP_PRODUCTS.map((p) => [p.slug, p]));
+
+  liveProducts = input.products.map((api) => {
+    const base = byId.get(api.id) ?? bySlug.get(api.slug);
+    const petTypes = (api.petTypes?.length
+      ? api.petTypes
+      : base?.petTypes ?? ['dog']) as Array<'dog' | 'cat' | 'bird'>;
+    const badge =
+      api.badge === 'hot' || api.badge === 'sale' || api.badge === 'new' || api.badge === 'limited'
+        ? api.badge
+        : base?.badge;
+    if (base) {
+      return {
+        ...base,
+        title: api.title || base.title,
+        brandId: api.brandId || base.brandId,
+        categorySlug: api.categorySlug || base.categorySlug,
+        petTypes,
+        priceToman: api.priceToman,
+        compareAtToman: api.compareAtToman ?? base.compareAtToman,
+        image: api.image || base.image,
+        badge,
+        inStock: api.inStock,
+        params: api.params && Object.keys(api.params).length ? api.params : base.params,
+        description: api.description || base.description,
+        featured: api.featured ?? base.featured,
+        slug: api.slug || base.slug,
+      };
+    }
+    return {
+      id: api.id,
+      slug: api.slug,
+      title: api.title,
+      brandId: api.brandId,
+      categorySlug: api.categorySlug,
+      petTypes,
+      priceToman: api.priceToman,
+      compareAtToman: api.compareAtToman,
+      image: api.image || '/pepito/img/logo.png',
+      badge,
+      inStock: api.inStock,
+      params: api.params ?? {},
+      description: api.description ?? '',
+      featured: Boolean(api.featured),
+    };
+  });
+
+  if (input.categories?.length) {
+    const staticBySlug = new Map(SHOP_CATEGORIES.map((c) => [c.slug, c]));
+    liveCategories = input.categories.map((c) => {
+      const base = staticBySlug.get(c.slug);
+      const petType = (c.petType === 'cat' || c.petType === 'bird' ? c.petType : 'dog') as
+        | 'dog'
+        | 'cat'
+        | 'bird';
+      return {
+        slug: c.slug,
+        labelFa: c.labelFa || base?.labelFa || c.slug,
+        petType,
+        description: c.description || base?.description || '',
+        emoji: c.emoji || base?.emoji || '🛒',
+      };
+    });
+  }
+
+  liveHydrated = true;
+}
+
 export function productDiscountPercent(p: ShopProduct): number | null {
   if (!p.compareAtToman || p.compareAtToman <= p.priceToman) return null;
   return Math.round(((p.compareAtToman - p.priceToman) / p.compareAtToman) * 100);
@@ -3282,7 +3398,7 @@ export function productReturnPolicy(p: ShopProduct): string {
 }
 
 export function getCategory(slug: string): ShopCategory | undefined {
-  return SHOP_CATEGORIES.find((c) => c.slug === slug);
+  return liveCategories.find((c) => c.slug === slug) ?? SHOP_CATEGORIES.find((c) => c.slug === slug);
 }
 
 export function getBrand(id: string): ShopBrand | undefined {
@@ -3290,16 +3406,21 @@ export function getBrand(id: string): ShopBrand | undefined {
 }
 
 export function getProduct(idOrSlug: string): ShopProduct | undefined {
-  return SHOP_PRODUCTS.find((p) => p.id === idOrSlug || p.slug === idOrSlug);
+  return (
+    liveProducts.find((p) => p.id === idOrSlug || p.slug === idOrSlug) ??
+    SHOP_PRODUCTS.find((p) => p.id === idOrSlug || p.slug === idOrSlug)
+  );
 }
 
 export function getFeaturedProducts(): ShopProduct[] {
-  return SHOP_PRODUCTS.filter((p) => p.featured);
+  const featured = liveProducts.filter((p) => p.featured);
+  return featured.length ? featured : SHOP_PRODUCTS.filter((p) => p.featured);
 }
 
 export function categoriesForPet(pet: ShopPetType): ShopCategory[] {
-  if (pet === 'all') return SHOP_CATEGORIES;
-  return SHOP_CATEGORIES.filter((c) => c.petType === pet);
+  const cats = liveCategories.length ? liveCategories : SHOP_CATEGORIES;
+  if (pet === 'all') return cats;
+  return cats.filter((c) => c.petType === pet);
 }
 
 export interface ShopFilters {
@@ -3324,8 +3445,9 @@ export function filterProducts(filters: ShopFilters = {}): ShopProduct[] {
   } = filters;
 
   const query = q?.trim().toLowerCase();
+  const source = liveProducts.length ? liveProducts : SHOP_PRODUCTS;
 
-  return SHOP_PRODUCTS.filter((p) => {
+  return source.filter((p) => {
     if (petType !== 'all' && !p.petTypes.includes(petType)) return false;
     if (categorySlug && p.categorySlug !== categorySlug) return false;
     if (brandId && p.brandId !== brandId) return false;
