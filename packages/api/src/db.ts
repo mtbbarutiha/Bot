@@ -510,6 +510,23 @@ function migrateSchema() {
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
+
+  /** Lightweight email send attempts for admin mail panel (no body / no secrets). */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS email_send_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      to_addr TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      purpose TEXT,
+      ok INTEGER NOT NULL DEFAULT 0,
+      error TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_email_send_logs_created
+      ON email_send_logs (created_at DESC)`
+  );
   db.exec(
     `CREATE INDEX IF NOT EXISTS idx_app_error_logs_created
       ON app_error_logs (created_at DESC)`
@@ -4692,6 +4709,128 @@ export const dbService = {
 
   deleteWebOtp(channel: string, target: string) {
     db.prepare('DELETE FROM web_otps WHERE channel = ? AND target = ?').run(channel, target);
+  },
+
+  listPendingWebOtps(channel?: string, limit = 40): Array<{
+    channel: string;
+    target: string;
+    expiresAt: string;
+    attempts: number;
+    createdAt: string;
+  }> {
+    const lim = Math.min(Math.max(limit, 1), 100);
+    const rows = channel
+      ? (db
+          .prepare(
+            `SELECT channel, target, expires_at, attempts, created_at
+             FROM web_otps WHERE channel = ? ORDER BY created_at DESC LIMIT ?`
+          )
+          .all(channel, lim) as Record<string, unknown>[])
+      : (db
+          .prepare(
+            `SELECT channel, target, expires_at, attempts, created_at
+             FROM web_otps ORDER BY created_at DESC LIMIT ?`
+          )
+          .all(lim) as Record<string, unknown>[]);
+    return rows.map((row) => ({
+      channel: String(row.channel),
+      target: String(row.target),
+      expiresAt: String(row.expires_at),
+      attempts: Number(row.attempts ?? 0),
+      createdAt: String(row.created_at),
+    }));
+  },
+
+  createEmailSendLog(data: {
+    to: string;
+    subject: string;
+    purpose?: string;
+    ok: boolean;
+    error?: string | null;
+  }): { id: number } {
+    const result = db
+      .prepare(
+        `INSERT INTO email_send_logs (to_addr, subject, purpose, ok, error)
+         VALUES (?, ?, ?, ?, ?)`
+      )
+      .run(
+        data.to.slice(0, 320),
+        data.subject.slice(0, 240),
+        (data.purpose || 'mail').slice(0, 64),
+        data.ok ? 1 : 0,
+        data.error ? data.error.slice(0, 500) : null
+      );
+    return { id: Number(result.lastInsertRowid) };
+  },
+
+  listEmailSendLogs(opts?: { limit?: number; ok?: boolean }): Array<{
+    id: number;
+    to: string;
+    subject: string;
+    purpose: string | null;
+    ok: boolean;
+    error: string | null;
+    createdAt: string;
+  }> {
+    const limit = Math.min(Math.max(opts?.limit ?? 80, 1), 300);
+    const clauses: string[] = [];
+    const params: unknown[] = [];
+    if (typeof opts?.ok === 'boolean') {
+      clauses.push('ok = ?');
+      params.push(opts.ok ? 1 : 0);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+    params.push(limit);
+    const rows = db
+      .prepare(
+        `SELECT * FROM email_send_logs ${where} ORDER BY id DESC LIMIT ?`
+      )
+      .all(...params) as Record<string, unknown>[];
+    return rows.map((row) => ({
+      id: Number(row.id),
+      to: String(row.to_addr),
+      subject: String(row.subject),
+      purpose: (row.purpose as string | null) ?? null,
+      ok: Number(row.ok) === 1,
+      error: (row.error as string | null) ?? null,
+      createdAt: String(row.created_at),
+    }));
+  },
+
+  getEmailSendLogStats(): {
+    total: number;
+    ok24h: number;
+    fail24h: number;
+    lastAt: string | null;
+  } {
+    const total = (
+      db.prepare('SELECT COUNT(*) as c FROM email_send_logs').get() as { c: number }
+    ).c;
+    const ok24h = (
+      db
+        .prepare(
+          `SELECT COUNT(*) as c FROM email_send_logs
+           WHERE ok = 1 AND created_at >= datetime('now', '-1 day')`
+        )
+        .get() as { c: number }
+    ).c;
+    const fail24h = (
+      db
+        .prepare(
+          `SELECT COUNT(*) as c FROM email_send_logs
+           WHERE ok = 0 AND created_at >= datetime('now', '-1 day')`
+        )
+        .get() as { c: number }
+    ).c;
+    const last = db
+      .prepare(`SELECT created_at FROM email_send_logs ORDER BY id DESC LIMIT 1`)
+      .get() as { created_at: string } | undefined;
+    return {
+      total: Number(total ?? 0),
+      ok24h: Number(ok24h ?? 0),
+      fail24h: Number(fail24h ?? 0),
+      lastAt: last?.created_at ?? null,
+    };
   },
 
   createWebSession(userId: number, token: string, expiresAt: string) {

@@ -133,6 +133,7 @@ export async function requestWebOtp(
       to: target,
       subject: 'کد ورود پت‌دیت',
       text: formatLoginOtpEmail(code),
+      purpose: 'login_otp',
     });
     if (!sent.ok) {
       dbService.deleteWebOtp(channel, target);

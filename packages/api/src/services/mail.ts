@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { dbService } from '../db';
 
 function smtpHost(): string {
   return String(process.env.SMTP_HOST ?? '').trim();
@@ -9,41 +10,33 @@ function isLocalSmtpHost(host: string): boolean {
   return h === '127.0.0.1' || h === 'localhost' || h === '::1';
 }
 
-export function isSmtpConfigured(): boolean {
-  return Boolean(smtpHost());
-}
-
-/** Send a plain-text (+ simple HTML) email via SMTP. Never logs message body. */
-export async function sendMail(opts: {
-  to: string;
-  subject: string;
-  text: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  const host = smtpHost();
-  if (!host) {
-    return { ok: false, error: 'SMTP پیکربندی نشده' };
-  }
-
-  const port = Number(process.env.SMTP_PORT) || 587;
+function smtpAuth(): { user: string; pass: string } {
   const user = String(process.env.SMTP_USER ?? '').trim();
   const pass = String(process.env.SMTP_PASS ?? process.env.SMTP_PASSWORD ?? '').trim();
-  const fromAddr = String(process.env.SMTP_FROM ?? '').trim() || user || 'noreply@petdate.ir';
-  const fromName = String(process.env.SMTP_FROM_NAME ?? '').trim() || 'PetDate';
+  return { user, pass };
+}
+
+function smtpFrom(): { addr: string; name: string } {
+  const { user } = smtpAuth();
+  const addr = String(process.env.SMTP_FROM ?? '').trim() || user || 'noreply@petdate.ir';
+  const name = String(process.env.SMTP_FROM_NAME ?? '').trim() || 'PetDate';
+  return { addr, name };
+}
+
+function smtpTlsFlags(host: string, port: number, hasAuth: boolean): {
+  secure: boolean;
+  ignoreTls: boolean;
+  rejectUnauthorized: boolean;
+} {
   const secure =
     process.env.SMTP_SECURE === '1' ||
     process.env.SMTP_SECURE === 'true' ||
     port === 465;
-
   const local = isLocalSmtpHost(host);
-
-  // Local Postfix often presents a self-signed cert on STARTTLS (:25).
-  // Default: skip STARTTLS to 127.0.0.1/localhost (safe on-loopback).
-  // Override with SMTP_IGNORE_TLS=0 to force STARTTLS, plus SMTP_TLS_REJECT_UNAUTHORIZED=0.
   const ignoreTls =
     process.env.SMTP_IGNORE_TLS === '1' ||
     process.env.SMTP_IGNORE_TLS === 'true' ||
     (local && process.env.SMTP_IGNORE_TLS !== '0' && process.env.SMTP_IGNORE_TLS !== 'false');
-
   const rejectUnauthorized =
     process.env.SMTP_TLS_REJECT_UNAUTHORIZED === '1'
       ? true
@@ -51,15 +44,82 @@ export async function sendMail(opts: {
         ? false
         : local
           ? false
-          : // Unauthenticated relays commonly use self-signed certs
-            Boolean(user && pass);
+          : Boolean(hasAuth);
+  return { secure, ignoreTls, rejectUnauthorized };
+}
+
+export function isSmtpConfigured(): boolean {
+  return Boolean(smtpHost());
+}
+
+/** Safe SMTP snapshot for admin UI — never includes password. */
+export function getSmtpPublicConfig(): {
+  configured: boolean;
+  host: string | null;
+  port: number;
+  from: string;
+  fromName: string;
+  user: string | null;
+  authConfigured: boolean;
+  secure: boolean;
+  ignoreTls: boolean;
+  tlsRejectUnauthorized: boolean;
+  localHost: boolean;
+} {
+  const host = smtpHost();
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const { user, pass } = smtpAuth();
+  const { addr, name } = smtpFrom();
+  const hasAuth = Boolean(user && pass);
+  const flags = smtpTlsFlags(host || '127.0.0.1', port, hasAuth);
+  return {
+    configured: Boolean(host),
+    host: host || null,
+    port,
+    from: addr,
+    fromName: name,
+    user: user || null,
+    authConfigured: hasAuth,
+    secure: flags.ignoreTls ? false : flags.secure,
+    ignoreTls: flags.ignoreTls,
+    tlsRejectUnauthorized: flags.rejectUnauthorized,
+    localHost: host ? isLocalSmtpHost(host) : false,
+  };
+}
+
+/** Send a plain-text (+ simple HTML) email via SMTP. Never logs message body. */
+export async function sendMail(opts: {
+  to: string;
+  subject: string;
+  text: string;
+  purpose?: string;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  const host = smtpHost();
+  const purpose = (opts.purpose || 'mail').slice(0, 64);
+  if (!host) {
+    dbService.createEmailSendLog({
+      to: opts.to,
+      subject: opts.subject,
+      purpose,
+      ok: false,
+      error: 'SMTP پیکربندی نشده',
+    });
+    return { ok: false, error: 'SMTP پیکربندی نشده' };
+  }
+
+  const port = Number(process.env.SMTP_PORT) || 587;
+  const { user, pass } = smtpAuth();
+  const { addr: fromAddr, name: fromName } = smtpFrom();
+  const hasAuth = Boolean(user && pass);
+  const local = isLocalSmtpHost(host);
+  const { secure, ignoreTls, rejectUnauthorized } = smtpTlsFlags(host, port, hasAuth);
 
   try {
     const transporter = nodemailer.createTransport({
       host,
       port,
       secure: ignoreTls ? false : secure,
-      auth: user && pass ? { user, pass } : undefined,
+      auth: hasAuth ? { user, pass } : undefined,
       connectionTimeout: 15_000,
       greetingTimeout: 15_000,
       socketTimeout: 20_000,
@@ -76,6 +136,12 @@ export async function sendMail(opts: {
         opts.text
       )}</div>`,
     });
+    dbService.createEmailSendLog({
+      to: opts.to,
+      subject: opts.subject,
+      purpose,
+      ok: true,
+    });
     return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
@@ -86,7 +152,14 @@ export async function sendMail(opts: {
       ignoreTls,
       rejectUnauthorized,
       secure: ignoreTls ? false : secure,
-      auth: Boolean(user && pass),
+      auth: hasAuth,
+    });
+    dbService.createEmailSendLog({
+      to: opts.to,
+      subject: opts.subject,
+      purpose,
+      ok: false,
+      error: message.slice(0, 500),
     });
     return { ok: false, error: 'ارسال ایمیل ناموفق بود' };
   }

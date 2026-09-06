@@ -15,6 +15,7 @@ import { dbService } from '../db';
 import { adminPlatform } from '../admin-platform';
 import { adminFinance } from '../admin-finance';
 import { logAppEvent } from '../services/app-logger';
+import { getSmtpPublicConfig, isSmtpConfigured, sendMail } from '../services/mail';
 import { rateLimit } from '../middleware/rate-limit';
 
 export const adminRouter = Router();
@@ -461,6 +462,57 @@ adminRouter.post('/logs', (req, res) => {
     meta: req.body?.meta && typeof req.body.meta === 'object' ? (req.body.meta as Record<string, unknown>) : null,
   });
   res.status(201).json({ ok: true });
+});
+
+adminRouter.get('/mail', async (_req, res) => {
+  const smtp = getSmtpPublicConfig();
+  let smtpReachable: { ok: boolean; detail: string } = {
+    ok: false,
+    detail: 'پیکربندی نشده',
+  };
+  if (smtp.configured && smtp.host) {
+    const reachable = await checkTcpPort(smtp.host, smtp.port, 1500);
+    smtpReachable = reachable
+      ? { ok: true, detail: `TCP ${smtp.host}:${smtp.port} باز است` }
+      : { ok: false, detail: `TCP ${smtp.host}:${smtp.port} در دسترس نیست` };
+  }
+  res.json({
+    generatedAt: new Date().toISOString(),
+    smtp,
+    smtpReachable,
+    stats: dbService.getEmailSendLogStats(),
+    recentSends: dbService.listEmailSendLogs({ limit: 80 }),
+    pendingEmailOtps: dbService.listPendingWebOtps('email', 40),
+  });
+});
+
+const adminMailTestLimit = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 10,
+  message: 'تلاش تست ایمیل زیاد است. کمی بعد دوباره تلاش کن.',
+});
+
+adminRouter.post('/mail/test', adminMailTestLimit, async (req, res) => {
+  if (!isSmtpConfigured()) {
+    res.status(503).json({ error: 'SMTP پیکربندی نشده' });
+    return;
+  }
+  const to = typeof req.body?.to === 'string' ? req.body.to.trim() : '';
+  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || to.length > 200) {
+    res.status(400).json({ error: 'آدرس ایمیل معتبر نیست' });
+    return;
+  }
+  const sent = await sendMail({
+    to,
+    subject: 'تست ارسال PetDate',
+    text: `این یک ایمیل تست از پنل ادمین پت‌دیت است.\nزمان: ${new Date().toISOString()}`,
+    purpose: 'admin_test',
+  });
+  if (!sent.ok) {
+    res.status(502).json({ error: sent.error || 'ارسال ناموفق بود' });
+    return;
+  }
+  res.json({ ok: true, to });
 });
 
 type CheckStatus = 'up' | 'down' | 'not_configured';

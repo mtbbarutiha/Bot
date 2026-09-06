@@ -100,6 +100,13 @@ API کد OTP تب ایمیل را از طریق Postfix محلی می‌فرست
 
 `SMTP_TLS_REJECT_UNAUTHORIZED=0` لازم است چون گواهی فعلی `mail.petdate.ir` هنوز self-signed است (تا بعد از certbot روی DNS درست).
 
+### پنل مشاهده ارسال (ادمین وب)
+
+- URL: `https://petdate.ir/admin/mail`
+- ورود: `https://petdate.ir/admin/login` با رمز `ADMIN_PASSWORD` (همان پنل ادمین؛ پیش‌فرض توسعه `petdate`)
+- نشان می‌دهد: host/port/from (بدون رمز)، وضعیت پورت، لاگ ارسال‌ها، OTPهای ایمیل فعال، و دکمهٔ تست ارسال
+- API: `GET /api/admin/mail` و `POST /api/admin/mail/test` (هدر `x-admin-password`)
+
 ## تست
 
 ```bash

@@ -11,6 +11,7 @@ import { AdminPetsPage } from './admin/pages/AdminPetsPage';
 import { AdminUsersPage } from './admin/pages/AdminUsersPage';
 import { AdminVerificationPage } from './admin/pages/AdminVerificationPage';
 import { AdminLogsPage } from './admin/pages/AdminLogsPage';
+import { AdminMailPage } from './admin/pages/AdminMailPage';
 import { AdminMonitoringPage } from './admin/pages/AdminMonitoringPage';
 import { AdminConsultsPage } from './admin/pages/AdminConsultsPage';
 import { AdminPlaydatesPage } from './admin/pages/AdminPlaydatesPage';
@@ -117,6 +118,7 @@ export default function App() {
               <Route path="finance/wallet" element={<AdminFinanceWalletPage />} />
               <Route path="finance/products" element={<AdminFinanceProductsPage />} />
               <Route path="content" element={<AdminContentPage />} />
+              <Route path="mail" element={<AdminMailPage />} />
               <Route path="logs" element={<AdminLogsPage />} />
               <Route path="monitoring" element={<AdminMonitoringPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />

@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import {
-  Activity, Bell, ClipboardList, LayoutDashboard, LineChart, LogOut, Menu, Package,
+  Activity, Bell, ClipboardList, LayoutDashboard, LineChart, LogOut, Mail, Menu, Package,
   PawPrint, PieChart, ScrollText, Settings, ShieldCheck, ShoppingBag, Stethoscope,
   Store, TrendingUp, Users, Wallet, X,
 } from 'lucide-react';
@@ -37,6 +37,7 @@ const NAV_GROUPS: NavGroup[] = [
   ]},
   { title: 'محتوا و سیستم', items: [
     { to: '/admin/content', icon: Bell, label: 'اعلان‌ها / محتوا' },
+    { to: '/admin/mail', icon: Mail, label: 'ایمیل / SMTP' },
     { to: '/admin/monitoring', icon: Activity, label: 'مانیتورینگ' },
     { to: '/admin/logs', icon: ScrollText, label: 'لاگ خطاها' },
     { to: '/admin/settings', icon: Settings, label: 'تنظیمات' },
