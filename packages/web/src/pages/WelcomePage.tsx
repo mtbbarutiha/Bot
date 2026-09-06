@@ -322,7 +322,14 @@ export function WelcomePage() {
               className={`pepito-hero-slide${i === slide ? ' is-active' : ''}`}
               aria-hidden={i !== slide}
             >
-              <img className="pepito-hero-media" src={s.img} alt="" />
+              <img
+                className="pepito-hero-media"
+                src={s.img}
+                alt=""
+                decoding={i === 0 ? "sync" : "async"}
+                loading={i === 0 ? "eager" : "lazy"}
+                fetchPriority={i === 0 ? "high" : "auto"}
+              />
             </div>
           ))}
         </div>
