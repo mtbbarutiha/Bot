@@ -6,7 +6,7 @@ import { SITE_NAV_AUTH, SITE_NAV_GUEST } from '../lib/siteNav';
 /**
  * Site-wide mobile bottom dock (full primary set).
  * Guest: شاپ / همبازی / سبد / ورود
- * Logged-in: شاپ / همبازی / کیف پول / پروفایل
+ * Logged-in: شاپ / همبازی / گفتگو / کیف پول / پروفایل
  * Desktop uses a slimmer SiteDesktopNav + left avatar/wallet/cart cluster.
  */
 export function LandingMobileDock() {
