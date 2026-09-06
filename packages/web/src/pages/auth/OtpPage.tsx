@@ -14,12 +14,14 @@ type OtpCredentialRequestOptions = CredentialRequestOptions & {
   otp?: { transport: Array<'sms'> };
 };
 
+const OTP_LEN = 5;
+
 function digitsOnly(raw: string): string {
   return String(raw ?? '')
     .replace(/[^\d۰-۹٠-٩]/g, '')
     .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
     .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)))
-    .slice(0, 5);
+    .slice(0, OTP_LEN);
 }
 
 export function OtpPage() {
@@ -47,7 +49,12 @@ export function OtpPage() {
   );
   const inputRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
+  const codeRef = useRef(code);
   const telegramLoginUrl = telegramWebLoginDeepLink(next);
+
+  useEffect(() => {
+    codeRef.current = code;
+  }, [code]);
 
   useEffect(() => {
     if (!pendingChannel || !pendingTarget) {
@@ -57,7 +64,7 @@ export function OtpPage() {
 
   async function submitCode(raw: string) {
     const value = digitsOnly(raw);
-    if (value.length < 5 || submittingRef.current) return;
+    if (value.length < OTP_LEN || submittingRef.current) return;
     submittingRef.current = true;
     setBusy(true);
     setError('');
@@ -84,9 +91,18 @@ export function OtpPage() {
     }
   }
 
-  /** iOS/Safari SMS Autofill + Chrome Android Web OTP API */
+  function applyOtpValue(raw: string, autoSubmit = true) {
+    const nextCode = digitsOnly(raw);
+    setCode(nextCode);
+    if (autoSubmit && nextCode.length === OTP_LEN) {
+      void submitCode(nextCode);
+    }
+  }
+
+  /** Chrome Android Web OTP API only — do not call credentials.get on Safari. */
   useEffect(() => {
     if (pendingChannel !== 'phone') return;
+    if (typeof window === 'undefined' || !('OTPCredential' in window)) return;
 
     const ac = new AbortController();
     const nav = navigator as Navigator & {
@@ -103,9 +119,8 @@ export function OtpPage() {
         .then((cred) => {
           const otp = cred as OtpCredentialLike | null;
           const filled = digitsOnly(otp?.code ?? '');
-          if (filled.length >= 5) {
-            setCode(filled);
-            void submitCode(filled);
+          if (filled.length >= OTP_LEN) {
+            applyOtpValue(filled);
           }
         })
         .catch(() => {
@@ -115,6 +130,48 @@ export function OtpPage() {
 
     return () => ac.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- listen once per phone challenge
+  }, [pendingChannel, pendingTarget]);
+
+  /**
+   * iOS Safari sometimes fills autocomplete="one-time-code" without a reliable
+   * React onChange. Poll the focused field lightly and also listen to input/change.
+   */
+  useEffect(() => {
+    if (pendingChannel !== 'phone') return;
+    const el = inputRef.current;
+    if (!el) return;
+
+    const syncFromDom = () => {
+      const filled = digitsOnly(el.value);
+      if (filled.length >= OTP_LEN && filled !== codeRef.current) {
+        applyOtpValue(filled);
+      } else if (filled && filled !== codeRef.current) {
+        setCode(filled);
+      }
+    };
+
+    el.addEventListener('input', syncFromDom);
+    el.addEventListener('change', syncFromDom);
+    el.addEventListener('keyup', syncFromDom);
+    const timer = window.setInterval(() => {
+      if (document.activeElement === el || digitsOnly(el.value).length === OTP_LEN) {
+        syncFromDom();
+      }
+    }, 400);
+
+    // Focus so the iOS keyboard suggestion bar can offer the SMS code.
+    const focusTimer = window.setTimeout(() => {
+      el.focus({ preventScroll: true });
+    }, 50);
+
+    return () => {
+      el.removeEventListener('input', syncFromDom);
+      el.removeEventListener('change', syncFromDom);
+      el.removeEventListener('keyup', syncFromDom);
+      window.clearInterval(timer);
+      window.clearTimeout(focusTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pendingChannel, pendingTarget]);
 
   async function onSubmit(e: FormEvent) {
@@ -137,6 +194,7 @@ export function OtpPage() {
       setError(err instanceof Error ? err.message : 'ارسال مجدد ناموفق بود');
     } finally {
       setBusy(false);
+      window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
     }
   }
 
@@ -153,23 +211,31 @@ export function OtpPage() {
       <p className="auth-lead">
         کد ۵ رقمی برای <strong>{pendingTarget}</strong> ارسال شد
         {pendingChannel === 'phone'
-          ? ' — پیامک را باز کن یا صبر کن تا خودکار وارد شود'
+          ? ' — از پیشنهاد کیبورد (QuickType) کد را بزن یا صبر کن تا پر شود'
           : ' (ایمیل در لاگ سرور)'}
         .
       </p>
       <form className="auth-form" onSubmit={onSubmit} autoComplete="on">
-        <label>
+        <label htmlFor="otp-code">
           کد تأیید
+          {/*
+            Single text field — required for iOS SMS Autofill.
+            Do NOT use type=number/password or split boxes without a hidden
+            one-time-code field (Safari will not offer the SMS code).
+          */}
           <input
             ref={inputRef}
-            name="one-time-code"
             id="otp-code"
+            name="otp"
+            type="text"
             value={code}
-            onChange={(e) => {
-              const nextCode = digitsOnly(e.target.value);
-              setCode(nextCode);
-              if (nextCode.length === 5) {
-                void submitCode(nextCode);
+            onChange={(e) => applyOtpValue(e.target.value)}
+            onInput={(e) => applyOtpValue((e.target as HTMLInputElement).value)}
+            onPaste={(e) => {
+              const pasted = e.clipboardData?.getData('text') ?? '';
+              if (pasted) {
+                e.preventDefault();
+                applyOtpValue(pasted);
               }
             }}
             inputMode="numeric"
@@ -178,12 +244,14 @@ export function OtpPage() {
             autoCorrect="off"
             spellCheck={false}
             pattern="[0-9]*"
-            maxLength={5}
+            maxLength={OTP_LEN}
+            minLength={OTP_LEN}
             placeholder="-----"
             required
             autoFocus
             enterKeyHint="done"
             aria-label="کد یکبارمصرف پیامک"
+            dir="ltr"
           />
         </label>
         {error && <p className="auth-error">{error}</p>}
@@ -191,7 +259,7 @@ export function OtpPage() {
         <button
           type="submit"
           className="pepito-btn button-1 auth-submit"
-          disabled={busy || code.trim().length < 5}
+          disabled={busy || code.trim().length < OTP_LEN}
         >
           {busy ? 'در حال بررسی…' : 'تأیید و ادامه'}
         </button>
