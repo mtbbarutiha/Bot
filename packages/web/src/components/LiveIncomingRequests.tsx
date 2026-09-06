@@ -104,6 +104,13 @@ export function LiveIncomingRequests() {
     navigate('/explore#requests');
   }
 
+  function onOpenInChat() {
+    if (!current) return;
+    const id = current.id;
+    dismissCurrent();
+    navigate(`/chats/${id}`);
+  }
+
   if (!current) return null;
 
   const fromName = current.fromPet?.name ?? 'یک پت';
@@ -155,6 +162,14 @@ export function LiveIncomingRequests() {
           >
             <X size={16} strokeWidth={2.5} />
             رد
+          </button>
+          <button
+            type="button"
+            className="btn-profile"
+            disabled={busy}
+            onClick={onOpenInChat}
+          >
+            مشاهده در چت
           </button>
           <button
             type="button"

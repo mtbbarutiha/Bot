@@ -130,3 +130,173 @@ html:has(.tg-chat) body {
 .tg-emoji-picker {
   border-radius: 16px 16px 0 0;
 }
+
+/* In-thread playdate request card (bot parity) */
+.tg-chat-list-item.is-pending {
+  background: linear-gradient(135deg, rgba(11, 165, 242, 0.1), rgba(21, 204, 160, 0.08));
+}
+.tg-chat-list-item.is-pending .tg-chat-list-meta small {
+  color: var(--pepito-sky, #0ba5f2);
+  font-weight: 600;
+}
+
+.tg-request-card {
+  margin: 8px 12px 16px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  border: 1px solid rgba(25, 6, 61, 0.08);
+  box-shadow: 0 10px 28px rgba(25, 6, 61, 0.08);
+  max-width: min(100%, 420px);
+  margin-inline: auto;
+  width: 100%;
+}
+.tg-request-card-cover {
+  height: 148px;
+  background-size: cover;
+  background-position: center;
+  background-color: #dfe7ef;
+}
+.tg-request-card-body {
+  padding: 14px 16px 16px;
+  display: grid;
+  gap: 8px;
+}
+.tg-request-card-kicker {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--pepito-sky, #0ba5f2);
+  letter-spacing: 0.01em;
+}
+.tg-request-card.is-outgoing .tg-request-card-kicker {
+  color: var(--pepito-mint, #15cca0);
+}
+.tg-request-card.is-rejected .tg-request-card-kicker {
+  color: var(--tg-danger, #c62828);
+}
+.tg-request-card-body h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--pepito-dark, #19063d);
+  line-height: 1.35;
+}
+.tg-request-card-meta {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  color: var(--pepito-muted, #757086);
+  font-size: 0.84rem;
+}
+.tg-request-card-msg {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(25, 6, 61, 0.04);
+  color: var(--pepito-dark, #19063d);
+  font-size: 0.9rem;
+}
+.tg-request-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+.tg-request-accept,
+.tg-request-reject {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 42px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+.tg-request-accept {
+  background: linear-gradient(145deg, var(--pepito-mint, #15cca0), #0ba88a);
+  color: #fff;
+}
+.tg-request-reject {
+  background: rgba(198, 40, 40, 0.1);
+  color: var(--tg-danger, #c62828);
+}
+.tg-request-accept:disabled,
+.tg-request-reject:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.tg-request-card-wait {
+  margin: 2px 0 0;
+  font-size: 0.86rem;
+  color: var(--pepito-muted, #757086);
+}
+.tg-request-composer-bar {
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+  text-align: center;
+  background: #fff;
+  border-top: 1px solid rgba(25, 6, 61, 0.08);
+  color: var(--pepito-muted, #757086);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.tg-chat--pending .tg-chat-header {
+  background: linear-gradient(135deg, #1f2430 0%, #1a4a68 55%, #0f7a8a 100%) !important;
+}
+
+/* Vet consult chat — reuse playmate chrome without secure lock UI */
+.pepito-vet-chat .tg-chat-peer {
+  cursor: default;
+}
+.pepito-vet-chat .tg-chat-peer:hover {
+  background: transparent;
+}
+.tg-chat-peer-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255, 255, 255, 0.14);
+  color: #9ef0d5;
+  flex-shrink: 0;
+}
+.pepito-vet-chat .tg-status-strip {
+  background: linear-gradient(90deg, #eef9ff, #e8fff7);
+  color: #0f4c6b;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(15, 76, 107, 0.12);
+}
+.pepito-vet-chat .tg-status-strip.is-wait {
+  background: linear-gradient(90deg, #fff8e8, #eef9ff);
+  color: #7a5a12;
+}
+.pepito-vet-chat .tg-chat-empty,
+.pepito-vet-chat .tg-thread-empty {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 36px 20px;
+  min-height: 100%;
+}
+.pepito-vet-chat .auth-error {
+  margin: 0.35rem 0.9rem;
+}
+@media (min-width: 860px) {
+  .pepito-vet-chat.tg-chat--thread-only {
+    max-width: min(920px, 100%);
+    margin-inline: auto;
+    border-inline: 1px solid rgba(25, 6, 61, 0.06);
+    box-shadow: 0 18px 50px rgba(25, 6, 61, 0.08);
+  }
+}

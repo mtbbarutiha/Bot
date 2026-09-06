@@ -227,6 +227,10 @@ export function PlaymateRequestsPanel({
                       <X size={16} strokeWidth={2.5} />
                       رد
                     </button>
+                    <Link to={`/chats/${match.id}`} className="btn-profile">
+                      <MessageCircle size={16} strokeWidth={2} />
+                      مشاهده در چت
+                    </Link>
                   </div>
                 ) : match.status === 'accepted' ? (
                   <div className="match-actions">
@@ -236,6 +240,16 @@ export function PlaymateRequestsPanel({
                     </Link>
                     <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">
                       پروفایل پت
+                    </Link>
+                  </div>
+                ) : match.status === 'pending' ? (
+                  <div className="match-actions">
+                    <Link to={`/chats/${match.id}`} className="btn-accept">
+                      <MessageCircle size={16} strokeWidth={2} />
+                      مشاهده در چت
+                    </Link>
+                    <Link to={`/pets/${match.fromPet.id}`} className="btn-profile">
+                      پروفایل
                     </Link>
                   </div>
                 ) : (

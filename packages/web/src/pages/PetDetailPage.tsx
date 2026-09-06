@@ -86,7 +86,7 @@ export function PetDetailPage() {
     setBusy(true);
     setError(null);
     try {
-      await sendPlaymateRequestNow({
+      const req = await sendPlaymateRequestNow({
         fromPetId,
         toPetId: pet.id,
         fromUserId: myUserId,
@@ -94,7 +94,11 @@ export function PetDetailPage() {
       setAlreadyRequested(true);
       setShowPickFrom(false);
       setToast('✅ درخواست همبازی ارسال شد!');
-      setTimeout(() => setToast(null), 2800);
+      setTimeout(() => setToast(null), 1200);
+      if (req?.id) {
+        navigate(`/chats/${req.id}`);
+        return;
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ارسال درخواست ناموفق بود');
     } finally {

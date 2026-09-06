@@ -4867,6 +4867,32 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   justify-content: center;
   min-width: 8.5rem;
 }
+.pepito-vet-consult-incoming-list .pepito-vet-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: rgba(11, 165, 242, 0.12);
+  color: #0b6fa8;
+}
+.pepito-vet-consult-incoming-list .pepito-vet-status.is-active {
+  background: rgba(21, 204, 160, 0.14);
+  color: #0b7a5c;
+}
+.pepito-vet-consult-incoming-list .pepito-vet-status.is-done {
+  background: rgba(31, 36, 48, 0.08);
+  color: #5a6270;
+}
+@media (min-width: 720px) {
+  .pepito-vet-consult-incoming-list li {
+    grid-template-columns: 1fr auto;
+    align-items: center;
+  }
+}
 
 /* Dedicated vet dashboard — keep inbox readable on wide desktop */
 .pepito-vet-dashboard {

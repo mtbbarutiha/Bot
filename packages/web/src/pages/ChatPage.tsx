@@ -42,11 +42,13 @@ import {
   playdateChatMediaUrl,
   postPlaydateChatMessage,
   setPlaydateChatSecure,
+  updatePlaydateStatus,
   uploadPlaydateChatFile,
 } from '../lib/api';
 import type { PlaydateChatMediaKind, PlaydateChatMessage } from '@petdate/shared';
 import { playdateToMatchRequest } from '../lib/playdateMap';
 import {
+  MATCH_STATUS_LABELS,
   PET_GENDER_LABELS,
   PET_SIZE_LABELS,
   PET_TYPE_LABELS,
@@ -234,7 +236,7 @@ function ConversationListPane({
           <div className="tg-chat-list-empty">
             <BrandMark iconSize={28} />
             <h2>هنوز گفتگویی نیست</h2>
-            <p>بعد از قبول درخواست همبازی، چت اینجا باز می‌شود.</p>
+            <p>درخواست‌های همبازی و چت‌های پذیرفته‌شده اینجا دیده می‌شوند.</p>
             <Link to="/explore#requests" className="tg-chat-link-btn">
               رفتن به همبازی
             </Link>
@@ -244,13 +246,23 @@ function ConversationListPane({
             {conversations.map((c) => {
               const peer = c.fromPet;
               const active = activeId === c.id;
+              const pending = c.status === 'pending';
+              const preview = c.chatEnded
+                ? 'چت پایان یافته'
+                : pending
+                  ? c.direction === 'incoming'
+                    ? 'درخواست همبازی جدید'
+                    : 'منتظر پاسخ درخواست'
+                  : c.chatSecure
+                    ? 'چت امن'
+                    : `${peer.name} · ${peer.breed}`;
               return (
                 <li key={c.id}>
                   <button
                     type="button"
                     className={`tg-chat-list-item${active ? ' is-active' : ''}${
                       c.chatEnded ? ' is-ended' : ''
-                    }`}
+                    }${pending ? ' is-pending' : ''}`}
                     onClick={() => onSelect(c.id)}
                   >
                     <PetAvatar
@@ -261,13 +273,7 @@ function ConversationListPane({
                     />
                     <span className="tg-chat-list-meta">
                       <strong>{peer.ownerName || peer.name}</strong>
-                      <small>
-                        {c.chatEnded
-                          ? 'چت پایان یافته'
-                          : c.chatSecure
-                            ? 'چت امن'
-                            : `${peer.name} · ${peer.breed}`}
-                      </small>
+                      <small>{preview}</small>
                     </span>
                     <time className="tg-chat-list-time">{formatTimeAgo(c.createdAt)}</time>
                   </button>
@@ -324,6 +330,7 @@ export function ChatPage() {
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const [peerOwnerLabel, setPeerOwnerLabel] = useState<string | null>(null);
   const [brokenMedia, setBrokenMedia] = useState<Record<string, boolean>>({});
+  const [requestBusy, setRequestBusy] = useState(false);
 
   const scrollerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -350,9 +357,10 @@ export function ChatPage() {
     setListLoading(true);
     setListError(null);
     try {
-      const rows = await listPlaydateRequests({ userId: myUserId, status: 'accepted' });
+      const rows = await listPlaydateRequests({ userId: myUserId });
       const mapped = rows
         .filter((r) => {
+          if (r.status === 'rejected' || r.status === 'cancelled') return false;
           const owns =
             r.toUserId === myUserId ||
             r.fromUserId === myUserId ||
@@ -362,9 +370,11 @@ export function ChatPage() {
         })
         .map((r) => playdateToMatchRequest(r, myUserId))
         .sort((a, b) => {
-          if (Boolean(a.chatEnded) !== Boolean(b.chatEnded)) {
-            return a.chatEnded ? 1 : -1;
-          }
+          const rank = (m: MatchRequest) =>
+            m.status === 'pending' ? 0 : m.chatEnded ? 2 : 1;
+          const ra = rank(a);
+          const rb = rank(b);
+          if (ra !== rb) return ra - rb;
           return Date.parse(b.createdAt) - Date.parse(a.createdAt);
         });
       setConversations(mapped);
@@ -390,7 +400,10 @@ export function ChatPage() {
       setThreadLoading(true);
       try {
         const req = await getPlaydateRequest(selectedId);
-        if (!req || req.status !== 'accepted') {
+        if (
+          !req ||
+          (req.status !== 'accepted' && req.status !== 'pending' && req.status !== 'rejected')
+        ) {
           if (!cancelled) setMatch(null);
           return;
         }
@@ -443,14 +456,52 @@ export function ChatPage() {
     setPendingPreview(null);
     setPeerOwnerLabel(null);
     setBrokenMedia({});
+    setRequestBusy(false);
     stickToBottomRef.current = true;
-    if (!ended) {
+    if (match.status === 'accepted' && !ended) {
       setMessages([systemMessage('چت همبازی فعال شد — می‌توانی پیام بفرستی.')]);
+    } else if (match.status === 'pending') {
+      setMessages([]);
+    } else if (match.status === 'rejected') {
+      setMessages([systemMessage('این درخواست رد شده است.')]);
     }
-  }, [match?.id, ended]);
+  }, [match?.id, match?.status, ended]);
+
+  // While pending, poll status so both sides unlock when accepted (bot parity).
+  useEffect(() => {
+    if (!match || !myUserId || match.status !== 'pending') return;
+    let cancelled = false;
+
+    async function pullStatus() {
+      try {
+        const req = await getPlaydateRequest(match!.id);
+        if (cancelled || !req || req.status === 'pending') return;
+        const mapped = playdateToMatchRequest(req, myUserId!);
+        setMatch(mapped);
+        setSecure(Boolean(req.chatSecure));
+        setEnded(Boolean(req.chatEnded));
+        bootstrappedRef.current = null;
+        void reloadConversations();
+        if (req.status === 'accepted') {
+          setMessages([systemMessage('درخواست پذیرفته شد — چت همبازی فعال شد.')]);
+        } else if (req.status === 'rejected') {
+          setMessages([systemMessage('درخواست همبازی رد شد.')]);
+        }
+      } catch {
+        /* ignore */
+      }
+    }
+
+    void pullStatus();
+    const timer = window.setInterval(() => void pullStatus(), POLL_MS);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [match?.id, match?.status, myUserId, reloadConversations]);
 
   useEffect(() => {
-    if (!match || !myUserId || ended) return;
+    if (!match || !myUserId || ended || match.status !== 'accepted') return;
     let cancelled = false;
 
     async function pull(initial = false) {
@@ -479,6 +530,9 @@ export function ChatPage() {
       try {
         const req = await getPlaydateRequest(match!.id);
         if (cancelled || !req) return;
+        if (req.status !== 'accepted') {
+          return;
+        }
         setSecure((prev) => {
           const next = Boolean(req.chatSecure);
           if (prev !== next) {
@@ -594,6 +648,10 @@ export function ChatPage() {
   const peerOwnerName =
     peerOwnerLabel || peerPet?.ownerName || peerPet?.name || 'صاحب پت';
   const peerOwnerId = peerPet?.ownerId;
+  const isPendingRequest = match?.status === 'pending';
+  const isRejectedRequest = match?.status === 'rejected';
+  const chatUnlocked = match?.status === 'accepted' && !ended;
+  const incomingPending = Boolean(isPendingRequest && match?.direction === 'incoming');
 
   const messageBlocks = useMemo(() => {
     const blocks: Array<{ key: string; day?: string; msg?: ChatMsg }> = [];
@@ -619,6 +677,44 @@ export function ChatPage() {
       return;
     }
     navigate('/explore#requests');
+  }
+
+  async function onAcceptRequest() {
+    if (!match || !myUserId || requestBusy || match.direction !== 'incoming') return;
+    setRequestBusy(true);
+    setActionError(null);
+    try {
+      const updated = await updatePlaydateStatus(match.id, 'accepted', myUserId);
+      const mapped = playdateToMatchRequest(updated, myUserId);
+      bootstrappedRef.current = null;
+      setMatch(mapped);
+      setEnded(Boolean(updated.chatEnded));
+      setSecure(Boolean(updated.chatSecure));
+      setMessages([systemMessage('درخواست پذیرفته شد — چت همبازی فعال شد.')]);
+      void reloadConversations();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'قبول درخواست ناموفق بود');
+    } finally {
+      setRequestBusy(false);
+    }
+  }
+
+  async function onRejectRequest() {
+    if (!match || !myUserId || requestBusy || match.direction !== 'incoming') return;
+    setRequestBusy(true);
+    setActionError(null);
+    try {
+      const updated = await updatePlaydateStatus(match.id, 'rejected', myUserId);
+      const mapped = playdateToMatchRequest(updated, myUserId);
+      bootstrappedRef.current = null;
+      setMatch(mapped);
+      setMessages([systemMessage('درخواست همبازی رد شد.')]);
+      void reloadConversations();
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'رد درخواست ناموفق بود');
+    } finally {
+      setRequestBusy(false);
+    }
   }
 
   function clearPendingFile() {
@@ -674,7 +770,7 @@ export function ChatPage() {
 
   async function sendMessage(e?: FormEvent) {
     e?.preventDefault();
-    if (ended || sending || !myUserId || !match) return;
+    if (ended || sending || !myUserId || !match || match.status !== 'accepted') return;
     const text = draft.trim();
     const file = pendingFile;
     if (!text && !file) return;
@@ -710,7 +806,7 @@ export function ChatPage() {
   }
 
   async function toggleSecure() {
-    if (!myUserId || !match || ended) return;
+    if (!myUserId || !match || ended || match.status !== 'accepted') return;
     setMenuOpen(false);
     const next = !secure;
     setSecure(next);
@@ -752,7 +848,7 @@ export function ChatPage() {
   }
 
   async function endChat() {
-    if (!myUserId || !match || ending || ended) return;
+    if (!myUserId || !match || ending || ended || match.status !== 'accepted') return;
     setMenuOpen(false);
     setEnding(true);
     setActionError(null);
@@ -873,6 +969,7 @@ export function ChatPage() {
     showList && !showThread ? 'tg-chat--list-only' : '',
     secure ? 'tg-chat--secure' : '',
     ended ? 'tg-chat--ended' : '',
+    isPendingRequest ? 'tg-chat--pending' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -902,10 +999,10 @@ export function ChatPage() {
           ) : !match || !peerPet ? (
             <div className="tg-thread-empty">
               <BrandMark iconSize={28} />
-              <h2>چت پیدا نشد</h2>
-              <p>این گفتگو تمام شده یا هنوز پذیرفته نشده است.</p>
-              <Link to="/explore#requests" className="tg-chat-link-btn">
-                بازگشت به همبازی
+              <h2>گفتگو پیدا نشد</h2>
+              <p>این درخواست در دسترس نیست یا مال تو نیست.</p>
+              <Link to="/chats" className="tg-chat-link-btn">
+                بازگشت به گفتگوها
               </Link>
             </div>
           ) : (
@@ -935,15 +1032,21 @@ export function ChatPage() {
                     <small>
                       {ended
                         ? 'چت پایان یافته'
-                        : secure
-                          ? 'چت امن فعال'
-                          : 'فعال در چت همبازی'}{' '}
+                        : isPendingRequest
+                          ? incomingPending
+                            ? 'درخواست همبازی جدید'
+                            : 'منتظر پاسخ درخواست'
+                          : isRejectedRequest
+                            ? 'درخواست رد شده'
+                            : secure
+                              ? 'چت امن فعال'
+                              : 'فعال در چت همبازی'}{' '}
                       · {peerPet.name}
                     </small>
                   </span>
                 </button>
 
-                {!ended ? (
+                {chatUnlocked ? (
                   <div className="tg-chat-header-actions" ref={menuRef}>
                     <button
                       type="button"
@@ -1009,7 +1112,7 @@ export function ChatPage() {
                 ) : null}
               </header>
 
-              {secure && !ended ? (
+              {secure && chatUnlocked ? (
                 <div className="tg-secure-strip" role="status">
                   چت امن فعال است — پیام‌ها قابل ذخیره یا فوروارد نیستند
                 </div>
@@ -1021,6 +1124,82 @@ export function ChatPage() {
                 onScroll={onScrollerScroll}
               >
                 <div className="tg-chat-messages">
+                  <article
+                    className={`tg-request-card${
+                      match.direction === 'incoming' ? ' is-incoming' : ' is-outgoing'
+                    }${isPendingRequest ? ' is-pending' : ''}${
+                      isRejectedRequest ? ' is-rejected' : ''
+                    }`}
+                    aria-label="کارت درخواست همبازی"
+                  >
+                    <div
+                      className="tg-request-card-cover"
+                      style={{ backgroundImage: `url(${peerPet.imageUrl})` }}
+                    />
+                    <div className="tg-request-card-body">
+                      <p className="tg-request-card-kicker">
+                        {incomingPending
+                          ? 'درخواست همبازی جدید'
+                          : isPendingRequest
+                            ? 'درخواست همبازی ارسال شد'
+                            : isRejectedRequest
+                              ? 'درخواست رد شد'
+                              : 'درخواست همبازی'}
+                      </p>
+                      <h3>
+                        {match.rawFromName ?? peerPet.name}
+                        {' → '}
+                        {match.rawToName ?? match.toPet?.name ?? 'پت شما'}
+                      </h3>
+                      <ul className="tg-request-card-meta">
+                        <li>
+                          #{match.id} ·{' '}
+                          {match.statusLabel ??
+                            MATCH_STATUS_LABELS[match.status] ??
+                            match.status}
+                        </li>
+                        {peerPet.breed ? (
+                          <li>
+                            {PET_TYPE_LABELS[peerPet.type]} · {peerPet.breed}
+                          </li>
+                        ) : null}
+                        {peerPet.city ? <li>📍 {peerPet.city}</li> : null}
+                      </ul>
+                      {match.message ? (
+                        <p className="tg-request-card-msg">«{match.message}»</p>
+                      ) : null}
+                      {incomingPending ? (
+                        <div className="tg-request-card-actions">
+                          <button
+                            type="button"
+                            className="tg-request-accept"
+                            disabled={requestBusy}
+                            onClick={() => void onAcceptRequest()}
+                          >
+                            <Check size={16} strokeWidth={2.5} />
+                            {requestBusy ? '…' : 'قبول'}
+                          </button>
+                          <button
+                            type="button"
+                            className="tg-request-reject"
+                            disabled={requestBusy}
+                            onClick={() => void onRejectRequest()}
+                          >
+                            <X size={16} strokeWidth={2.5} />
+                            رد
+                          </button>
+                        </div>
+                      ) : isPendingRequest ? (
+                        <p className="tg-request-card-wait" role="status">
+                          منتظر پاسخ صاحب {peerPet.name} باش.
+                        </p>
+                      ) : match.status === 'accepted' ? (
+                        <p className="tg-request-card-wait" role="status">
+                          پذیرفته شد — می‌توانی پیام بفرستی.
+                        </p>
+                      ) : null}
+                    </div>
+                  </article>
                   {messageBlocks.map((block) => {
                     if (block.day) {
                       return (
@@ -1129,7 +1308,15 @@ export function ChatPage() {
               {actionError ? <p className="tg-error">{actionError}</p> : null}
               {sendError ? <p className="tg-error">{sendError}</p> : null}
 
-              {!ended ? (
+              {!chatUnlocked && !ended ? (
+                <div className="tg-request-composer-bar" role="status">
+                  {incomingPending
+                    ? 'برای شروع چت، درخواست را قبول یا رد کن.'
+                    : isRejectedRequest
+                      ? 'این درخواست رد شده است.'
+                      : 'چت بعد از قبول درخواست فعال می‌شود.'}
+                </div>
+              ) : chatUnlocked ? (
                 <>
                   {pendingFile ? (
                     <div className="tg-attach-preview">

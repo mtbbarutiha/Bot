@@ -4352,9 +4352,11 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 
 .tg-thread > .tg-chat-header,
 .tg-thread > .tg-secure-strip,
+.tg-thread > .tg-status-strip,
 .tg-thread > .tg-attach-preview,
 .tg-thread > .tg-composer,
 .tg-thread > .tg-composer-shell,
+.tg-thread > .tg-request-composer-bar,
 .tg-thread > .tg-ended-bar,
 .tg-thread > .tg-error {
   flex: 0 0 auto;

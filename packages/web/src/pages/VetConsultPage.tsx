@@ -70,19 +70,12 @@ function VetInboxSection({
               <li key={c.id} data-testid={`vet-incoming-${c.id}`}>
                 <div>
                   <strong>{patientLabel(c)}</strong>
-                  <span>درخواست مشاوره سریع</span>
+                  <span className="pepito-vet-status">درخواست جدید — در انتظار پاسخ</span>
                   {c.createdAt ? (
                     <small>{formatPersianDateTime(c.createdAt)}</small>
                   ) : null}
                 </div>
                 <div className="pepito-vet-consult-incoming-actions">
-                  <Link
-                    to={`/vet-chats/${c.id}`}
-                    className="pepito-btn pepito-btn--ghost"
-                    data-testid={`vet-open-chat-${c.id}`}
-                  >
-                    مشاهده درخواست
-                  </Link>
                   <button
                     type="button"
                     className="pepito-btn button-1"
@@ -92,6 +85,13 @@ function VetInboxSection({
                   >
                     قبول و ورود به چت
                   </button>
+                  <Link
+                    to={`/vet-chats/${c.id}`}
+                    className="pepito-btn pepito-btn--ghost"
+                    data-testid={`vet-open-chat-${c.id}`}
+                  >
+                    مشاهده
+                  </Link>
                   <button
                     type="button"
                     className="pepito-btn pepito-btn--ghost"
@@ -121,7 +121,13 @@ function VetInboxSection({
               <li key={c.id}>
                 <div>
                   <strong>{patientLabel(c)}</strong>
-                  <span>{c.status === 'active' ? 'مشاوره فعال' : 'پایان‌یافته'}</span>
+                  <span
+                    className={`pepito-vet-status${
+                      c.status === 'active' ? ' is-active' : ' is-done'
+                    }`}
+                  >
+                    {c.status === 'active' ? 'مشاوره فعال' : 'پایان‌یافته'}
+                  </span>
                   {c.createdAt ? (
                     <small>{formatPersianDateTime(c.createdAt)}</small>
                   ) : null}
@@ -136,7 +142,17 @@ function VetInboxSection({
                       ورود به چت
                     </Link>
                   </div>
-                ) : null}
+                ) : (
+                  <div className="pepito-vet-consult-incoming-actions">
+                    <Link
+                      to={`/vet-chats/${c.id}`}
+                      className="pepito-btn pepito-btn--ghost"
+                      data-testid={`vet-view-chat-${c.id}`}
+                    >
+                      مشاهده گفتگو
+                    </Link>
+                  </div>
+                )}
               </li>
             ))}
           </ul>
