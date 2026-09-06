@@ -2,6 +2,7 @@ import { createHash, randomInt } from 'crypto';
 import { normalizeIranMobile } from '@petdate/shared';
 import { dbService } from '../db';
 import { candooSendOtp, isCandooConfigured } from './candoo';
+import { formatPhoneVerifyOtpSms } from './otp-sms-copy';
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -80,7 +81,7 @@ export async function sendPhoneOtp(userId: number, phoneRaw: string): Promise<Se
     expiresAt,
   });
 
-  const body = `کد تایید همبازی: ${code}`;
+  const body = formatPhoneVerifyOtpSms(code);
   const sent = await candooSendOtp({
     recipient: phone,
     body,

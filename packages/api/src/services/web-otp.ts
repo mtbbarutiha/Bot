@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt } from 'crypto';
 import { normalizeIranMobile } from '@petdate/shared';
 import { dbService } from '../db';
 import { candooSendOtp, isCandooConfigured } from './candoo';
+import { formatLoginOtpSms } from './otp-sms-copy';
 
 const OTP_TTL_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
@@ -77,7 +78,7 @@ export async function requestWebOtp(
     if (isCandooConfigured()) {
       const sent = await candooSendOtp({
         recipient: target,
-        body: `کد ورود petdate: ${code}`,
+        body: formatLoginOtpSms(code),
       });
       if (!sent.ok) {
         console.error('web phone otp send failed', sent.error, sent.raw, 'src=', sent.srcNum);
