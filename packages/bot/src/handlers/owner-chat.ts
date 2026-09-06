@@ -20,7 +20,7 @@ import {
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 import { formatPet } from '../format';
-import { MAIN_MENU_ALIASES, MAIN_MENU_BTN, mainMenuKeyboard } from '../keyboards';
+import { MAIN_MENU_ALIASES, MAIN_MENU_BTN, MENU_LABELS, mainMenuKeyboard } from '../keyboards';
 
 export const OWNER_CHAT_BTNS = {
   secureOn: '🔒 چت امن',
@@ -510,6 +510,12 @@ export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
   const text = ctx.message?.text?.trim();
   if (text && (OWNER_CHAT_ACTION_BTNS.has(text) || MAIN_MENU_ALIASES.has(text) || text === MAIN_MENU_BTN)) {
     return handleOwnerChatAction(ctx, text);
+  }
+
+  // Main-menu reply buttons (e.g. پیدا کردن همبازی) must not be relayed as chat text
+  if (text && MENU_LABELS.has(text)) {
+    await upsertSession(String(from.id), clearOwnerChatPatch());
+    return false;
   }
 
   const peer = session.ownerChatPeerTelegramId;

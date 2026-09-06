@@ -1,4 +1,5 @@
 import './load-env';
+import dns from 'dns';
 import express from 'express';
 import cors from 'cors';
 import type { GameType } from '@petdate/shared';
@@ -29,6 +30,13 @@ import {
   installProcessErrorLogging,
   responseErrorLogger,
 } from './services/app-logger';
+
+// Prefer IPv4 — Telegram notify fetch was timing out on IPv6
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  /* older Node */
+}
 
 getDb();
 installProcessErrorLogging('api');

@@ -649,8 +649,13 @@ playdatesRouter.post('/', async (req, res) => {
   });
 
   const enriched = enrichPlaydate(request)!;
-  const telegramNotified = await notifyNewPlaydateTelegram(enriched);
-  res.status(201).json({ ...enriched, telegramNotified });
+  // Never block HTTP on Telegram — slow/failed TG was hanging find-playmate
+  // for minutes (bot loops up to 30 creates, each awaiting notify).
+  void notifyNewPlaydateTelegram(enriched).catch((err) => {
+    console.warn('playdate telegram notify failed:', (err as Error).message);
+  });
+  // telegramNotified:true = API owns delivery (async); bot must not double-send
+  res.status(201).json({ ...enriched, telegramNotified: true });
 });
 
 playdatesRouter.patch('/:id', async (req, res) => {

@@ -1,10 +1,18 @@
 import { Bot } from 'grammy';
+import dns from 'dns';
 import { applyBotBranding } from './branding';
 import { assertBotToken, config } from './config';
 import { requiredChannels } from './force-join';
 import { registerHandlers } from './handlers';
 import { connectRedis, disconnectRedis } from './session';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
+
+// Prefer IPv4 — Telegram API IPv6 often times out on this host
+try {
+  dns.setDefaultResultOrder('ipv4first');
+} catch {
+  /* older Node */
+}
 
 async function warnForceJoinAdminRights(bot: Bot): Promise<void> {
   const me = await bot.api.getMe();
@@ -43,10 +51,17 @@ async function main(): Promise<void> {
       if (
         message.includes('fetch failed') ||
         message.includes('ECONNREFUSED') ||
-        message.includes('API ')
+        message.includes('API ') ||
+        message.includes('AbortError') ||
+        message.includes('timeout')
       ) {
         await err.ctx.reply(
           'فعلاً سرور همبازی در دسترس نیست. چند لحظه بعد دوباره امتحان کن.'
+        );
+      } else {
+        // Always acknowledge so menu buttons never look dead
+        await err.ctx.reply(
+          'یک مشکل موقتی پیش اومد. دوباره «🔍 پیدا کردن همبازی» یا /menu رو بزن.'
         );
       }
     } catch {

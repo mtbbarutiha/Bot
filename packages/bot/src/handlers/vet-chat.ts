@@ -25,6 +25,7 @@ import {
 } from '../api-client';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
+import { MENU_LABELS } from '../keyboards';
 
 /** Reply-keyboard labels for vet chat (short so buttons stay compact). */
 export const VET_CHAT_BTNS = {
@@ -1017,6 +1018,19 @@ export async function handleVetChatRelay(ctx: Context): Promise<boolean> {
     if (text === VET_CHAT_BTNS.medical) return handleVetChatMedicalView(ctx);
     if (text === VET_CHAT_BTNS.addNote) return handleVetChatAddNoteStart(ctx);
     if (text === VET_CHAT_BTNS.prescription) return handleVetChatPrescriptionStart(ctx);
+    // Main-menu buttons must not be relayed into the consultation chat
+    if (MENU_LABELS.has(text)) {
+      await upsertSession(String(from.id), {
+        step: 'ready',
+        vetChatRole: undefined,
+        vetChatPeerTelegramId: undefined,
+        vetChatConsultId: undefined,
+        medicalNotePetId: undefined,
+        prescriptionPetId: undefined,
+        prescriptionDraft: undefined,
+      });
+      return false;
+    }
     if (session.step === 'vet_medical_note') return handleVetChatNoteText(ctx, text);
     if (session.step === 'vet_prescription') return handleVetChatPrescriptionText(ctx, text);
   }

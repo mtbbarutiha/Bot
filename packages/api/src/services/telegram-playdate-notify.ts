@@ -52,14 +52,20 @@ function formatPetHtml(pet: PetProfile): string {
   return lines.filter(Boolean).join('\n');
 }
 
+/** Keep Telegram calls short so playdate create never blocks the HTTP response. */
+const TELEGRAM_CALL_TIMEOUT_MS = 4000;
+
 async function telegramCall(method: string, body: Record<string, unknown>): Promise<boolean> {
   const token = infra.telegram.botToken;
   if (!token) return false;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TELEGRAM_CALL_TIMEOUT_MS);
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/${method}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
+      signal: controller.signal,
     });
     const data = (await res.json()) as { ok?: boolean; description?: string };
     if (!data.ok) {
@@ -70,6 +76,8 @@ async function telegramCall(method: string, body: Record<string, unknown>): Prom
   } catch (err) {
     console.warn(`telegram ${method} error:`, (err as Error).message);
     return false;
+  } finally {
+    clearTimeout(timer);
   }
 }
 
