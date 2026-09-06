@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { SiteLogo } from '../components/SiteLogo';
 import { EmojiPicker } from '../components/EmojiPicker';
+import { FindPlaymatePanel } from '../components/FindPlaymatePanel';
 import { PetAvatar } from '../components/PetAvatar';
 import { PresenceBadge } from '../components/PresenceBadge';
 import { RequestCountdown } from '../components/RequestCountdown';
@@ -265,34 +266,29 @@ function ConversationListPane({
             <div className="tg-skeleton tg-skeleton--row" />
           </div>
          ) : conversations.length === 0 ? (
-          <div className="tg-chat-list-empty">
-            <SiteLogo className="tg-chat-empty-logo" height={48} />
-            <h2>هنوز گفتگویی نیست</h2>
-            <p>
-              {scope === 'vet'
-                ? 'درخواست‌ها و چت‌های مشاوره دامپزشکی این نقش اینجا می‌آیند.'
-                : 'درخواست‌های همبازی و مشاوره‌های شما به‌عنوان صاحب پت اینجا می‌آیند.'}
-            </p>
-            <Link
-              to={scope === 'vet' ? '/vet-consult' : '/explore'}
-              className={
-                scope === 'vet' ? 'tg-chat-link-btn' : 'pepito-btn button-1 tg-chat-playmate-cta'
-              }
-            >
-              {scope === 'vet' ? (
-                'رفتن به پنل پزشک'
-              ) : (
-                <>
-                  <span className="pepito-btn-icon" aria-hidden>
-                    <i className="flaticon-pawprint-4" />
-                  </span>
-                  پیدا کردن همبازی
-                </>
-              )}
-            </Link>
+          <div
+            className={`tg-chat-list-empty${scope !== 'vet' ? ' tg-chat-list-empty--hub' : ''}`}
+          >
+            {scope === 'vet' ? (
+              <>
+                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <h2>هنوز گفتگویی نیست</h2>
+                <p>درخواست‌ها و چت‌های مشاوره دامپزشکی این نقش اینجا می‌آیند.</p>
+                <Link to="/vet-consult" className="tg-chat-link-btn">
+                  رفتن به پنل پزشک
+                </Link>
+              </>
+            ) : (
+              <FindPlaymatePanel compact onSent={onRefresh} />
+            )}
           </div>
         ) : (
           <ul className="tg-chat-list-items">
+            {scope !== 'vet' ? (
+              <li className="tg-chat-list-hub-cta" key="find-playmate-cta">
+                <FindPlaymatePanel compact showRequests={false} onSent={onRefresh} />
+              </li>
+            ) : null}
             {conversations.map((c) => {
               const active = activeKey === c.key;
               const busy = busyKey === c.key;
@@ -369,25 +365,20 @@ function ConversationListPane({
 
 function ThreadEmptyState({ scope }: { scope: InboxScope }) {
   const isVet = scope === 'vet';
+  if (isVet) {
+    return (
+      <div className="tg-thread-empty">
+        <SiteLogo className="tg-chat-empty-logo" height={48} />
+        <h2>مشاوره‌ای را شروع کن</h2>
+        <Link to="/vet-consult" className="tg-chat-link-btn">
+          رفتن به پنل پزشک
+        </Link>
+      </div>
+    );
+  }
   return (
-    <div className="tg-thread-empty">
-      <SiteLogo className="tg-chat-empty-logo" height={48} />
-      <h2>{isVet ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
-      <Link
-        to={isVet ? '/vet-consult' : '/explore'}
-        className={isVet ? 'tg-chat-link-btn' : 'pepito-btn button-1 tg-chat-playmate-cta'}
-      >
-        {isVet ? (
-          'رفتن به پنل پزشک'
-        ) : (
-          <>
-            <span className="pepito-btn-icon" aria-hidden>
-              <i className="flaticon-pawprint-4" />
-            </span>
-            پیدا کردن همبازی
-          </>
-        )}
-      </Link>
+    <div className="tg-thread-empty tg-thread-empty--hub">
+      <FindPlaymatePanel />
     </div>
   );
 }

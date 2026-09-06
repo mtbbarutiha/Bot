@@ -459,6 +459,23 @@ html:has(.tg-chat) body {
   color: var(--pepito-muted, #6b6280);
 }
 
+.tg-chat-list-hub-cta {
+  list-style: none;
+  padding: 0.65rem 0.75rem 0.35rem;
+}
+.tg-chat-list-hub-cta .find-playmate-panel {
+  gap: 0.5rem;
+}
+.tg-chat-list-hub-cta .pepito-btn {
+  width: 100%;
+  justify-content: center;
+}
+.tg-chat-list-empty--hub .pepito-btn,
+.tg-thread-empty--hub .pepito-btn {
+  width: 100%;
+  justify-content: center;
+}
+
 /* Site logo in chats */
 .tg-chat-list-brand { min-width: 0; }
 .tg-chat-list-logo,
