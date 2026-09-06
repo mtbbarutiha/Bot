@@ -1,11 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { loginPath } from '../lib/authRedirect';
-import { SITE_NAV_AUTH, SITE_NAV_GUEST } from '../lib/siteNav';
+import { SITE_NAV_DESKTOP_AUTH, SITE_NAV_DESKTOP_GUEST } from '../lib/siteNav';
 
 /**
- * Desktop primary actions — same destinations as the mobile bottom dock.
- * Visible from 860px up (CSS); hidden on admin/chat.
+ * Desktop primary actions (≥860px). Slimmer than the mobile dock:
+ * cart / wallet chip / circular profile avatar live in NavUserCluster.
  */
 export function SiteDesktopNav() {
   const { pathname } = useLocation();
@@ -15,7 +15,7 @@ export function SiteDesktopNav() {
     return null;
   }
 
-  const items = isLoggedIn ? SITE_NAV_AUTH : SITE_NAV_GUEST;
+  const items = isLoggedIn ? SITE_NAV_DESKTOP_AUTH : SITE_NAV_DESKTOP_GUEST;
 
   return (
     <nav className="pepito-site-desktop-nav" aria-label="میانبرهای اصلی">

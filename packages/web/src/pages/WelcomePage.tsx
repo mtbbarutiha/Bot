@@ -296,7 +296,6 @@ export function WelcomePage() {
           <a href="#services">خدمات</a>
           <a href="#rely">اعتماد</a>
           <a href="#pets">پذیرش</a>
-          <Link to="/shop">پت شاپ</Link>
           <a href="#news">اخبار</a>
           <a href="#faq">سؤالات</a>
         </nav>

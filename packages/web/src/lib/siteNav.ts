@@ -75,3 +75,15 @@ export const SITE_NAV_AUTH: SiteNavItem[] = [
     match: (p) => p === '/profile' || p.startsWith('/profile'),
   },
 ];
+
+/**
+ * Desktop header shortcuts — avoid duplicating left-cluster tools.
+ * Guest: cart lives in NavUserCluster; Auth: wallet chip + circular avatar cover wallet/profile.
+ */
+export const SITE_NAV_DESKTOP_GUEST: SiteNavItem[] = SITE_NAV_GUEST.filter(
+  (item) => item.key !== 'cart',
+);
+
+export const SITE_NAV_DESKTOP_AUTH: SiteNavItem[] = SITE_NAV_AUTH.filter(
+  (item) => item.key !== 'wallet' && item.key !== 'profile',
+);

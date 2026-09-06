@@ -6833,8 +6833,19 @@ button.chip.is-on {
     color: #fff;
   }
 
-  .pepito-nav-user-cluster .pepito-nav-profile,
-  .pepito-nav-user-cluster .pepito-nav-wallet {
-    display: none !important;
+  /* Desktop keeps circular avatar + wallet chip in the left cluster
+     (SiteDesktopNav no longer duplicates پروفایل / کیف پول / سبد). */
+  .pepito-nav-user-cluster .pepito-nav-profile-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  .pepito-nav-user-cluster .pepito-nav-profile-photo {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
   }
 }

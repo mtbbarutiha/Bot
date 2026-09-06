@@ -47,9 +47,6 @@ export function ShopChrome({
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
         <nav className="pepito-nav-links pepito-nav-links--app" aria-label="پت دیت شاپ">
-          <NavLink to="/shop" end>
-            پت دیت شاپ
-          </NavLink>
           <NavLink to="/shop/c/dog-food">سگ</NavLink>
           <NavLink to="/shop/c/cat-food">گربه</NavLink>
           <NavLink to="/shop/c/bird-food">پرنده</NavLink>

@@ -6,8 +6,9 @@ import { useAuthStore } from '../hooks/useAuthStore';
 import { useShopCart } from '../hooks/useShopCart';
 
 /**
- * Top-bar account tools: avatar + wallet + cart.
- * Kept as one in-flow cluster on mobile so nothing overlaps the logo.
+ * Top-bar account tools pinned to physical CSS left (LTR cluster):
+ * circular profile avatar → wallet chip → cart.
+ * Mobile CSS hides avatar/wallet (dock covers them); desktop keeps them.
  */
 export function NavUserCluster({ showCart = true }: { showCart?: boolean } = {}) {
   const { isLoggedIn } = useAuthStore();

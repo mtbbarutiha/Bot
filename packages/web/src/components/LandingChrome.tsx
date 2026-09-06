@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
+import { useAuthStore } from '../hooks/useAuthStore';
 import { SiteFooter } from './SiteFooter';
 import { NavUserCluster } from './NavUserCluster';
 import { SiteDesktopNav } from './SiteDesktopNav';
@@ -58,6 +59,7 @@ export function LandingChrome({
   footer = true,
 }: LandingChromeProps) {
   const [scrolled, setScrolled] = useState(false);
+  const { isLoggedIn } = useAuthStore();
   // App shell uses ProfileMenu for logout — no default “back” action in the top bar.
   const actionLabel =
     actionLabelProp !== undefined
@@ -85,7 +87,11 @@ export function LandingChrome({
 
   return (
     <div className={`pepito-landing pepito-flow-page${className ? ` ${className}` : ''}`} dir="rtl">
-      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${appNav ? ' pepito-nav--app' : ' pepito-nav--tools'}`}>
+      <header
+        className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${
+          appNav || isLoggedIn ? ' pepito-nav--app' : ' pepito-nav--tools'
+        }`}
+      >
         {/* Logo first in DOM so dir=rtl places it at inline-start (right). */}
         <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
@@ -96,14 +102,12 @@ export function LandingChrome({
             <NavLink to="/" end>
               خانه
             </NavLink>
-            <NavLink to="/explore">پنل همبازی</NavLink>
             <NavLink to="/add-pet">پت‌های من</NavLink>
           </nav>
         ) : (
           <nav className="pepito-nav-links" aria-label="بخش‌ها">
             <Link to="/#services">خدمات</Link>
             <Link to="/#pets">پذیرش</Link>
-            <Link to="/shop">پت شاپ</Link>
             <Link to="/#news">اخبار</Link>
             <Link to="/faq">سؤالات</Link>
           </nav>
