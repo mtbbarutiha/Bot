@@ -2094,8 +2094,8 @@ export const dbService = {
         const roles = u.roles?.length ? u.roles : u.role ? [u.role] : [];
         return roles.includes('vet');
       });
-    const phoneOk = vets.filter((v) => Boolean(v.phoneVerified));
-    return phoneOk.length > 0 ? phoneOk : vets;
+    // همهٔ آنلاین‌های ربات و وب؛ ترجیح phone فقط در ORDER BY است
+    return vets;
   },
 
   /** همهٔ کاربران با نقش دامپزشک (فعال و غیرفعال ادمین) */
