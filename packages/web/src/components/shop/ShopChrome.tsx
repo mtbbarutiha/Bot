@@ -100,7 +100,7 @@ export function ShopChrome({
               <span className="pepito-kicker-dot" aria-hidden>
                 <PawPrint size={16} />
               </span>
-              PetDate Shop
+              پت دیت شاپ
             </p>
             <h1>{bannerTitle}</h1>
             {bannerLead ? <p>{bannerLead}</p> : null}
