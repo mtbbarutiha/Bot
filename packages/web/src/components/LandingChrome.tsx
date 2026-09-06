@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
-import { RoleSwitchControl } from './RoleSwitchControl';
+import { ProfileMenu } from './ProfileMenu';
 
 const BANNER_IMG = '/pepito/uploads/3.jpg';
 
@@ -45,7 +45,7 @@ export function LandingChrome({
   bannerTitle = BRAND.displayName,
   bannerLead = BRAND.taglineFa,
   bannerImage = BANNER_IMG,
-  actionLabel = 'بازگشت به صفحه اصلی',
+  actionLabel: actionLabelProp,
   actionTo = '/',
   onAction,
   ctaLabel,
@@ -56,6 +56,13 @@ export function LandingChrome({
   footer = true,
 }: LandingChromeProps) {
   const [scrolled, setScrolled] = useState(false);
+  // App shell uses ProfileMenu for logout — no default “back” action in the top bar.
+  const actionLabel =
+    actionLabelProp !== undefined
+      ? actionLabelProp
+      : appNav
+        ? ''
+        : 'بازگشت به صفحه اصلی';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);
@@ -76,7 +83,7 @@ export function LandingChrome({
 
   return (
     <div className={`pepito-landing pepito-flow-page${className ? ` ${className}` : ''}`} dir="rtl">
-      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}`}>
+      <header className={`pepito-nav${scrolled ? ' is-scrolled' : ''}${appNav ? ' pepito-nav--app' : ''}`}>
         <Link to={appNav ? '/home' : '/'} className="pepito-nav-logo" aria-label={BRAND.displayName}>
           <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
         </Link>
@@ -101,7 +108,6 @@ export function LandingChrome({
         )}
 
         <div className="pepito-nav-actions">
-          {appNav ? <RoleSwitchControl /> : null}
           {actionLabel && onAction ? (
             <button type="button" className="pepito-nav-login pepito-nav-login--btn" onClick={onAction}>
               {actionLabel}
@@ -117,6 +123,7 @@ export function LandingChrome({
               {ctaLabel}
             </Link>
           ) : null}
+          {appNav ? <ProfileMenu /> : null}
         </div>
       </header>
 

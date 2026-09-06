@@ -2696,6 +2696,163 @@ button.chip.is-on {
   }
 }
 
+/* —— Post-login profile avatar (physical CSS left) —— */
+.pepito-nav--app {
+  /* Room for absolute avatar on physical left */
+  padding-left: calc(var(--pepito-gutter-x) + 3.1rem);
+}
+.pepito-nav-profile {
+  position: absolute;
+  left: var(--pepito-gutter-x);
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;
+}
+.pepito-nav-profile-btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(92, 77, 145, 0.18);
+  background: linear-gradient(145deg, #f7f5fc, #ebe7f7);
+  color: var(--pepito-base);
+  cursor: pointer;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(25, 6, 61, 0.08);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.pepito-nav-profile-btn:hover,
+.pepito-nav-profile-btn[aria-expanded='true'] {
+  border-color: var(--pepito-base);
+  box-shadow: 0 8px 20px rgba(92, 77, 145, 0.18);
+  transform: translateY(-1px);
+}
+.pepito-nav-profile-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.pepito-nav-profile-fallback {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  line-height: 1;
+  color: var(--pepito-base);
+}
+.pepito-nav-profile-menu {
+  position: absolute;
+  top: calc(100% + 0.55rem);
+  left: 0;
+  right: auto;
+  width: min(280px, calc(100vw - 1.5rem));
+  padding: 0.7rem;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid rgba(92, 77, 145, 0.12);
+  box-shadow: 0 18px 44px rgba(25, 6, 61, 0.16);
+  animation: pepito-flow-rise 0.28s ease both;
+  z-index: 70;
+}
+.pepito-nav-profile-head {
+  padding: 0.35rem 0.45rem 0.65rem;
+  border-bottom: 1px solid rgba(92, 77, 145, 0.08);
+  margin-bottom: 0.45rem;
+}
+.pepito-nav-profile-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: var(--pepito-dark);
+}
+.pepito-nav-profile-role-label {
+  margin: 0.2rem 0 0;
+  font-size: 0.78rem;
+  color: var(--pepito-muted);
+}
+.pepito-nav-profile-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: 100%;
+  padding: 0.65rem 0.7rem;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--pepito-dark);
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  text-align: start;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.pepito-nav-profile-item:hover {
+  background: rgba(92, 77, 145, 0.08);
+  color: var(--pepito-base);
+}
+.pepito-nav-profile-item--logout {
+  margin-top: 0.25rem;
+  color: #b42318;
+}
+.pepito-nav-profile-item--logout:hover {
+  background: rgba(180, 35, 24, 0.08);
+  color: #912018;
+}
+.pepito-nav-profile-role-slot {
+  margin: 0.2rem 0;
+  padding: 0.15rem 0;
+}
+.pepito-nav-profile-role-slot .pepito-role-switch {
+  width: 100%;
+  position: relative;
+}
+.pepito-nav-profile-role-slot .pepito-role-switch-trigger {
+  width: 100%;
+  justify-content: space-between;
+  padding: 0.55rem 0.7rem;
+  border-radius: 12px;
+  background: #faf9fc;
+  border: 1px solid rgba(92, 77, 145, 0.1);
+}
+.pepito-nav-profile-role-slot .pepito-role-switch-panel {
+  inset-inline-end: auto;
+  inset-inline-start: 0;
+  left: 0;
+  right: auto;
+  min-width: min(320px, calc(100vw - 1.5rem));
+}
+@media (max-width: 900px) {
+  .pepito-nav--app {
+    padding-left: calc(var(--pepito-gutter-x) + 2.85rem);
+  }
+  .pepito-nav-profile-btn {
+    width: 38px;
+    height: 38px;
+  }
+  .pepito-nav-profile-menu {
+    position: fixed;
+    top: calc(var(--pepito-nav-h) + 0.35rem);
+    left: 0.75rem;
+    right: auto;
+    width: min(300px, calc(100vw - 1.5rem));
+  }
+  .pepito-nav-profile-role-slot .pepito-role-switch-panel {
+    position: fixed;
+    top: calc(var(--pepito-nav-h) + 0.35rem);
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    inset-inline: 0.75rem;
+  }
+}
+
 /* —— Find playmate + inline requests —— */
 .pepito-explore {
   padding: 1.75rem 1.35rem 2.5rem;

@@ -1,8 +1,7 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import {
   Home,
   LayoutGrid,
-  LogOut,
   PawPrint,
   ShoppingBag,
   Stethoscope,
@@ -30,21 +29,13 @@ const mobileNav = navItems.filter((i) =>
 );
 
 export function Layout() {
-  const { user, logout } = useAuthStore();
-  const navigate = useNavigate();
-
-  async function onLogout() {
-    await logout();
-    navigate('/', { replace: true });
-  }
+  const { user } = useAuthStore();
 
   return (
     <LandingChrome
       appNav
       hideBanner
       footer
-      actionLabel="خروج"
-      onAction={() => void onLogout()}
       ctaLabel="همبازی"
       ctaTo="/explore"
       className="pepito-app-shell"
@@ -67,9 +58,6 @@ export function Layout() {
             ))}
             <RoleSwitchControl variant="rail" />
           </nav>
-          <button type="button" className="pepito-app-rail-logout" onClick={() => void onLogout()}>
-            <LogOut size={16} /> خروج
-          </button>
         </aside>
 
         <main className="pepito-app-main">
