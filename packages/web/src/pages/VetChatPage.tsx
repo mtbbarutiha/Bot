@@ -12,31 +12,48 @@ import {
   ArrowRight,
   Check,
   CheckCheck,
+  ImageOff,
   Loader2,
+  Lock,
+  LockOpen,
+  MoreVertical,
+  Paperclip,
   RefreshCw,
   Send,
+  Smile,
   Stethoscope,
+  UserPlus,
   X,
 } from 'lucide-react';
 import {
   VET_CONSULT_REQUEST_TTL_MS,
   isPendingRequestExpired,
   userHasRole,
+  type VetConsultChatMediaKind,
   type VetConsultChatMessage,
   type VetConsultation,
 } from '@petdate/shared';
 import { SiteLogo } from '../components/SiteLogo';
 import { PetAvatar } from '../components/PetAvatar';
+import { PresenceBadge } from '../components/PresenceBadge';
+import { EmojiPicker } from '../components/EmojiPicker';
 import { RequestCountdown } from '../components/RequestCountdown';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
+import { usePeerPresence, usePresenceHeartbeat } from '../hooks/usePresence';
 import {
   acceptVetConsultation,
+  addUserContact,
+  clearVetConsultChatMessages,
+  endVetConsultChat,
   getVetConsultation,
   listVetConsultChatMessages,
   listVetConsultations,
   postVetConsultChatMessage,
   rejectVetConsultation,
+  setVetConsultChatSecure,
+  uploadVetConsultChatFile,
+  vetConsultChatMediaUrl,
 } from '../lib/api';
 import { subscribeIncomingRefresh } from '../lib/liveIncoming';
 import {
@@ -48,28 +65,75 @@ import {
 } from '../lib/inboxConversations';
 import { formatTimeAgo } from '../data/mock';
 
+const CHAT_WIPE_HINT =
+  'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
+
 const POLL_MS = 1500;
+const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 const DESKTOP_MQ = '(min-width: 860px)';
 
 type UiMsg = {
-  id: number;
-  from: 'me' | 'peer';
+  id: string;
+  numericId: number;
+  from: 'me' | 'peer' | 'system';
   text: string;
   at: number;
+  mediaKind?: VetConsultChatMediaKind | null;
+  telegramFileId?: string | null;
+  storageKey?: string | null;
+  mimeType?: string | null;
+  fileName?: string | null;
 };
 
 function toUi(row: VetConsultChatMessage, myId: number): UiMsg {
   const at = Date.parse(row.createdAt);
   return {
-    id: row.id,
+    id: String(row.id),
+    numericId: row.id,
     from: row.senderUserId === myId ? 'me' : 'peer',
     text: row.text,
     at: Number.isFinite(at) ? at : Date.now(),
+    mediaKind: row.mediaKind,
+    telegramFileId: row.telegramFileId,
+    storageKey: row.storageKey,
+    mimeType: row.mimeType,
+    fileName: row.fileName,
+  };
+}
+
+function systemMessage(text: string): UiMsg {
+  return {
+    id: `sys-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    numericId: 0,
+    from: 'system',
+    text,
+    at: Date.now(),
   };
 }
 
 function formatClock(ts: number) {
   return new Date(ts).toLocaleTimeString('fa-IR', { hour: '2-digit', minute: '2-digit' });
+}
+
+function mediaLabel(kind?: VetConsultChatMediaKind | null) {
+  switch (kind) {
+    case 'photo':
+      return 'تصویر';
+    case 'video':
+    case 'animation':
+    case 'video_note':
+      return 'ویدیو';
+    case 'voice':
+      return 'پیام صوتی';
+    case 'audio':
+      return 'فایل صوتی';
+    case 'document':
+      return 'فایل';
+    case 'sticker':
+      return 'استیکر';
+    default:
+      return 'رسانه';
+  }
 }
 
 function useIsDesktop() {
@@ -125,18 +189,44 @@ export function VetChatPage() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [acting, setActing] = useState(false);
+  const [ending, setEnding] = useState(false);
+  const [wiping, setWiping] = useState(false);
+  const [secure, setSecure] = useState(false);
+  const [ended, setEnded] = useState(false);
+  const [wiped, setWiped] = useState(false);
+  const [contactAdded, setContactAdded] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [brokenMedia, setBrokenMedia] = useState<Record<string, boolean>>({});
   const [error, setError] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [conversations, setConversations] = useState<InboxConversation[]>([]);
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [listActionKey, setListActionKey] = useState<string | null>(null);
+
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  const selectionRef = useRef<{ start: number; end: number } | null>(null);
   const lastIdRef = useRef(0);
   const stickToBottomRef = useRef(true);
+  const smoothScrollRef = useRef(false);
 
   const isVetSide = Boolean(user && consult && user.id === consult.vetUserId);
   const isVetUser = userHasRole(user, 'vet');
+  const peerUserId = consult
+    ? isVetSide
+      ? consult.patientUserId
+      : consult.vetUserId
+    : null;
+
+  usePresenceHeartbeat(user?.id);
+  const peerPresence = usePeerPresence(peerUserId);
 
   useChatViewportHeight(true);
 
@@ -199,6 +289,34 @@ export function VetChatPage() {
     }
     return found;
   }, [user?.id, consultId, isVetUser]);
+
+  const applyConsultFlags = useCallback((next: VetConsultation, opts?: { announce?: boolean }) => {
+    setSecure((prev) => {
+      const value = Boolean(next.chatSecure);
+      if (opts?.announce && prev !== value) {
+        setMessages((msgs) => [
+          ...msgs,
+          systemMessage(
+            value
+              ? 'طرف مقابل چت امن را فعال کرد.\nپیام‌های این گفتگو قابل ذخیره یا فوروارد نیستند.'
+              : 'طرف مقابل چت امن را خاموش کرد.',
+          ),
+        ]);
+      }
+      return value;
+    });
+    setEnded((prev) => {
+      const value = Boolean(next.chatEnded);
+      if (opts?.announce && !prev && value) {
+        setMessages((msgs) => [
+          ...msgs,
+          systemMessage(['چت مشاوره قطع شد.', '', CHAT_WIPE_HINT].join('\n')),
+        ]);
+        void reloadConversations();
+      }
+      return value;
+    });
+  }, [reloadConversations]);
 
   const syncMessages = useCallback(
     async (opts?: { reset?: boolean }) => {
@@ -267,6 +385,8 @@ export function VetChatPage() {
     (async () => {
       setLoading(true);
       setError(null);
+      setSendError(null);
+      setActionError(null);
       try {
         const found = await loadConsult();
         if (cancelled) return;
@@ -276,9 +396,25 @@ export function VetChatPage() {
           return;
         }
         setConsult(found);
+        setSecure(Boolean(found.chatSecure));
+        setEnded(Boolean(found.chatEnded));
+        setWiped(false);
+        setContactAdded(false);
+        setMenuOpen(false);
+        setEmojiOpen(false);
+        setPendingFile(null);
+        setPendingPreview(null);
+        setBrokenMedia({});
         lastIdRef.current = 0;
         stickToBottomRef.current = true;
         await syncMessages({ reset: true });
+        if (found.status === 'active' && !found.chatEnded) {
+          setMessages((prev) =>
+            prev.length
+              ? prev
+              : [systemMessage('چت مشاوره فعال شد — می‌توانی پیام بفرستی.')],
+          );
+        }
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : 'خطا در بارگذاری چت');
@@ -298,7 +434,9 @@ export function VetChatPage() {
       return;
     }
     const timer = window.setInterval(() => {
-      void syncMessages();
+      if (consult.status === 'active' && !ended) {
+        void syncMessages();
+      }
       void loadConsult()
         .then((next) => {
           if (!next) return;
@@ -308,27 +446,63 @@ export function VetChatPage() {
             }
             return next;
           });
+          if (next.status === 'active' || next.chatEnded) {
+            applyConsultFlags(next, { announce: true });
+          }
         })
         .catch(() => undefined);
       void reloadConversations();
     }, POLL_MS);
     return () => window.clearInterval(timer);
-  }, [consult?.status, consult?.id, syncMessages, loadConsult, reloadConversations]);
+  }, [
+    consult?.status,
+    consult?.id,
+    ended,
+    syncMessages,
+    loadConsult,
+    reloadConversations,
+    applyConsultFlags,
+  ]);
 
   useEffect(() => {
     const el = scrollerRef.current;
     if (!el || !stickToBottomRef.current) return;
+    const behavior = smoothScrollRef.current ? 'smooth' : 'auto';
+    smoothScrollRef.current = false;
     requestAnimationFrame(() => {
-      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      el.scrollTo({ top: el.scrollHeight, behavior });
     });
-  }, [messages.length, consult?.status]);
+  }, [messages, ended, pendingFile, emojiOpen, consult?.status]);
 
   useEffect(() => {
     const ta = inputRef.current;
     if (!ta) return;
     ta.style.height = '0px';
     ta.style.height = `${Math.min(128, Math.max(44, ta.scrollHeight))}px`;
-  }, [draft, consult?.status]);
+  }, [draft, consult?.status, hasThread]);
+
+  useEffect(() => {
+    if (!pendingFile || !pendingFile.type.startsWith('image/')) {
+      setPendingPreview(null);
+      return;
+    }
+    const url = URL.createObjectURL(pendingFile);
+    setPendingPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [pendingFile]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [menuOpen]);
+
+  useEffect(() => {
+    if (ended) setEmojiOpen(false);
+  }, [ended]);
 
   function onScrollerScroll() {
     const el = scrollerRef.current;
@@ -370,12 +544,22 @@ export function VetChatPage() {
     if (!token || !consult) return;
     setActing(true);
     setError(null);
+    setActionError(null);
     try {
       const updated = await acceptVetConsultation(consult.id, token);
-      setConsult({ ...updated, status: updated.status === 'cancelled' ? updated.status : 'active' });
+      const next = {
+        ...updated,
+        status: updated.status === 'cancelled' ? updated.status : ('active' as const),
+      };
+      setConsult(next);
+      setSecure(Boolean(updated.chatSecure));
+      setEnded(Boolean(updated.chatEnded));
       lastIdRef.current = 0;
       stickToBottomRef.current = true;
       await syncMessages({ reset: true });
+      setMessages((prev) =>
+        prev.length ? prev : [systemMessage('درخواست پذیرفته شد — چت مشاوره فعال شد.')],
+      );
       void reloadConversations();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'قبول درخواست ناموفق بود');
@@ -398,36 +582,246 @@ export function VetChatPage() {
     }
   }
 
-  async function sendMessage(text: string) {
-    const trimmed = text.trim();
-    if (!trimmed || !token || !user?.id || !consult || sending) return;
+  function clearPendingFile() {
+    setPendingFile(null);
+    setPendingPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }
+
+  function rememberSelection() {
+    const ta = inputRef.current;
+    if (!ta) return;
+    selectionRef.current = {
+      start: ta.selectionStart ?? draft.length,
+      end: ta.selectionEnd ?? draft.length,
+    };
+  }
+
+  function insertEmoji(emoji: string) {
+    const ta = inputRef.current;
+    const sel = selectionRef.current;
+    const start = sel?.start ?? ta?.selectionStart ?? draft.length;
+    const end = sel?.end ?? ta?.selectionEnd ?? draft.length;
+    const next = draft.slice(0, start) + emoji + draft.slice(end);
+    const caret = start + emoji.length;
+    setDraft(next);
+    selectionRef.current = { start: caret, end: caret };
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    });
+  }
+
+  function onPickFile(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file) return;
+    if (file.size > MAX_ATTACH_BYTES) {
+      setSendError('حجم فایل بیش از حد مجاز است (حداکثر ۱۵ مگابایت)');
+      clearPendingFile();
+      return;
+    }
+    setSendError(null);
+    setPendingFile(file);
+  }
+
+  async function sendMessage(e?: FormEvent) {
+    e?.preventDefault();
+    if (ended || sending || !token || !user?.id || !consult || consult.status !== 'active') {
+      return;
+    }
+    const text = draft.trim();
+    const file = pendingFile;
+    if (!text && !file) return;
     setSending(true);
+    setSendError(null);
     setError(null);
+    setEmojiOpen(false);
+    setDraft('');
+    clearPendingFile();
     stickToBottomRef.current = true;
+    smoothScrollRef.current = true;
     try {
-      const row = await postVetConsultChatMessage(consult.id, trimmed, token);
-      setMessages((prev) => [...prev, toUi(row, user.id)]);
-      lastIdRef.current = Math.max(lastIdRef.current, row.id);
-      setDraft('');
+      const saved = file
+        ? await uploadVetConsultChatFile(consult.id, user.id, file, text, token)
+        : await postVetConsultChatMessage(consult.id, text, token);
+      const ui = toUi(saved, user.id);
+      setMessages((prev) => (prev.some((m) => m.id === ui.id) ? prev : [...prev, ui]));
+      lastIdRef.current = Math.max(lastIdRef.current, saved.id);
       void reloadConversations();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'ارسال پیام ناموفق بود');
+      if (text) setDraft(text);
+      if (file) setPendingFile(file);
+      setSendError(err instanceof Error ? err.message : 'ارسال پیام ناموفق بود');
     } finally {
       setSending(false);
       inputRef.current?.focus();
     }
   }
 
-  function onSubmit(e: FormEvent) {
-    e.preventDefault();
-    void sendMessage(draft);
-  }
-
-  function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
+  function onComposerKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      void sendMessage(draft);
+      void sendMessage();
     }
+  }
+
+  async function toggleSecure() {
+    if (!user?.id || !consult || ended || consult.status !== 'active') return;
+    setMenuOpen(false);
+    const next = !secure;
+    setSecure(next);
+    setActionError(null);
+    setMessages((prev) => [
+      ...prev,
+      systemMessage(
+        next
+          ? 'چت امن فعال شد.\nاز این به بعد پیام‌ها قابل ذخیره یا فوروارد نیستند.'
+          : 'چت امن خاموش شد. پیام‌های بعدی مثل قبل قابل ذخیره هستند.',
+      ),
+    ]);
+    try {
+      const updated = await setVetConsultChatSecure(consult.id, user.id, next, token);
+      setConsult(updated);
+      void reloadConversations();
+    } catch (err) {
+      setSecure(!next);
+      setActionError(err instanceof Error ? err.message : 'تغییر چت امن ناموفق بود');
+    }
+  }
+
+  async function addContact() {
+    if (!user?.id || !peerUserId || ended || contactAdded) return;
+    setMenuOpen(false);
+    setActionError(null);
+    try {
+      await addUserContact(user.id, peerUserId);
+      setContactAdded(true);
+      setMessages((prev) => [...prev, systemMessage('مخاطب با موفقیت اضافه شد.')]);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'افزودن مخاطب ناموفق بود';
+      if (/قبل|already|exists/i.test(msg)) {
+        setContactAdded(true);
+        setMessages((prev) => [...prev, systemMessage('این شخص از قبل در مخاطبینت بود.')]);
+      } else {
+        setActionError(msg);
+      }
+    }
+  }
+
+  async function endChat() {
+    if (!user?.id || !consult || ending || ended || consult.status !== 'active') return;
+    setMenuOpen(false);
+    setEnding(true);
+    setActionError(null);
+    setEnded(true);
+    setMessages((prev) => [
+      ...prev,
+      systemMessage(
+        [
+          'چت مشاوره پایان یافت.',
+          '',
+          CHAT_WIPE_HINT,
+          secure ? 'چت امن فعال بود — حتماً گفتگو را پاک کن.' : null,
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      ),
+    ]);
+    try {
+      const res = await endVetConsultChat(consult.id, user.id, token);
+      setConsult(res.consultation);
+      void reloadConversations();
+    } catch (err) {
+      try {
+        await clearVetConsultChatMessages(consult.id, user.id, token);
+      } catch {
+        /* local end still ok */
+      }
+      setActionError(err instanceof Error ? err.message : 'قطع چت روی سرور ناموفق بود');
+    } finally {
+      setEnding(false);
+    }
+  }
+
+  async function wipeConversation() {
+    if (!user?.id || !consult || wiping) return;
+    setWiping(true);
+    setActionError(null);
+    try {
+      await clearVetConsultChatMessages(consult.id, user.id, token);
+      setMessages([systemMessage('گفتگو به‌طور کامل پاک شد.')]);
+      lastIdRef.current = 0;
+      setWiped(true);
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : 'پاک‌کردن گفتگو ناموفق بود');
+    } finally {
+      setWiping(false);
+    }
+  }
+
+  function renderMedia(msg: UiMsg) {
+    const hasFile = Boolean(msg.telegramFileId || msg.storageKey);
+    if (!msg.mediaKind || !hasFile || !user?.id || !consult) return null;
+    if (brokenMedia[msg.id]) {
+      return (
+        <div className="tg-media-broken" role="img" aria-label={mediaLabel(msg.mediaKind)}>
+          <ImageOff size={18} aria-hidden />
+          <span>{mediaLabel(msg.mediaKind)} در دسترس نیست</span>
+        </div>
+      );
+    }
+    const src = vetConsultChatMediaUrl(consult.id, msg.numericId, user.id);
+    const markBroken = () =>
+      setBrokenMedia((prev) => (prev[msg.id] ? prev : { ...prev, [msg.id]: true }));
+    if (msg.mediaKind === 'photo' || msg.mediaKind === 'sticker') {
+      return (
+        <a className="tg-media-link" href={src} target="_blank" rel="noreferrer">
+          <img
+            className="tg-media-image"
+            src={src}
+            alt={mediaLabel(msg.mediaKind)}
+            loading="lazy"
+            onError={markBroken}
+          />
+        </a>
+      );
+    }
+    if (
+      msg.mediaKind === 'video' ||
+      msg.mediaKind === 'animation' ||
+      msg.mediaKind === 'video_note'
+    ) {
+      return (
+        <video
+          className="tg-media-video"
+          src={src}
+          controls
+          playsInline
+          onError={markBroken}
+        >
+          ویدیو پشتیبانی نمی‌شود
+        </video>
+      );
+    }
+    if (msg.mediaKind === 'voice' || msg.mediaKind === 'audio') {
+      return (
+        <audio
+          className="tg-media-audio"
+          src={src}
+          controls
+          preload="metadata"
+          onError={markBroken}
+        />
+      );
+    }
+    return (
+      <a className="tg-media-file" href={src} target="_blank" rel="noreferrer">
+        {'📎 '}
+        {msg.fileName || mediaLabel(msg.mediaKind)}
+      </a>
+    );
   }
 
   function onBack() {
@@ -446,6 +840,7 @@ export function VetChatPage() {
     (consult?.status === 'requested' &&
       isPendingRequestExpired(consult.createdAt, VET_CONSULT_REQUEST_TTL_MS));
   const active = consult?.status === 'active';
+  const chatUnlocked = Boolean(active && !ended);
   const incomingPending = Boolean(pending && isVetSide);
 
   const shellClass = [
@@ -455,24 +850,30 @@ export function VetChatPage() {
     showList && showThread ? 'tg-chat--split' : '',
     !showList && showThread ? 'tg-chat--thread-only' : '',
     showList && !showThread ? 'tg-chat--list-only' : '',
+    secure ? 'tg-chat--secure' : '',
+    ended ? 'tg-chat--ended' : '',
     pending ? 'tg-chat--pending' : '',
   ]
     .filter(Boolean)
     .join(' ');
 
-  const statusLabel = expired
-    ? 'درخواست منقضی شده'
-    : pending
-      ? isVetSide
-        ? 'درخواست مشاوره جدید'
-        : 'منتظر پاسخ پزشک'
-      : active
-        ? 'چت مشاوره فعال'
-        : consult?.status === 'completed'
-          ? 'مشاوره پایان یافته'
-          : consult
-            ? `وضعیت: ${consult.status}`
-            : '';
+  const statusLabel = ended
+    ? 'چت پایان یافته'
+    : expired
+      ? 'درخواست منقضی شده'
+      : pending
+        ? isVetSide
+          ? 'درخواست مشاوره جدید'
+          : 'منتظر پاسخ پزشک'
+        : chatUnlocked
+          ? secure
+            ? 'چت امن فعال'
+            : 'چت مشاوره فعال'
+          : consult?.status === 'completed'
+            ? 'مشاوره پایان یافته'
+            : consult
+              ? `وضعیت: ${consult.status}`
+              : '';
 
   return (
     <div className={shellClass} dir="rtl">
@@ -651,11 +1052,61 @@ export function VetChatPage() {
                       {statusLabel}
                       {peerSub ? ` · ${peerSub}` : ''}
                     </small>
+                    <PresenceBadge presence={peerPresence} />
                   </span>
                 </div>
+
+                {chatUnlocked ? (
+                  <div className="tg-chat-header-actions" ref={menuRef}>
+                    <button
+                      type="button"
+                      className={`tg-icon-btn tg-secure-toggle${secure ? ' is-on' : ''}`}
+                      onClick={() => void toggleSecure()}
+                      aria-label={secure ? 'خاموش‌کردن چت امن' : 'فعال‌کردن چت امن'}
+                      title={secure ? 'خاموش‌کردن چت امن' : 'فعال‌کردن چت امن'}
+                    >
+                      {secure ? <Lock size={18} /> : <LockOpen size={18} />}
+                    </button>
+                    <button
+                      type="button"
+                      className="tg-icon-btn"
+                      onClick={() => setMenuOpen((v) => !v)}
+                      aria-label="منوی گفتگو"
+                      aria-expanded={menuOpen}
+                    >
+                      <MoreVertical size={18} />
+                    </button>
+                    {menuOpen ? (
+                      <div className="tg-chat-menu" role="menu">
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => void addContact()}
+                          disabled={contactAdded}
+                        >
+                          <UserPlus size={16} />
+                          {contactAdded ? 'مخاطب اضافه شد' : 'افزودن مخاطب'}
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          className="is-danger"
+                          onClick={() => void endChat()}
+                          disabled={ending}
+                        >
+                          {ending ? 'در حال قطع…' : 'قطع چت مشاوره'}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </header>
 
-              {pending ? (
+              {secure && chatUnlocked ? (
+                <div className="tg-secure-strip" role="status">
+                  چت امن فعال است — پیام‌ها قابل ذخیره یا فوروارد نیستند
+                </div>
+              ) : pending ? (
                 <div className={`tg-status-strip${isVetSide ? '' : ' is-wait'}`} role="status">
                   {isVetSide
                     ? 'درخواست مشاوره در انتظار پاسخ شماست'
@@ -670,7 +1121,7 @@ export function VetChatPage() {
                     }}
                   />
                 </div>
-              ) : active ? (
+              ) : chatUnlocked ? (
                 <div className="tg-status-strip" role="status">
                   چت مشاوره دامپزشک فعال است
                 </div>
@@ -692,9 +1143,11 @@ export function VetChatPage() {
                             ? 'درخواست مشاوره جدید'
                             : pending
                               ? 'درخواست مشاوره ارسال شد'
-                              : active
-                                ? 'مشاوره فعال'
-                                : 'درخواست مشاوره'}
+                              : ended
+                                ? 'چت مشاوره پایان یافت'
+                                : active
+                                  ? 'مشاوره فعال'
+                                  : 'درخواست مشاوره'}
                       </p>
                       <h3>
                         {peerName}
@@ -755,30 +1208,55 @@ export function VetChatPage() {
                             </>
                           ) : null}
                         </p>
-                      ) : active ? (
+                      ) : chatUnlocked ? (
                         <p className="tg-request-card-wait" role="status">
                           پذیرفته شد — می‌توانی پیام بفرستی.
+                        </p>
+                      ) : ended ? (
+                        <p className="tg-request-card-wait" role="status">
+                          چت قطع شده — می‌توانی گفتگو را پاک کنی.
                         </p>
                       ) : null}
                     </div>
                   </article>
 
-                  {messages.map((m) => (
-                    <div
-                      key={m.id}
-                      className={`tg-bubble-row${m.from === 'me' ? ' is-out' : ' is-in'}`}
-                    >
-                      <div className="tg-bubble">
-                        <p className="tg-bubble-text">{m.text}</p>
-                        <footer className="tg-bubble-meta">
-                          <time>{formatClock(m.at)}</time>
-                          {m.from === 'me' ? (
-                            <CheckCheck size={14} className="tg-ticks" aria-hidden />
+                  {messages.map((m) => {
+                    if (m.from === 'system') {
+                      return (
+                        <div key={m.id} className="tg-system-msg">
+                          <span>{m.text}</span>
+                        </div>
+                      );
+                    }
+                    const showText =
+                      Boolean(m.text) &&
+                      !/^\[(تصویر|ویدیو|پیام صوتی|فایل صوتی|فایل|استیکر|رسانه)\]$/.test(m.text);
+                    return (
+                      <div
+                        key={m.id}
+                        className={`tg-bubble-row${m.from === 'me' ? ' is-out' : ' is-in'}`}
+                      >
+                        <div
+                          className={`tg-bubble${secure ? ' is-protected' : ''}${
+                            m.mediaKind ? ' has-media' : ''
+                          }`}
+                        >
+                          {renderMedia(m)}
+                          {showText ? <p className="tg-bubble-text">{m.text}</p> : null}
+                          {m.mediaKind && !showText ? (
+                            <span className="tg-media-caption">{mediaLabel(m.mediaKind)}</span>
                           ) : null}
-                        </footer>
+                          <footer className="tg-bubble-meta">
+                            <time>{formatClock(m.at)}</time>
+                            {m.from === 'me' ? (
+                              <CheckCheck size={14} className="tg-ticks" aria-hidden />
+                            ) : null}
+                            {secure ? <Lock size={11} className="tg-lock-ico" aria-hidden /> : null}
+                          </footer>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -787,35 +1265,18 @@ export function VetChatPage() {
                   {error}
                 </p>
               ) : null}
+              {actionError ? (
+                <p className="tg-error" role="alert">
+                  {actionError}
+                </p>
+              ) : null}
+              {sendError ? (
+                <p className="tg-error" role="alert">
+                  {sendError}
+                </p>
+              ) : null}
 
-              {active ? (
-                <div className="tg-composer-shell">
-                  <form className="tg-composer tg-composer--simple" dir="ltr" onSubmit={onSubmit}>
-                    <textarea
-                      ref={inputRef}
-                      dir="auto"
-                      rows={1}
-                      value={draft}
-                      placeholder="پیام…"
-                      disabled={sending}
-                      onChange={(e) => setDraft(e.target.value)}
-                      onKeyDown={onKeyDown}
-                      aria-label="متن پیام"
-                      enterKeyHint="send"
-                      data-testid="vet-chat-input"
-                    />
-                    <button
-                      type="submit"
-                      className={`tg-send${sending ? ' is-sending' : ''}`}
-                      disabled={sending || !draft.trim()}
-                      aria-label="ارسال"
-                      data-testid="vet-chat-send"
-                    >
-                      {sending ? <Loader2 size={18} className="tg-spin" /> : <Send size={18} />}
-                    </button>
-                  </form>
-                </div>
-              ) : (
+              {!chatUnlocked && !ended ? (
                 <div className="tg-request-composer-bar" role="status">
                   {incomingPending
                     ? 'برای شروع چت، درخواست را قبول یا رد کن.'
@@ -825,10 +1286,136 @@ export function VetChatPage() {
                         ? 'چت بعد از قبول پزشک فعال می‌شود.'
                         : 'این مشاوره دیگر فعال نیست.'}
                   {expired && !isVetSide ? (
-                    <Link to="/vet-consult" className="tg-chat-link-btn" style={{ marginInlineStart: 8 }}>
+                    <Link
+                      to="/vet-consult"
+                      className="tg-chat-link-btn"
+                      style={{ marginInlineStart: 8 }}
+                    >
                       درخواست مجدد
                     </Link>
                   ) : null}
+                </div>
+              ) : chatUnlocked ? (
+                <>
+                  {pendingFile ? (
+                    <div className="tg-attach-preview">
+                      {pendingPreview ? (
+                        <img src={pendingPreview} alt="" className="tg-attach-thumb" />
+                      ) : (
+                        <span className="tg-attach-name">📎 {pendingFile.name}</span>
+                      )}
+                      <button
+                        type="button"
+                        className="tg-attach-clear"
+                        onClick={clearPendingFile}
+                        aria-label="حذف فایل"
+                      >
+                        <X size={16} />
+                      </button>
+                    </div>
+                  ) : null}
+                  <div className="tg-composer-shell">
+                    <EmojiPicker
+                      open={emojiOpen}
+                      onClose={() => setEmojiOpen(false)}
+                      onPick={insertEmoji}
+                    />
+                    <form
+                      className="tg-composer"
+                      dir="ltr"
+                      onSubmit={(e) => {
+                        void sendMessage(e);
+                      }}
+                    >
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="tg-file-input"
+                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip,.txt"
+                        onChange={(e) => onPickFile(e.target.files)}
+                        aria-hidden
+                        tabIndex={-1}
+                      />
+                      <button
+                        type="button"
+                        className="tg-attach"
+                        onClick={() => {
+                          setEmojiOpen(false);
+                          fileInputRef.current?.click();
+                        }}
+                        disabled={sending}
+                        aria-label="پیوست فایل"
+                        title="پیوست عکس یا فایل"
+                      >
+                        <Paperclip size={20} />
+                      </button>
+                      <button
+                        type="button"
+                        className={`tg-emoji-btn${emojiOpen ? ' is-open' : ''}`}
+                        onClick={() => setEmojiOpen((v) => !v)}
+                        disabled={sending}
+                        aria-label="ایموجی"
+                        aria-expanded={emojiOpen}
+                        title="ایموجی"
+                      >
+                        <Smile size={20} />
+                      </button>
+                      <textarea
+                        ref={inputRef}
+                        dir="auto"
+                        value={draft}
+                        onChange={(e) => {
+                          setDraft(e.target.value);
+                          rememberSelection();
+                        }}
+                        onSelect={rememberSelection}
+                        onClick={rememberSelection}
+                        onKeyUp={rememberSelection}
+                        onBlur={rememberSelection}
+                        onKeyDown={onComposerKeyDown}
+                        placeholder={
+                          pendingFile ? 'کپشن (اختیاری)…' : secure ? 'پیام امن…' : 'پیام…'
+                        }
+                        aria-label="متن پیام"
+                        rows={1}
+                        autoComplete="off"
+                        enterKeyHint="send"
+                        data-testid="vet-chat-input"
+                      />
+                      <button
+                        type="submit"
+                        className={`tg-send${sending ? ' is-sending' : ''}`}
+                        disabled={(!draft.trim() && !pendingFile) || sending}
+                        aria-label="ارسال"
+                        data-testid="vet-chat-send"
+                      >
+                        {sending ? <Loader2 size={18} className="tg-spin" /> : <Send size={18} />}
+                      </button>
+                    </form>
+                  </div>
+                </>
+              ) : (
+                <div className="tg-ended-bar">
+                  <p>{wiped ? 'گفتگو کاملاً پاک شد.' : CHAT_WIPE_HINT}</p>
+                  <button
+                    type="button"
+                    className="tg-wipe-btn"
+                    onClick={() => void wipeConversation()}
+                    disabled={wiping || wiped}
+                  >
+                    {wiped ? (
+                      <>
+                        <Check size={16} /> پاک شد
+                      </>
+                    ) : wiping ? (
+                      'در حال پاک‌کردن…'
+                    ) : (
+                      'پاک کردن کل گفتگو'
+                    )}
+                  </button>
+                  <Link to="/chats" className="tg-chat-link-btn">
+                    بازگشت به گفتگوها
+                  </Link>
                 </div>
               )}
             </>

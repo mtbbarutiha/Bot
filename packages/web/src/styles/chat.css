@@ -249,7 +249,28 @@ html:has(.tg-chat) body {
   background: linear-gradient(135deg, #1f2430 0%, #1a4a68 55%, #0f7a8a 100%) !important;
 }
 
-/* Vet consult chat — reuse playmate chrome without secure lock UI */
+.tg-presence {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.tg-presence-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #9aa3af;
+}
+.tg-presence.is-online .tg-presence-dot {
+  background: #15cca0;
+  box-shadow: 0 0 0 3px rgba(21, 204, 160, 0.2);
+}
+.tg-presence.is-offline {
+  opacity: 0.85;
+}
+
+/* Vet consult chat — reuse playmate chrome */
 .pepito-vet-chat .tg-chat-peer {
   cursor: default;
 }

@@ -30,10 +30,12 @@ import {
 import { SiteLogo } from '../components/SiteLogo';
 import { EmojiPicker } from '../components/EmojiPicker';
 import { PetAvatar } from '../components/PetAvatar';
+import { PresenceBadge } from '../components/PresenceBadge';
 import { RequestCountdown } from '../components/RequestCountdown';
 import { formatAge, formatTimeAgo } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
+import { usePeerPresence, usePresenceHeartbeat } from '../hooks/usePresence';
 import {
   addUserContact,
   clearPlaydateChatMessages,
@@ -415,6 +417,8 @@ export function ChatPage() {
   const showThread = desktop || hasThread;
 
   useChatViewportHeight(true);
+  usePresenceHeartbeat(myUserId);
+  const peerPresence = usePeerPresence(match?.fromPet?.ownerId);
 
   const reloadConversations = useCallback(async () => {
     if (!myUserId) {
@@ -1166,6 +1170,7 @@ export function ChatPage() {
                               : 'فعال در چت همبازی'}{' '}
                       · {peerPet.name}
                     </small>
+                    <PresenceBadge presence={peerPresence} />
                   </span>
                 </button>
 
