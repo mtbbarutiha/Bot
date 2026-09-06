@@ -20,8 +20,22 @@ function generateCode(): string {
 }
 
 function normalizeEmail(raw: string): string | null {
-  const email = String(raw ?? '').trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return null;
+  const email = String(raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\u200b-\u200d\ufeff]/g, '');
+  // Reject consecutive dots / leading-trailing dots that Postfix treats as illegal syntax
+  // (e.g. user@gmail..com) — previously surfaced as cryptic «ارسال ایمیل ناموفق».
+  if (
+    !email ||
+    email.length > 254 ||
+    email.includes('..') ||
+    !/^[a-z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/.test(
+      email
+    )
+  ) {
+    return null;
+  }
   return email;
 }
 
@@ -122,13 +136,12 @@ export async function requestWebOtp(
     });
     if (!sent.ok) {
       dbService.deleteWebOtp(channel, target);
-      if (isProduction() || !echoDevCode()) {
-        return {
-          ok: false,
-          reason: 'send_failed',
-          error: sent.error || 'ارسال ایمیل ناموفق بود',
-        };
-      }
+      // Never return ok after a failed send — OTP row is deleted above.
+      return {
+        ok: false,
+        reason: 'send_failed',
+        error: sent.error || 'ارسال ایمیل ناموفق بود',
+      };
     }
   } else if (isProduction()) {
     dbService.deleteWebOtp(channel, target);
