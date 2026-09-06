@@ -4920,14 +4920,20 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   margin: 0 0 0.55rem;
 }
 .pepito-vet-chat-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.35rem;
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 0.55rem;
+  margin-top: 0.45rem;
 }
 .pepito-vet-chat-actions .pepito-btn {
-  flex: 1 1 auto;
+  width: 100%;
   justify-content: center;
+  min-height: 44px;
+}
+.pepito-vet-chat-actions .pepito-btn--ghost {
+  border: 1px solid rgba(198, 40, 40, 0.28);
+  color: #c62828;
+  background: rgba(198, 40, 40, 0.06);
 }
 .pepito-vet-chat-wait-hint {
   margin: 0;
