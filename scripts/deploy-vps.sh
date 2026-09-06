@@ -91,11 +91,25 @@ else
 fi
 
 npm install
+# PWA/brand assets may have been chattr +i locked; unlock so Vite can empty dist/
+if command -v chattr >/dev/null 2>&1 && [[ -d packages/web/dist ]]; then
+  find packages/web/dist -type f -exec lsattr {} + 2>/dev/null | awk '/i/ {print $NF}' | while read -r f; do
+    sudo chattr -i "$f" 2>/dev/null || true
+  done
+fi
 npm run build:all
 
 mkdir -p packages/api/data
 
+# SQLite daily backup (idempotent cron)
+if [[ -x ./scripts/backup-sqlite.sh ]]; then
+  sudo mkdir -p /var/backups/petdate
+  sudo chmod 700 /var/backups/petdate
+  (sudo crontab -l 2>/dev/null | grep -v backup-sqlite || true; echo "15 2 * * * $REMOTE_DIR/scripts/backup-sqlite.sh >> /var/log/petdate-backup.log 2>&1") | sudo crontab - || true
+fi
+
 # PM2 process file
+cp -f ecosystem.config.cjs ecosystem.config.cjs.bak 2>/dev/null || true
 cat > ecosystem.config.cjs <<'PM2'
 module.exports = {
   apps: [
@@ -103,24 +117,44 @@ module.exports = {
       name: 'petdate-api',
       cwd: '$REMOTE_DIR',
       script: 'packages/api/dist/index.js',
-      env: { NODE_ENV: 'production', PORT: 3001 },
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      max_restarts: 20,
+      min_uptime: '10s',
       max_memory_restart: '512M',
+      env: { NODE_ENV: 'production', PORT: 3001, NODE_OPTIONS: '--dns-result-order=ipv4first' },
     },
     {
       name: 'petdate-bot',
       cwd: '$REMOTE_DIR',
       script: 'packages/bot/dist/index.js',
-      env: { NODE_ENV: 'production' },
+      instances: 1,
+      exec_mode: 'fork',
+      autorestart: true,
+      max_restarts: 20,
+      min_uptime: '10s',
       max_memory_restart: '512M',
+      env: { NODE_ENV: 'production', NODE_OPTIONS: '--dns-result-order=ipv4first' },
     },
   ],
 };
 PM2
 
+# Expand REMOTE_DIR in generated ecosystem (heredoc quoted kept literals)
+sed -i "s|'\$REMOTE_DIR'|'$REMOTE_DIR'|g; s|\$REMOTE_DIR|$REMOTE_DIR|g" ecosystem.config.cjs || true
+
 pm2 startOrReload ecosystem.config.cjs
 pm2 save
 sudo env PATH=\$PATH:\$(dirname \$(which node)) pm2 startup systemd -u \$(whoami) --hp \$HOME >/tmp/pm2-startup.txt || true
 
+# Prefer checked-in hardened nginx if present
+if [[ -f infra/nginx/petdate.conf ]]; then
+  sudo cp infra/nginx/petdate.conf /etc/nginx/sites-available/petdate
+  sudo ln -sfn /etc/nginx/sites-available/petdate /etc/nginx/sites-enabled/petdate
+  sudo rm -f /etc/nginx/sites-enabled/default
+  sudo nginx -t && sudo systemctl reload nginx
+else
 # Nginx: serve web + proxy API
 sudo tee /etc/nginx/sites-available/petdate >/dev/null <<'NGINX'
 server {
@@ -162,6 +196,7 @@ sudo ln -sfn /etc/nginx/sites-available/petdate /etc/nginx/sites-enabled/petdate
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t
 sudo systemctl reload nginx
+fi
 
 echo ""
 echo "Deploy done."
