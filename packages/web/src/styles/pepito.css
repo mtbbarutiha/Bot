@@ -285,14 +285,17 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   transition: box-shadow 0.25s ease;
 }
 @media (max-width: 859px) {
-  /* Keep fixed like desktop — sticky + margin-top nav offset caused a large empty gap */
+  /*
+    Mobile: nav scrolls away with the page (not fixed/sticky).
+    Fixed/sticky on small screens covered the hero and felt jumpy.
+  */
   :root {
     --pepito-nav-h: 64px;
   }
   .pepito-nav {
-    position: fixed;
-    inset-inline: 0;
-    top: 0;
+    position: relative;
+    inset: auto;
+    top: auto;
     width: 100%;
     max-width: 100vw;
     overflow: visible;
@@ -304,9 +307,23 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   body:has(.pepito-landing) {
     overflow-x: clip;
   }
+  /* Nav is in normal flow — drop fixed-nav offsets */
+  .pepito-hero,
+  .pepito-flow-banner,
+  .pd-shop-hero {
+    margin-top: 0;
+  }
   .pepito-hero {
-    margin-top: var(--pepito-nav-h);
     min-height: calc(85vh - var(--pepito-nav-h));
+  }
+  .pepito-app-layout {
+    padding-top: 0;
+    min-height: auto;
+  }
+  .pepito-app-rail {
+    position: static;
+    top: auto;
+    height: auto;
   }
   .pepito-nav--app {
     padding-left: calc(var(--pepito-gutter-x) + 7.25rem);
