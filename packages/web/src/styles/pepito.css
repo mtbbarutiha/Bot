@@ -7272,9 +7272,9 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 
 @media (max-width: 859px) {
   .pepito-landing-mobile-dock {
-    display: grid;
-    /* Guest: 4 items · Auth: 5 (incl. گفتگو) — equal columns either way */
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
     position: fixed;
     inset-inline: 10px;
     bottom: calc(8px + env(safe-area-inset-bottom, 0px));
@@ -7290,6 +7290,7 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 
   .pepito-landing-mobile-dock-link {
     display: flex;
+    flex: 1 1 0;
     flex-direction: column;
     align-items: center;
     justify-content: center;
