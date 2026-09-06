@@ -725,3 +725,32 @@ usersRouter.post('/:id/contacts', (req, res) => {
   }
   res.status(result.created ? 201 : 200).json(result);
 });
+
+/** Heartbeat — touch last_seen_at (online window = 90s). */
+usersRouter.post('/:id/presence', (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+  const lastSeenAt = dbService.touchUserLastSeen(userId);
+  if (lastSeenAt == null) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(dbService.getUserPresence(userId));
+});
+
+usersRouter.get('/:id/presence', (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+  const presence = dbService.getUserPresence(userId);
+  if (!presence) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(presence);
+});

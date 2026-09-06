@@ -21,10 +21,12 @@ export function ensureChatUploadsRoot(): string {
   return root;
 }
 
-/** Safe relative key: `{playdateId}/{uuid}{ext}` — never absolute or with `..`. */
-export function buildStorageKey(playdateId: number, originalName: string): string {
+/** Safe relative key: `{folderId}/{uuid}{ext}` — never absolute or with `..`. */
+export function buildStorageKey(folderId: string | number, originalName: string): string {
+  const folder = String(folderId).replace(/[^\w.~-]/gi, '');
+  if (!folder) throw new Error('INVALID_FOLDER_ID');
   const ext = path.extname(originalName || '').slice(0, 16).replace(/[^\w.~-]/gi, '');
-  return `${playdateId}/${randomUUID()}${ext}`;
+  return `${folder}/${randomUUID()}${ext}`;
 }
 
 export function resolveStoragePath(storageKey: string): string | null {
@@ -38,14 +40,19 @@ export function resolveStoragePath(storageKey: string): string | null {
 }
 
 export function saveChatUpload(opts: {
-  playdateId: number;
+  /** Playdate numeric id, or string like `vet-{consultId}`. */
+  folderId: string | number;
+  /** @deprecated use folderId — kept for call-site clarity in playdate routes */
+  playdateId?: number;
   originalName: string;
   buffer: Buffer;
 }): { storageKey: string; absolutePath: string } {
   if (opts.buffer.length > MAX_UPLOAD_BYTES) {
     throw new Error('FILE_TOO_LARGE');
   }
-  const storageKey = buildStorageKey(opts.playdateId, opts.originalName);
+  const folderId = opts.folderId ?? opts.playdateId;
+  if (folderId == null) throw new Error('INVALID_FOLDER_ID');
+  const storageKey = buildStorageKey(folderId, opts.originalName);
   const abs = resolveStoragePath(storageKey);
   if (!abs) throw new Error('INVALID_STORAGE_KEY');
   fs.mkdirSync(path.dirname(abs), { recursive: true });
@@ -59,6 +66,20 @@ export function deleteChatUpload(storageKey: string | null | undefined): void {
   if (!abs) return;
   try {
     if (fs.existsSync(abs)) fs.unlinkSync(abs);
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Remove an entire chat-upload folder (e.g. playdate id or `vet-{consultId}`). */
+export function purgeChatUploadFolder(folderId: string | number): void {
+  const folder = String(folderId).replace(/[^\w.~-]/gi, '');
+  if (!folder || folder.includes('..')) return;
+  const root = ensureChatUploadsRoot();
+  const abs = path.resolve(root, folder);
+  if (!abs.startsWith(path.resolve(root) + path.sep)) return;
+  try {
+    if (fs.existsSync(abs)) fs.rmSync(abs, { recursive: true, force: true });
   } catch {
     /* ignore */
   }

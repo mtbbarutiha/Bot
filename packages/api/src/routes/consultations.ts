@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import fs from 'fs';
+import multer from 'multer';
 import { QUICK_VET_COST, type VetConsultStatus } from '@petdate/shared';
 import { infra } from '../config/infra';
 import { dbService } from '../db';
@@ -10,6 +11,15 @@ import {
   renderPrescriptionHtml,
 } from '../services/prescription-html';
 import { notifyVetQuickConsultTelegram } from '../services/telegram-vet-consult-notify';
+import { resolveTelegramFile } from '../services/telegram-chat-notify';
+import {
+  MAX_UPLOAD_BYTES,
+  deleteChatUpload,
+  inferMediaKind,
+  purgeChatUploadFolder,
+  resolveStoragePath,
+  saveChatUpload,
+} from '../services/chat-upload-store';
 import { getUserFromBearer } from '../services/web-otp';
 
 const VALID_STATUSES: VetConsultStatus[] = [
@@ -19,6 +29,22 @@ const VALID_STATUSES: VetConsultStatus[] = [
   'cancelled',
   'expired',
 ];
+
+const chatUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1 },
+});
+
+function vetUploadFolder(consultId: number): string {
+  return `vet-${consultId}`;
+}
+
+function purgeVetConsultUploads(consultId: number): void {
+  for (const key of dbService.listVetConsultChatStorageKeys(consultId)) {
+    deleteChatUpload(key);
+  }
+  purgeChatUploadFolder(vetUploadFolder(consultId));
+}
 
 export const consultationsRouter = Router();
 
@@ -510,8 +536,19 @@ consultationsRouter.post('/:id/messages', async (req, res) => {
   const session = getUserFromBearer(req.header('authorization') ?? undefined);
   const senderUserId =
     session?.user?.id ??
-    (req.body?.senderUserId != null ? Number(req.body.senderUserId) : undefined);
+    (req.body?.senderUserId != null
+      ? Number(req.body.senderUserId)
+      : req.body?.userId != null
+        ? Number(req.body.userId)
+        : undefined);
   const text = typeof req.body?.text === 'string' ? req.body.text : '';
+  const mediaKind = typeof req.body?.mediaKind === 'string' ? req.body.mediaKind : undefined;
+  const telegramFileId =
+    typeof req.body?.telegramFileId === 'string' ? req.body.telegramFileId : undefined;
+  const mimeType = typeof req.body?.mimeType === 'string' ? req.body.mimeType : undefined;
+  const fileName = typeof req.body?.fileName === 'string' ? req.body.fileName : undefined;
+  const storageKey =
+    typeof req.body?.storageKey === 'string' ? req.body.storageKey : undefined;
 
   if (!senderUserId || !Number.isFinite(senderUserId)) {
     res.status(401).json({ error: 'ورود لازم است' });
@@ -535,12 +572,21 @@ consultationsRouter.post('/:id/messages', async (req, res) => {
     res.status(409).json({ error: 'چت فقط بعد از قبول درخواست فعال است' });
     return;
   }
+  if (gate.consult.chatEnded) {
+    res.status(409).json({ error: 'این چت قطع شده است' });
+    return;
+  }
 
   try {
     const message = dbService.createVetConsultChatMessage({
       consultId: id,
       senderUserId,
       text,
+      mediaKind,
+      telegramFileId,
+      mimeType,
+      fileName,
+      storageKey,
     });
 
     const peerId =
@@ -559,6 +605,7 @@ consultationsRouter.post('/:id/messages', async (req, res) => {
           body: JSON.stringify({
             chat_id: peer.telegramId,
             text: `💬 ${sender?.name ?? 'طرف مقابل'}:\n${message.text}\n\n↩️ پاسخ در چت وب:\n${chatUrl}`,
+            ...(gate.consult.chatSecure ? { protect_content: true } : {}),
           }),
         }).catch(() => undefined);
       }
@@ -576,6 +623,318 @@ consultationsRouter.post('/:id/messages', async (req, res) => {
     }
     throw err;
   }
+});
+
+consultationsRouter.post('/:id/messages/upload', (req, res) => {
+  chatUpload.single('file')(req, res, async (uploadErr) => {
+    if (uploadErr) {
+      const tooLarge =
+        uploadErr instanceof multer.MulterError && uploadErr.code === 'LIMIT_FILE_SIZE';
+      res.status(tooLarge ? 413 : 400).json({
+        error: tooLarge
+          ? 'حجم فایل بیش از حد مجاز است (حداکثر ۱۵ مگابایت)'
+          : 'آپلود فایل ناموفق بود',
+      });
+      return;
+    }
+
+    const id = Number(req.params.id);
+    const session = getUserFromBearer(req.header('authorization') ?? undefined);
+    const senderUserId =
+      session?.user?.id ??
+      Number(
+        (req.body as { senderUserId?: string; userId?: string })?.senderUserId ??
+          (req.body as { userId?: string })?.userId
+      );
+    const caption =
+      typeof (req.body as { caption?: string; text?: string })?.caption === 'string'
+        ? (req.body as { caption: string }).caption
+        : typeof (req.body as { text?: string })?.text === 'string'
+          ? (req.body as { text: string }).text
+          : '';
+    const file = req.file;
+
+    if (!senderUserId || !Number.isFinite(senderUserId)) {
+      res.status(401).json({ error: 'ورود لازم است' });
+      return;
+    }
+    if (!Number.isFinite(id) || id <= 0) {
+      res.status(400).json({ error: 'شناسه نامعتبر' });
+      return;
+    }
+    if (!file?.buffer?.length) {
+      res.status(400).json({ error: 'فایل الزامی است' });
+      return;
+    }
+
+    const gate = requireConsultParticipant(id, senderUserId);
+    if (gate.error === 'not_found') {
+      res.status(404).json({ error: 'مشاوره پیدا نشد' });
+      return;
+    }
+    if (gate.error === 'forbidden') {
+      res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+      return;
+    }
+    if (gate.consult.status !== 'active') {
+      res.status(409).json({ error: 'چت فقط بعد از قبول درخواست فعال است' });
+      return;
+    }
+    if (gate.consult.chatEnded) {
+      res.status(409).json({ error: 'این چت قطع شده است' });
+      return;
+    }
+
+    try {
+      const originalName = file.originalname || 'file';
+      const mimeType = file.mimetype || 'application/octet-stream';
+      const mediaKind = inferMediaKind(mimeType, originalName);
+      const saved = saveChatUpload({
+        folderId: vetUploadFolder(id),
+        originalName,
+        buffer: file.buffer,
+      });
+
+      const message = dbService.createVetConsultChatMessage({
+        consultId: id,
+        senderUserId,
+        text: caption,
+        mediaKind,
+        storageKey: saved.storageKey,
+        mimeType,
+        fileName: originalName,
+      });
+
+      const peerId =
+        gate.consult.vetUserId === senderUserId
+          ? gate.consult.patientUserId
+          : gate.consult.vetUserId;
+      const peer = dbService.getUserById(peerId);
+      const sender = dbService.getUserById(senderUserId);
+      if (peer?.telegramId) {
+        const token = infra.telegram.botToken;
+        if (token) {
+          const chatUrl = `${infra.web.url.replace(/\/$/, '')}/vet-chats/${id}`;
+          void fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: peer.telegramId,
+              text: `💬 ${sender?.name ?? 'طرف مقابل'}:\n${message.text}\n\n↩️ پاسخ در چت وب:\n${chatUrl}`,
+              ...(gate.consult.chatSecure ? { protect_content: true } : {}),
+            }),
+          }).catch(() => undefined);
+        }
+      }
+
+      res.status(201).json(message);
+    } catch (err) {
+      if (err instanceof Error && err.message === 'FILE_TOO_LARGE') {
+        res.status(413).json({ error: 'حجم فایل بیش از حد مجاز است (حداکثر ۱۵ مگابایت)' });
+        return;
+      }
+      if (err instanceof Error && err.message === 'EMPTY_TEXT') {
+        res.status(400).json({ error: 'فایل یا متن پیام الزامی است' });
+        return;
+      }
+      if (err instanceof Error && err.message === 'TEXT_TOO_LONG') {
+        res.status(400).json({ error: 'کپشن خیلی طولانی است' });
+        return;
+      }
+      console.warn('vet chat upload failed:', (err as Error).message);
+      res.status(500).json({ error: 'ذخیره فایل ناموفق بود' });
+    }
+  });
+});
+
+consultationsRouter.get('/:id/messages/:messageId/media', async (req, res) => {
+  const consultId = Number(req.params.id);
+  const messageId = Number(req.params.messageId);
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  const userId =
+    session?.user?.id ??
+    (req.query.userId != null ? Number(req.query.userId) : undefined);
+  if (!Number.isFinite(consultId) || !Number.isFinite(messageId) || !userId || !Number.isFinite(userId)) {
+    res.status(400).json({ error: 'شناسه مشاوره، پیام و userId الزامی هستند' });
+    return;
+  }
+
+  const gate = requireConsultParticipant(consultId, userId);
+  if (gate.error === 'not_found') {
+    res.status(404).json({ error: 'مشاوره پیدا نشد' });
+    return;
+  }
+  if (gate.error === 'forbidden') {
+    res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+    return;
+  }
+
+  const message = dbService.getVetConsultChatMessage(messageId);
+  if (!message || message.consultId !== consultId) {
+    res.status(404).json({ error: 'فایل پیدا نشد' });
+    return;
+  }
+
+  if (message.storageKey) {
+    const abs = resolveStoragePath(message.storageKey);
+    if (!abs || !fs.existsSync(abs)) {
+      res.status(404).json({ error: 'فایل پیدا نشد' });
+      return;
+    }
+    const contentType = message.mimeType || 'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    if (message.fileName) {
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename*=UTF-8''${encodeURIComponent(message.fileName)}`
+      );
+    }
+    res.send(fs.readFileSync(abs));
+    return;
+  }
+
+  if (!message.telegramFileId) {
+    res.status(404).json({ error: 'فایل پیدا نشد' });
+    return;
+  }
+
+  const file = await resolveTelegramFile(message.telegramFileId);
+  if (!file) {
+    res.status(502).json({ error: 'دریافت فایل از تلگرام ناموفق بود' });
+    return;
+  }
+
+  try {
+    const upstream = await fetch(file.downloadUrl);
+    if (!upstream.ok || !upstream.body) {
+      res.status(502).json({ error: 'دانلود فایل ناموفق بود' });
+      return;
+    }
+    const contentType =
+      message.mimeType ||
+      upstream.headers.get('content-type') ||
+      'application/octet-stream';
+    res.setHeader('Content-Type', contentType);
+    res.setHeader('Cache-Control', 'private, max-age=300');
+    if (message.fileName) {
+      res.setHeader(
+        'Content-Disposition',
+        `inline; filename*=UTF-8''${encodeURIComponent(message.fileName)}`
+      );
+    }
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.send(buf);
+  } catch (err) {
+    console.warn('proxy telegram vet file failed:', (err as Error).message);
+    res.status(502).json({ error: 'پروکسی فایل ناموفق بود' });
+  }
+});
+
+consultationsRouter.post('/:id/end-chat', async (req, res) => {
+  const id = Number(req.params.id);
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  const userId =
+    session?.user?.id ??
+    (req.body?.userId != null ? Number(req.body.userId) : undefined);
+  if (!userId || !Number.isFinite(userId)) {
+    res.status(401).json({ error: 'ورود لازم است' });
+    return;
+  }
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+
+  const gate = requireConsultParticipant(id, userId);
+  if (gate.error === 'not_found') {
+    res.status(404).json({ error: 'مشاوره پیدا نشد' });
+    return;
+  }
+  if (gate.error === 'forbidden') {
+    res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+    return;
+  }
+  if (gate.consult.status !== 'active') {
+    res.status(409).json({ error: 'فقط چت مشاورهٔ فعال قابل قطع است' });
+    return;
+  }
+
+  purgeVetConsultUploads(id);
+  const updated = dbService.endVetConsultChat(id);
+  res.json({ ok: true, consultation: updated });
+});
+
+consultationsRouter.patch('/:id/chat-secure', async (req, res) => {
+  const id = Number(req.params.id);
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  const userId =
+    session?.user?.id ??
+    (req.body?.userId != null ? Number(req.body.userId) : undefined);
+  const secure = Boolean(req.body?.secure);
+  if (!userId || !Number.isFinite(userId)) {
+    res.status(401).json({ error: 'ورود لازم است' });
+    return;
+  }
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+
+  const gate = requireConsultParticipant(id, userId);
+  if (gate.error === 'not_found') {
+    res.status(404).json({ error: 'مشاوره پیدا نشد' });
+    return;
+  }
+  if (gate.error === 'forbidden') {
+    res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+    return;
+  }
+  if (gate.consult.status !== 'active') {
+    res.status(409).json({ error: 'چت امن فقط برای مشاورهٔ فعال مجاز است' });
+    return;
+  }
+  if (gate.consult.chatEnded) {
+    res.status(409).json({ error: 'این چت قطع شده است' });
+    return;
+  }
+
+  const updated = dbService.setVetConsultChatSecure(id, secure);
+  res.json(updated);
+});
+
+consultationsRouter.delete('/:id/messages', async (req, res) => {
+  const id = Number(req.params.id);
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  const userId =
+    session?.user?.id ??
+    (req.query.userId != null
+      ? Number(req.query.userId)
+      : req.body?.userId != null
+        ? Number(req.body.userId)
+        : undefined);
+  if (!userId || !Number.isFinite(userId)) {
+    res.status(401).json({ error: 'ورود لازم است' });
+    return;
+  }
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+
+  const gate = requireConsultParticipant(id, userId);
+  if (gate.error === 'not_found') {
+    res.status(404).json({ error: 'مشاوره پیدا نشد' });
+    return;
+  }
+  if (gate.error === 'forbidden') {
+    res.status(403).json({ error: 'دسترسی به این چت مجاز نیست' });
+    return;
+  }
+
+  purgeVetConsultUploads(id);
+  const cleared = dbService.clearVetConsultChatMessages(id);
+  res.json({ ok: true, cleared });
 });
 
 /** ثبت امتیاز اختیاری صاحب‌پت به دامپزشک — یک امتیاز به ازای هر مشاوره */

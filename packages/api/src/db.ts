@@ -47,6 +47,7 @@ import {
   PROFILE_REWARD_SECTIONS,
   PROFILE_SECTION_REWARD,
   SIGNUP_BONUS,
+  USER_PRESENCE_ONLINE_MS,
   USER_ROLES,
   VET_CONSULT_REQUEST_TTL_MS,
   walletFromUserFields,
@@ -590,6 +591,42 @@ function migrateSchema() {
   }
   if (!chatNames.has('storage_key')) {
     db.exec('ALTER TABLE playdate_chat_messages ADD COLUMN storage_key TEXT');
+  }
+
+  // Vet consult chat media + secure/ended flags (parity with playdate chat)
+  const vcCols = db.prepare('PRAGMA table_info(vet_consultations)').all() as { name: string }[];
+  const vcNames = new Set(vcCols.map((c) => c.name));
+  if (!vcNames.has('chat_secure')) {
+    db.exec('ALTER TABLE vet_consultations ADD COLUMN chat_secure INTEGER NOT NULL DEFAULT 0');
+  }
+  if (!vcNames.has('chat_ended')) {
+    db.exec('ALTER TABLE vet_consultations ADD COLUMN chat_ended INTEGER NOT NULL DEFAULT 0');
+  }
+
+  const vchatCols = db
+    .prepare('PRAGMA table_info(vet_consult_chat_messages)')
+    .all() as { name: string }[];
+  const vchatNames = new Set(vchatCols.map((c) => c.name));
+  if (!vchatNames.has('media_kind')) {
+    db.exec('ALTER TABLE vet_consult_chat_messages ADD COLUMN media_kind TEXT');
+  }
+  if (!vchatNames.has('telegram_file_id')) {
+    db.exec('ALTER TABLE vet_consult_chat_messages ADD COLUMN telegram_file_id TEXT');
+  }
+  if (!vchatNames.has('mime_type')) {
+    db.exec('ALTER TABLE vet_consult_chat_messages ADD COLUMN mime_type TEXT');
+  }
+  if (!vchatNames.has('file_name')) {
+    db.exec('ALTER TABLE vet_consult_chat_messages ADD COLUMN file_name TEXT');
+  }
+  if (!vchatNames.has('storage_key')) {
+    db.exec('ALTER TABLE vet_consult_chat_messages ADD COLUMN storage_key TEXT');
+  }
+
+  const userPresenceCols = db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
+  const userPresenceNames = new Set(userPresenceCols.map((c) => c.name));
+  if (!userPresenceNames.has('last_seen_at')) {
+    db.exec('ALTER TABLE users ADD COLUMN last_seen_at TEXT');
   }
 
   // Backfill roles JSON from legacy single role column
@@ -1513,6 +1550,11 @@ function mapVetConsultChatMessage(row: Record<string, unknown>): VetConsultChatM
     consultId: row.consult_id as number,
     senderUserId: row.sender_user_id as number,
     text: row.text as string,
+    mediaKind: (row.media_kind as VetConsultChatMessage['mediaKind']) ?? null,
+    telegramFileId: (row.telegram_file_id as string | undefined) ?? null,
+    storageKey: (row.storage_key as string | undefined) ?? null,
+    mimeType: (row.mime_type as string | undefined) ?? null,
+    fileName: (row.file_name as string | undefined) ?? null,
     createdAt: row.created_at as string,
   };
 }
@@ -1525,6 +1567,8 @@ function mapVetConsultation(row: Record<string, unknown>): VetConsultation {
     petId: row.pet_id != null ? Number(row.pet_id) : undefined,
     status: row.status as VetConsultStatus,
     notes: (row.notes as string | undefined) ?? undefined,
+    chatSecure: Boolean(row.chat_secure),
+    chatEnded: Boolean(row.chat_ended),
     createdAt: row.created_at as string,
     lastActivityAt:
       (row.last_activity_at as string | undefined) ??
@@ -1536,6 +1580,25 @@ function mapVetConsultation(row: Record<string, unknown>): VetConsultation {
     petSpecies: (row.pet_species as string | undefined) ?? undefined,
     petBreed: (row.pet_breed as string | undefined) ?? undefined,
   };
+}
+
+function parseLastSeenMs(lastSeenAt: string | null | undefined): number | null {
+  if (!lastSeenAt) return null;
+  const raw = lastSeenAt.trim();
+  if (!raw) return null;
+  const iso = raw.includes('T') ? raw : `${raw.replace(' ', 'T')}Z`;
+  const ms = Date.parse(iso);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function presenceFromLastSeen(
+  userId: number,
+  lastSeenAt: string | null | undefined
+): { userId: number; lastSeenAt: string | null; online: boolean } {
+  const seen = lastSeenAt?.trim() || null;
+  const ms = parseLastSeenMs(seen);
+  const online = ms != null && Date.now() - ms <= USER_PRESENCE_ONLINE_MS;
+  return { userId, lastSeenAt: seen, online };
 }
 
 function mapSection(row: Record<string, unknown>): Section {
@@ -3531,23 +3594,124 @@ export const dbService = {
   createVetConsultChatMessage(data: {
     consultId: number;
     senderUserId: number;
-    text: string;
+    text?: string;
+    mediaKind?: VetConsultChatMessage['mediaKind'];
+    telegramFileId?: string | null;
+    storageKey?: string | null;
+    mimeType?: string | null;
+    fileName?: string | null;
   }): VetConsultChatMessage {
-    const text = data.text.trim();
-    if (!text) throw new Error('EMPTY_TEXT');
+    const text = (data.text ?? '').trim();
+    const hasMedia = Boolean(
+      data.mediaKind && (data.telegramFileId || data.storageKey)
+    );
+    if (!text && !hasMedia) throw new Error('EMPTY_TEXT');
     if (text.length > 4000) throw new Error('TEXT_TOO_LONG');
     const result = db
       .prepare(
-        `INSERT INTO vet_consult_chat_messages (consult_id, sender_user_id, text)
-         VALUES (?, ?, ?)`
+        `INSERT INTO vet_consult_chat_messages (
+          consult_id, sender_user_id, text, media_kind, telegram_file_id,
+          mime_type, file_name, storage_key
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
       )
-      .run(data.consultId, data.senderUserId, text);
+      .run(
+        data.consultId,
+        data.senderUserId,
+        text || mediaPlaceholder(data.mediaKind),
+        data.mediaKind ?? null,
+        data.telegramFileId ?? null,
+        data.mimeType ?? null,
+        data.fileName ?? null,
+        data.storageKey ?? null
+      );
     // Touch parent consult so inbox can surface latest chats first via message time.
     // (listVetConsultations already sorts by last message / created_at)
     return mapVetConsultChatMessage(
       db
         .prepare('SELECT * FROM vet_consult_chat_messages WHERE id = ?')
         .get(result.lastInsertRowid) as Record<string, unknown>
+    );
+  },
+
+  getVetConsultChatMessage(id: number): VetConsultChatMessage | null {
+    const row = db
+      .prepare('SELECT * FROM vet_consult_chat_messages WHERE id = ?')
+      .get(id) as Record<string, unknown> | undefined;
+    return row ? mapVetConsultChatMessage(row) : null;
+  },
+
+  setVetConsultChatSecure(id: number, secure: boolean): VetConsultation | null {
+    db.prepare(
+      `UPDATE vet_consultations SET chat_secure = ? WHERE id = ?`
+    ).run(secure ? 1 : 0, id);
+    return this.getVetConsultation(id);
+  },
+
+  endVetConsultChat(id: number): VetConsultation | null {
+    db.prepare(
+      `UPDATE vet_consultations SET chat_ended = 1, chat_secure = 0 WHERE id = ?`
+    ).run(id);
+    this.clearVetConsultChatMessages(id);
+    return this.getVetConsultation(id);
+  },
+
+  listVetConsultChatStorageKeys(consultId: number): string[] {
+    const rows = db
+      .prepare(
+        `SELECT storage_key FROM vet_consult_chat_messages
+         WHERE consult_id = ? AND storage_key IS NOT NULL AND storage_key != ''`
+      )
+      .all(consultId) as { storage_key: string }[];
+    return rows.map((r) => r.storage_key).filter(Boolean);
+  },
+
+  clearVetConsultChatMessages(consultId: number): number {
+    const result = db
+      .prepare('DELETE FROM vet_consult_chat_messages WHERE consult_id = ?')
+      .run(consultId);
+    return Number(result.changes ?? 0);
+  },
+
+  touchUserLastSeen(userId: number): string | null {
+    const existing = this.getUserById(userId);
+    if (!existing) return null;
+    db.prepare(
+      `UPDATE users SET last_seen_at = datetime('now') WHERE id = ?`
+    ).run(userId);
+    const row = db
+      .prepare('SELECT last_seen_at FROM users WHERE id = ?')
+      .get(userId) as { last_seen_at: string | null } | undefined;
+    return row?.last_seen_at ?? null;
+  },
+
+  getUserPresence(userId: number): {
+    userId: number;
+    lastSeenAt: string | null;
+    online: boolean;
+  } | null {
+    const row = db
+      .prepare('SELECT id, last_seen_at FROM users WHERE id = ?')
+      .get(userId) as { id: number; last_seen_at: string | null } | undefined;
+    if (!row) return null;
+    return presenceFromLastSeen(row.id, row.last_seen_at);
+  },
+
+  getUsersPresence(ids: number[]): Array<{
+    userId: number;
+    lastSeenAt: string | null;
+    online: boolean;
+  }> {
+    const unique = [...new Set(ids.filter((id) => Number.isFinite(id) && id > 0))];
+    if (!unique.length) return [];
+    const placeholders = unique.map(() => '?').join(',');
+    const rows = db
+      .prepare(`SELECT id, last_seen_at FROM users WHERE id IN (${placeholders})`)
+      .all(...unique) as Array<{ id: number; last_seen_at: string | null }>;
+    const byId = new Map(
+      rows.map((r) => [r.id, presenceFromLastSeen(r.id, r.last_seen_at)] as const)
+    );
+    return unique.map(
+      (id) => byId.get(id) ?? { userId: id, lastSeenAt: null, online: false }
     );
   },
 

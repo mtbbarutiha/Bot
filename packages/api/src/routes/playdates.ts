@@ -15,6 +15,7 @@ import {
   MAX_UPLOAD_BYTES,
   deleteChatUpload,
   inferMediaKind,
+  purgeChatUploadFolder,
   resolveStoragePath,
   saveChatUpload,
 } from '../services/chat-upload-store';
@@ -39,6 +40,7 @@ function purgePlaydateUploads(playdateId: number): void {
   for (const key of dbService.listPlaydateChatStorageKeys(playdateId)) {
     deleteChatUpload(key);
   }
+  purgeChatUploadFolder(playdateId);
 }
 
 function peerTelegramIds(playdate: NonNullable<ReturnType<typeof dbService.getPlaydateRequest>>, exceptUserId?: number): string[] {
@@ -332,7 +334,7 @@ playdatesRouter.post('/:id/messages/upload', (req, res) => {
       const mimeType = file.mimetype || 'application/octet-stream';
       const mediaKind = inferMediaKind(mimeType, originalName);
       const saved = saveChatUpload({
-        playdateId,
+        folderId: playdateId,
         originalName,
         buffer: file.buffer,
       });

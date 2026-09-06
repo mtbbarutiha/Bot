@@ -354,6 +354,10 @@ export interface VetConsultation {
   petId?: number;
   status: VetConsultStatus;
   notes?: string;
+  /** چت امن برای پیام‌های مشاوره (protect_content در تلگرام) */
+  chatSecure?: boolean;
+  /** چت از طرف یکی از کاربران قطع شده */
+  chatEnded?: boolean;
   createdAt: string;
   /** آخرین پیام یا ایجاد — برای مرتب‌سازی inbox */
   lastActivityAt?: string;
@@ -366,13 +370,32 @@ export interface VetConsultation {
   petBreed?: string;
 }
 
+/** نوع رسانهٔ پیام چت مشاوره (همان مجموعهٔ همبازی) */
+export type VetConsultChatMediaKind = PlaydateChatMediaKind;
+
 /** پیام چت مشاوره دامپزشک (وب) */
 export interface VetConsultChatMessage {
   id: number;
   consultId: number;
   senderUserId: number;
   text: string;
+  mediaKind?: VetConsultChatMediaKind | null;
+  telegramFileId?: string | null;
+  /** Local upload key under API chat-uploads (web attach). */
+  storageKey?: string | null;
+  mimeType?: string | null;
+  fileName?: string | null;
   createdAt: string;
+}
+
+/** Online if lastSeenAt is within this window (ms). */
+export const USER_PRESENCE_ONLINE_MS = 90_000;
+
+/** وضعیت آنلاین بودن کاربر (heartbeat / last_seen) */
+export interface UserPresence {
+  userId: number;
+  online: boolean;
+  lastSeenAt: string | null;
 }
 
 /** دامپزشکی که بیمار قبلاً باهاش مشاوره داشته (برای ارتباط سریع) */

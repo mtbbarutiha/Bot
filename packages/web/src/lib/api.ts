@@ -5,6 +5,7 @@ import type {
   PlaydateRequest,
   PlaydateStatus,
   User,
+  UserPresence,
   UserRole,
   VetConsultChatMessage,
   VetConsultation,
@@ -620,6 +621,103 @@ export async function postVetConsultChatMessage(
     headers: token ? { Authorization: `Bearer ${token}` } : undefined,
     body: JSON.stringify({ text }),
   });
+}
+
+/** Upload a vet consult chat attachment (photo / video / audio / document). */
+export async function uploadVetConsultChatFile(
+  consultId: number,
+  senderUserId: number,
+  file: File,
+  caption = '',
+  token?: string | null
+): Promise<VetConsultChatMessage> {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('senderUserId', String(senderUserId));
+  if (caption.trim()) form.append('caption', caption.trim());
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/consultations/${consultId}/messages/upload`, {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: form,
+    });
+  } catch {
+    throw new Error('اتصال به سرور برقرار نشد. مطمئن شو API روشن است.');
+  }
+  if (!res.ok) {
+    const body = await res.text();
+    try {
+      const json = JSON.parse(body) as { error?: string; message?: string };
+      throw new Error(json.error || json.message || body || `خطای ${res.status}`);
+    } catch (err) {
+      if (err instanceof Error && !err.message.startsWith('{') && err.message !== body) throw err;
+      throw new Error(body || `خطای ${res.status}`);
+    }
+  }
+  return res.json() as Promise<VetConsultChatMessage>;
+}
+
+export async function clearVetConsultChatMessages(
+  consultId: number,
+  userId: number,
+  token?: string | null
+): Promise<{ ok: true; cleared: number }> {
+  return request(`/api/consultations/${consultId}/messages?userId=${userId}`, {
+    method: 'DELETE',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+}
+
+export async function endVetConsultChat(
+  consultId: number,
+  userId: number,
+  token?: string | null
+): Promise<{ ok: true; consultation: VetConsultation }> {
+  return request(`/api/consultations/${consultId}/end-chat`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export async function setVetConsultChatSecure(
+  consultId: number,
+  userId: number,
+  secure: boolean,
+  token?: string | null
+): Promise<VetConsultation> {
+  return request(`/api/consultations/${consultId}/chat-secure`, {
+    method: 'PATCH',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: JSON.stringify({ userId, secure }),
+  });
+}
+
+export function vetConsultChatMediaUrl(
+  consultId: number,
+  messageId: number,
+  userId: number
+): string {
+  return `${API_BASE}/api/consultations/${consultId}/messages/${messageId}/media?userId=${userId}`;
+}
+
+export async function heartbeatPresence(userId: number): Promise<UserPresence> {
+  return request<UserPresence>(`/api/users/${userId}/presence`, {
+    method: 'POST',
+    body: JSON.stringify({}),
+  });
+}
+
+export async function getUserPresence(userId: number): Promise<UserPresence> {
+  return request<UserPresence>(`/api/users/${userId}/presence`);
+}
+
+export async function getUsersPresence(ids: number[]): Promise<UserPresence[]> {
+  const unique = [...new Set(ids.filter((id) => Number.isFinite(id) && id > 0))];
+  if (!unique.length) return [];
+  return request<UserPresence[]>(`/api/presence?ids=${unique.join(',')}`);
 }
 
 export function telegramBotDeepLink(path = ''): string {
