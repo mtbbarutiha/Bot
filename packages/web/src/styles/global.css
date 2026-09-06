@@ -4333,8 +4333,8 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 
 .tg-thread {
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   min-height: 0;
   height: 100%;
@@ -4342,7 +4342,21 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 
 .tg-thread:has(.tg-thread-empty) {
-  grid-template-rows: 1fr;
+  display: flex;
+}
+
+.tg-thread > .tg-chat-wallpaper {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.tg-thread > .tg-chat-header,
+.tg-thread > .tg-secure-strip,
+.tg-thread > .tg-attach-preview,
+.tg-thread > .tg-composer,
+.tg-thread > .tg-ended-bar,
+.tg-thread > .tg-error {
+  flex: 0 0 auto;
 }
 
 .tg-chat--empty,

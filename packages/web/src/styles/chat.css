@@ -107,3 +107,8 @@ html:has(.tg-chat) body {
     box-shadow: 0 18px 50px rgba(25, 6, 61, 0.08);
   }
 }
+
+
+.tg-composer {
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px)) !important;
+}
