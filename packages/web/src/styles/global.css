@@ -588,99 +588,6 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   height: auto;
 }
 
-/* ── Pet grid cards ── */
-.pet-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  padding: 0 20px;
-}
-
-.pet-grid-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 14px 14px 16px;
-  position: relative;
-  display: block;
-  box-shadow: var(--shadow-xs);
-  transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
-  animation: fadeUp 0.4s ease both;
-}
-
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.pet-grid-card:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-md);
-  border-color: var(--brand-200);
-}
-
-.pet-grid-card .pet-img {
-  display: block;
-  margin-bottom: 12px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-}
-
-.pet-grid-card .add-btn {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-xs);
-  background: var(--slate-900);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  transition: transform var(--transition), background var(--transition);
-}
-
-.pet-grid-card .add-btn:hover { background: var(--primary); }
-.pet-grid-card .add-btn:active { transform: scale(0.92); }
-
-.pet-card-body { text-align: center; }
-
-.pet-grid-card .pet-name {
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  margin-bottom: 2px;
-}
-
-.pet-grid-card .pet-breed {
-  font-size: 0.72rem;
-  color: var(--text-tertiary);
-  margin-bottom: 8px;
-}
-
-.pet-grid-card .pet-rating {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: var(--radius-full);
-  background: var(--slate-50);
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
-.pet-grid-card .pet-rating svg { color: var(--warning); }
-
-.pet-grid-card .pet-distance {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: var(--primary);
-}
-
 /* ── Promo banner ── */
 .promo-banner {
   position: fixed;
@@ -1869,11 +1776,6 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
     grid-template-columns: 1fr 1fr;
   }
 
-  .pet-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 16px;
-  }
-
   .product-grid {
     grid-template-columns: repeat(3, 1fr);
     gap: 16px;
@@ -1983,11 +1885,6 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
     min-height: calc(100dvh - 40px);
     border-radius: var(--radius-xl);
     box-shadow: var(--shadow-lg);
-  }
-
-  .pet-grid {
-    grid-template-columns: repeat(4, 1fr);
-    padding: 0 24px;
   }
 
   .product-grid {

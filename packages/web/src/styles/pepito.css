@@ -2334,43 +2334,6 @@ button.chip.is-on {
 .pepito-home-nearby {
   padding-bottom: 0.5rem;
 }
-.pepito-home-pet-grid {
-  animation: pepito-flow-rise 0.55s ease 0.08s both;
-}
-.pepito-home-empty {
-  text-align: center;
-  padding: 1.5rem 1rem 2rem;
-}
-.pepito-home-empty .pepito-btn {
-  margin-top: 0.85rem;
-}
-
-.pepito-home-toast-banner {
-  position: sticky;
-  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  margin-top: 0.5rem;
-  padding: 0.85rem 1rem;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.96);
-  border: 1px solid rgba(92, 77, 145, 0.12);
-  box-shadow: 0 12px 28px rgba(25, 6, 61, 0.1);
-  animation: pepito-flow-rise 0.4s ease both;
-}
-.pepito-home-toast-banner p {
-  margin: 0;
-  flex: 1;
-  font-size: 0.9rem;
-  color: var(--pepito-dark);
-}
-.pepito-home-toast-banner a {
-  font-weight: 700;
-  color: var(--pepito-base);
-  text-decoration: none;
-}
 
 .pepito-profile {
   display: flex;

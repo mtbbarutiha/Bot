@@ -620,21 +620,6 @@ export function getPetById(id: number): Pet | undefined {
   return MOCK_PETS.find((p) => p.id === id);
 }
 
-export function getNearbyPets(excludeId?: number): Pet[] {
-  return MOCK_PETS
-    .filter((p) => p.lookingForPlaymate && p.id !== excludeId)
-    .sort((a, b) => a.distanceKm - b.distanceKm);
-}
-
-export function getCompatiblePets(myPet: Pet): Pet[] {
-  return getNearbyPets(myPet.id).filter((p) => {
-    if (p.type !== myPet.type && !(p.type === 'cat' && myPet.type === 'rabbit')) return false;
-    if (myPet.size === 'small' && p.size === 'large') return false;
-    if (myPet.size === 'large' && p.size === 'small' && p.type === 'dog') return false;
-    return true;
-  });
-}
-
 export function formatAge(pet: Pet): string {
   const unit = pet.ageUnit === 'year' ? 'سال' : 'ماه';
   return `${pet.age} ${unit}`;

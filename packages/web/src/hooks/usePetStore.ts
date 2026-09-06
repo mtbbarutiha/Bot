@@ -11,7 +11,6 @@ export function usePetStore() {
   return {
     ...data,
     getPetById: petStore.getPetById.bind(petStore),
-    getNearbyPets: petStore.getNearbyPets.bind(petStore),
     addPet: petStore.addPet.bind(petStore),
     updatePet: petStore.updatePet.bind(petStore),
     deletePet: petStore.deletePet.bind(petStore),

@@ -107,12 +107,6 @@ class PetStore {
     return this.data.pets.find((p) => p.id === id);
   }
 
-  getNearbyPets(excludeId?: number): Pet[] {
-    return this.data.pets
-      .filter((p) => p.lookingForPlaymate && p.id !== excludeId)
-      .sort((a, b) => a.distanceKm - b.distanceKm);
-  }
-
   addPet(pet: Omit<Pet, 'id'>): Pet {
     const nextId = Math.max(0, ...this.data.pets.map((p) => p.id), this.data.myPet.id) + 1;
     const created: Pet = { ...pet, id: nextId };

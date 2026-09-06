@@ -1,15 +1,9 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Mail, PawPrint } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { PawPrint } from 'lucide-react';
 import { BRAND, userHasRole } from '@petdate/shared';
-import { PetGridCard } from '../components/PetGridCard';
-import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { usePetStore } from '../hooks/usePetStore';
 import { useUserStore } from '../hooks/useUserStore';
-import { listPets } from '../lib/api';
-import { sendPlaymateRequestNow } from '../lib/playmateActions';
-import type { Pet } from '../types';
 
 const HERO_IMG = '/pepito/uploads/3.jpg';
 
@@ -22,17 +16,11 @@ function PawIcon({ size = 16 }: { size?: number }) {
 }
 
 export function HomePage() {
-  const { myPet, getNearbyPets } = usePetStore();
+  const { myPet } = usePetStore();
   const { user } = useUserStore();
-  const { user: authUser, isLoggedIn, isProfileComplete } = useAuthStore();
-  const navigate = useNavigate();
-  const [showToast, setShowToast] = useState(false);
-  const [toastText, setToastText] = useState('درخواست همبازی ارسال شد');
-  const [pendingCount, setPendingCount] = useState(0);
+  const { user: authUser, isProfileComplete } = useAuthStore();
 
-  const myUserId = authUser?.id;
   const isPetOwner = !user.role || userHasRole(user, 'pet_owner');
-  const nearby = isPetOwner ? getNearbyPets(myPet.id).slice(0, 6) : [];
   const displayName = authUser?.name?.trim() || 'دوست';
   const hasPetName = Boolean(myPet?.name && myPet.name !== 'پت من');
   const needsProfile = !isProfileComplete;
@@ -59,35 +47,6 @@ export function HomePage() {
       : isPetOwner
         ? 'پیدا کردن همبازی'
         : 'پروفایل من';
-
-  const handleQuickAdd = async (pet: Pet) => {
-    if (!isLoggedIn || !myUserId) {
-      navigate('/auth/login');
-      return;
-    }
-    try {
-      const mine = await listPets({ ownerId: myUserId });
-      if (mine.length === 0) {
-        setToastText('اول یک پت ثبت کن');
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 2500);
-        return;
-      }
-      await sendPlaymateRequestNow({
-        fromPetId: mine[0]!.id,
-        toPetId: pet.id,
-        fromUserId: myUserId,
-      });
-      setPendingCount((c) => c + 1);
-      setToastText('درخواست همبازی ارسال شد');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2500);
-    } catch (err) {
-      setToastText(err instanceof Error ? err.message : 'ارسال ناموفق بود');
-      setShowToast(true);
-      setTimeout(() => setShowToast(false), 2500);
-    }
-  };
 
   return (
     <div className="pepito-home">
@@ -149,46 +108,14 @@ export function HomePage() {
             <strong>{isPetOwner ? 'پیدا کردن همبازی' : 'پروفایل و خدمات'}</strong>
             <span>
               {isPetOwner
-                ? pendingCount > 0
-                  ? `درخواست‌های همبازی · ${pendingCount} جدید`
-                  : 'ارسال و مدیریت درخواست‌های همبازی'
+                ? 'ارسال و مدیریت درخواست‌های همبازی'
                 : 'کلینیک، فروشگاه، مشاوره'}
             </span>
           </Link>
         </div>
       </section>
 
-      {isPetOwner ? (
-        <section className="pepito-home-nearby" aria-label="همبازی‌های نزدیک">
-          <header className="pepito-home-section-head">
-            <p className="pepito-eyebrow">پیشنهادی</p>
-            <h2>همبازی‌های نزدیک</h2>
-            <p>
-              <Link to="/explore" className="pepito-home-inline-link">
-                پیدا کردن همبازی
-              </Link>
-            </p>
-          </header>
-
-          {nearby.length > 0 ? (
-            <div className="pet-grid pepito-home-pet-grid">
-              {nearby.map((pet, i) => (
-                <PetGridCard key={pet.id} pet={pet} index={i} onQuickAdd={(p) => void handleQuickAdd(p)} />
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state pepito-home-empty">
-              <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
-              <h3>هنوز پتی نزدیک نیست</h3>
-              <p>از پیدا کردن همبازی شروع کن یا پت‌ات را ثبت کن.</p>
-              <Link to="/explore" className="pepito-btn button-1">
-                <PawIcon />
-                پیدا کردن همبازی
-              </Link>
-            </div>
-          )}
-        </section>
-      ) : (
+      {!isPetOwner ? (
         <section className="pepito-home-nearby pepito-home-nearby--role">
           <header className="pepito-home-section-head">
             <p className="pepito-eyebrow">خدمات</p>
@@ -210,23 +137,7 @@ export function HomePage() {
             </Link>
           </div>
         </section>
-      )}
-
-      {pendingCount > 0 && (
-        <div className="pepito-home-toast-banner" role="status">
-          <Mail size={16} strokeWidth={2} />
-          <p>
-            <strong>{pendingCount} درخواست</strong> ارسال شد
-          </p>
-          <Link to="/explore#requests">مشاهده</Link>
-        </div>
-      )}
-
-      {showToast && (
-        <div className="toast" role="status">
-          {toastText}
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }
