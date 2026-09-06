@@ -305,8 +305,8 @@ export function ChatPage() {
         <BrandMark iconSize={26} />
         <h1>چت پیدا نشد</h1>
         <p>این گفتگو تمام شده یا هنوز پذیرفته نشده است.</p>
-        <Link to="/matches" className="tg-chat-link-btn">
-          بازگشت به درخواست‌ها
+        <Link to="/explore#requests" className="tg-chat-link-btn">
+          بازگشت به همبازی
         </Link>
       </div>
     );
@@ -483,7 +483,7 @@ export function ChatPage() {
         <button
           type="button"
           className="tg-chat-back"
-          onClick={() => navigate('/matches')}
+          onClick={() => navigate('/explore#requests')}
           aria-label="بازگشت"
         >
           <ArrowRight size={22} strokeWidth={2.2} />
@@ -743,8 +743,8 @@ export function ChatPage() {
               '🗑 پاک کردن کل گفتگو'
             )}
           </button>
-          <Link to="/matches" className="tg-chat-link-btn">
-            بازگشت به درخواست‌ها
+          <Link to="/explore#requests" className="tg-chat-link-btn">
+            بازگشت به همبازی
           </Link>
         </div>
       )}

@@ -86,7 +86,6 @@ export function LandingChrome({
               خانه
             </NavLink>
             <NavLink to="/explore">همبازی</NavLink>
-            <NavLink to="/matches">درخواست‌ها</NavLink>
             <NavLink to="/add-pet">پت‌های من</NavLink>
             <NavLink to="/profile">پروفایل</NavLink>
           </nav>

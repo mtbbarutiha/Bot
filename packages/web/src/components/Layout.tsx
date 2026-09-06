@@ -3,7 +3,6 @@ import {
   Home,
   LayoutGrid,
   LogOut,
-  Mail,
   PawPrint,
   ShoppingBag,
   Stethoscope,
@@ -18,7 +17,6 @@ import { useAuthStore } from '../hooks/useAuthStore';
 const navItems: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/home', icon: Home, label: 'خانه' },
   { to: '/explore', icon: LayoutGrid, label: 'پیدا کردن همبازی' },
-  { to: '/matches', icon: Mail, label: 'درخواست‌ها' },
   { to: '/add-pet', icon: PawPrint, label: 'پت‌های من' },
   { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
   { to: '/clinics', icon: Stethoscope, label: 'کلینیک‌ها' },
@@ -27,7 +25,7 @@ const navItems: { to: string; icon: LucideIcon; label: string }[] = [
 ];
 
 const mobileNav = navItems.filter((i) =>
-  ['/home', '/explore', '/matches', '/profile'].includes(i.to)
+  ['/home', '/explore', '/add-pet', '/profile'].includes(i.to)
 );
 
 export function Layout() {

@@ -147,12 +147,12 @@ export function HomePage() {
           ) : null}
           <Link to={isPetOwner ? '/explore' : '/profile'} className="pepito-home-action">
             <strong>{isPetOwner ? 'پیدا کردن همبازی' : 'پروفایل و خدمات'}</strong>
-            <span>{isPetOwner ? 'کشف پت‌های نزدیک' : 'کلینیک، فروشگاه، مشاوره'}</span>
-          </Link>
-          <Link to="/matches" className="pepito-home-action">
-            <strong>درخواست‌ها</strong>
             <span>
-              {pendingCount > 0 ? `${pendingCount} درخواست جدید` : 'پیام و همبازی‌ها'}
+              {isPetOwner
+                ? pendingCount > 0
+                  ? `نزدیک‌ها و درخواست‌ها · ${pendingCount} جدید`
+                  : 'نزدیک‌ها و درخواست‌های من'
+                : 'کلینیک، فروشگاه، مشاوره'}
             </span>
           </Link>
         </div>
@@ -218,7 +218,7 @@ export function HomePage() {
           <p>
             <strong>{pendingCount} درخواست</strong> ارسال شد
           </p>
-          <Link to="/matches">مشاهده</Link>
+          <Link to="/explore#requests">مشاهده</Link>
         </div>
       )}
 

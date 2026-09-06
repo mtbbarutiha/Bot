@@ -348,7 +348,7 @@ export function WelcomePage() {
             ورود
           </Link>
           {/* Pepito: Send a message → contact / chat */}
-          <GatedLink to="/matches" className="pepito-btn pepito-btn--nav">
+          <GatedLink to="/explore#requests" className="pepito-btn pepito-btn--nav">
             <PawIcon size={14} />
             ارسال پیام
           </GatedLink>

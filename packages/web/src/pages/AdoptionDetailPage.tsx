@@ -84,7 +84,7 @@ export function AdoptionDetailPage() {
           <Link to={loginPath('/home')} className="pepito-nav-login">
             ورود
           </Link>
-          <GatedLink to="/matches" className="pepito-btn pepito-btn--nav">
+          <GatedLink to="/explore#requests" className="pepito-btn pepito-btn--nav">
             <PawIcon size={14} />
             ارسال پیام
           </GatedLink>

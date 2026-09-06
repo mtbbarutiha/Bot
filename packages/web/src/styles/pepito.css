@@ -2485,6 +2485,66 @@ button.chip.is-on {
 }
 .home-service-chip svg { color: var(--pepito-base) !important; }
 
+/* —— Find playmate + inline requests —— */
+.pepito-explore {
+  padding: 1.75rem 1.35rem 2.5rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.pepito-explore-head {
+  margin-bottom: 1.25rem;
+}
+.pepito-explore-head h1 {
+  font-family: var(--pepito-font-display, inherit);
+  font-size: clamp(1.65rem, 3vw, 2.15rem);
+  margin: 0.2rem 0 0.45rem;
+  color: var(--pepito-dark, #1f2430);
+}
+.pepito-explore-find {
+  margin-bottom: 1.75rem;
+  padding: 1.15rem 1.1rem;
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(246, 242, 255, 0.75));
+  border: 1px solid rgba(92, 77, 145, 0.1);
+}
+.pepito-explore-find .pepito-btn {
+  width: 100%;
+  justify-content: center;
+}
+.pepito-explore-section {
+  margin-top: 2rem;
+  scroll-margin-top: calc(var(--pepito-nav-h, 74px) + 16px);
+}
+.pepito-explore-section.is-hash-focus {
+  outline: 2px solid rgba(92, 77, 145, 0.22);
+  outline-offset: 8px;
+  border-radius: 16px;
+}
+.pepito-explore-search {
+  margin: 0.85rem 0 1rem;
+}
+.pepito-explore-empty {
+  margin-top: 1rem;
+}
+.playmate-requests-panel__empty {
+  padding: 1.25rem 0.5rem;
+}
+.playmate-requests-panel__empty p {
+  color: #5f7d93;
+  font-size: 0.9rem;
+}
+.playmate-requests-panel__lead {
+  margin: 0 0 0.75rem;
+  color: #5f7d93;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 768px) {
+  .pepito-explore {
+    padding: 1.25rem 1rem 6.5rem;
+  }
+}
+
 .auth-tab.is-on {
   background: var(--pepito-base) !important;
   color: #fff !important;
