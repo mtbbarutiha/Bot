@@ -148,8 +148,8 @@ playdatesRouter.get('/active-owner-chat', (req, res) => {
   }
 
   const accepted = dbService.listPlaydateRequests({ userId: user.id, status: 'accepted' });
-  // newest first
-  const sorted = [...accepted].sort((a, b) => b.id - a.id);
+  // newest first — skip ended chats so bot does not resume a closed session
+  const sorted = [...accepted].filter((pd) => !pd.chatEnded).sort((a, b) => b.id - a.id);
   for (const pd of sorted) {
     const fromUser = dbService.getUserById(pd.fromUserId);
     const toUserId = pd.toUserId ?? dbService.getPet(pd.toPetId)?.ownerId;
@@ -166,6 +166,7 @@ playdatesRouter.get('/active-owner-chat', (req, res) => {
       myPetId: iAmFrom ? pd.fromPetId : pd.toPetId,
       peerPetId: iAmFrom ? pd.toPetId : pd.fromPetId,
       peerName: peer.name,
+      chatSecure: Boolean(pd.chatSecure),
     });
     return;
   }

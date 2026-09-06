@@ -65,6 +65,27 @@ function usableTelegramId(id?: string | null): id is string {
   return true;
 }
 
+
+/** Reply keyboard for active playmate (owner) chat — mirrors bot ownerChatReplyKeyboard */
+export function ownerChatTelegramKeyboard(secure = false): {
+  keyboard: { text: string }[][];
+  resize_keyboard: true;
+  is_persistent: true;
+} {
+  return {
+    keyboard: [
+      [
+        { text: secure ? '🔓 خاموش‌کردن چت امن' : '🔒 چت امن' },
+        { text: '👤 پروفایل طرف مقابل' },
+      ],
+      [{ text: '🐾 مشاهده پروفایل پت' }, { text: '➕ افزودن مخاطب' }],
+      [{ text: '🔌 قطع چت همبازی' }],
+    ],
+    resize_keyboard: true,
+    is_persistent: true,
+  };
+}
+
 function telegramMethodForKind(kind: PlaydateChatMediaKind | null | undefined): string {
   switch (kind) {
     case 'photo':
@@ -149,6 +170,10 @@ export async function notifyPlaydateChatTelegram(opts: {
       const caption = bodyText ? `${header}\n\n${bodyText}` : header;
       form.append('caption', caption.slice(0, 1024));
       if (opts.protectContent) form.append('protect_content', 'true');
+      form.append(
+        'reply_markup',
+        JSON.stringify(ownerChatTelegramKeyboard(Boolean(opts.protectContent)))
+      );
       const sent = await telegramCallForm(telegramMethodForKind(opts.mediaKind), form);
       if (sent.ok) {
         rememberDelivery(opts.playdateId, opts.toTelegramId, sent.messageId);
@@ -163,6 +188,7 @@ export async function notifyPlaydateChatTelegram(opts: {
     chat_id: opts.toTelegramId,
     text: `${header}\n\n${body}`,
     ...(opts.protectContent ? { protect_content: true } : {}),
+    reply_markup: ownerChatTelegramKeyboard(Boolean(opts.protectContent)),
   });
   if (sent.ok) rememberDelivery(opts.playdateId, opts.toTelegramId, sent.messageId);
   return sent.ok;

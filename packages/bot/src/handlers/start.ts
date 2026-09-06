@@ -29,6 +29,7 @@ import { getSession, upsertSession } from '../session';
 import { parseWebLoginStartPayload } from '../telegram-web-link';
 import { webLinkHint } from '../urls';
 import { displayName, getCtxUser, menuKeyboardFor } from './helpers';
+import { resumeOwnerChatOnStart } from './owner-chat';
 import { startProfileWizard } from './profile';
 
 export { displayName, getCtxUser, menuKeyboardFor } from './helpers';
@@ -158,6 +159,12 @@ export async function handleStart(ctx: Context): Promise<void> {
     }
 
     const roles = normalizeRoles(user.roles, user.role);
+
+    // اگر چت همبازی فعال (پذیرفته‌شده و قطع‌نشده) هست، منوی اصلی نشان نده
+    if (roles.length && (await resumeOwnerChatOnStart(ctx))) {
+      return;
+    }
+
     await upsertSession(telegramId, {
       userId: user.id,
       role: user.role,

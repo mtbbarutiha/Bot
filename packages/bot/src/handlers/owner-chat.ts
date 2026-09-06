@@ -1,6 +1,6 @@
 import { Keyboard } from 'grammy';
 import type { Context } from 'grammy';
-import type { User } from '@petdate/shared';
+import type { BotSession, User } from '@petdate/shared';
 import {
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
@@ -9,6 +9,7 @@ import {
 } from '@petdate/shared';
 import {
   addUserContact,
+  getActiveOwnerChat,
   getPet,
   getUserById,
   getUserByTelegramId,
@@ -16,6 +17,7 @@ import {
   postPlaydateChatTgRefs,
   endPlaydateChatViaApi,
   setPlaydateChatSecureViaApi,
+  type ActiveOwnerChat,
 } from '../api-client';
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
@@ -431,8 +433,78 @@ async function handleOwnerChatAction(ctx: Context, text: string): Promise<boolea
 
 
 /**
+ * اگر همبازی پذیرفته‌شده و قطع‌نشده در API هست، سشن ربات را به owner_chat برگردان.
+ * برای همگام‌سازی وقتی کاربر روی وب چت می‌کند ولی سشن تلگرام هنوز منوی اصلی است.
+ */
+export async function ensureOwnerChatSession(
+  telegramId: string,
+  userId?: number
+): Promise<{ session: BotSession; active: ActiveOwnerChat; resumed: boolean } | null> {
+  const existing = await getSession(telegramId);
+  if (
+    existing?.step === 'owner_chat' &&
+    existing.ownerChatPeerTelegramId &&
+    existing.ownerChatPlaydateId
+  ) {
+    return {
+      session: existing,
+      active: {
+        playdateId: existing.ownerChatPlaydateId,
+        peerTelegramId: existing.ownerChatPeerTelegramId,
+        peerUserId: existing.ownerChatPeerUserId ?? 0,
+        myPetId: existing.ownerChatMyPetId ?? 0,
+        peerPetId: existing.ownerChatPeerPetId ?? 0,
+        chatSecure: !!existing.ownerChatSecure,
+      },
+      resumed: false,
+    };
+  }
+
+  const active = await getActiveOwnerChat(telegramId);
+  if (!active?.peerTelegramId) return null;
+
+  const session = await upsertSession(telegramId, {
+    userId,
+    step: 'owner_chat',
+    ownerChatPlaydateId: active.playdateId,
+    ownerChatPeerTelegramId: active.peerTelegramId,
+    ownerChatPeerUserId: active.peerUserId,
+    ownerChatMyPetId: active.myPetId,
+    ownerChatPeerPetId: active.peerPetId,
+    ownerChatSecure: Boolean(active.chatSecure),
+  });
+
+  return { session, active, resumed: true };
+}
+
+/** برای /start — اگر چت فعال است، کیبورد چت را نشان بده */
+export async function resumeOwnerChatOnStart(ctx: Context): Promise<boolean> {
+  const from = ctx.from;
+  if (!from) return false;
+  const me = await getCtxUser(ctx);
+  const ensured = await ensureOwnerChatSession(String(from.id), me?.id);
+  if (!ensured) return false;
+
+  const { active, session } = ensured;
+  const secure = !!session.ownerChatSecure;
+  await ctx.reply(
+    [
+      '💬 <b>چت همبازی فعال است</b>',
+      '',
+      active.peerName ? `طرف مقابل: <b>${escapeHtml(active.peerName)}</b>` : null,
+      'پیام‌هایت مستقیم به طرف مقابل می‌رسد.',
+      `برای قطع: ${OWNER_CHAT_BTNS.end}`,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+    { parse_mode: 'HTML', reply_markup: ownerChatReplyKeyboard(secure) }
+  );
+  return true;
+}
+
+/**
  * Explicit opt-in to owner chat after a playdate was accepted.
- * Used when the user taps «شروع چت» — never auto-connect on random messages.
+ * Used when the user taps «شروع چت».
  */
 export async function enterOwnerChatFromCallback(
   ctx: Context,
@@ -500,14 +572,36 @@ export async function enterOwnerChatFromCallback(
 export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {
   const from = ctx.from;
   if (!from) return false;
-  const session = await getSession(String(from.id));
-  // Do NOT auto-enter chat on arbitrary messages — that connected peers
-  // without an explicit "enter chat" / accept action.
-  if (!session || session.step !== 'owner_chat' || !session.ownerChatPeerTelegramId) {
-    return false;
-  }
 
   const text = ctx.message?.text?.trim();
+  // اگر هنوز در حالت چت نیستیم و کاربر دکمه منوی اصلی زده، وارد چت نشو
+  // تا اکشن‌های منو (پیدا کردن همبازی و …) کار کنند.
+  const lookingLikeMenu =
+    Boolean(text) &&
+    (MENU_LABELS.has(text!) || MAIN_MENU_ALIASES.has(text!) || text === MAIN_MENU_BTN);
+
+  let session = await getSession(String(from.id));
+  if (!session || session.step !== 'owner_chat' || !session.ownerChatPeerTelegramId) {
+    if (lookingLikeMenu) return false;
+    const me = await getCtxUser(ctx);
+    const ensured = await ensureOwnerChatSession(String(from.id), me?.id);
+    if (!ensured) return false;
+    session = ensured.session;
+    if (ensured.resumed) {
+      await ctx.reply(
+        [
+          '💬 چت همبازی دوباره فعال شد.',
+          ensured.active.peerName ? `طرف مقابل: ${ensured.active.peerName}` : null,
+          'پیام‌هایت مستقیم به طرف مقابل می‌رسد.',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+        { reply_markup: ownerChatReplyKeyboard(!!session.ownerChatSecure) }
+      );
+    }
+  }
+  if (!session.ownerChatPeerTelegramId) return false;
+
   if (text && (OWNER_CHAT_ACTION_BTNS.has(text) || MAIN_MENU_ALIASES.has(text) || text === MAIN_MENU_BTN)) {
     return handleOwnerChatAction(ctx, text);
   }

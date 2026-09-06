@@ -329,6 +329,7 @@ export type ActiveOwnerChat = {
   myPetId: number;
   peerPetId: number;
   peerName?: string;
+  chatSecure?: boolean;
 };
 
 export async function getActiveOwnerChat(telegramId: string): Promise<ActiveOwnerChat | null> {
