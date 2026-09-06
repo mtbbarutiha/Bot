@@ -2,10 +2,15 @@ import type { Context } from 'grammy';
 import { InlineKeyboard } from 'grammy';
 import type { User } from '@petdate/shared';
 import {
+  isPendingRequestExpired,
+  VET_CONSULT_REQUEST_TTL_MS,
+} from '@petdate/shared';
+import {
   createVetConsultation,
   creditUserCoins,
   debitUserCoins,
   getUserById,
+  getVetConsultation,
   listPets,
   listVerifiedVets,
   updateVetConsultationStatus,
@@ -299,6 +304,37 @@ export async function handleVetConsultDecision(
   if (!vet) {
     await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
     return;
+  }
+
+  const existing = await getVetConsultation(consultId).catch(() => null);
+  if (existing) {
+    const stale =
+      existing.status === 'expired' ||
+      (existing.status === 'requested' &&
+        isPendingRequestExpired(existing.createdAt, VET_CONSULT_REQUEST_TTL_MS));
+    if (stale) {
+      await ctx.answerCallbackQuery({ text: 'این درخواست منقضی شده', show_alert: true });
+      if (existing.status === 'requested') {
+        try {
+          await updateVetConsultationStatus(consultId, 'expired');
+        } catch {
+          /* ignore */
+        }
+      }
+      try {
+        await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+      } catch {
+        /* ignore */
+      }
+      try {
+        await ctx.reply(
+          '⏱ این درخواست مشاوره منقضی شده (بیش از ۲ دقیقه).\nاگر بیمار دوباره درخواست بدهد، اطلاع می‌گیری.'
+        );
+      } catch {
+        /* ignore */
+      }
+      return;
+    }
   }
 
   let updated;
