@@ -76,6 +76,7 @@ export function AdoptionDetailPage() {
         <nav className="pepito-nav-links" aria-label="بخش‌ها">
           <Link to="/#services">خدمات</Link>
           <Link to="/#pets">پذیرش</Link>
+          <Link to="/shop">پت شاپ</Link>
           <Link to="/#team">تیم</Link>
           <Link to="/#reviews">نظرات</Link>
           <Link to="/#faq">سؤالات</Link>

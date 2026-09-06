@@ -140,7 +140,7 @@ const FAQS = [
   },
   {
     q: 'برای دیدن لندینگ باید وارد شوم؟',
-    a: 'خیر. لندینگ آزاد است. فقط برای همبازی، ثبت پت، دامپزشک، چت و شاپ باید با OTP وارد شوی.',
+    a: 'خیر. لندینگ و پت شاپ آزادند. برای همبازی، ثبت پت، دامپزشک و چت با OTP وارد شو؛ ثبت سفارش شاپ هم ورود می‌خواهد.',
   },
   {
     q: 'اگر من وب باشم و طرف مقابل ربات؟',
@@ -156,12 +156,12 @@ const FAQS = [
 const RELY_ITEMS_LEFT = ['عاشق سگ‌ها', 'راحتی', 'شفافیت', 'آرایشگر تأییدشده'] as const;
 const RELY_ITEMS_RIGHT = ['مراقبت شخصی', 'آرامش خیال', 'کار تیمی', 'بیش از ۲۰ سال تجربه'] as const;
 
-/** Pepito “Our featured products” — shop grid */
+/** Pepito “Our featured products” — shop grid → real catalog */
 const PRODUCTS = [
-  { name: 'ظرف غذای سگ کوچک', price: '$25.00', badge: 'Hot', img: `${P}/01-1.png`, to: '/shop' },
-  { name: 'توپ گربه', price: '$35.00', badge: 'Hot', img: `${P}/1-1.jpg`, to: '/shop' },
-  { name: 'بیلچه شن', price: '$40.00', badge: 'Hot', img: `${P}/03-1.png`, to: '/shop' },
-  { name: '۳ استخوان اسباب‌بازی', price: '$45.00', badge: 'Hot', img: `${P}/06-1.png`, to: '/shop' },
+  { name: 'ظرف غذای سگ کوچک', price: '۶۴۴٬۰۰۰ تومان', badge: 'تخفیف', img: `${P}/01-1.png`, to: '/shop/product/steel-pet-bowl' },
+  { name: 'توپ گربه', price: '۱۶۰٬۰۰۰ تومان', badge: 'پرفروش', img: `${P}/1-1.jpg`, to: '/shop/product/cookie-mouse-cat-toy' },
+  { name: 'خاک گربه', price: '۳۹۰٬۰۰۰ تومان', badge: 'ویژه', img: `${P}/03.png`, to: '/shop/product/hello-cat-litter' },
+  { name: 'غذای خشک جوسرا', price: '۳٬۳۰۰٬۰۰۰ تومان', badge: 'پرفروش', img: `${P}/06-1.png`, to: '/shop/product/josera-kitten-dry' },
 ] as const;
 
 /** Pepito “Latest News” / blog1 carousel */
@@ -339,7 +339,7 @@ export function WelcomePage() {
           <a href="#services">خدمات</a>
           <a href="#rely">اعتماد</a>
           <a href="#pets">پذیرش</a>
-          <a href="#shop">فروشگاه</a>
+          <Link to="/shop">پت شاپ</Link>
           <a href="#news">اخبار</a>
           <a href="#faq">سؤالات</a>
         </nav>
@@ -673,14 +673,14 @@ export function WelcomePage() {
             <span className="pepito-eyebrow-icon" aria-hidden>
               <PawPrint size={18} />
             </span>
-            فروشگاه پت
+            پت شاپ
           </p>
           <h2>محصولات ویژه ما</h2>
         </div>
         <div className="pepito-shop-grid">
           {PRODUCTS.map((p) => (
             <article key={p.name} className="pepito-shop-item">
-              <GatedLink to={p.to} className="pepito-shop-wrap">
+              <Link to={p.to} className="pepito-shop-wrap">
                 <div className="pepito-shop-img">
                   <img src={p.img} alt={p.name} loading="lazy" />
                 </div>
@@ -690,14 +690,20 @@ export function WelcomePage() {
                     <span className="pepito-shop-amount">{p.price}</span>
                   </h4>
                 </div>
-              </GatedLink>
+              </Link>
               <div className="pepito-shop-text">
                 <h3>
-                  <GatedLink to={p.to}>{p.name}</GatedLink>
+                  <Link to={p.to}>{p.name}</Link>
                 </h3>
               </div>
             </article>
           ))}
+        </div>
+        <div style={{ marginTop: 28, textAlign: 'center' }}>
+          <Link to="/shop" className="pepito-btn button-1">
+            <PawIcon />
+            ورود به پت شاپ
+          </Link>
         </div>
       </section>
 

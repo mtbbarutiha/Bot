@@ -5,7 +5,7 @@ import { useAuthStore } from '../hooks/useAuthStore';
 import { TelegramSync } from './OnboardingGuard';
 
 const PUBLIC_EXACT = new Set(['/', '/welcome']);
-const PUBLIC_PREFIXES = ['/auth', '/admin', '/adoption'];
+const PUBLIC_PREFIXES = ['/auth', '/admin', '/adoption', '/shop'];
 
 function isPublic(pathname: string) {
   if (PUBLIC_EXACT.has(pathname)) return true;
@@ -34,7 +34,13 @@ export function AuthGuard({ children }: { children?: React.ReactNode }) {
     return <Navigate to={loginPath(next)} replace state={{ from: next }} />;
   }
 
-  if (isLoggedIn && !hasRole && !location.pathname.startsWith('/onboarding/role')) {
+  // Public surfaces (landing, shop, adoption) stay browsable even before role pick.
+  if (
+    isLoggedIn &&
+    !hasRole &&
+    !location.pathname.startsWith('/onboarding/role') &&
+    !isPublic(location.pathname)
+  ) {
     return <Navigate to="/onboarding/role" replace state={{ next: nextFromState }} />;
   }
 

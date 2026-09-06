@@ -22,7 +22,11 @@ import { HomePage } from './pages/HomePage';
 import { MatchesPage } from './pages/MatchesPage';
 import { PetDetailPage } from './pages/PetDetailPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { ShopPage } from './pages/ShopPage';
+import { ShopCartProvider } from './hooks/useShopCart';
+import { ShopHomePage } from './pages/shop/ShopHomePage';
+import { ShopCategoryPage } from './pages/shop/ShopCategoryPage';
+import { ShopProductPage } from './pages/shop/ShopProductPage';
+import { ShopCartPage } from './pages/shop/ShopCartPage';
 import { VetConsultPage } from './pages/VetConsultPage';
 import { WelcomePage } from './pages/WelcomePage';
 import { AdoptionDetailPage } from './pages/AdoptionDetailPage';
@@ -34,10 +38,15 @@ import { RoleWizardPage } from './pages/onboarding/RoleWizardPage';
 export default function App() {
   return (
     <AppGuards>
+      <ShopCartProvider>
       <Routes>
         <Route index element={<WelcomePage />} />
         <Route path="welcome" element={<WelcomePage />} />
         <Route path="adoption/:slug" element={<AdoptionDetailPage />} />
+        <Route path="shop" element={<ShopHomePage />} />
+        <Route path="shop/c/:category" element={<ShopCategoryPage />} />
+        <Route path="shop/product/:id" element={<ShopProductPage />} />
+        <Route path="shop/cart" element={<ShopCartPage />} />
         <Route path="auth/login" element={<LoginPage />} />
         <Route path="auth/otp" element={<OtpPage />} />
         <Route path="onboarding/role" element={<RoleSelectPage />} />
@@ -54,7 +63,6 @@ export default function App() {
           <Route path="chats/:matchId" element={<ChatPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="clinics" element={<ClinicsPage />} />
-          <Route path="shop" element={<ShopPage />} />
           <Route path="vet-consult" element={<VetConsultPage />} />
         </Route>
 
@@ -76,6 +84,7 @@ export default function App() {
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
+      </ShopCartProvider>
     </AppGuards>
   );
 }

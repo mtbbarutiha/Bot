@@ -95,13 +95,14 @@ export function LandingChrome({
               خانه
             </NavLink>
             <NavLink to="/explore">همبازی</NavLink>
+            <NavLink to="/shop">پت شاپ</NavLink>
             <NavLink to="/add-pet">پت‌های من</NavLink>
           </nav>
         ) : (
           <nav className="pepito-nav-links" aria-label="بخش‌ها">
             <Link to="/#services">خدمات</Link>
             <Link to="/#pets">پذیرش</Link>
-            <Link to="/#shop">فروشگاه</Link>
+            <Link to="/shop">پت شاپ</Link>
             <Link to="/#news">اخبار</Link>
             <Link to="/#faq">سؤالات</Link>
           </nav>

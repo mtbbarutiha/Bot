@@ -31,7 +31,7 @@ export function HomePage() {
       ? `همبازی برای ${myPet.name} — درخواست بفرست و مدیریت کن در همان فضای Pet Date.`
       : isPetOwner
         ? 'پت‌ات را ثبت کن و همبازی پیدا کن — همان حساب وب و تلگرام.'
-        : 'از پروفایل، کلینیک، فروشگاه و مشاوره را در همین محیط ادامه بده.';
+        : 'از پروفایل، کلینیک، پت شاپ و مشاوره را در همین محیط ادامه بده.';
 
   const primaryTo = needsProfile
     ? '/onboarding/profile'
@@ -109,7 +109,7 @@ export function HomePage() {
             <span>
               {isPetOwner
                 ? 'ارسال و مدیریت درخواست‌های همبازی'
-                : 'کلینیک، فروشگاه، مشاوره'}
+                : 'کلینیک، پت شاپ، مشاوره'}
             </span>
           </Link>
         </div>
@@ -120,7 +120,7 @@ export function HomePage() {
           <header className="pepito-home-section-head">
             <p className="pepito-eyebrow">خدمات</p>
             <h2>ادامه در همین فضا</h2>
-            <p>کلینیک، فروشگاه و مشاوره — بدون ترک ظاهر لندینگ.</p>
+            <p>کلینیک، پت شاپ و مشاوره — بدون ترک ظاهر لندینگ.</p>
           </header>
           <div className="pepito-home-actions">
             <Link to="/clinics" className="pepito-home-action">
@@ -128,7 +128,7 @@ export function HomePage() {
               <span>مراکز و نوبت‌ها</span>
             </Link>
             <Link to="/shop" className="pepito-home-action">
-              <strong>فروشگاه</strong>
+              <strong>پت شاپ</strong>
               <span>لوازم و محصولات پت</span>
             </Link>
             <Link to="/vet-consult" className="pepito-home-action">
