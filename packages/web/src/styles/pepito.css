@@ -560,12 +560,17 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   }
 }
 
-/* About strip (Pepito Read more) */
+/* About strip — Pepito `.about` (col-lg-5 + offset-lg-1 + col-lg-6, note.vert-move) */
 .pepito-about {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: clamp(1.5rem, 4vw, 3rem);
+  /* Pepito: copy 5/12, gap ≈ offset-lg-1 (8.333%), media 6/12 */
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  column-gap: 8.333%;
+  row-gap: 1.5rem;
   align-items: center;
+}
+.pepito-about-copy {
+  min-width: 0;
 }
 .pepito-about-copy .pepito-eyebrow {
   margin: 0 0 0.55rem;
@@ -576,19 +581,88 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 .pepito-about-copy h2 {
   margin: 0 0 0.85rem;
   font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+  overflow-wrap: anywhere;
 }
 .pepito-about-copy p {
   margin: 0 0 1.35rem;
   max-width: 34rem;
   line-height: 1.75;
 }
+.pepito-about-media {
+  min-width: 0;
+}
+.pepito-about-item {
+  position: relative;
+  border-radius: 20px;
+  overflow: visible;
+  margin-bottom: 0;
+}
 .pepito-about-media img {
+  position: relative;
   width: 100%;
+  max-width: 100%;
+  height: auto;
   border-radius: 20px;
   display: block;
   object-fit: cover;
   aspect-ratio: 1483 / 1200;
   box-shadow: none;
+}
+/* Pepito `.note.vert-move` — floating quote card on about photo */
+.pepito-about-note {
+  position: absolute;
+  z-index: 2;
+  inset-inline-end: 30px;
+  bottom: 30px;
+  width: min(275px, calc(100% - 40px));
+  padding: 40px 30px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: all 350ms cubic-bezier(0.37, 0, 0.63, 1);
+  box-sizing: border-box;
+}
+.pepito-about-note-stars {
+  display: flex;
+  gap: 0.2rem;
+  margin-bottom: 20px;
+  color: #fd961e;
+}
+.pepito-about-note-txt {
+  margin: 0 0 20px;
+  font-family: var(--font-display);
+  color: var(--pepito-dark);
+  font-size: 24px;
+  line-height: 1.25;
+  font-weight: 500;
+}
+.pepito-about-note-title {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-display);
+  color: var(--pepito-dark);
+  font-size: 18px;
+  line-height: 1.25;
+  font-weight: 400;
+}
+.pepito-about-note-title .pepito-paw,
+.pepito-about-note-title svg {
+  color: var(--pepito-pink);
+  transform: rotate(30deg);
+  flex-shrink: 0;
+}
+.pepito-vert-move {
+  animation: pepito-mover 1s infinite alternate;
+}
+@keyframes pepito-mover {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-10px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pepito-vert-move { animation: none; }
 }
 
 .pepito-call-band {
@@ -1725,7 +1799,18 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   .pepito-adoption-grid,
   .pepito-team,
   .pepito-reviews { grid-template-columns: 1fr 1fr; }
-  .pepito-about,
+  .pepito-about {
+    grid-template-columns: 1fr;
+    column-gap: 0;
+  }
+  .pepito-about-note {
+    inset-inline-end: 20px;
+    bottom: 20px;
+    padding: 28px 22px;
+  }
+  .pepito-about-note-txt {
+    font-size: 18px;
+  }
   .pepito-faq-layout,
   .pepito-rely-grid { grid-template-columns: 1fr; }
   .pepito-rely-media {
