@@ -47,7 +47,35 @@ installProcessErrorLogging('api');
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
-app.use(cors());
+/** Behind nginx / CDN — trust X-Forwarded-* for correct client IP (rate limits). */
+app.set('trust proxy', 1);
+
+const corsOrigins = [
+  process.env.WEB_URL,
+  process.env.PUBLIC_WEB_URL,
+  'https://petdate.ir',
+  'https://www.petdate.ir',
+]
+  .filter(Boolean)
+  .map((u) => String(u).replace(/\/$/, ''));
+
+app.use(
+  cors({
+    origin:
+      process.env.NODE_ENV === 'production'
+        ? (origin, cb) => {
+            // Same-origin / non-browser (bot, curl) — no Origin header
+            if (!origin) {
+              cb(null, true);
+              return;
+            }
+            const ok = corsOrigins.some((o) => origin === o || origin.startsWith(`${o}/`));
+            cb(null, ok);
+          }
+        : true,
+    credentials: true,
+  })
+);
 app.use(express.json({ limit: '2mb' }));
 app.use(responseErrorLogger);
 

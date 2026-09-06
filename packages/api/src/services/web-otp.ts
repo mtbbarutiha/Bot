@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt } from 'crypto';
 import { normalizeIranMobile } from '@petdate/shared';
 import { dbService } from '../db';
 import { candooSendOtp, isCandooConfigured } from './candoo';
+import { isSmtpConfigured, sendMail } from './mail';
 import { formatLoginOtpSms } from './otp-sms-copy';
 
 const OTP_TTL_MS = 5 * 60 * 1000;
@@ -24,12 +25,24 @@ function normalizeEmail(raw: string): string | null {
   return email;
 }
 
+function isProduction(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
+/** Echo OTP in API JSON only for explicit local/dev — never in production. */
 function echoDevCode(): boolean {
-  return (
-    process.env.WEB_OTP_DEV_ECHO === '1' ||
-    process.env.NODE_ENV !== 'production' ||
-    !isCandooConfigured()
-  );
+  if (isProduction()) return false;
+  return process.env.WEB_OTP_DEV_ECHO === '1' || process.env.WEB_OTP_DEV_ECHO !== '0';
+}
+
+function formatLoginOtpEmail(code: string): string {
+  return [
+    'کد ورود پت‌دیت:',
+    code,
+    '',
+    'این کد تا ۵ دقیقه معتبر است.',
+    'اگر این درخواست از طرف شما نبوده، نادیده بگیرید.',
+  ].join('\n');
 }
 
 export type WebOtpChannel = 'phone' | 'email';
@@ -81,10 +94,9 @@ export async function requestWebOtp(
         body: formatLoginOtpSms(code),
       });
       if (!sent.ok) {
-        console.error('web phone otp send failed', sent.error, sent.raw, 'src=', sent.srcNum);
-        // Don't leave a cooldown OTP if SMS never went out
+        console.error('web phone otp send failed', sent.error, 'src=', sent.srcNum);
         dbService.deleteWebOtp(channel, target);
-        if (!echoDevCode()) {
+        if (isProduction() || !echoDevCode()) {
           return {
             ok: false,
             reason: 'send_failed',
@@ -92,9 +104,39 @@ export async function requestWebOtp(
           };
         }
       }
+    } else if (isProduction()) {
+      dbService.deleteWebOtp(channel, target);
+      return {
+        ok: false,
+        reason: 'not_configured',
+        error: 'سرویس پیامک پیکربندی نشده',
+      };
     } else {
       console.info(`[web-otp][phone] ${target} => ${code}`);
     }
+  } else if (isSmtpConfigured()) {
+    const sent = await sendMail({
+      to: target,
+      subject: 'کد ورود پت‌دیت',
+      text: formatLoginOtpEmail(code),
+    });
+    if (!sent.ok) {
+      dbService.deleteWebOtp(channel, target);
+      if (isProduction() || !echoDevCode()) {
+        return {
+          ok: false,
+          reason: 'send_failed',
+          error: sent.error || 'ارسال ایمیل ناموفق بود',
+        };
+      }
+    }
+  } else if (isProduction()) {
+    dbService.deleteWebOtp(channel, target);
+    return {
+      ok: false,
+      reason: 'not_configured',
+      error: 'سرویس ایمیل پیکربندی نشده',
+    };
   } else {
     console.info(`[web-otp][email] ${target} => ${code}`);
   }

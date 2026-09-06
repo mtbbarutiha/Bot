@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Download } from 'lucide-react';
-import { adminFetch, formatTomanFa, getAdminPassword } from '../api';
+import { adminDownload, adminFetch, formatTomanFa } from '../api';
 import {
   AdminBarChart, AdminDonutChart, AdminLineChart, PeriodFilter, type FinancePeriod,
 } from '../FinanceCharts';
@@ -14,7 +14,6 @@ type Sales = {
 };
 
 const PAY_COLORS = ['#0f766e', '#5c4d91', '#c2410c', '#0369a1', '#64748b'];
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
 export function AdminFinanceSalesPage() {
   const [period, setPeriod] = useState<FinancePeriod>('month');
@@ -45,11 +44,12 @@ export function AdminFinanceSalesPage() {
             type="button"
             className="admin-btn admin-btn--ghost"
             onClick={() => {
-              const pwd = getAdminPassword();
-              window.open(
-                `${API_BASE}/api/admin/finance/export?kind=sales&period=${period}&adminPassword=${encodeURIComponent(pwd)}`,
-                '_blank'
-              );
+              void adminDownload(
+                `/api/admin/finance/export?kind=sales&period=${period}`,
+                `petdate-sales-${period}.csv`
+              ).catch((err) => {
+                alert(err instanceof Error ? err.message : 'خروجی ناموفق بود');
+              });
             }}
           >
             <Download size={16} /> CSV

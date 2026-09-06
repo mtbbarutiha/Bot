@@ -37,6 +37,33 @@ export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T
   return res.json() as Promise<T>;
 }
 
+/** Download admin CSV/binary with header auth (never put password in query string). */
+export async function adminDownload(path: string, filename: string): Promise<void> {
+  const headers = new Headers();
+  const pwd = getAdminPassword();
+  if (pwd) headers.set('x-admin-password', pwd);
+  const res = await fetch(`${API_BASE}${path}`, { headers });
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
+    try {
+      const j = (await res.json()) as { error?: string };
+      if (j.error) msg = j.error;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
 export function formatTomanFa(n: number): string {
   return new Intl.NumberFormat('fa-IR').format(Math.round(n)) + ' تومان';
 }

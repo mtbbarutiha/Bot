@@ -4,7 +4,7 @@ import {
   ArrowDownRight, ArrowUpRight, Download, LineChart, PieChart,
   ShoppingBag, TrendingUp, Wallet,
 } from 'lucide-react';
-import { adminFetch, formatNumFa, formatTomanFa, getAdminPassword } from '../api';
+import { adminDownload, adminFetch, formatNumFa, formatTomanFa } from '../api';
 import { PeriodFilter, type FinancePeriod } from '../FinanceCharts';
 
 type Dash = {
@@ -18,8 +18,6 @@ type Dash = {
     cogs: number; operatingExpense: number;
   };
 };
-
-const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
 export function AdminFinanceDashboardPage() {
   const [period, setPeriod] = useState<FinancePeriod>('month');
@@ -48,11 +46,13 @@ export function AdminFinanceDashboardPage() {
   ] : [];
 
   const exportCsv = (kind: 'pnl' | 'sales') => {
-    const pwd = getAdminPassword();
-    window.open(
-      `${API_BASE}/api/admin/finance/export?kind=${kind}&period=${period}&adminPassword=${encodeURIComponent(pwd)}`,
-      '_blank'
-    );
+    void adminDownload(
+      `/api/admin/finance/export?kind=${kind}&period=${period}`,
+      `petdate-${kind}-${period}.csv`
+    ).catch((err) => {
+      console.error(err);
+      alert(err instanceof Error ? err.message : 'خروجی ناموفق بود');
+    });
   };
 
   return (

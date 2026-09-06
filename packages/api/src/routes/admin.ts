@@ -15,9 +15,16 @@ import { dbService } from '../db';
 import { adminPlatform } from '../admin-platform';
 import { adminFinance } from '../admin-finance';
 import { logAppEvent } from '../services/app-logger';
+import { rateLimit } from '../middleware/rate-limit';
 
 export const adminRouter = Router();
 const STARTED_AT = Date.now();
+
+const adminLoginLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'تلاش ورود ادمین زیاد است. کمی بعد دوباره تلاش کن.',
+});
 
 function adminPassword(): string {
   return (process.env.ADMIN_PASSWORD || 'petdate').trim() || 'petdate';
@@ -28,13 +35,13 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
     next();
     return;
   }
+  // Header only — never accept password via query string (leaks into access logs / Referer).
   const header = req.header('x-admin-password') || '';
-  const query = typeof req.query.adminPassword === 'string' ? req.query.adminPassword : '';
   const bodyPwd =
     req.body && typeof req.body === 'object' && typeof (req.body as { password?: string }).password === 'string'
       ? (req.body as { password: string }).password
       : '';
-  if ((header || query || bodyPwd) !== adminPassword()) {
+  if ((header || bodyPwd) !== adminPassword()) {
     res.status(401).json({ error: 'دسترسی ادمین مجاز نیست' });
     return;
   }
@@ -43,7 +50,7 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
 
 adminRouter.use(requireAdmin);
 
-adminRouter.post('/auth/login', (req, res) => {
+adminRouter.post('/auth/login', adminLoginLimit, (req, res) => {
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
   if (password !== adminPassword()) {
     res.status(401).json({ error: 'رمز عبور اشتباه است' });

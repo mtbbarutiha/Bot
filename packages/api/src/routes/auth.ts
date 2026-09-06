@@ -15,6 +15,7 @@ import {
   resolveUserAvatarPath,
   saveUserAvatar,
 } from '../services/user-avatar-store';
+import { rateLimit } from '../middleware/rate-limit';
 import {
   getUserFromBearer,
   requestWebOtp,
@@ -23,6 +24,20 @@ import {
 } from '../services/web-otp';
 
 export const authRouter = Router();
+
+const otpRequestLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 8,
+  keyFn: (req) => `${String(req.body?.channel ?? '')}:${String(req.body?.target ?? '').trim()}`,
+  message: 'درخواست کد زیاد شده. ۱۵ دقیقه صبر کن و دوباره تلاش کن.',
+});
+
+const otpVerifyLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  keyFn: (req) => `${String(req.body?.channel ?? '')}:${String(req.body?.target ?? '').trim()}`,
+  message: 'تلاش‌های ورود زیاد است. کمی بعد دوباره تلاش کن.',
+});
 
 const avatarUpload = multer({
   storage: multer.memoryStorage(),
@@ -98,7 +113,7 @@ function parseChannel(value: unknown): WebOtpChannel | null {
   return value === 'phone' || value === 'email' ? value : null;
 }
 
-authRouter.post('/otp/request', async (req, res) => {
+authRouter.post('/otp/request', otpRequestLimit, async (req, res) => {
   const channel = parseChannel(req.body?.channel);
   const target = String(req.body?.target ?? '').trim();
   if (!channel) {
@@ -118,7 +133,7 @@ authRouter.post('/otp/request', async (req, res) => {
   res.json(result);
 });
 
-authRouter.post('/otp/verify', (req, res) => {
+authRouter.post('/otp/verify', otpVerifyLimit, (req, res) => {
   const channel = parseChannel(req.body?.channel);
   const target = String(req.body?.target ?? '').trim();
   const code = String(req.body?.code ?? '').trim();
