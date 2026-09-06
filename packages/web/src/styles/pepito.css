@@ -4659,7 +4659,11 @@ button.chip.is-on {
 .pepito-app-shell--chat .pepito-nav,
 .pepito-app-shell:has(.tg-chat) .pepito-footer,
 .pepito-app-shell--chat .pepito-footer,
-.pepito-app-shell:has(.tg-chat) .pepito-site-desktop-nav {
+.pepito-app-shell:has(.tg-chat) .pepito-site-desktop-nav,
+.pepito-app-shell--chat .pepito-site-desktop-nav,
+.pepito-app-shell:has(.tg-chat) .pepito-landing-mobile-dock,
+.pepito-app-shell--chat .pepito-landing-mobile-dock,
+body:has(.tg-chat) .pepito-landing-mobile-dock {
   display: none !important;
 }
 .pepito-app-layout:has(.tg-chat) {
