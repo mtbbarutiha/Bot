@@ -4609,6 +4609,21 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 }
 .tg-ticks { color: #2aa8d8; }
 .tg-lock-ico { color: #0f6b4c; opacity: 0.85; }
+.tg-spin { animation: tgSpin 0.8s linear infinite; }
+@keyframes tgSpin { to { transform: rotate(360deg); } }
+.tg-media-broken {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 64px;
+  max-width: 260px;
+  margin: 2px 0 6px;
+  padding: 12px;
+  border-radius: 12px;
+  background: rgba(214, 69, 69, 0.08);
+  color: #8a3a3a;
+  font-size: 0.82rem;
+}
 
 .tg-media-link { display:block; }
 .tg-media-image,
@@ -4651,7 +4666,11 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .tg-info-card h3 { margin: 0 0 8px; font-size: 1rem; }
 .tg-info-card ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: .88rem; }
 .tg-info-close {
-  position: absolute; top: 8px; left: 8px;
+  position: absolute;
+  top: 8px;
+  inset-inline-start: 8px;
+  inset-inline-end: auto;
+  left: auto;
   border: 0; background: #f0f2f5; border-radius: 50%;
   width: 32px; height: 32px; display: grid; place-items: center; cursor: pointer;
 }

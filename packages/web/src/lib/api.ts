@@ -56,6 +56,14 @@ export async function getUserByTelegramId(telegramId: string): Promise<User | nu
   }
 }
 
+export async function getUserById(userId: number): Promise<User | null> {
+  try {
+    return await request<User>(`/api/users/id/${userId}`);
+  } catch {
+    return null;
+  }
+}
+
 export async function setUserRole(telegramId: string, role: UserRole): Promise<User> {
   return request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}/role`, {
     method: 'PATCH',
