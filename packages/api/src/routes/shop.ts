@@ -79,12 +79,7 @@ shopRouter.post('/checkout/coins', (req, res) => {
   });
 
   if (!result.ok) {
-    const status =
-      result.reason === 'insufficient_coins'
-        ? 402
-        : result.reason === 'user_missing'
-          ? 404
-          : 400;
+    const status = result.reason === 'user_missing' ? 404 : 400;
     res.status(status).json(result);
     return;
   }
