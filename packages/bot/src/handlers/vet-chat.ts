@@ -30,12 +30,24 @@ import { effectiveWebUrl, isTelegramInlineUrl } from '../urls';
 
 /** Reply-keyboard labels for vet chat (short so buttons stay compact). */
 export const VET_CHAT_BTNS = {
-  end: '🔌 قطع چت',
+  /** Keep on the first keyboard row — on Telegram mobile the 3rd row is easy to miss. */
+  end: '🔌 بستن چت',
   petProfile: '🐾 پروفایل پت',
   medical: '📋 پرونده',
   addNote: '📝 ثبت پرونده',
   prescription: '💊 نسخه',
 } as const;
+
+/** Previous end-chat label — still accept it until clients get the new keyboard. */
+const VET_CHAT_END_ALIASES = [VET_CHAT_BTNS.end, '🔌 قطع چت'] as const;
+
+function isVetChatEndLabel(text: string): boolean {
+  return (VET_CHAT_END_ALIASES as readonly string[]).includes(text);
+}
+
+function isVetChatControlLabel(text: string): boolean {
+  return isVetChatEndLabel(text) || (Object.values(VET_CHAT_BTNS) as string[]).includes(text);
+}
 
 const RX_NOTE =
   '⚠️ پیشنهادها فقط راهنما هستند؛ دوز و مدت را خودتان تکمیل/ویرایش کنید.';
@@ -120,7 +132,7 @@ async function promptPrescriptionComposer(
 
 /**
  * Vet chat reply keyboard.
- * Doctor: pet info → medical → prescription → end (colored, compact 2-col rows).
+ * Doctor: end chat first (always visible on mobile) → pet/medical → note/Rx.
  * Patient: end-chat only (no medical / prescription tools).
  */
 export function vetChatReplyKeyboard(isVet: boolean): Keyboard {
@@ -132,6 +144,9 @@ export function vetChatReplyKeyboard(isVet: boolean): Keyboard {
       .persistent();
   }
   return new Keyboard()
+    .text(VET_CHAT_BTNS.end)
+    .danger()
+    .row()
     .text(VET_CHAT_BTNS.petProfile)
     .primary()
     .text(VET_CHAT_BTNS.medical)
@@ -141,9 +156,6 @@ export function vetChatReplyKeyboard(isVet: boolean): Keyboard {
     .success()
     .text(VET_CHAT_BTNS.prescription)
     .success()
-    .row()
-    .text(VET_CHAT_BTNS.end)
-    .danger()
     .resized()
     .persistent();
 }
@@ -631,7 +643,7 @@ export async function handleVetChatNoteText(ctx: Context, text: string): Promise
     return false;
   }
 
-  if ((Object.values(VET_CHAT_BTNS) as string[]).includes(text)) {
+  if (isVetChatControlLabel(text)) {
     return false;
   }
 
@@ -900,7 +912,7 @@ export async function handleVetChatPrescriptionText(
   }
   if (!session.vetChatConsultId) return false;
 
-  if ((Object.values(VET_CHAT_BTNS) as string[]).includes(text)) {
+  if (isVetChatControlLabel(text)) {
     return false;
   }
 
@@ -1050,7 +1062,7 @@ export async function handleVetChatRelay(ctx: Context): Promise<boolean> {
 
   const text = ctx.message?.text?.trim();
   if (text) {
-    if (text === VET_CHAT_BTNS.end) return handleVetChatEnd(ctx);
+    if (isVetChatEndLabel(text)) return handleVetChatEnd(ctx);
     if (text === VET_CHAT_BTNS.petProfile) return handleVetChatPetProfileView(ctx);
     if (text === VET_CHAT_BTNS.medical) return handleVetChatMedicalView(ctx);
     if (text === VET_CHAT_BTNS.addNote) return handleVetChatAddNoteStart(ctx);

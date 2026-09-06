@@ -18,6 +18,7 @@ import {
   LockOpen,
   MoreVertical,
   Paperclip,
+  PhoneOff,
   RefreshCw,
   Send,
   Smile,
@@ -1182,6 +1183,16 @@ export function VetChatPage() {
                     </button>
                     <button
                       type="button"
+                      className="tg-icon-btn tg-end-chat-btn"
+                      onClick={() => void endChat()}
+                      disabled={ending}
+                      aria-label="بستن چت"
+                      title="بستن چت"
+                    >
+                      <PhoneOff size={18} />
+                    </button>
+                    <button
+                      type="button"
                       className="tg-icon-btn"
                       onClick={() => setMenuOpen((v) => !v)}
                       aria-label="منوی گفتگو"
@@ -1207,7 +1218,7 @@ export function VetChatPage() {
                           onClick={() => void endChat()}
                           disabled={ending}
                         >
-                          {ending ? 'در حال قطع…' : 'قطع چت مشاوره'}
+                          {ending ? 'در حال بستن…' : 'بستن چت'}
                         </button>
                       </div>
                     ) : null}
@@ -1235,8 +1246,16 @@ export function VetChatPage() {
                   />
                 </div>
               ) : chatUnlocked ? (
-                <div className="tg-status-strip" role="status">
-                  چت مشاوره دامپزشک فعال است
+                <div className="tg-status-strip tg-status-strip--with-action" role="status">
+                  <span>چت مشاوره دامپزشک فعال است</span>
+                  <button
+                    type="button"
+                    className="tg-end-chat-chip"
+                    onClick={() => void endChat()}
+                    disabled={ending}
+                  >
+                    {ending ? '…' : 'بستن چت'}
+                  </button>
                 </div>
               ) : null}
 

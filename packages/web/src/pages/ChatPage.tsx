@@ -17,6 +17,7 @@ import {
   Lock,
   LockOpen,
   MoreVertical,
+  PhoneOff,
   Paperclip,
   PawPrint,
   RefreshCw,
@@ -1324,6 +1325,16 @@ export function ChatPage() {
                     </button>
                     <button
                       type="button"
+                      className="tg-icon-btn tg-end-chat-btn"
+                      onClick={() => void endChat()}
+                      disabled={ending}
+                      aria-label="بستن چت"
+                      title="بستن چت"
+                    >
+                      <PhoneOff size={18} />
+                    </button>
+                    <button
+                      type="button"
                       className="tg-icon-btn"
                       onClick={() => setMenuOpen((v) => !v)}
                       aria-label="منوی گفتگو"
@@ -1369,7 +1380,7 @@ export function ChatPage() {
                           onClick={() => void endChat()}
                           disabled={ending}
                         >
-                          {ending ? 'در حال قطع…' : 'قطع چت همبازی'}
+                          {ending ? 'در حال بستن…' : 'بستن چت'}
                         </button>
                       </div>
                     ) : null}
