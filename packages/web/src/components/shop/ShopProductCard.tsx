@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import {
   BADGE_LABELS,
   formatToman,
@@ -53,7 +53,7 @@ export function ShopProductCard({
               disabled={!product.inStock}
               onClick={() => onAdd(product.id)}
             >
-              <ShoppingBag size={15} strokeWidth={2.2} aria-hidden />
+              <ShoppingCart size={15} strokeWidth={2.2} aria-hidden />
               {product.inStock ? 'بخر' : 'ناموجود'}
             </button>
           ) : null}

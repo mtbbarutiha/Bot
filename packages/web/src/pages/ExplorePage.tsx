@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { PawPrint } from 'lucide-react';
+import { HeartHandshake } from 'lucide-react';
 import { BRAND, primaryRole, type PetProfile } from '@petdate/shared';
 import { PlaymateRequestsPanel } from '../components/PlaymateRequestsPanel';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
@@ -49,10 +49,10 @@ const ROLE_EMPTY_MESSAGES: Record<string, { title: string; desc: string; cta?: s
 
 type FindPhase = 'idle' | 'pick' | 'sending' | 'done';
 
-function PawIcon({ size = 16 }: { size?: number }) {
+function PlaymateIcon({ size = 16 }: { size?: number }) {
   return (
     <span className="pepito-btn-icon" aria-hidden>
-      <PawPrint size={size} />
+      <HeartHandshake size={size} />
     </span>
   );
 }
@@ -162,7 +162,7 @@ export function ExplorePage() {
           <p>{roleEmpty.desc}</p>
           {roleEmpty.cta && roleEmpty.to && (
             <Link to={roleEmpty.to} className="pepito-btn button-1">
-              <PawIcon />
+              <PlaymateIcon />
               {roleEmpty.cta}
             </Link>
           )}
@@ -187,12 +187,12 @@ export function ExplorePage() {
       <section className="find-playmate-one pepito-explore-find" aria-label="پیدا کردن همبازی">
         {needsLogin ? (
           <Link to="/auth/login" className="pepito-btn button-1">
-            <PawIcon />
+            <PlaymateIcon />
             ورود برای پیدا کردن همبازی
           </Link>
         ) : needsPet ? (
           <Link to="/add-pet" className="pepito-btn button-1">
-            <PawIcon />
+            <PlaymateIcon />
             ثبت پت
           </Link>
         ) : showPetPick ? (
@@ -227,7 +227,7 @@ export function ExplorePage() {
             disabled={sending || petsLoading}
             onClick={() => void onPrimaryClick()}
           >
-            <PawIcon />
+            <PlaymateIcon />
             {sending
               ? 'در حال ارسال در تلگرام…'
               : findPhase === 'done'

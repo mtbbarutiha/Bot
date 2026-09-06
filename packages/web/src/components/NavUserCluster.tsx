@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ShoppingBag } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { ProfileMenu } from './ProfileMenu';
 import { WalletChip } from './WalletChip';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -31,7 +31,7 @@ export function NavUserCluster({ showCart = true }: { showCart?: boolean } = {})
           data-shop-cart-target
           aria-label={itemCount > 0 ? `سبد خرید (${itemCount})` : 'سبد خرید'}
         >
-          <ShoppingBag size={18} strokeWidth={2.2} aria-hidden />
+          <ShoppingCart size={18} strokeWidth={2.2} aria-hidden />
           {itemCount > 0 ? (
             <span className="pepito-nav-cart-count">{itemCount.toLocaleString('fa-IR')}</span>
           ) : null}

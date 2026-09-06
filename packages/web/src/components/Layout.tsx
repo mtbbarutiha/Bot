@@ -2,12 +2,12 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import {
   Home,
   LayoutDashboard,
-  LayoutGrid,
   MessagesSquare,
+  HeartHandshake,
   PawPrint,
   ShoppingBag,
   Stethoscope,
-  Zap,
+  UserRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { primaryRole, type UserRole } from '@petdate/shared';
@@ -20,10 +20,10 @@ import { RoleSwitchControl } from './RoleSwitchControl';
 const OWNER_NAV: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/', icon: Home, label: 'خانه' },
   { to: '/home', icon: LayoutDashboard, label: 'پنل' },
-  { to: '/explore', icon: LayoutGrid, label: 'پیدا کردن همبازی' },
+  { to: '/explore', icon: HeartHandshake, label: 'پیدا کردن همبازی' },
   { to: '/chats', icon: MessagesSquare, label: 'گفتگوها' },
   { to: '/add-pet', icon: PawPrint, label: 'پت‌های من' },
-  { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
+  { to: '/vet-consult', icon: Stethoscope, label: 'ارتباط با پزشک' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
 ];
 
@@ -31,7 +31,7 @@ const VET_NAV: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/', icon: Home, label: 'خانه' },
   { to: '/vet-consult', icon: Stethoscope, label: 'پنل پزشک' },
   { to: '/chats', icon: MessagesSquare, label: 'گفتگوها' },
-  { to: '/profile', icon: LayoutDashboard, label: 'پروفایل' },
+  { to: '/profile', icon: UserRound, label: 'پروفایل' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
 ];
 
@@ -39,8 +39,8 @@ const DEFAULT_NAV: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/', icon: Home, label: 'خانه' },
   { to: '/home', icon: LayoutDashboard, label: 'پنل' },
   { to: '/chats', icon: MessagesSquare, label: 'گفتگوها' },
-  { to: '/profile', icon: PawPrint, label: 'پروفایل' },
-  { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
+  { to: '/profile', icon: UserRound, label: 'پروفایل' },
+  { to: '/vet-consult', icon: Stethoscope, label: 'ارتباط با پزشک' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
 ];
 

@@ -1,8 +1,8 @@
 import type { LucideIcon } from 'lucide-react';
 import {
-  LayoutGrid,
   LogIn,
   MessagesSquare,
+  HeartHandshake,
   ShoppingBag,
   ShoppingCart,
   Stethoscope,
@@ -39,7 +39,7 @@ const PLAYMATE: SiteNavItem = {
   key: 'playmate',
   label: 'همبازی',
   to: '/explore',
-  icon: LayoutGrid,
+  icon: HeartHandshake,
   match: (p) => p === '/explore' || p.startsWith('/explore'),
 };
 

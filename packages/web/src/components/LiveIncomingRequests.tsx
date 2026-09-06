@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Stethoscope, X } from 'lucide-react';
+import { Check, HeartHandshake, Stethoscope, X } from 'lucide-react';
 import { userHasRole, type VetConsultation } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
@@ -219,11 +219,15 @@ export function LiveIncomingRequests() {
           <div className="live-incoming-photo">
             <img src={current.photo} alt={current.title} />
           </div>
-        ) : current.kind === 'vet' ? (
+        ) : (
           <div className="live-incoming-photo live-incoming-photo--icon" aria-hidden>
-            <Stethoscope size={36} strokeWidth={1.75} />
+            {current.kind === 'vet' ? (
+              <Stethoscope size={36} strokeWidth={1.75} />
+            ) : (
+              <HeartHandshake size={36} strokeWidth={1.75} />
+            )}
           </div>
-        ) : null}
+        )}
         {error ? (
           <p className="auth-error" role="alert">
             {error}

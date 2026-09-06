@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, UserRound } from 'lucide-react';
 import { USER_ROLE_LABELS, normalizeRoles, primaryRole } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { RoleSwitchControl } from './RoleSwitchControl';
@@ -94,7 +94,7 @@ export function ProfileMenu() {
             role="menuitem"
             onClick={() => setOpen(false)}
           >
-            <User size={16} strokeWidth={2} />
+            <UserRound size={16} strokeWidth={2} />
             <span>پروفایل</span>
           </Link>
 

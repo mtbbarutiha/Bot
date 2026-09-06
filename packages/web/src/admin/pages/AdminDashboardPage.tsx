@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Activity, MessageCircle, Package, PawPrint, Stethoscope, Users, Wallet } from 'lucide-react';
+import { Activity, HeartHandshake, Package, PawPrint, Stethoscope, Users, Wallet } from 'lucide-react';
 import { adminFetch, formatNumFa, formatTomanFa } from '../api';
 
 type Dash = {
@@ -29,7 +29,7 @@ export function AdminDashboardPage() {
   const kpis = s ? [
     { label: 'کاربران', value: formatNumFa(s.users), icon: Users, tone: 'violet' },
     { label: 'پت‌ها', value: formatNumFa(s.pets), icon: PawPrint, tone: 'mint' },
-    { label: 'همبازی (باز)', value: formatNumFa(s.playdatesPending), icon: MessageCircle, tone: 'orange' },
+    { label: 'همبازی (باز)', value: formatNumFa(s.playdatesPending), icon: HeartHandshake, tone: 'orange' },
     { label: 'مشاوره باز', value: formatNumFa(s.vetConsultsOpen), icon: Stethoscope, tone: 'sky' },
     { label: 'سفارش فروشگاه', value: formatNumFa(s.shopOrders), icon: Package, tone: 'slate' },
     { label: 'درآمد فروشگاه', value: formatTomanFa(s.shopRevenueToman), icon: Wallet, tone: 'mint' },
