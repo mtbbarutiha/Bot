@@ -253,10 +253,17 @@ async function showProductList(
     });
   }
 
+  let catTitle = categorySlug;
+  if (categorySlug !== 'featured') {
+    const cats = await fetchShopCategories().catch(() => ({ categories: [] as ShopApiCategory[] }));
+    const found = cats.categories.find((c) => c.slug === categorySlug);
+    if (found) catTitle = `${found.emoji || '🛒'} ${found.labelFa}`;
+  }
+
   const title =
     categorySlug === 'featured'
       ? '⭐ محصولات پیشنهادی'
-      : `🛒 ${escapeHtml(categorySlug)}`;
+      : `🛒 ${escapeHtml(catTitle)}`;
   const text = [
     `<b>${title}</b>`,
     '',
