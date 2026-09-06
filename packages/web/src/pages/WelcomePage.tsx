@@ -514,9 +514,12 @@ export function WelcomePage() {
         </div>
       </section>
 
-      {/* Pepito “Why rely on us?” — after services */}
+      {/* Pepito “Why rely on us?” — media first in RTL → physical right (col-lg-4 offset) */}
       <section className="pepito-section pepito-rely" id="rely">
         <div className="pepito-rely-grid">
+          <div className="pepito-rely-media">
+            <img src={`${P}/pet3.png`} alt="" loading="lazy" />
+          </div>
           <div className="pepito-rely-copy">
             <p className="pepito-eyebrow">
               <span className="pepito-eyebrow-icon" aria-hidden>
@@ -550,9 +553,6 @@ export function WelcomePage() {
                 ))}
               </ul>
             </div>
-          </div>
-          <div className="pepito-rely-media">
-            <img src={`${P}/pet3.png`} alt="" loading="lazy" />
           </div>
         </div>
       </section>

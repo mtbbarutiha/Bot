@@ -1331,6 +1331,8 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 }
 
 /* ========== Pepito “Why rely on us?” (banner / chose-us) ========== */
+/* LTR Pepito: copy col-lg-6 | offset-lg-2 | img col-lg-4 (image on the right).
+   RTL: media first → physical right, copy second → physical left. */
 .pepito-rely {
   background: #fff;
   padding-block: 120px;
@@ -1338,9 +1340,14 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 }
 .pepito-rely-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
-  gap: clamp(1.5rem, 4vw, 3rem);
+  /* RTL col1 (right) = image ~4/12, col2 (left) = copy ~6/12, gap ≈ offset */
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1fr);
+  column-gap: clamp(1.5rem, 6vw, 4.5rem);
+  row-gap: 1.75rem;
   align-items: center;
+}
+.pepito-rely-copy {
+  min-width: 0;
 }
 .pepito-rely-copy .pepito-eyebrow {
   margin: 0 0 0.55rem;
@@ -1404,6 +1411,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   display: flex;
   align-items: flex-end;
   justify-content: center;
+  min-width: 0;
   min-height: 280px;
 }
 .pepito-rely-media img {
@@ -1412,6 +1420,17 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   max-width: 420px;
   height: auto;
   object-fit: contain;
+  object-position: center bottom;
+  filter: drop-shadow(0 18px 40px rgba(25, 6, 61, 0.12));
+  animation: pepito-rely-float 3.2s ease-in-out infinite alternate;
+  will-change: transform;
+}
+@keyframes pepito-rely-float {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(-14px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pepito-rely-media img { animation: none; }
 }
 
 /* ========== Pepito shop / featured products ========== */
@@ -2032,8 +2051,9 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   }
   .pepito-faq-layout,
   .pepito-rely-grid { grid-template-columns: 1fr; }
+  /* Pepito mobile: copy first, then image */
+  .pepito-rely-copy { order: -1; }
   .pepito-rely-media {
-    order: -1;
     min-height: 0;
   }
   .pepito-rely-media img {
