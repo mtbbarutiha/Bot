@@ -1,5 +1,6 @@
 import './load-env';
 import dns from 'dns';
+import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import type { GameType } from '@petdate/shared';
@@ -33,6 +34,7 @@ import {
   installProcessErrorLogging,
   responseErrorLogger,
 } from './services/app-logger';
+import { attachChatWebSocket } from './ws/chatHub';
 
 // Prefer IPv4 — Telegram notify fetch was timing out on IPv6
 try {
@@ -186,8 +188,11 @@ app.get('/api/my-section-games', (req, res) => {
 
 app.use(expressErrorHandler);
 
-app.listen(PORT, () => {
-  console.log(`🐾 petdate API روی پورت ${PORT} اجرا شد`);
+const server = http.createServer(app);
+attachChatWebSocket(server);
+
+server.listen(PORT, () => {
+  console.log(`🐾 petdate API روی پورت ${PORT} اجرا شد (WebSocket: /api/ws/chat)`);
   // Sweep stale pending playmate / vet requests every 30s
   const sweep = () => {
     try {
@@ -204,4 +209,4 @@ app.listen(PORT, () => {
   setInterval(sweep, 30_000).unref?.();
 });
 
-export { app, dbService };
+export { app, dbService, server };

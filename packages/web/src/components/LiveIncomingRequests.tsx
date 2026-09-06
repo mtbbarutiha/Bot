@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check, HeartHandshake, Stethoscope, X } from 'lucide-react';
 import { userHasRole, type VetConsultation } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
+import { useChatSocket } from '../hooks/useChatSocket';
 import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
 import {
   acceptVetConsultation,
@@ -15,7 +16,7 @@ import { emitIncomingRefresh } from '../lib/liveIncoming';
 import { isIncomingPlaydate } from '../lib/playdateMap';
 
 /** Ajax poll — short so desktop doctor / owner screens update quickly. */
-const POLL_MS = 1500;
+const FALLBACK_POLL_MS = 12_000;
 
 type IncomingItem =
   | { kind: 'playmate'; id: number; title: string; subtitle: string; photo?: string; href: string }
@@ -141,9 +142,19 @@ export function LiveIncomingRequests() {
     }
   }, [isLoggedIn, myUserId, canPlaymate, canVet]);
 
+  const { connected: wsConnected } = useChatSocket({
+    token,
+    enabled: Boolean(isLoggedIn && token && myUserId && (canPlaymate || canVet)),
+    onEvent: (event) => {
+      if (event.type === 'inbox') {
+        void poll();
+      }
+    },
+  });
+
   useLiveAjaxPoll(poll, {
-    enabled: Boolean(isLoggedIn && myUserId && (canPlaymate || canVet)),
-    intervalMs: POLL_MS,
+    enabled: Boolean(isLoggedIn && myUserId && (canPlaymate || canVet) && !wsConnected),
+    intervalMs: FALLBACK_POLL_MS,
   });
 
   async function onAccept() {

@@ -20,6 +20,11 @@ import {
   saveChatUpload,
 } from '../services/chat-upload-store';
 import { startOwnerChatFromApi } from '../services/telegram-owner-chat-start';
+import {
+  notifyInbox,
+  notifyPlaymateMessage,
+  notifyPlaymateThread,
+} from '../ws/chatHub';
 
 const VALID_STATUSES: PlaydateStatus[] = [
   'pending',
@@ -264,6 +269,11 @@ playdatesRouter.post('/:id/messages', async (req, res) => {
       }
     }
 
+    const playdate = gate.playdate;
+    const participants = [playdate.fromUserId, playdate.toUserId].filter(
+      (id): id is number => Number.isFinite(id as number) && (id as number) > 0,
+    );
+    notifyPlaymateMessage(playdateId, message, participants);
     res.status(201).json(message);
   } catch (err) {
     if (err instanceof Error && err.message === 'EMPTY_TEXT') {
@@ -373,6 +383,10 @@ playdatesRouter.post('/:id/messages/upload', (req, res) => {
         });
       }
 
+      const participants = [playdate.fromUserId, playdate.toUserId].filter(
+        (id): id is number => Number.isFinite(id as number) && (id as number) > 0,
+      );
+      notifyPlaymateMessage(playdateId, message, participants);
       res.status(201).json(message);
     } catch (err) {
       if (err instanceof Error && err.message === 'FILE_TOO_LARGE') {
@@ -501,6 +515,9 @@ playdatesRouter.post('/:id/end-chat', async (req, res) => {
   for (const telegramId of peerTelegramIds(gate.playdate, userId)) {
     void notifyPlaydateChatEndedTelegram({ toTelegramId: telegramId });
   }
+    notifyPlaymateThread(playdateId, [gate.playdate.fromUserId, gate.playdate.toUserId].filter(
+    (id): id is number => Number.isFinite(id as number) && (id as number) > 0,
+  ), { chatEnded: true, chatSecure: false });
   res.json({ ok: true, playdate: enrichPlaydate(updated) });
 });
 
@@ -535,6 +552,9 @@ playdatesRouter.patch('/:id/chat-secure', async (req, res) => {
   for (const telegramId of peerTelegramIds(gate.playdate, userId)) {
     void notifyPlaydateChatSecureTelegram({ toTelegramId: telegramId, secure });
   }
+    notifyPlaymateThread(playdateId, [gate.playdate.fromUserId, gate.playdate.toUserId].filter(
+    (id): id is number => Number.isFinite(id as number) && (id as number) > 0,
+  ), { chatSecure: secure });
   res.json(enrichPlaydate(updated));
 });
 
@@ -571,6 +591,13 @@ playdatesRouter.delete('/:id/messages', async (req, res) => {
 
   purgePlaydateUploads(playdateId);
   const cleared = dbService.clearPlaydateChatMessages(playdateId);
+  notifyPlaymateThread(
+    playdateId,
+    [gate.playdate.fromUserId, gate.playdate.toUserId].filter(
+      (id): id is number => Number.isFinite(id as number) && (id as number) > 0,
+    ),
+    { messagesCleared: true },
+  );
   res.json({ ok: true, cleared, telegramDeleted });
 });
 
@@ -680,6 +707,11 @@ playdatesRouter.post('/', async (req, res) => {
   void notifyNewPlaydateTelegram(enriched).catch((err) => {
     console.warn('playdate telegram notify failed:', (err as Error).message);
   });
+  notifyInbox([enriched.toUserId, enriched.fromUserId], {
+    kind: 'playmate',
+    reason: 'request',
+    id: enriched.id,
+  });
   // telegramNotified:true = API owns delivery (async); bot must not double-send
   res.status(201).json({
     ...enriched,
@@ -756,6 +788,19 @@ playdatesRouter.patch('/:id', async (req, res) => {
   if (startOwnerChat && isRecipient) {
     ownerChatStarted = await openOwnerChatOnAccept(updated, previous.status);
   }
+
+  notifyInbox([updated.toUserId, updated.fromUserId], {
+    kind: 'playmate',
+    reason: 'status',
+    id: updated.id,
+  });
+  notifyPlaymateThread(
+    updated.id,
+    [updated.fromUserId, updated.toUserId].filter(
+      (id): id is number => Number.isFinite(id as number) && (id as number) > 0,
+    ),
+    { status: updated.status },
+  );
 
   res.json({ ...updated, ownerChatStarted });
 });

@@ -39,6 +39,7 @@ import { PresenceBadge } from '../components/PresenceBadge';
 import { EmojiPicker } from '../components/EmojiPicker';
 import { RequestCountdown } from '../components/RequestCountdown';
 import { useAuthStore } from '../hooks/useAuthStore';
+import { useChatSocket, type ChatSocketEvent } from '../hooks/useChatSocket';
 import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
 import { usePeerPresence, usePresenceHeartbeat } from '../hooks/usePresence';
 import {
@@ -69,6 +70,7 @@ const CHAT_WIPE_HINT =
   'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
 const POLL_MS = 1500;
+const FALLBACK_POLL_MS = 12_000;
 const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 const DESKTOP_MQ = '(min-width: 860px)';
 
@@ -247,20 +249,25 @@ export function VetChatPage() {
     return pet ? `مشاوره برای ${pet}` : 'مشاوره دامپزشک';
   }, [consult, isVetSide]);
 
-  const reloadConversations = useCallback(async () => {
+  const reloadConversations = useCallback(async (opts?: { soft?: boolean }) => {
     if (!user?.id) {
       setConversations([]);
       setListLoading(false);
       return;
     }
-    setListLoading(true);
-    setListError(null);
+    if (!opts?.soft) {
+      setListLoading(true);
+      setListError(null);
+    }
     try {
       setConversations(await loadInboxConversations(user.id, user));
+      if (opts?.soft) setListError(null);
     } catch (err) {
-      setListError(err instanceof Error ? err.message : 'بارگذاری گفتگوها ناموفق بود');
+      if (!opts?.soft) {
+        setListError(err instanceof Error ? err.message : 'بارگذاری گفتگوها ناموفق بود');
+      }
     } finally {
-      setListLoading(false);
+      if (!opts?.soft) setListLoading(false);
     }
   }, [user]);
 
@@ -312,7 +319,7 @@ export function VetChatPage() {
           ...msgs,
           systemMessage(['چت مشاوره قطع شد.', '', CHAT_WIPE_HINT].join('\n')),
         ]);
-        void reloadConversations();
+        void reloadConversations({ soft: true });
       }
       return value;
     });
@@ -348,11 +355,63 @@ export function VetChatPage() {
     void reloadConversations();
   }, [reloadConversations]);
 
+  const onChatSocket = useCallback(
+    (event: ChatSocketEvent) => {
+      if (event.type === 'inbox') {
+        void reloadConversations({ soft: true });
+        return;
+      }
+      if (!consultId || !user?.id) return;
+      if (event.type === 'message' && event.channel === 'vet' && event.threadId === consultId) {
+        const row = event.message as VetConsultChatMessage;
+        if (!row?.id) return;
+        setMessages((prev) => {
+          if (prev.some((m) => m.numericId === row.id || m.id === String(row.id))) return prev;
+          return [...prev, toUi(row, user.id)];
+        });
+        lastIdRef.current = Math.max(lastIdRef.current, row.id);
+        void reloadConversations({ soft: true });
+        return;
+      }
+      if (event.type === 'thread' && event.channel === 'vet' && event.threadId === consultId) {
+        const patch = event.patch || {};
+        if (typeof patch.chatSecure === 'boolean' || patch.chatEnded || patch.messagesCleared) {
+          void loadConsult().then((next) => {
+            if (!next) return;
+            setConsult(next);
+            applyConsultFlags(next, { announce: true });
+            if (patch.messagesCleared) {
+              setMessages([]);
+              lastIdRef.current = 0;
+            }
+          });
+        }
+        if (typeof patch.status === 'string') {
+          void loadConsult().then((next) => {
+            if (!next) return;
+            setConsult(next);
+            applyConsultFlags(next, { announce: true });
+          });
+        }
+        void reloadConversations({ soft: true });
+      }
+    },
+    [consultId, user?.id, reloadConversations, loadConsult, applyConsultFlags],
+  );
+
+  const { connected: wsConnected } = useChatSocket({
+    token,
+    enabled: Boolean(token && user?.id),
+    thread:
+      hasThread && consultId > 0 ? { channel: 'vet', threadId: consultId } : null,
+    onEvent: onChatSocket,
+  });
+
   useLiveAjaxPoll(
     () => {
-      void reloadConversations();
+      void reloadConversations({ soft: true });
     },
-    { enabled: Boolean(user?.id), intervalMs: 1500 },
+    { enabled: Boolean(user?.id) && !wsConnected, intervalMs: FALLBACK_POLL_MS },
   );
 
   useEffect(() => {
@@ -361,7 +420,7 @@ export function VetChatPage() {
       if (detail?.kinds && !detail.kinds.includes('vet') && !detail.kinds.includes('playmate')) {
         return;
       }
-      void reloadConversations();
+      void reloadConversations({ soft: true });
     });
   }, [user?.id, reloadConversations]);
 
@@ -451,8 +510,8 @@ export function VetChatPage() {
           }
         })
         .catch(() => undefined);
-      void reloadConversations();
-    }, POLL_MS);
+      void reloadConversations({ soft: true });
+    }, wsConnected ? FALLBACK_POLL_MS : POLL_MS);
     return () => window.clearInterval(timer);
   }, [
     consult?.status,
@@ -462,6 +521,7 @@ export function VetChatPage() {
     loadConsult,
     reloadConversations,
     applyConsultFlags,
+    wsConnected,
   ]);
 
   useEffect(() => {

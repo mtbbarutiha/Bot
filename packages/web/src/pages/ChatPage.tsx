@@ -34,6 +34,7 @@ import { PresenceBadge } from '../components/PresenceBadge';
 import { RequestCountdown } from '../components/RequestCountdown';
 import { formatAge, formatTimeAgo } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
+import { useChatSocket, type ChatSocketEvent } from '../hooks/useChatSocket';
 import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
 import { usePeerPresence, usePresenceHeartbeat } from '../hooks/usePresence';
 import {
@@ -73,6 +74,7 @@ const CHAT_WIPE_HINT =
   'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
 const POLL_MS = 1500;
+const FALLBACK_POLL_MS = 12_000;
 const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 const DESKTOP_MQ = '(min-width: 860px)';
 
@@ -420,22 +422,27 @@ export function ChatPage() {
   usePresenceHeartbeat(myUserId);
   const peerPresence = usePeerPresence(match?.fromPet?.ownerId);
 
-  const reloadConversations = useCallback(async () => {
+  const reloadConversations = useCallback(async (opts?: { soft?: boolean }) => {
     if (!myUserId) {
       setConversations([]);
       setListLoading(false);
       setListError('برای دیدن گفتگوها وارد حساب شو.');
       return;
     }
-    setListLoading(true);
-    setListError(null);
+    if (!opts?.soft) {
+      setListLoading(true);
+      setListError(null);
+    }
     try {
       const mapped = await loadInboxConversations(myUserId, authUser);
       setConversations(mapped);
+      if (opts?.soft) setListError(null);
     } catch (err) {
-      setListError(err instanceof Error ? err.message : 'بارگذاری گفتگوها ناموفق بود');
+      if (!opts?.soft) {
+        setListError(err instanceof Error ? err.message : 'بارگذاری گفتگوها ناموفق بود');
+      }
     } finally {
-      setListLoading(false);
+      if (!opts?.soft) setListLoading(false);
     }
   }, [myUserId, authUser]);
 
@@ -443,18 +450,97 @@ export function ChatPage() {
     void reloadConversations();
   }, [reloadConversations]);
 
-  // Keep desktop inbox fresh via ajax (new playmate / vet requests appear quickly).
+  const onChatSocket = useCallback(
+    (event: ChatSocketEvent) => {
+      if (event.type === 'inbox') {
+        void reloadConversations({ soft: true });
+        return;
+      }
+      if (!match?.id || !myUserId) return;
+      if (event.type === 'message' && event.channel === 'playmate' && event.threadId === match.id) {
+        const row = event.message as PlaydateChatMessage;
+        if (!row?.id) return;
+        setMessages((prev) => {
+          if (prev.some((m) => m.numericId === row.id || m.id === String(row.id))) return prev;
+          return [...prev, toUiMessage(row, myUserId)];
+        });
+        lastMsgIdRef.current = Math.max(lastMsgIdRef.current, row.id);
+        void reloadConversations({ soft: true });
+        return;
+      }
+      if (event.type === 'thread' && event.channel === 'playmate' && event.threadId === match.id) {
+        const patch = event.patch || {};
+        if (typeof patch.chatSecure === 'boolean') {
+          setSecure((prev) => {
+            if (prev === patch.chatSecure) return prev;
+            setMessages((msgs) => [
+              ...msgs,
+              systemMessage(
+                patch.chatSecure
+                  ? 'طرف مقابل چت امن را فعال کرد.\nپیام‌های این گفتگو قابل ذخیره یا فوروارد نیستند.'
+                  : 'طرف مقابل چت امن را خاموش کرد.',
+              ),
+            ]);
+            return Boolean(patch.chatSecure);
+          });
+        }
+        if (patch.chatEnded) {
+          setEnded(true);
+          setMessages((msgs) => [
+            ...msgs,
+            systemMessage(['چت همبازی قطع شد.', '', CHAT_WIPE_HINT].join('\n')),
+          ]);
+        }
+        if (patch.messagesCleared) {
+          setMessages([]);
+          lastMsgIdRef.current = 0;
+          setWiped(true);
+        }
+        if (typeof patch.status === 'string' && patch.status !== match.status) {
+          void getPlaydateRequest(match.id).then((req) => {
+            if (!req || !myUserId) return;
+            const mapped = playdateToMatchRequest(req, myUserId);
+            setMatch(mapped);
+            setSecure(Boolean(req.chatSecure));
+            setEnded(Boolean(req.chatEnded));
+            bootstrappedRef.current = null;
+            if (req.status === 'accepted') {
+              setMessages([systemMessage('درخواست پذیرفته شد — چت همبازی فعال شد.')]);
+            } else if (req.status === 'expired') {
+              setMessages([systemMessage('درخواست همبازی منقضی شد (مهلت ۲ دقیقه).')]);
+            } else if (req.status === 'rejected') {
+              setMessages([systemMessage('درخواست همبازی رد شد.')]);
+            }
+          });
+        }
+        void reloadConversations({ soft: true });
+      }
+    },
+    [match?.id, match?.status, myUserId, reloadConversations],
+  );
+
+  const { connected: wsConnected } = useChatSocket({
+    token,
+    enabled: Boolean(token && myUserId),
+    thread:
+      hasThread && selectedId > 0
+        ? { channel: 'playmate', threadId: selectedId }
+        : null,
+    onEvent: onChatSocket,
+  });
+
+  // Soft fallback poll when WebSocket is down (avoids constant list flicker).
   useLiveAjaxPoll(
     () => {
-      void reloadConversations();
+      void reloadConversations({ soft: true });
     },
-    { enabled: Boolean(myUserId), intervalMs: 1500 },
+    { enabled: Boolean(myUserId) && !wsConnected, intervalMs: FALLBACK_POLL_MS },
   );
 
   useEffect(() => {
     if (!myUserId) return;
     return subscribeIncomingRefresh(() => {
-      void reloadConversations();
+      void reloadConversations({ soft: true });
     });
   }, [myUserId, reloadConversations]);
 
@@ -576,12 +662,12 @@ export function ChatPage() {
     }
 
     void pullStatus();
-    const timer = window.setInterval(() => void pullStatus(), POLL_MS);
+    const timer = window.setInterval(() => void pullStatus(), wsConnected ? FALLBACK_POLL_MS : POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [match?.id, match?.status, myUserId, reloadConversations]);
+  }, [match?.id, match?.status, myUserId, reloadConversations, wsConnected]);
 
   useEffect(() => {
     if (!match || !myUserId || ended || match.status !== 'accepted') return;
@@ -647,12 +733,12 @@ export function ChatPage() {
     const timer = window.setInterval(() => {
       void pull(false);
       void pullMeta();
-    }, POLL_MS);
+    }, wsConnected ? FALLBACK_POLL_MS : POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [match?.id, myUserId, ended, reloadConversations]);
+  }, [match?.id, myUserId, ended, reloadConversations, wsConnected]);
 
   useEffect(() => {
     const el = scrollerRef.current;

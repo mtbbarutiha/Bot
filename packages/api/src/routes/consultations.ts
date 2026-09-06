@@ -21,6 +21,11 @@ import {
   saveChatUpload,
 } from '../services/chat-upload-store';
 import { getUserFromBearer } from '../services/web-otp';
+import {
+  notifyInbox,
+  notifyVetMessage,
+  notifyVetThread,
+} from '../ws/chatHub';
 
 const VALID_STATUSES: VetConsultStatus[] = [
   'requested',
@@ -236,6 +241,13 @@ consultationsRouter.post('/quick-connect', async (req, res) => {
 
   const updatedPatient = dbService.getUserById(patient.id);
   const sent = consultations.length;
+  notifyInbox(
+    [patient.id, ...consultations.map((c) => c.vetUserId)],
+    { kind: 'vet', reason: 'request' },
+  );
+  for (const c of consultations) {
+    notifyInbox([c.vetUserId, patient.id], { kind: 'vet', reason: 'request', id: c.id });
+  }
   res.status(201).json({
     ok: true,
     sent,
@@ -305,6 +317,11 @@ consultationsRouter.post('/', (req, res) => {
     notes: typeof notes === 'string' ? notes : undefined,
   });
 
+  notifyInbox([consultation.vetUserId, consultation.patientUserId], {
+    kind: 'vet',
+    reason: 'request',
+    id: consultation.id,
+  });
   res.status(201).json(consultation);
 });
 
@@ -350,6 +367,9 @@ consultationsRouter.patch('/:id/status', async (req, res) => {
     });
   }
 
+  notifyVetThread(updated.id, [updated.vetUserId, updated.patientUserId], {
+    status: updated.status,
+  });
   res.json(updated);
 });
 
@@ -465,6 +485,9 @@ consultationsRouter.post('/:id/accept', async (req, res) => {
     roleLabel: 'دامپزشک',
   });
 
+  notifyVetThread(updated.id, [updated.vetUserId, updated.patientUserId], {
+    status: 'active',
+  });
   res.json(updated);
 });
 
@@ -497,6 +520,11 @@ consultationsRouter.post('/:id/reject', (req, res) => {
     return;
   }
   const updated = dbService.updateVetConsultationStatus(id, 'cancelled');
+  if (updated) {
+    notifyVetThread(updated.id, [updated.vetUserId, updated.patientUserId], {
+      status: 'cancelled',
+    });
+  }
   res.json(updated);
 });
 
@@ -611,6 +639,7 @@ consultationsRouter.post('/:id/messages', async (req, res) => {
       }
     }
 
+    notifyVetMessage(id, message, [gate.consult.vetUserId, gate.consult.patientUserId]);
     res.status(201).json(message);
   } catch (err) {
     if (err instanceof Error && err.message === 'EMPTY_TEXT') {
@@ -727,6 +756,7 @@ consultationsRouter.post('/:id/messages/upload', (req, res) => {
         }
       }
 
+      notifyVetMessage(id, message, [gate.consult.vetUserId, gate.consult.patientUserId]);
       res.status(201).json(message);
     } catch (err) {
       if (err instanceof Error && err.message === 'FILE_TOO_LARGE') {
@@ -862,6 +892,10 @@ consultationsRouter.post('/:id/end-chat', async (req, res) => {
 
   purgeVetConsultUploads(id);
   const updated = dbService.endVetConsultChat(id);
+  notifyVetThread(id, [gate.consult.vetUserId, gate.consult.patientUserId], {
+    chatEnded: true,
+    chatSecure: false,
+  });
   res.json({ ok: true, consultation: updated });
 });
 
@@ -900,6 +934,9 @@ consultationsRouter.patch('/:id/chat-secure', async (req, res) => {
   }
 
   const updated = dbService.setVetConsultChatSecure(id, secure);
+  notifyVetThread(id, [gate.consult.vetUserId, gate.consult.patientUserId], {
+    chatSecure: secure,
+  });
   res.json(updated);
 });
 
@@ -934,6 +971,9 @@ consultationsRouter.delete('/:id/messages', async (req, res) => {
 
   purgeVetConsultUploads(id);
   const cleared = dbService.clearVetConsultChatMessages(id);
+  notifyVetThread(id, [gate.consult.vetUserId, gate.consult.patientUserId], {
+    messagesCleared: true,
+  });
   res.json({ ok: true, cleared });
 });
 
