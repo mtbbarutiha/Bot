@@ -2370,14 +2370,6 @@ button.chip.is-on {
   color: var(--pepito-muted);
   font-size: 0.95rem;
 }
-.pepito-home-inline-link {
-  color: var(--pepito-base);
-  font-weight: 700;
-  text-decoration: none;
-}
-.pepito-home-inline-link:hover {
-  color: var(--pepito-pink);
-}
 
 .pepito-home-actions {
   display: grid;
