@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { PLAYDATE_REQUEST_TTL_MS, requestRemainingMs } from '@petdate/shared';
 
 function formatRemain(ms: number): string {
@@ -21,19 +21,30 @@ export function RequestCountdown({
   onExpire?: () => void;
 }) {
   const [remain, setRemain] = useState(() => requestRemainingMs(createdAt, ttlMs));
+  const onExpireRef = useRef(onExpire);
+  onExpireRef.current = onExpire;
+  const expiredNotifiedRef = useRef(false);
 
   useEffect(() => {
+    expiredNotifiedRef.current = false;
     setRemain(requestRemainingMs(createdAt, ttlMs));
+
     const id = window.setInterval(() => {
       const next = requestRemainingMs(createdAt, ttlMs);
       setRemain(next);
       if (next <= 0) {
         window.clearInterval(id);
-        onExpire?.();
+        if (!expiredNotifiedRef.current) {
+          expiredNotifiedRef.current = true;
+          onExpireRef.current?.();
+        }
       }
     }, 500);
+
     return () => window.clearInterval(id);
-  }, [createdAt, ttlMs, onExpire]);
+    // Keep onExpire out of deps — parent soft polls recreate the callback every
+    // render and used to restart this effect / re-fire expire in a loop.
+  }, [createdAt, ttlMs]);
 
   if (remain <= 0) {
     return <span className={className}>منقضی شد</span>;

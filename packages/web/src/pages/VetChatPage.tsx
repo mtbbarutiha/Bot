@@ -69,8 +69,8 @@ import { formatTimeAgo } from '../data/mock';
 const CHAT_WIPE_HINT =
   'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
-const POLL_MS = 1500;
-const FALLBACK_POLL_MS = 12_000;
+const FALLBACK_POLL_MS = 20_000;
+const MESSAGE_FALLBACK_POLL_MS = 8_000;
 const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 const DESKTOP_MQ = '(min-width: 860px)';
 
@@ -249,8 +249,12 @@ export function VetChatPage() {
     return pet ? `مشاوره برای ${pet}` : 'مشاوره دامپزشک';
   }, [consult, isVetSide]);
 
+  const userRef = useRef(user);
+  userRef.current = user;
+
   const reloadConversations = useCallback(async (opts?: { soft?: boolean }) => {
-    if (!user?.id) {
+    const u = userRef.current;
+    if (!u?.id) {
       setConversations([]);
       setListLoading(false);
       return;
@@ -260,7 +264,24 @@ export function VetChatPage() {
       setListError(null);
     }
     try {
-      setConversations(await loadInboxConversations(user.id, user));
+      const mapped = await loadInboxConversations(u.id, u);
+      setConversations((prev) => {
+        if (
+          opts?.soft &&
+          prev.length === mapped.length &&
+          prev.every(
+            (row, i) =>
+              row.key === mapped[i]?.key &&
+              row.preview === mapped[i]?.preview &&
+              row.pending === mapped[i]?.pending &&
+              row.ended === mapped[i]?.ended &&
+              row.lastActivityAt === mapped[i]?.lastActivityAt,
+          )
+        ) {
+          return prev;
+        }
+        return mapped;
+      });
       if (opts?.soft) setListError(null);
     } catch (err) {
       if (!opts?.soft) {
@@ -269,7 +290,7 @@ export function VetChatPage() {
     } finally {
       if (!opts?.soft) setListLoading(false);
     }
-  }, [user]);
+  }, []);
 
   const loadConsult = useCallback(async () => {
     if (!user?.id || !Number.isFinite(consultId) || consultId <= 0) return null;
@@ -511,7 +532,7 @@ export function VetChatPage() {
         })
         .catch(() => undefined);
       void reloadConversations({ soft: true });
-    }, wsConnected ? FALLBACK_POLL_MS : POLL_MS);
+    }, wsConnected ? FALLBACK_POLL_MS : MESSAGE_FALLBACK_POLL_MS);
     return () => window.clearInterval(timer);
   }, [
     consult?.status,
@@ -1203,7 +1224,7 @@ export function VetChatPage() {
                     ttlMs={VET_CONSULT_REQUEST_TTL_MS}
                     onExpire={() => {
                       setConsult((prev) => (prev ? { ...prev, status: 'expired' } : prev));
-                      void reloadConversations();
+                      void reloadConversations({ soft: true });
                     }}
                   />
                 </div>

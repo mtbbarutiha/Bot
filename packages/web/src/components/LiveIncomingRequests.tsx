@@ -16,7 +16,7 @@ import { emitIncomingRefresh } from '../lib/liveIncoming';
 import { isIncomingPlaydate } from '../lib/playdateMap';
 
 /** Ajax poll — short so desktop doctor / owner screens update quickly. */
-const FALLBACK_POLL_MS = 12_000;
+const FALLBACK_POLL_MS = 20_000;
 
 type IncomingItem =
   | { kind: 'playmate'; id: number; title: string; subtitle: string; photo?: string; href: string }
@@ -104,15 +104,7 @@ export function LiveIncomingRequests() {
       if (!seededRef.current) {
         seenRef.current = new Set(items.map((i) => `${i.kind}:${i.id}`));
         seededRef.current = true;
-        if (items.length) {
-          emitIncomingRefresh({
-            kinds: [
-              ...(items.some((i) => i.kind === 'playmate') ? (['playmate'] as const) : []),
-              ...(items.some((i) => i.kind === 'vet') ? (['vet'] as const) : []),
-            ],
-            ids: items.map((i) => i.id),
-          });
-        }
+        // Do not emit on seed — that was soft-reloading /chats on every mount.
         return;
       }
 

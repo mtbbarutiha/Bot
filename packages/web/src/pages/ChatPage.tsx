@@ -73,8 +73,10 @@ import {
 const CHAT_WIPE_HINT =
   'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
-const POLL_MS = 1500;
-const FALLBACK_POLL_MS = 12_000;
+/** Soft inbox refresh when WebSocket is unavailable (CDN often blocks WS). */
+const FALLBACK_POLL_MS = 20_000;
+/** Message/status poll when WS is down — keep gentle to avoid UI thrash. */
+const MESSAGE_FALLBACK_POLL_MS = 8_000;
 const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 const DESKTOP_MQ = '(min-width: 860px)';
 
@@ -442,6 +444,9 @@ export function ChatPage() {
   usePresenceHeartbeat(myUserId);
   const peerPresence = usePeerPresence(match?.fromPet?.ownerId);
 
+  const authUserRef = useRef(authUser);
+  authUserRef.current = authUser;
+
   const reloadConversations = useCallback(async (opts?: { soft?: boolean }) => {
     if (!myUserId) {
       setConversations([]);
@@ -454,8 +459,25 @@ export function ChatPage() {
       setListError(null);
     }
     try {
-      const mapped = await loadInboxConversations(myUserId, authUser);
-      setConversations(mapped);
+      const mapped = await loadInboxConversations(myUserId, authUserRef.current);
+      setConversations((prev) => {
+        // Skip state write when soft poll returns the same inbox — stops list flicker.
+        if (
+          opts?.soft &&
+          prev.length === mapped.length &&
+          prev.every(
+            (row, i) =>
+              row.key === mapped[i]?.key &&
+              row.preview === mapped[i]?.preview &&
+              row.pending === mapped[i]?.pending &&
+              row.ended === mapped[i]?.ended &&
+              row.lastActivityAt === mapped[i]?.lastActivityAt,
+          )
+        ) {
+          return prev;
+        }
+        return mapped;
+      });
       if (opts?.soft) setListError(null);
     } catch (err) {
       if (!opts?.soft) {
@@ -464,7 +486,7 @@ export function ChatPage() {
     } finally {
       if (!opts?.soft) setListLoading(false);
     }
-  }, [myUserId, authUser]);
+  }, [myUserId]);
 
   useEffect(() => {
     void reloadConversations();
@@ -668,7 +690,7 @@ export function ChatPage() {
         setSecure(Boolean(req.chatSecure));
         setEnded(Boolean(req.chatEnded));
         bootstrappedRef.current = null;
-        void reloadConversations();
+        void reloadConversations({ soft: true });
         if (req.status === 'accepted') {
           setMessages([systemMessage('درخواست پذیرفته شد — چت همبازی فعال شد.')]);
         } else if (req.status === 'expired') {
@@ -682,7 +704,7 @@ export function ChatPage() {
     }
 
     void pullStatus();
-    const timer = window.setInterval(() => void pullStatus(), wsConnected ? FALLBACK_POLL_MS : POLL_MS);
+    const timer = window.setInterval(() => void pullStatus(), wsConnected ? FALLBACK_POLL_MS : MESSAGE_FALLBACK_POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
@@ -742,7 +764,7 @@ export function ChatPage() {
             ...msgs,
             systemMessage(['چت همبازی قطع شد.', '', CHAT_WIPE_HINT].join('\n')),
           ]);
-          void reloadConversations();
+          void reloadConversations({ soft: true });
         }
       } catch {
         /* ignore */
@@ -753,7 +775,7 @@ export function ChatPage() {
     const timer = window.setInterval(() => {
       void pull(false);
       void pullMeta();
-    }, wsConnected ? FALLBACK_POLL_MS : POLL_MS);
+    }, wsConnected ? FALLBACK_POLL_MS : MESSAGE_FALLBACK_POLL_MS);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
@@ -1400,7 +1422,7 @@ export function ChatPage() {
                                   void getPlaydateRequest(match.id).then((req) => {
                                     if (!req || !myUserId) return;
                                     setMatch(playdateToMatchRequest(req, myUserId));
-                                    void reloadConversations();
+                                    void reloadConversations({ soft: true });
                                   });
                                 }}
                               />
