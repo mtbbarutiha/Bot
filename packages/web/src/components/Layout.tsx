@@ -3,6 +3,7 @@ import {
   Home,
   LayoutDashboard,
   LayoutGrid,
+  MessagesSquare,
   PawPrint,
   ShoppingBag,
   Stethoscope,
@@ -20,6 +21,7 @@ const OWNER_NAV: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/', icon: Home, label: 'خانه' },
   { to: '/home', icon: LayoutDashboard, label: 'پنل' },
   { to: '/explore', icon: LayoutGrid, label: 'پیدا کردن همبازی' },
+  { to: '/chats', icon: MessagesSquare, label: 'گفتگوها' },
   { to: '/add-pet', icon: PawPrint, label: 'پت‌های من' },
   { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
@@ -28,6 +30,7 @@ const OWNER_NAV: { to: string; icon: LucideIcon; label: string }[] = [
 const VET_NAV: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/', icon: Home, label: 'خانه' },
   { to: '/vet-consult', icon: Stethoscope, label: 'پنل پزشک' },
+  { to: '/chats', icon: MessagesSquare, label: 'گفتگوها' },
   { to: '/profile', icon: LayoutDashboard, label: 'پروفایل' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
 ];
@@ -35,6 +38,7 @@ const VET_NAV: { to: string; icon: LucideIcon; label: string }[] = [
 const DEFAULT_NAV: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/', icon: Home, label: 'خانه' },
   { to: '/home', icon: LayoutDashboard, label: 'پنل' },
+  { to: '/chats', icon: MessagesSquare, label: 'گفتگوها' },
   { to: '/profile', icon: PawPrint, label: 'پروفایل' },
   { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },

@@ -1,5 +1,13 @@
 import type { LucideIcon } from 'lucide-react';
-import { LayoutGrid, LogIn, ShoppingBag, ShoppingCart, UserRound, Wallet } from 'lucide-react';
+import {
+  LayoutGrid,
+  LogIn,
+  MessagesSquare,
+  ShoppingBag,
+  ShoppingCart,
+  UserRound,
+  Wallet,
+} from 'lucide-react';
 
 export type SiteNavItem = {
   key: string;
@@ -59,6 +67,13 @@ export const SITE_NAV_AUTH: SiteNavItem[] = [
     to: '/explore',
     icon: LayoutGrid,
     match: (p) => p === '/explore' || p.startsWith('/explore'),
+  },
+  {
+    key: 'chats',
+    label: 'گفتگو',
+    to: '/chats',
+    icon: MessagesSquare,
+    match: (p) => p === '/chats' || p.startsWith('/chats/') || p.startsWith('/vet-chats'),
   },
   {
     key: 'wallet',
