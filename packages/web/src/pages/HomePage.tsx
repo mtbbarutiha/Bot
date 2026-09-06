@@ -40,7 +40,7 @@ export function HomePage() {
   const lead = needsProfile
     ? 'پروفایلت را کامل کن تا همبازی و خدمات نزدیک‌تر شوند.'
     : isPetOwner && hasPetName
-      ? `همبازی برای ${myPet.name} — کشف پت‌های نزدیک در همان فضای Pet Date.`
+      ? `همبازی برای ${myPet.name} — درخواست بفرست و مدیریت کن در همان فضای Pet Date.`
       : isPetOwner
         ? 'پت‌ات را ثبت کن و همبازی پیدا کن — همان حساب وب و تلگرام.'
         : 'از پروفایل، کلینیک، فروشگاه و مشاوره را در همین محیط ادامه بده.';
@@ -150,8 +150,8 @@ export function HomePage() {
             <span>
               {isPetOwner
                 ? pendingCount > 0
-                  ? `نزدیک‌ها و درخواست‌ها · ${pendingCount} جدید`
-                  : 'نزدیک‌ها و درخواست‌های من'
+                  ? `درخواست‌های همبازی · ${pendingCount} جدید`
+                  : 'ارسال و مدیریت درخواست‌های همبازی'
                 : 'کلینیک، فروشگاه، مشاوره'}
             </span>
           </Link>
@@ -165,7 +165,7 @@ export function HomePage() {
             <h2>همبازی‌های نزدیک</h2>
             <p>
               <Link to="/explore" className="pepito-home-inline-link">
-                مشاهده همه
+                پیدا کردن همبازی
               </Link>
             </p>
           </header>
@@ -180,10 +180,10 @@ export function HomePage() {
             <div className="empty-state pepito-home-empty">
               <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
               <h3>هنوز پتی نزدیک نیست</h3>
-              <p>از بخش کشف همبازی شروع کن یا پت‌ات را ثبت کن.</p>
+              <p>از پیدا کردن همبازی شروع کن یا پت‌ات را ثبت کن.</p>
               <Link to="/explore" className="pepito-btn button-1">
                 <PawIcon />
-                کشف همبازی
+                پیدا کردن همبازی
               </Link>
             </div>
           )}

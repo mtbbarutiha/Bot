@@ -1,45 +1,37 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { PawPrint, Search, SlidersHorizontal } from 'lucide-react';
+import { PawPrint } from 'lucide-react';
 import { BRAND, primaryRole, userHasRole, type PetProfile } from '@petdate/shared';
-import { PetGridCard } from '../components/PetGridCard';
-import { CategoryPetIcon } from '../components/PetAvatar';
 import { PlaymateRequestsPanel } from '../components/PlaymateRequestsPanel';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { useAuthStore } from '../hooks/useAuthStore';
-import { usePetStore } from '../hooks/usePetStore';
 import { useUserStore } from '../hooks/useUserStore';
 import { listPets } from '../lib/api';
 import { findAndSendPlaymates, type FindPlaymateResult } from '../lib/playmateActions';
 import { petProfileToUiPet } from '../lib/playdateMap';
-import type { PetType } from '../types';
-import { PET_TYPE_LABELS } from '../types';
-
-const ALL = 'all' as const;
-const CATEGORIES: (PetType | typeof ALL)[] = ['all', 'dog', 'cat', 'bird', 'rabbit'];
 
 const ROLE_EMPTY_MESSAGES: Record<string, { title: string; desc: string; cta?: string; to?: string }> = {
   vet: {
     title: 'حالت دامپزشک',
-    desc: 'برای مشاهده همبازی‌ها به عنوان صاحب پت وارد شو یا از مشاوره آنلاین استفاده کن.',
+    desc: 'برای پیدا کردن همبازی به عنوان صاحب پت وارد شو یا از مشاوره آنلاین استفاده کن.',
     cta: '🩺 مشاوره دامپزشک',
     to: '/vet-consult',
   },
   no_pet: {
     title: 'هنوز پتی نداری؟',
-    desc: 'می‌تونی فروشگاه و کلینیک‌ها رو ببینی یا دنبال پت بگردی.',
+    desc: 'می‌تونی فروشگاه و کلینیک‌ها رو ببینی یا پت ثبت کنی.',
     cta: '🛒 فروشگاه پت',
     to: '/shop',
   },
   pet_seeker: {
     title: 'دنبال پت می‌گردی؟',
-    desc: 'به زودی آگهی‌های پت‌های قابل‌انتخاب اضافه می‌شه. فعلاً جامعه رو کشف کن.',
+    desc: 'به زودی آگهی‌های پت‌های قابل‌انتخاب اضافه می‌شه.',
     cta: '🏥 کلینیک‌های نزدیک',
     to: '/clinics',
   },
   community_seeker: {
     title: 'جامعه petdate',
-    desc: 'به زودی گروه‌ها و رویدادها اضافه می‌شن. فعلاً پت‌های نزدیک رو ببین.',
+    desc: 'به زودی گروه‌ها و رویدادها اضافه می‌شن.',
   },
   trainer: {
     title: 'حالت مربی',
@@ -67,11 +59,8 @@ function PawIcon({ size = 16 }: { size?: number }) {
 
 export function ExplorePage() {
   const location = useLocation();
-  const { pets, myPet } = usePetStore();
   const { user } = useUserStore();
   const { user: authUser, isLoggedIn } = useAuthStore();
-  const [activeCategory, setActiveCategory] = useState<PetType | typeof ALL>(ALL);
-  const [search, setSearch] = useState('');
   const [myPets, setMyPets] = useState<PetProfile[]>([]);
   const [petsLoading, setPetsLoading] = useState(false);
   const [findPhase, setFindPhase] = useState<FindPhase>('idle');
@@ -114,16 +103,6 @@ export function ExplorePage() {
     }, 80);
     return () => window.clearTimeout(t);
   }, [focusRequests, petsLoading]);
-
-  const filtered = pets
-    .filter((p) => {
-      if (p.id === myPet.id) return false;
-      if (!p.lookingForPlaymate) return false;
-      if (activeCategory !== ALL && p.type !== activeCategory) return false;
-      if (search && !p.name.includes(search) && !p.breed.includes(search)) return false;
-      return true;
-    })
-    .sort((a, b) => a.distanceKm - b.distanceKm);
 
   async function runFindForPet(pet: PetProfile) {
     if (!myUserId) {
@@ -200,9 +179,7 @@ export function ExplorePage() {
       <header className="pepito-home-section-head pepito-explore-head">
         <p className="pepito-eyebrow">{BRAND.taglineFa}</p>
         <h1>پیدا کردن همبازی</h1>
-        <p>
-          {filtered.length} پت نزدیک {myPet.city} — کشف و مدیریت درخواست در یک صفحه
-        </p>
+        <p>ارسال درخواست همبازی و مدیریت دریافتی‌ها در یک صفحه</p>
       </header>
 
       <section className="find-playmate-one pepito-explore-find" aria-label="پیدا کردن همبازی">
@@ -277,61 +254,6 @@ export function ExplorePage() {
           <p>دریافتی، ارسالی و پذیرفته‌شده — قبول، رد و ورود به چت.</p>
         </header>
         <PlaymateRequestsPanel embedded />
-      </section>
-
-      <section className="pepito-explore-section" aria-label="نزدیک‌ها">
-        <header className="pepito-home-section-head">
-          <p className="pepito-eyebrow">پیشنهادی</p>
-          <h2>نزدیک‌ها</h2>
-          <p>پت‌های نزدیک که دنبال همبازی هستند.</p>
-        </header>
-
-        <div className="search-row-inline pepito-explore-search">
-          <div className="search-bar">
-            <input
-              type="search"
-              placeholder="جستجوی نژاد، نام..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <span className="search-icon">
-              <Search size={18} strokeWidth={2} />
-            </span>
-          </div>
-          <button className="filter-btn" aria-label="فیلتر" type="button">
-            <SlidersHorizontal size={18} strokeWidth={2} />
-          </button>
-        </div>
-
-        <div className="categories">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              className={`category-item${activeCategory === cat ? ' active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
-            >
-              <div className="category-circle">
-                <CategoryPetIcon type={cat} />
-              </div>
-              <span>{cat === ALL ? 'همه' : PET_TYPE_LABELS[cat]}</span>
-            </button>
-          ))}
-        </div>
-
-        {filtered.length > 0 ? (
-          <div className="pet-grid">
-            {filtered.map((pet, i) => (
-              <PetGridCard key={pet.id} pet={pet} index={i} />
-            ))}
-          </div>
-        ) : (
-          <div className="empty-state">
-            <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
-            <h3>پتی پیدا نشد</h3>
-            <p>فیلتر رو عوض کن یا بعداً دوباره سر بزن</p>
-          </div>
-        )}
       </section>
     </div>
   );
