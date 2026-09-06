@@ -9,7 +9,6 @@ export function AdminWordmark({ className = '', size = 'md' }: AdminWordmarkProp
       <span className="admin-wordmark-badge" aria-hidden>PD</span>
       <div className="admin-wordmark-copy">
         <strong className="admin-wordmark-title">PetDate Admin</strong>
-        <span className="admin-wordmark-sub">platform console</span>
       </div>
     </div>
   );

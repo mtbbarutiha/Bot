@@ -63,7 +63,6 @@ export function AdminLayout() {
         <aside className={`admin-sidebar${mobileOpen ? ' is-open' : ''}`}>
           <div className="admin-brand">
             <AdminWordmark />
-            <small className="admin-brand-sub">Petify-inspired · Pepito ops</small>
           </div>
           <nav className="admin-nav">
             {NAV_GROUPS.map((group) => (
