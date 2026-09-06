@@ -43,7 +43,7 @@ export function Layout() {
     <LandingChrome
       appNav
       hideBanner
-      footer={false}
+      footer
       actionLabel="خروج"
       onAction={() => void onLogout()}
       ctaLabel="همبازی"
@@ -52,6 +52,7 @@ export function Layout() {
     >
       <div className="pepito-app-layout">
         <aside className="pepito-app-rail" aria-label="منوی بیشتر">
+          <p className="pepito-app-rail-brand">Pet Date</p>
           <p className="pepito-app-rail-user">{user?.name || 'کاربر Pet Date'}</p>
           <nav className="pepito-app-rail-nav">
             {navItems.map((item) => (

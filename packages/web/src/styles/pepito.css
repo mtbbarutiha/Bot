@@ -2167,24 +2167,236 @@ button.chip.is-on {
   display: none;
 }
 
+.pepito-app-rail-brand {
+  margin: 0 0.35rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+  color: var(--pepito-base);
+}
+.pepito-app-shell .pepito-footer {
+  margin-top: 0;
+}
+
 .pepito-home {
   background: transparent !important;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
 }
-.pepito-home-header.home-header,
-.pepito-app-shell .home-header {
-  background:
-    linear-gradient(145deg, rgba(25, 6, 61, 0.78) 0%, rgba(92, 77, 145, 0.72) 52%, rgba(219, 137, 202, 0.45) 120%),
-    url('/pepito/uploads/3.jpg') center / cover no-repeat !important;
-  border-radius: 22px;
+.pepito-home-hero {
+  position: relative;
+  min-height: clamp(260px, 42vh, 420px);
+  border-radius: 28px;
   overflow: hidden;
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+  animation: pepito-flow-banner-in 0.75s ease both;
+}
+.pepito-home-hero-wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    rgba(25, 6, 61, 0.78) 0%,
+    rgba(25, 6, 61, 0.42) 46%,
+    rgba(92, 77, 145, 0.18) 78%,
+    transparent 100%
+  );
+  z-index: 0;
+  pointer-events: none;
+}
+[dir='rtl'] .pepito-home-hero-wash {
+  background: linear-gradient(
+    255deg,
+    rgba(25, 6, 61, 0.78) 0%,
+    rgba(25, 6, 61, 0.42) 46%,
+    rgba(92, 77, 145, 0.18) 78%,
+    transparent 100%
+  );
+}
+.pepito-home-hero-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 2rem 1.5rem 1.75rem;
+  color: #fff;
+  animation: pepito-flow-rise 0.65s ease 0.1s both;
+}
+.pepito-home-kicker {
+  color: rgba(255, 255, 255, 0.92) !important;
 }
 .pepito-home-brand {
   margin: 0 0 0.35rem;
   font-family: var(--font-display);
   font-weight: 800;
-  font-size: 1.15rem;
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
   letter-spacing: -0.02em;
   color: #fff;
+}
+.pepito-home-hero-inner h1 {
+  margin: 0 0 0.45rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 3.4vw, 2.25rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+}
+.pepito-home-lead {
+  margin: 0 0 1.15rem;
+  max-width: 34rem;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.9);
+}
+.pepito-home-cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+.pepito-home-cta-ghost {
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255, 255, 255, 0.35) !important;
+  backdrop-filter: blur(6px);
+}
+.pepito-home-cta-ghost:hover {
+  background: rgba(255, 255, 255, 0.28) !important;
+  color: #fff !important;
+}
+
+.pepito-home-section-head {
+  margin-bottom: 1rem;
+}
+.pepito-home-section-head h2 {
+  margin: 0.2rem 0 0.35rem;
+  font-family: var(--font-display);
+  color: var(--pepito-dark);
+  font-size: clamp(1.25rem, 2.4vw, 1.6rem);
+}
+.pepito-home-section-head > p {
+  margin: 0;
+  color: var(--pepito-muted);
+  font-size: 0.95rem;
+}
+.pepito-home-inline-link {
+  color: var(--pepito-base);
+  font-weight: 700;
+  text-decoration: none;
+}
+.pepito-home-inline-link:hover {
+  color: var(--pepito-pink);
+}
+
+.pepito-home-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+.pepito-home-action {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 1rem 1.05rem;
+  border-radius: 18px;
+  text-decoration: none;
+  color: inherit;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(92, 77, 145, 0.1);
+  transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+  animation: pepito-flow-rise 0.55s ease both;
+}
+.pepito-home-action:nth-child(2) { animation-delay: 0.06s; }
+.pepito-home-action:nth-child(3) { animation-delay: 0.12s; }
+.pepito-home-action:nth-child(4) { animation-delay: 0.18s; }
+.pepito-home-action:hover {
+  transform: translateY(-3px);
+  border-color: rgba(92, 77, 145, 0.22);
+  background: #fff;
+}
+.pepito-home-action strong {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  color: var(--pepito-dark);
+}
+.pepito-home-action span {
+  font-size: 0.86rem;
+  color: var(--pepito-muted);
+  line-height: 1.4;
+}
+
+.pepito-home-nearby {
+  padding-bottom: 0.5rem;
+}
+.pepito-home-pet-grid {
+  animation: pepito-flow-rise 0.55s ease 0.08s both;
+}
+.pepito-home-empty {
+  text-align: center;
+  padding: 1.5rem 1rem 2rem;
+}
+.pepito-home-empty .pepito-btn {
+  margin-top: 0.85rem;
+}
+
+.pepito-home-toast-banner {
+  position: sticky;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+  padding: 0.85rem 1rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(92, 77, 145, 0.12);
+  box-shadow: 0 12px 28px rgba(25, 6, 61, 0.1);
+  animation: pepito-flow-rise 0.4s ease both;
+}
+.pepito-home-toast-banner p {
+  margin: 0;
+  flex: 1;
+  font-size: 0.9rem;
+  color: var(--pepito-dark);
+}
+.pepito-home-toast-banner a {
+  font-weight: 700;
+  color: var(--pepito-base);
+  text-decoration: none;
+}
+
+.pepito-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+.pepito-profile-hero.profile-hero {
+  background:
+    linear-gradient(145deg, rgba(25, 6, 61, 0.78) 0%, rgba(92, 77, 145, 0.7) 52%, rgba(219, 137, 202, 0.42) 120%),
+    url('/pepito/uploads/2.jpg') center / cover no-repeat !important;
+  border-radius: 24px;
+  overflow: hidden;
+  animation: pepito-flow-banner-in 0.7s ease both;
+}
+.pepito-profile-body {
+  animation: pepito-flow-rise 0.5s ease 0.08s both;
+}
+.pepito-profile-panel {
+  border-radius: 20px !important;
+  border: 1px solid rgba(92, 77, 145, 0.1) !important;
+  background: rgba(255, 255, 255, 0.88) !important;
+}
+.pepito-profile .profile-wizard-link.pepito-btn {
+  margin-top: 0.85rem;
+  width: 100%;
+  justify-content: center;
 }
 
 @keyframes pepito-flow-rise {
@@ -2249,6 +2461,19 @@ button.chip.is-on {
   }
   .pepito-flow-panel {
     padding: 1.75rem 0 2.75rem;
+  }
+  .pepito-home-hero {
+    min-height: 240px;
+    border-radius: 20px;
+  }
+  .pepito-home-hero-inner {
+    padding: 1.5rem 1.15rem 1.35rem;
+  }
+  .pepito-home-actions {
+    grid-template-columns: 1fr;
+  }
+  .pepito-app-shell .pepito-footer {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
   }
 }
 

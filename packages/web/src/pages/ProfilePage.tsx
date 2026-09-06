@@ -8,7 +8,6 @@ import {
   primaryRole,
   userHasRole,
 } from '@petdate/shared';
-import { BrandMark } from '../components/BrandMark';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -52,9 +51,9 @@ export function ProfilePage() {
   }
 
   return (
-    <>
-      <div className="profile-hero">
-        <BrandMark className="profile-brand" iconSize={26} />
+    <div className="pepito-profile">
+      <div className="profile-hero pepito-profile-hero">
+        <p className="pepito-home-brand profile-brand">Pet Date</p>
         <div className="profile-hero-photo">
           {user.avatarUrl || (isPetOwner && myPet.imageUrl) ? (
             <img src={user.avatarUrl || myPet.imageUrl} alt={user.name} />
@@ -69,8 +68,8 @@ export function ProfilePage() {
         </div>
       </div>
 
-      <div className="profile-section">
-        <div className="profile-status-card">
+      <div className="profile-section pepito-profile-body">
+        <div className="profile-status-card pepito-profile-panel">
           <div className="profile-status-row">
             <span className="profile-status-label">نقش</span>
             <span className="profile-status-value">{roleLabel}</span>
@@ -100,7 +99,7 @@ export function ProfilePage() {
             </div>
           )}
           {(needsWizard || isPetOwner) && (
-            <Link to={wizardLink} className="profile-wizard-link">
+            <Link to={wizardLink} className="profile-wizard-link pepito-btn button-1">
               {needsWizard ? 'تکمیل پروفایل' : 'ویرایش / ثبت پت'}
               <ChevronLeft size={16} strokeWidth={2} />
             </Link>
@@ -215,6 +214,6 @@ export function ProfilePage() {
           انتقال به ویرایش پروفایل
         </div>
       )}
-    </>
+    </div>
   );
 }
