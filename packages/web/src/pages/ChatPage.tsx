@@ -32,6 +32,7 @@ import {
   clearPlaydateChatMessages,
   endPlaydateChat,
   getPlaydateRequest,
+  getUserById,
   listPlaydateChatMessages,
   listPlaydateRequests,
   playdateChatMediaUrl,
@@ -198,6 +199,9 @@ function ConversationListPane({
   return (
     <aside className="tg-chat-list" aria-label="فهرست گفتگوها">
       <header className="tg-chat-list-head">
+        <Link to="/explore#requests" className="tg-icon-btn" aria-label="بازگشت به همبازی">
+          <ArrowRight size={18} />
+        </Link>
         <div>
           <p className="tg-chat-list-kicker">پت‌دیت</p>
           <h1>گفتگوها</h1>
