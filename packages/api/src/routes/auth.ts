@@ -3,6 +3,11 @@ import type { OnboardingStatus, UserGender, UserRole } from '@petdate/shared';
 import { USER_ROLES, normalizeRoles } from '@petdate/shared';
 import { dbService } from '../db';
 import {
+  completeTelegramAttach,
+  createTelegramAttachLink,
+  exchangeTelegramWebLink,
+} from '../services/telegram-web-link';
+import {
   getUserFromBearer,
   requestWebOtp,
   verifyWebOtp,
@@ -10,6 +15,71 @@ import {
 } from '../services/web-otp';
 
 export const authRouter = Router();
+
+/**
+ * Bot deep-link → web session (HMAC with TELEGRAM_BOT_TOKEN).
+ * Keeps the same users row so pets/wallet sync between Telegram and the site.
+ */
+authRouter.post('/telegram/exchange', (req, res) => {
+  const result = exchangeTelegramWebLink({
+    telegramId: String(req.body?.telegramId ?? req.body?.tg ?? ''),
+    exp: req.body?.exp,
+    sig: String(req.body?.sig ?? ''),
+  });
+  if (!result.ok) {
+    const status = result.reason === 'expired' ? 410 : 400;
+    res.status(status).json(result);
+    return;
+  }
+  res.json({ ok: true, token: result.token, user: result.user });
+});
+
+/**
+ * Logged-in web user: create a one-time bot deep link to attach Telegram (wallet sync).
+ */
+authRouter.post('/telegram/link-start', (req, res) => {
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  if (!session) {
+    res.status(401).json({ error: 'وارد نشده‌اید' });
+    return;
+  }
+  const result = createTelegramAttachLink(session.user.id);
+  if (!result.ok) {
+    const status = result.reason === 'not_configured' ? 503 : 400;
+    res.status(status).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+/**
+ * Bot completes web→Telegram attach after /start wlink_<token>.
+ * Auth is the one-time token (same pattern as other bot→API open calls).
+ */
+authRouter.post('/telegram/link-complete', (req, res) => {
+  const result = completeTelegramAttach({
+    token: String(req.body?.token ?? ''),
+    telegramId: String(req.body?.telegramId ?? req.body?.tg ?? ''),
+    username: req.body?.username != null ? String(req.body.username) : undefined,
+    name: req.body?.name != null ? String(req.body.name) : undefined,
+  });
+  if (!result.ok) {
+    const status =
+      result.reason === 'expired'
+        ? 410
+        : result.reason === 'already_linked_other'
+          ? 409
+          : 400;
+    res.status(status).json(result);
+    return;
+  }
+  res.json({
+    ok: true,
+    user: result.user,
+    merged: result.merged,
+    wallet: result.wallet,
+  });
+});
 
 function parseChannel(value: unknown): WebOtpChannel | null {
   return value === 'phone' || value === 'email' ? value : null;
@@ -61,14 +131,15 @@ authRouter.get('/me', (req, res) => {
   res.json({ ok: true, user: session.user });
 });
 
-/** کیف پول چندارزی — TON / Stars / سکه ربات / تومان */
+/** کیف پول چندارزی — TON / Stars / سکه ربات / تومان (همان منبع ربات) */
 authRouter.get('/wallet', (req, res) => {
   const session = getUserFromBearer(req.header('authorization') ?? undefined);
   if (!session) {
     res.status(401).json({ error: 'وارد نشده‌اید' });
     return;
   }
-  const wallet = dbService.getWallet(session.user.id);
+  const user = dbService.getUserById(session.user.id) ?? session.user;
+  const wallet = dbService.getWallet(user.id);
   if (!wallet) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;
@@ -78,6 +149,11 @@ authRouter.get('/wallet', (req, res) => {
     wallet,
     /** coins همان سکه ربات است؛ برای سازگاری با کلاینت‌های قدیمی */
     coins: wallet.coins,
+    telegram: {
+      linked: Boolean(user.telegramId),
+      telegramId: user.telegramId ?? null,
+      username: user.username ?? null,
+    },
   });
 });
 

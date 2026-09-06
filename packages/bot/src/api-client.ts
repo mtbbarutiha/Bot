@@ -36,6 +36,24 @@ export async function registerTelegramUser(data: {
   });
 }
 
+/** Complete web→Telegram attach from /start wlink_<token>. */
+export async function completeWebTelegramLink(data: {
+  token: string;
+  telegramId: string;
+  username?: string;
+  name?: string;
+}): Promise<{
+  ok: true;
+  user: User;
+  merged: boolean;
+  wallet: { ton: number; stars: number; coins: number; toman: number };
+}> {
+  return request('/api/auth/telegram/link-complete', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getUserByTelegramId(telegramId: string): Promise<User | null> {
   try {
     return await request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}`);

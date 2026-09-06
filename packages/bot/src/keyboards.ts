@@ -28,6 +28,7 @@ import {
   packagePickerLabel,
 } from './economy';
 import { isTelegramAdmin } from './config';
+import { telegramWebLoginUrl } from './telegram-web-link';
 import { effectiveWebUrl, isTelegramInlineUrl } from './urls';
 
 /** دکمهٔ ثابت بازگشت/باز کردن منوی اصلی روی reply keyboard */
@@ -760,10 +761,16 @@ export function playdateActionKeyboard(requestId: number): InlineKeyboard {
 }
 
 export function webLinksKeyboard(telegramId: string): InlineKeyboard | undefined {
+  const login = telegramWebLoginUrl(telegramId, '/wallet');
+  if (login) {
+    return new InlineKeyboard()
+      .url('🌐 باز کردن وب (ورود خودکار)', login)
+      .primary();
+  }
   const base = effectiveWebUrl();
   if (!isTelegramInlineUrl(base)) return undefined;
   return new InlineKeyboard()
-    .url('🌐 باز کردن petdate', `${base}/profile?from=telegram&tg=${telegramId}`)
+    .url('🌐 باز کردن petdate', `${base}/wallet`)
     .primary();
 }
 

@@ -126,6 +126,12 @@ class AuthStore {
     return result.user;
   }
 
+  /** Apply a session from bot-signed Telegram exchange (same users row). */
+  acceptSession(token: string, user: User) {
+    this.data = { token, user };
+    this.persist();
+  }
+
   async refreshMe() {
     if (!this.data.token) return null;
     const me = await fetchMe(this.data.token);

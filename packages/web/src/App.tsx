@@ -29,6 +29,7 @@ import { AdminFinanceWalletPage } from './admin/pages/AdminFinanceWalletPage';
 import { AdminFinanceProductsPage } from './admin/pages/AdminFinanceProductsPage';
 import { LoginPage } from './pages/auth/LoginPage';
 import { OtpPage } from './pages/auth/OtpPage';
+import { TelegramLinkPage } from './pages/auth/TelegramLinkPage';
 import { AddPetPage } from './pages/AddPetPage';
 import { ChatPage } from './pages/ChatPage';
 import { ExplorePage } from './pages/ExplorePage';
@@ -68,6 +69,7 @@ export default function App() {
           <Route path="shop/cart" element={<ShopCartPage />} />
           <Route path="auth/login" element={<LoginPage />} />
           <Route path="auth/otp" element={<OtpPage />} />
+          <Route path="auth/telegram" element={<TelegramLinkPage />} />
           <Route path="onboarding/role" element={<RoleSelectPage />} />
           <Route path="onboarding/profile" element={<ProfileWizardPage />} />
           <Route path="onboarding/wizard/:role" element={<RoleWizardPage />} />

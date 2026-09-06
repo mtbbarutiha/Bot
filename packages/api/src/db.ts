@@ -428,6 +428,21 @@ function migrateSchema() {
   `);
   db.exec(`CREATE INDEX IF NOT EXISTS idx_web_sessions_user ON web_sessions (user_id);`);
 
+  /** One-time tokens for web→Telegram account attach (wallet sync deep links). */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS telegram_attach_tokens (
+      token TEXT PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_telegram_attach_tokens_user
+      ON telegram_attach_tokens (user_id)`
+  );
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS playdate_chat_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -3960,6 +3975,31 @@ export const dbService = {
       ).run(...fields.map((f) => patch[f]), survivorId);
     }
 
+    // Sum multi-currency wallets so web↔Telegram link does not drop balances.
+    const absCoins = Math.max(0, Math.floor(Number(absorbed.coins ?? 0)));
+    const absTon = Math.max(0, Math.floor(Number(absorbed.walletTon ?? absorbed.wallet?.ton ?? 0)));
+    const absStars = Math.max(
+      0,
+      Math.floor(Number(absorbed.walletStars ?? absorbed.wallet?.stars ?? 0))
+    );
+    const absToman = Math.max(
+      0,
+      Math.floor(Number(absorbed.walletToman ?? absorbed.wallet?.toman ?? 0))
+    );
+    if (absCoins || absTon || absStars || absToman) {
+      db.prepare(
+        `UPDATE users SET
+           coins = COALESCE(coins, 0) + ?,
+           wallet_ton = COALESCE(wallet_ton, 0) + ?,
+           wallet_stars = COALESCE(wallet_stars, 0) + ?,
+           wallet_toman = COALESCE(wallet_toman, 0) + ?
+         WHERE id = ?`
+      ).run(absCoins, absTon, absStars, absToman, survivorId);
+      db.prepare(
+        `UPDATE users SET coins = 0, wallet_ton = 0, wallet_stars = 0, wallet_toman = 0 WHERE id = ?`
+      ).run(absorbedId);
+    }
+
     // Reassign owned data so web + bot share the same pets / requests / sessions.
     db.prepare('UPDATE pets SET owner_id = ? WHERE owner_id = ?').run(survivorId, absorbedId);
     try {
@@ -4020,6 +4060,98 @@ export const dbService = {
       `UPDATE users SET phone = ?, phone_verified = 1, phone_verified_at = datetime('now') WHERE id = ?`
     ).run(phone, userId);
     return this.getUserById(userId);
+  },
+
+  /**
+   * Attach Telegram id to a web user; merge if another row already owns that telegram_id.
+   * Used by wallet «همگام‌سازی تلگرام» deep-link completion.
+   */
+  linkTelegramIdentity(
+    userId: number,
+    telegramId: string,
+    opts?: { username?: string; name?: string }
+  ):
+    | { ok: true; user: User; merged: boolean }
+    | { ok: false; reason: string; error: string } {
+    const tg = String(telegramId ?? '').trim();
+    if (!/^\d{3,20}$/.test(tg)) {
+      return { ok: false, reason: 'invalid_tg', error: 'شناسه تلگرام نامعتبر است' };
+    }
+    const me = this.getUserById(userId);
+    if (!me) {
+      return { ok: false, reason: 'missing_user', error: 'کاربر پیدا نشد' };
+    }
+    if (me.telegramId && me.telegramId !== tg) {
+      return {
+        ok: false,
+        reason: 'already_linked_other',
+        error: 'این حساب وب قبلاً به تلگرام دیگری وصل است',
+      };
+    }
+    if (me.telegramId === tg) {
+      return { ok: true, user: me, merged: false };
+    }
+
+    const other = this.getUserByTelegramId(tg);
+    if (other && other.id !== me.id) {
+      const { survivor, absorbed } = this.pickIdentitySurvivor(me, other);
+      const merged = this.mergeUsers(survivor.id, absorbed.id);
+      if (!merged) {
+        return { ok: false, reason: 'merge_failed', error: 'ادغام حساب‌ها ممکن نشد' };
+      }
+      if (!merged.telegramId) {
+        db.prepare('UPDATE users SET telegram_id = ? WHERE id = ?').run(tg, merged.id);
+      }
+      if (opts?.username) {
+        db.prepare(`UPDATE users SET username = COALESCE(username, ?) WHERE id = ?`).run(
+          opts.username,
+          merged.id
+        );
+      }
+      return { ok: true, user: this.getUserById(merged.id)!, merged: true };
+    }
+
+    db.prepare('UPDATE users SET telegram_id = ? WHERE id = ?').run(tg, me.id);
+    if (opts?.username) {
+      db.prepare(`UPDATE users SET username = COALESCE(username, ?) WHERE id = ?`).run(
+        opts.username,
+        me.id
+      );
+    }
+    if (opts?.name && (!me.name || me.name === 'کاربر petdate')) {
+      db.prepare('UPDATE users SET name = ? WHERE id = ?').run(opts.name, me.id);
+    }
+    return { ok: true, user: this.getUserById(me.id)!, merged: false };
+  },
+
+  createTelegramAttachToken(userId: number, token: string, expiresAt: string) {
+    db.prepare(
+      `INSERT INTO telegram_attach_tokens (token, user_id, expires_at) VALUES (?, ?, ?)`
+    ).run(token, userId, expiresAt);
+  },
+
+  /** Consume a one-time attach token if still valid; returns owning web userId. */
+  consumeTelegramAttachToken(token: string): { userId: number } | null {
+    const row = db
+      .prepare(
+        `SELECT token, user_id, expires_at, used_at FROM telegram_attach_tokens WHERE token = ?`
+      )
+      .get(token) as
+      | { token: string; user_id: number; expires_at: string; used_at: string | null }
+      | undefined;
+    if (!row) return null;
+    if (row.used_at) return null;
+    const expMs = Date.parse(row.expires_at);
+    if (!Number.isFinite(expMs) || expMs < Date.now()) return null;
+    const upd = db
+      .prepare(
+        `UPDATE telegram_attach_tokens
+         SET used_at = datetime('now')
+         WHERE token = ? AND used_at IS NULL`
+      )
+      .run(token);
+    if (upd.changes === 0) return null;
+    return { userId: Number(row.user_id) };
   },
 
   /** Attach email to userId; merge if another row already owns that email. */

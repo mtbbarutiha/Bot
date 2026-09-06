@@ -348,7 +348,44 @@ export async function fetchWallet(token: string) {
       toman: number;
     };
     coins: number;
+    telegram?: {
+      linked: boolean;
+      telegramId: string | null;
+      username: string | null;
+    };
   }>('/api/auth/wallet', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+/** Bot-signed deep link → web session (same users row). */
+export async function exchangeTelegramWebLink(input: {
+  telegramId: string;
+  exp: string;
+  sig: string;
+}) {
+  return request<{ ok: true; token: string; user: User }>('/api/auth/telegram/exchange', {
+    method: 'POST',
+    body: JSON.stringify({
+      telegramId: input.telegramId,
+      exp: input.exp,
+      sig: input.sig,
+    }),
+  });
+}
+
+/** Logged-in web user: one-time bot deep link to attach Telegram. */
+export async function startTelegramAttach(token: string) {
+  return request<{
+    ok: true;
+    token: string;
+    deepLink: string;
+    botUsername: string;
+    expiresAt: string;
+    alreadyLinked: boolean;
+    telegramId?: string;
+  }>('/api/auth/telegram/link-start', {
+    method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
   });
 }

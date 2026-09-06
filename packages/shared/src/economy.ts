@@ -54,8 +54,8 @@ export const WALLET_CURRENCY_STATUS: Record<
     noteFa: 'نمایش موجودی؛ واریز TON هنوز فعال نیست',
   },
   stars: {
-    deposit: 'stub',
-    noteFa: 'نمایش موجودی ستاره؛ پرداخت Stars در ربات برای خرید سکه فعال است',
+    deposit: 'bot_only',
+    noteFa: 'موجودی ستاره مشترک با ربات (wallet_stars) — نه موجودی بومی Stars تلگرام',
   },
   coins: {
     deposit: 'wired',

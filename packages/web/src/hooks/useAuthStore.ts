@@ -19,6 +19,7 @@ export function useAuthStore() {
     isProfileComplete: authStore.isProfileComplete,
     requestOtp: authStore.requestOtp.bind(authStore),
     verifyOtp: authStore.verifyOtp.bind(authStore),
+    acceptSession: authStore.acceptSession.bind(authStore),
     refreshMe: authStore.refreshMe.bind(authStore),
     saveProfile: authStore.saveProfile.bind(authStore),
     saveRoles: authStore.saveRoles.bind(authStore),

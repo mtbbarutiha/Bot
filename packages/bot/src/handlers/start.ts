@@ -13,6 +13,7 @@ import {
   setUserOnboarding,
   setUserPrimaryRole,
   setUserRoles,
+  completeWebTelegramLink,
 } from '../api-client';
 import { formatCoinAwardMessage } from '../economy';
 import { sendWelcomeLogo } from '../branding';
@@ -22,6 +23,7 @@ import {
   myRolesSwitchKeyboard,
   roleKeyboard,
   roleReplyKeyboard,
+  webLinksKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
 import { webLinkHint } from '../urls';
@@ -36,9 +38,63 @@ function roleLabels(user: User): string {
   return roles.map((r) => USER_ROLE_LABELS[r]).join(' · ');
 }
 
+function startPayload(ctx: Context): string {
+  const text = ctx.message?.text?.trim() ?? '';
+  const parts = text.split(/\s+/);
+  if (parts.length < 2) return '';
+  return parts.slice(1).join(' ').trim();
+}
+
+async function tryHandleWebLinkAttach(ctx: Context, payload: string): Promise<boolean> {
+  const m = /^wlink_([a-f0-9]{32})$/i.exec(payload);
+  if (!m) return false;
+  const from = ctx.from;
+  if (!from) return true;
+
+  const telegramId = String(from.id);
+  try {
+    const result = await completeWebTelegramLink({
+      token: m[1]!,
+      telegramId,
+      username: from.username,
+      name: displayName(from),
+    });
+    const stars = result.wallet?.stars ?? result.user.wallet?.stars ?? result.user.walletStars ?? 0;
+    const starsFa = new Intl.NumberFormat('fa-IR').format(Math.max(0, Math.floor(stars)));
+    await ctx.reply(
+      [
+        '✅ حساب وب به تلگرام وصل شد.',
+        result.merged ? 'حساب‌های قبلی ادغام شدند تا موجودی مشترک بماند.' : '',
+        '',
+        `⭐ موجودی ستاره مشترک با ربات: ${starsFa}`,
+        'از صفحه کیف پول وب می‌توانی دوباره همگام‌سازی کنی.',
+      ]
+        .filter(Boolean)
+        .join('\n'),
+      { reply_markup: webLinksKeyboard(telegramId) }
+    );
+  } catch (err) {
+    console.error('web telegram link failed:', err);
+    const msg = err instanceof Error ? err.message : '';
+    const fa =
+      /410|expired|منقضی/i.test(msg)
+        ? 'لینک منقضی شده — از کیف پول وب دوباره «اتصال تلگرام» را بزن.'
+        : /409|already_linked/i.test(msg)
+          ? 'این حساب وب قبلاً به تلگرام دیگری وصل است.'
+          : 'اتصال ناموفق بود. از کیف پول وب دوباره تلاش کن.';
+    await ctx.reply(fa);
+  }
+  return true;
+}
+
 export async function handleStart(ctx: Context): Promise<void> {
   const from = ctx.from;
   if (!from) return;
+
+  const payload = startPayload(ctx);
+  if (payload) {
+    await tryHandleWebLinkAttach(ctx, payload);
+  }
 
   const telegramId = String(from.id);
   const name = displayName(from);
@@ -49,6 +105,19 @@ export async function handleStart(ctx: Context): Promise<void> {
       name,
       username: from.username,
     });
+
+    if (payload.startsWith('wlink_')) {
+      const roles = normalizeRoles(user.roles, user.role);
+      await upsertSession(telegramId, {
+        userId: user.id,
+        role: user.role,
+        draftRoles: roles,
+        step: roles.length ? 'ready' : 'role_select',
+        locale: 'fa',
+        pendingPhone: undefined,
+      });
+      return;
+    }
 
     if (user.awardedRewards?.length) {
       const msg = formatCoinAwardMessage(user.awardedRewards);
@@ -137,6 +206,10 @@ export async function sendWelcomeBack(ctx: Context, user: User, name: string): P
     await ctx.reply(caption, {
       reply_markup: menuKeyboardFor(ctx, user),
     });
+  }
+  const webKb = user.telegramId ? webLinksKeyboard(String(user.telegramId)) : undefined;
+  if (webKb) {
+    await ctx.reply('برای کیف پول و همگام‌سازی در وب:', { reply_markup: webKb });
   }
 }
 

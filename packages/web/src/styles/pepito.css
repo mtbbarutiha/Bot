@@ -6610,6 +6610,106 @@ button.chip.is-on {
   gap: 0.35rem;
 }
 
+.pepito-wallet-tg {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.05rem 1.15rem;
+  background: linear-gradient(145deg, rgba(253, 150, 30, 0.08), rgba(92, 77, 145, 0.06));
+  border: 1px solid rgba(92, 77, 145, 0.12);
+  border-radius: 18px;
+}
+
+.pepito-wallet-tg-head h2 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--pepito-dark);
+}
+
+.pepito-wallet-tg-lead {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--pepito-muted);
+}
+
+.pepito-wallet-tg-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  align-items: flex-start;
+}
+
+.pepito-wallet-tg-status {
+  margin: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1d6f66;
+}
+
+.pepito-wallet-tg-status--off {
+  color: #9a5b12;
+  font-weight: 600;
+}
+
+.pepito-wallet-tg-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: #1d6f66;
+  box-shadow: 0 0 0 3px rgba(29, 111, 102, 0.18);
+}
+
+.pepito-wallet-tg-id {
+  font-weight: 600;
+  color: var(--pepito-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.pepito-wallet-tg-stars {
+  margin: 0;
+  font-size: 0.98rem;
+  color: var(--pepito-dark);
+}
+
+.pepito-wallet-tg-stars strong {
+  font-family: var(--font-display);
+  font-weight: 800;
+  color: var(--pepito-base);
+  font-variant-numeric: tabular-nums;
+}
+
+.pepito-wallet-tg-sync,
+.pepito-wallet-tg-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pepito-wallet-tg-hint,
+.pepito-wallet-tg-meta {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--pepito-muted);
+}
+
+@keyframes pepito-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pepito-spin {
+  animation: pepito-spin 0.85s linear infinite;
+}
+
 @media (max-width: 859px) {
   .pepito-landing-mobile-dock {
     display: grid;
