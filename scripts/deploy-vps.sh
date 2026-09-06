@@ -23,6 +23,8 @@ ssh "$TARGET" "sudo mkdir -p '$REMOTE_DIR' && sudo chown -R \$(whoami):\$(whoami
 rsync -az --delete \
   --exclude node_modules \
   --exclude .git \
+  --exclude .env \
+  --exclude '.env.*' \
   --exclude 'packages/*/dist' \
   --exclude 'packages/api/data/*.db*' \
   --exclude 'packages/api/data/chat-uploads' \
