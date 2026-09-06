@@ -4719,19 +4719,24 @@ export const dbService = {
     createdAt: string;
   }> {
     const lim = Math.min(Math.max(limit, 1), 100);
+    const nowIso = new Date().toISOString();
     const rows = channel
       ? (db
           .prepare(
             `SELECT channel, target, expires_at, attempts, created_at
-             FROM web_otps WHERE channel = ? ORDER BY created_at DESC LIMIT ?`
+             FROM web_otps
+             WHERE channel = ? AND expires_at > ?
+             ORDER BY created_at DESC LIMIT ?`
           )
-          .all(channel, lim) as Record<string, unknown>[])
+          .all(channel, nowIso, lim) as Record<string, unknown>[])
       : (db
           .prepare(
             `SELECT channel, target, expires_at, attempts, created_at
-             FROM web_otps ORDER BY created_at DESC LIMIT ?`
+             FROM web_otps
+             WHERE expires_at > ?
+             ORDER BY created_at DESC LIMIT ?`
           )
-          .all(lim) as Record<string, unknown>[]);
+          .all(nowIso, lim) as Record<string, unknown>[]);
     return rows.map((row) => ({
       channel: String(row.channel),
       target: String(row.target),
