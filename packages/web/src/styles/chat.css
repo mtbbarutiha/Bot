@@ -437,3 +437,14 @@ html:has(.tg-chat) body {
 .find-playmate-pet-btn small {
   color: var(--pepito-muted, #6b6280);
 }
+
+/* Site logo in chats */
+.tg-chat-list-brand { min-width: 0; }
+.tg-chat-list-logo,
+.tg-chat-empty-logo {
+  object-fit: contain;
+}
+.tg-chat-list-empty .tg-chat-empty-logo,
+.tg-thread-empty .tg-chat-empty-logo {
+  filter: drop-shadow(0 6px 14px rgba(21, 39, 64, 0.1));
+}

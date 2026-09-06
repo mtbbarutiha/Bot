@@ -27,7 +27,7 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
-import { BrandMark } from '../components/BrandMark';
+import { SiteLogo } from '../components/SiteLogo';
 import { EmojiPicker } from '../components/EmojiPicker';
 import { PetAvatar } from '../components/PetAvatar';
 import { RequestCountdown } from '../components/RequestCountdown';
@@ -230,8 +230,8 @@ function ConversationListPane({
         >
           <ArrowRight size={18} />
         </Link>
-        <div>
-          <p className="tg-chat-list-kicker">پت‌دیت</p>
+        <div className="tg-chat-list-brand">
+          <SiteLogo className="tg-chat-list-logo" height={34} />
           <h1>{scope === 'vet' ? 'گفتگوهای پزشک' : 'پیدا کردن همبازی'}</h1>
         </div>
         <button
@@ -256,7 +256,7 @@ function ConversationListPane({
           </div>
          ) : conversations.length === 0 ? (
           <div className="tg-chat-list-empty">
-            <BrandMark iconSize={28} />
+            <SiteLogo className="tg-chat-empty-logo" height={48} />
             <h2>هنوز گفتگویی نیست</h2>
             <p>
               {scope === 'vet'
@@ -350,7 +350,7 @@ function ThreadEmptyState({ scope }: { scope: InboxScope }) {
   const isVet = scope === 'vet';
   return (
     <div className="tg-thread-empty">
-      <BrandMark iconSize={36} />
+      <SiteLogo className="tg-chat-empty-logo" height={48} />
       <h2>{isVet ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
       <Link
         to={isVet ? '/vet-consult' : '/explore'}
@@ -1097,12 +1097,12 @@ export function ChatPage() {
             <ThreadEmptyState scope={inboxScope} />
           ) : threadLoading ? (
             <div className="tg-thread-empty">
-              <BrandMark iconSize={28} />
+              <SiteLogo className="tg-chat-empty-logo" height={48} />
               <h2>در حال باز کردن چت…</h2>
             </div>
           ) : !match || !peerPet ? (
             <div className="tg-thread-empty">
-              <BrandMark iconSize={28} />
+              <SiteLogo className="tg-chat-empty-logo" height={48} />
               <h2>گفتگو پیدا نشد</h2>
               <p>این درخواست در دسترس نیست یا مال تو نیست.</p>
               <Link to="/chats" className="tg-chat-link-btn">

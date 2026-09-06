@@ -4197,6 +4197,30 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   text-decoration: none;
 }
 
+.tg-chat-list-brand {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  justify-items: start;
+}
+
+.tg-chat-list-logo.site-logo,
+.tg-chat-list-logo {
+  max-width: min(168px, 52vw);
+  height: 34px;
+  width: auto;
+  object-fit: contain;
+  object-position: right center;
+}
+
+.tg-chat-empty-logo.site-logo,
+.tg-chat-empty-logo {
+  max-width: min(200px, 70vw);
+  width: auto;
+  object-fit: contain;
+  margin-inline: auto;
+}
+
 .tg-chat-list-kicker {
   margin: 0;
   font-size: 0.72rem;
@@ -4208,7 +4232,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .tg-chat-list-head h1 {
   margin: 2px 0 0;
   font-family: var(--font-display, 'Urbanist', 'Vazirmatn', system-ui, sans-serif);
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: var(--tg-ink);
 }

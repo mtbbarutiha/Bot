@@ -25,7 +25,7 @@ import {
   type VetConsultChatMessage,
   type VetConsultation,
 } from '@petdate/shared';
-import { BrandMark } from '../components/BrandMark';
+import { SiteLogo } from '../components/SiteLogo';
 import { PetAvatar } from '../components/PetAvatar';
 import { RequestCountdown } from '../components/RequestCountdown';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -493,7 +493,7 @@ export function VetChatPage() {
               </div>
             ) : conversations.length === 0 ? (
               <div className="tg-chat-list-empty">
-                <BrandMark iconSize={28} />
+                <SiteLogo className="tg-chat-empty-logo" height={48} />
                 <h2>هنوز گفتگویی نیست</h2>
                 <p>
                   {inboxScope === 'vet'
@@ -588,7 +588,7 @@ export function VetChatPage() {
         <section className="tg-thread" aria-label="چت مشاوره دامپزشک">
           {!hasThread ? (
             <div className="tg-thread-empty">
-              <BrandMark iconSize={36} />
+              <SiteLogo className="tg-chat-empty-logo" height={48} />
               <h2>{inboxScope === 'vet' ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
               <Link
                 to={inboxScope === 'vet' ? '/vet-consult' : '/explore'}
@@ -604,7 +604,7 @@ export function VetChatPage() {
             </div>
           ) : !consult ? (
             <div className="tg-thread-empty">
-              <BrandMark iconSize={28} />
+              <SiteLogo className="tg-chat-empty-logo" height={48} />
               <h2>مشاوره پیدا نشد</h2>
               <p role="alert">{error ?? 'این گفتگو در دسترس نیست.'}</p>
               <Link to="/chats" className="tg-chat-link-btn">
