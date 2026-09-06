@@ -1,25 +1,76 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Globe, LogOut, MapPin, Send, Shield, Smartphone } from 'lucide-react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
+  LogOut,
+  MapPin,
+  PawPrint,
+  Pencil,
+  X,
+} from 'lucide-react';
+import {
+  BRAND,
+  IRAN_PROVINCES,
   ONBOARDING_STATUS_LABELS,
+  PROFILE_INTEREST_OPTIONS,
+  USER_GENDER_LABELS,
   USER_ROLE_LABELS,
+  citiesForProvince,
   normalizeRoles,
   primaryRole,
   userHasRole,
+  type UserGender,
 } from '@petdate/shared';
 import { PetAvatar } from '../components/PetAvatar';
 import { formatAge } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { usePetStore } from '../hooks/usePetStore';
 
+const HERO_IMG = '/pepito/uploads/2.jpg';
+
+function PawIcon({ size = 16 }: { size?: number }) {
+  return (
+    <span className="pepito-btn-icon" aria-hidden>
+      <PawPrint size={size} />
+    </span>
+  );
+}
 
 export function ProfilePage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const editing = searchParams.get('edit') === '1';
   const { myPet } = usePetStore();
-  const { user, logout, isProfileComplete } = useAuthStore();
-  const [showToast, setShowToast] = useState(false);
+  const { user, logout, isProfileComplete, saveProfile } = useAuthStore();
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [savedToast, setSavedToast] = useState(false);
+
+  const [name, setName] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState<UserGender | ''>('');
+  const [country, setCountry] = useState('ایران');
+  const [province, setProvince] = useState('');
+  const [city, setCity] = useState('');
+  const [bio, setBio] = useState('');
+  const [interests, setInterests] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    setName(user.name ?? '');
+    setAge(user.age ? String(user.age) : '');
+    setGender(user.gender ?? '');
+    setCountry(user.country ?? 'ایران');
+    setProvince(user.province ?? '');
+    setCity(user.city ?? '');
+    setBio(user.bio ?? '');
+    setInterests(user.interests ?? []);
+    setError('');
+  }, [user, editing]);
+
+  const cities = useMemo(
+    () => (province ? citiesForProvince(province) : []),
+    [province]
+  );
 
   if (!user) {
     return null;
@@ -32,17 +83,31 @@ export function ProfilePage() {
 
   const roles = normalizeRoles(user.roles, user.role);
   const mainRole = primaryRole(roles, user.role);
-  const wizardLink = isProfileComplete
-    ? mainRole === 'pet_owner'
-      ? '/onboarding/pet'
-      : '/onboarding/profile'
-    : '/onboarding/profile';
   const needsWizard = !isProfileComplete;
   const isPetOwner = userHasRole(user, 'pet_owner');
   const roleLabel = roles.length
     ? roles.map((r) => USER_ROLE_LABELS[r]).join(' · ')
     : 'انتخاب نشده';
   const locationLabel = [user.city, user.province, user.country].filter(Boolean).join('، ') || '—';
+  const avatarSrc = user.avatarUrl || (isPetOwner && myPet.imageUrl ? myPet.imageUrl : '');
+  const initial = (user.name || 'پ').trim().slice(0, 1);
+  const hasPetName = Boolean(myPet?.name && myPet.name !== 'پت من');
+  const genderLabel = user.gender ? USER_GENDER_LABELS[user.gender] : null;
+
+  function openEdit() {
+    setSearchParams({ edit: '1' }, { replace: false });
+  }
+
+  function closeEdit() {
+    setSearchParams({}, { replace: true });
+    setError('');
+  }
+
+  function toggleInterest(item: string) {
+    setInterests((prev) =>
+      prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item].slice(0, 6)
+    );
+  }
 
   async function onLogout() {
     setBusy(true);
@@ -50,176 +115,371 @@ export function ProfilePage() {
     navigate('/auth/login', { replace: true });
   }
 
-  return (
-    <div className="pepito-profile">
-      <div className="profile-hero pepito-profile-hero">
-        <p className="pepito-home-brand profile-brand">Pet Date</p>
-        <div className="profile-hero-photo">
-          {user.avatarUrl || (isPetOwner && myPet.imageUrl) ? (
-            <img src={user.avatarUrl || myPet.imageUrl} alt={user.name} />
-          ) : (
-            <div className="profile-hero-fallback">{user.name.slice(0, 1)}</div>
-          )}
-        </div>
-        <div className="profile-name">{user.name}</div>
-        <div className="profile-city">
-          <MapPin size={14} strokeWidth={2} />
-          {locationLabel}
-        </div>
-      </div>
+  async function onSave(e: FormEvent) {
+    e.preventDefault();
+    if (name.trim().length < 2) {
+      setError('نام را درست وارد کن');
+      return;
+    }
+    const ageNum = Number(age);
+    if (!Number.isFinite(ageNum) || ageNum < 13 || ageNum > 90) {
+      setError('سن معتبر نیست');
+      return;
+    }
+    if (!gender) {
+      setError('جنسیت را انتخاب کن');
+      return;
+    }
+    if (!country.trim()) {
+      setError('کشور را مشخص کن');
+      return;
+    }
+    if (country === 'ایران' && !province) {
+      setError('استان را انتخاب کن');
+      return;
+    }
+    if (city.trim().length < 2) {
+      setError('شهر را وارد کن');
+      return;
+    }
 
-      <div className="profile-section pepito-profile-body">
-        <div className="profile-status-card pepito-profile-panel">
-          <div className="profile-status-row">
-            <span className="profile-status-label">نقش فعال</span>
-            <span className="profile-status-value">
-              {mainRole ? USER_ROLE_LABELS[mainRole] : '—'}
-            </span>
+    setBusy(true);
+    setError('');
+    try {
+      await saveProfile({
+        name: name.trim(),
+        age: ageNum,
+        gender,
+        country,
+        province: country === 'ایران' ? province : undefined,
+        city: city.trim(),
+        bio: bio.trim() || undefined,
+        interests,
+        onboarding: 'profile_complete',
+      });
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 2200);
+      closeEdit();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'ذخیره پروفایل ناموفق بود');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (editing) {
+    return (
+      <div className="pepito-profile pepito-profile--edit">
+        <header className="pepito-profile-edit-head">
+          <div>
+            <p className="pepito-eyebrow">ویرایش</p>
+            <h1>پروفایل من</h1>
+            <p>همان زبان Pepito — فیلدها را کامل کن و ذخیره کن.</p>
           </div>
-          <div className="profile-status-row">
-            <span className="profile-status-label">نقش‌ها</span>
-            <span className="profile-status-value">{roleLabel}</span>
-          </div>
-          <div className="profile-status-row">
-            <span className="profile-status-label">وضعیت پروفایل</span>
-            <span className={`profile-status-badge${needsWizard ? ' incomplete' : ' complete'}`}>
-              {onboardingLabel}
-            </span>
-          </div>
-          {user.phone && (
-            <div className="profile-status-row">
-              <span className="profile-status-label">موبایل</span>
-              <span className="profile-status-value" dir="ltr">{user.phone}</span>
-            </div>
-          )}
-          {user.email && (
-            <div className="profile-status-row">
-              <span className="profile-status-label">ایمیل</span>
-              <span className="profile-status-value" dir="ltr">{user.email}</span>
-            </div>
-          )}
-          {user.telegramId && (
-            <div className="profile-status-row">
-              <span className="profile-status-label">تلگرام</span>
-              <span className="profile-status-value">متصل (@Petdatebot)</span>
-            </div>
-          )}
-          {(needsWizard || isPetOwner) && (
-            <Link to={wizardLink} className="profile-wizard-link pepito-btn button-1">
-              {needsWizard ? 'تکمیل پروفایل' : 'ویرایش / ثبت پت'}
-              <ChevronLeft size={16} strokeWidth={2} />
-            </Link>
-          )}
-        </div>
+          <button
+            type="button"
+            className="pepito-profile-icon-btn"
+            onClick={closeEdit}
+            aria-label="انصراف"
+          >
+            <X size={20} strokeWidth={2} />
+          </button>
+        </header>
 
-        {user.bio ? (
-          <p className="profile-bio">{user.bio}</p>
-        ) : null}
+        <form className="pepito-profile-edit-form" onSubmit={(e) => void onSave(e)} noValidate>
+          <div className="pepito-profile-edit-grid">
+            <label className="pepito-field">
+              <span>نام نمایشی</span>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                autoComplete="name"
+                required
+              />
+            </label>
 
-        {isPetOwner && (
-          <>
-            <div className="section-row section-row--flush">
-              <h2>پت‌های من</h2>
-              <Link to="/add-pet">+ افزودن</Link>
-            </div>
+            <label className="pepito-field">
+              <span>سن</span>
+              <input
+                value={age}
+                onChange={(e) => setAge(e.target.value)}
+                inputMode="numeric"
+                required
+              />
+            </label>
 
-            <div className="my-pet-chip">
-              <PetAvatar type={myPet.type} size="sm" imageUrl={myPet.imageUrl} name={myPet.name} />
-              <div>
-                <h3>{myPet.name}</h3>
-                <p>
-                  {myPet.breed} · {formatAge(myPet)} · {myPet.neighborhood}
-                </p>
+            <div className="pepito-field pepito-field--full">
+              <span>جنسیت</span>
+              <div className="pepito-choice-row" role="group" aria-label="جنسیت">
+                {(['male', 'female'] as UserGender[]).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    className={`pepito-choice${gender === g ? ' is-on' : ''}`}
+                    onClick={() => setGender(g)}
+                  >
+                    {USER_GENDER_LABELS[g]}
+                  </button>
+                ))}
               </div>
             </div>
-          </>
+
+            <div className="pepito-field pepito-field--full">
+              <span>کشور</span>
+              <div className="pepito-choice-row" role="group" aria-label="کشور">
+                {['ایران', 'سایر'].map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`pepito-choice${country === c ? ' is-on' : ''}`}
+                    onClick={() => {
+                      setCountry(c);
+                      if (c !== 'ایران') setProvince('');
+                    }}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {country === 'ایران' ? (
+              <label className="pepito-field">
+                <span>استان</span>
+                <select value={province} onChange={(e) => setProvince(e.target.value)} required>
+                  <option value="">انتخاب استان</option>
+                  {IRAN_PROVINCES.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
+            <label className={`pepito-field${country !== 'ایران' ? ' pepito-field--full' : ''}`}>
+              <span>شهر</span>
+              {cities.length > 0 ? (
+                <select value={city} onChange={(e) => setCity(e.target.value)} required>
+                  <option value="">انتخاب شهر</option>
+                  {cities.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input value={city} onChange={(e) => setCity(e.target.value)} required />
+              )}
+            </label>
+
+            <label className="pepito-field pepito-field--full">
+              <span>درباره من</span>
+              <textarea
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                rows={4}
+                placeholder="کمی از خودت و پت‌ات بگو…"
+              />
+            </label>
+
+            <div className="pepito-field pepito-field--full">
+              <span>علایق (تا ۶ مورد)</span>
+              <div className="pepito-choice-wrap">
+                {PROFILE_INTEREST_OPTIONS.map((item) => (
+                  <button
+                    key={item}
+                    type="button"
+                    className={`pepito-choice pepito-choice--sm${interests.includes(item) ? ' is-on' : ''}`}
+                    onClick={() => toggleInterest(item)}
+                  >
+                    {item}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {error ? <p className="pepito-profile-error">{error}</p> : null}
+
+          <div className="pepito-profile-edit-actions">
+            <button type="submit" className="pepito-btn button-1" disabled={busy}>
+              <PawIcon />
+              {busy ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
+            </button>
+            <button
+              type="button"
+              className="pepito-btn pepito-btn--ghost"
+              onClick={closeEdit}
+              disabled={busy}
+            >
+              انصراف
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+
+  return (
+    <div className="pepito-profile">
+      <section
+        className="pepito-profile-hero"
+        style={{ backgroundImage: `url(${HERO_IMG})` }}
+        aria-label="پروفایل"
+      >
+        <div className="pepito-profile-hero-wash" aria-hidden />
+        <div className="pepito-profile-hero-inner">
+          <p className="pepito-kicker pepito-profile-kicker">
+            <span className="pepito-kicker-dot" aria-hidden>
+              <PawPrint size={16} />
+            </span>
+            {BRAND.taglineFa}
+          </p>
+          <p className="pepito-home-brand">{BRAND.displayName}</p>
+
+          <div className="pepito-profile-identity">
+            <div className="pepito-profile-avatar" aria-hidden>
+              {avatarSrc ? (
+                <img src={avatarSrc} alt="" />
+              ) : (
+                <span>{initial}</span>
+              )}
+            </div>
+            <div className="pepito-profile-identity-text">
+              <h1>{user.name}</h1>
+              <p className="pepito-profile-loc">
+                <MapPin size={15} strokeWidth={2} aria-hidden />
+                {locationLabel}
+              </p>
+              <p className="pepito-profile-roles">{roleLabel}</p>
+            </div>
+          </div>
+
+          <div className="pepito-home-cta pepito-profile-cta">
+            {needsWizard ? (
+              <Link to="/onboarding/profile" className="pepito-btn button-1">
+                <PawIcon />
+                تکمیل پروفایل
+              </Link>
+            ) : (
+              <button type="button" className="pepito-btn button-1" onClick={openEdit}>
+                <Pencil size={16} strokeWidth={2.25} aria-hidden />
+                ویرایش
+              </button>
+            )}
+            {isPetOwner ? (
+              <Link to="/add-pet" className="pepito-btn pepito-btn--ghost pepito-home-cta-ghost">
+                پت‌ها
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      </section>
+
+      <section className="pepito-profile-block" aria-label="جزئیات">
+        <header className="pepito-home-section-head">
+          <p className="pepito-eyebrow">درباره</p>
+          <h2>شناسنامه کوتاه</h2>
+          <p>نقش، وضعیت و چند خط از تو — بدون شلوغی.</p>
+        </header>
+
+        <dl className="pepito-profile-meta">
+          <div>
+            <dt>نقش فعال</dt>
+            <dd>{mainRole ? USER_ROLE_LABELS[mainRole] : '—'}</dd>
+          </div>
+          <div>
+            <dt>وضعیت</dt>
+            <dd>
+              <span
+                className={`pepito-profile-badge${needsWizard ? ' is-warn' : ' is-ok'}`}
+              >
+                {onboardingLabel}
+              </span>
+            </dd>
+          </div>
+          {user.age ? (
+            <div>
+              <dt>سن</dt>
+              <dd>{user.age}</dd>
+            </div>
+          ) : null}
+          {genderLabel ? (
+            <div>
+              <dt>جنسیت</dt>
+              <dd>{genderLabel}</dd>
+            </div>
+          ) : null}
+          {user.phone ? (
+            <div>
+              <dt>موبایل</dt>
+              <dd dir="ltr">{user.phone}</dd>
+            </div>
+          ) : null}
+        </dl>
+
+        {user.bio ? (
+          <p className="pepito-profile-bio">{user.bio}</p>
+        ) : (
+          <p className="pepito-profile-bio pepito-profile-bio--empty">
+            هنوز بیویی ننوشتی — با ویرایش می‌تونی اضافه کنی.
+          </p>
         )}
 
-        <div className="profile-services">
-          <h2>خدمات</h2>
-          <div className="service-links">
-            <Link to="/clinics" className="service-link-card">
-              کلینیک‌های نزدیک
-            </Link>
-            <Link to="/shop" className="service-link-card">
-              فروشگاه پت
-            </Link>
-            <Link to="/vet-consult" className="service-link-card">
-              مشاوره دامپزشک
-            </Link>
-            {isPetOwner && (
-              <Link to="/explore" className="service-link-card">
-                کشف همبازی
-              </Link>
-            )}
-          </div>
-        </div>
+        {user.interests && user.interests.length > 0 ? (
+          <ul className="pepito-profile-tags">
+            {user.interests.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
 
-        <button
-          className="cta-btn cta-btn--spaced"
-          type="button"
-          onClick={() => {
-            setShowToast(true);
-            setTimeout(() => setShowToast(false), 2500);
-            navigate('/onboarding/profile');
-          }}
-        >
-          ویرایش پروفایل
-        </button>
+      {isPetOwner ? (
+        <section className="pepito-profile-block" aria-label="پت‌های من">
+          <header className="pepito-home-section-head">
+            <p className="pepito-eyebrow">پت‌ها</p>
+            <h2>پت‌های من</h2>
+            <p>خلاصه پت ثبت‌شده — مدیریت کامل از مسیر پت‌ها.</p>
+          </header>
 
-        <div className="menu-item">
-          <div className="menu-icon">
-            <Send size={18} strokeWidth={2} />
-          </div>
-          <div className="menu-text">
-            <strong>ربات تلگرام</strong>
-            <small>@Petdatebot — هم‌تراز با وب</small>
-          </div>
-        </div>
+          <Link to="/add-pet" className="pepito-profile-pet">
+            <PetAvatar
+              type={myPet.type}
+              size="sm"
+              imageUrl={myPet.imageUrl}
+              name={myPet.name}
+            />
+            <div>
+              <strong>{hasPetName ? myPet.name : 'هنوز پتی ثبت نشده'}</strong>
+              <span>
+                {hasPetName
+                  ? `${myPet.breed} · ${formatAge(myPet)} · ${myPet.neighborhood || locationLabel}`
+                  : 'اولین پت را اضافه کن'}
+              </span>
+            </div>
+          </Link>
+        </section>
+      ) : null}
 
-        <div className="menu-item">
-          <div className="menu-icon">
-            <Globe size={18} strokeWidth={2} />
-          </div>
-          <div className="menu-text">
-            <strong>وب دسکتاپ</strong>
-            <small>ورود با OTP</small>
-          </div>
-        </div>
-        <div className="menu-item">
-          <div className="menu-icon">
-            <Smartphone size={18} strokeWidth={2} />
-          </div>
-          <div className="menu-text">
-            <strong>PWA</strong>
-            <small>قابل نصب</small>
-          </div>
-        </div>
-        <Link to="/admin/login" className="menu-item">
-          <div className="menu-icon">
-            <Shield size={18} strokeWidth={2} />
-          </div>
-          <div className="menu-text">
-            <strong>پنل ادمین</strong>
-            <small>مدیریت پت‌ها و درخواست‌ها</small>
-          </div>
-        </Link>
-
+      <section className="pepito-profile-block pepito-profile-block--quiet" aria-label="حساب">
         <button
           type="button"
-          className="cta-btn cta-btn--spaced profile-logout-btn"
+          className="pepito-profile-logout"
           onClick={() => void onLogout()}
           disabled={busy}
         >
-          <LogOut size={18} /> {busy ? 'خروج…' : 'خروج از حساب'}
+          <LogOut size={18} strokeWidth={2} aria-hidden />
+          {busy ? 'خروج…' : 'خروج از حساب'}
         </button>
-      </div>
+      </section>
 
-      {showToast && (
+      {savedToast ? (
         <div className="toast" role="status">
-          انتقال به ویرایش پروفایل
+          پروفایل ذخیره شد
         </div>
-      )}
+      ) : null}
     </div>
   );
 }
