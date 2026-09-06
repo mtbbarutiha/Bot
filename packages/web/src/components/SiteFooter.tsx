@@ -26,7 +26,7 @@ const QUICK_LINKS: { to: string; label: string }[] = [
   { to: '/shop', label: 'پت دیت شاپ' },
   { to: '/shop/cart', label: 'سبد خرید' },
   { to: '/add-pet', label: 'پت‌های من' },
-  { to: '/matches', label: 'درخواست‌های همبازی' },
+  { to: '/chats', label: 'گفتگو / درخواست‌ها' },
   { to: '/vet-consult', label: 'مشاوره دامپزشک' },
   { to: '/auth/login', label: 'ورود / ثبت‌نام' },
 ];

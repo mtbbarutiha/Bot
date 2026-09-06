@@ -198,7 +198,7 @@ export function PetDetailPage() {
           <button className="action-circle" aria-label="تماس" type="button">
             <Phone size={18} strokeWidth={2} />
           </button>
-          <Link to="/explore#requests" className="action-circle" aria-label="درخواست‌ها">
+          <Link to="/chats" className="action-circle" aria-label="گفتگو و درخواست‌ها">
             <MessageCircle size={18} strokeWidth={2} />
           </Link>
           <button

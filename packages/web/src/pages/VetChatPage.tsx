@@ -449,10 +449,20 @@ export function VetChatPage() {
   useEffect(() => {
     if (!user?.id) return;
     return subscribeIncomingRefresh((detail) => {
-      if (detail?.kinds && !detail.kinds.includes('vet') && !detail.kinds.includes('playmate')) {
+      if (detail?.kinds && !detail.kinds.includes('vet') && detail.kinds.length > 0) {
         return;
       }
       softReloadConversations();
+      const vetId = detail?.kinds?.includes('vet') ? detail.ids?.[0] : undefined;
+      if (!vetId) return;
+      const target = `/vet-chats/${vetId}`;
+      if (window.location.pathname === target) return;
+      if (
+        window.location.pathname === '/chats' ||
+        window.location.pathname.startsWith('/vet-chats')
+      ) {
+        navigate(target);
+      }
     });
   }, [user?.id, softReloadConversations]);
 
@@ -1001,9 +1011,9 @@ export function VetChatPage() {
         <aside className="tg-chat-list" aria-label="فهرست گفتگوها">
           <header className="tg-chat-list-head">
             <Link
-              to={inboxScope === 'vet' ? '/vet-consult' : '/explore#requests'}
+              to={inboxScope === 'vet' ? '/vet-consult' : '/chats'}
               className="tg-icon-btn"
-              aria-label={inboxScope === 'vet' ? 'بازگشت به پنل پزشک' : 'بازگشت به همبازی'}
+              aria-label={inboxScope === 'vet' ? 'بازگشت به پنل پزشک' : 'بازگشت به گفتگو'}
             >
               <ArrowRight size={18} />
             </Link>

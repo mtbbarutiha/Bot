@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Check, HeartHandshake, Stethoscope, X } from 'lucide-react';
 import { userHasRole, type VetConsultation } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -22,18 +22,32 @@ type IncomingItem =
   | { kind: 'playmate'; id: number; title: string; subtitle: string; photo?: string; href: string }
   | { kind: 'vet'; id: number; title: string; subtitle: string; photo?: string; href: string };
 
+function isConversationPath(pathname: string, item: IncomingItem): boolean {
+  if (item.kind === 'playmate') {
+    return pathname === item.href || pathname === `/chats/${item.id}`;
+  }
+  return pathname === item.href || pathname === `/vet-chats/${item.id}`;
+}
+
 /**
- * Global live inbox toast via ajax polling.
- * Dual-role users get both playmate and vet requests (not only primary role).
+ * Live incoming playmate / vet requests.
+ *
+ * Primary surface is گفتگو (conversation thread + inbox), not a desktop-only
+ * chrome. Fresh requests open `/chats/:id` or `/vet-chats/:id` where the
+ * in-thread request card already has accept/reject. A modal is only a
+ * fallback when something was queued by an older client path.
  */
 export function LiveIncomingRequests() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isLoggedIn, token } = useAuthStore();
   const myUserId = user?.id;
   const canPlaymate = Boolean(myUserId && userHasRole(user, 'pet_owner'));
   const canVet = Boolean(myUserId && userHasRole(user, 'vet'));
   const seenRef = useRef<Set<string>>(new Set());
   const seededRef = useRef(false);
+  const locationRef = useRef(location.pathname);
+  locationRef.current = location.pathname;
   const [queue, setQueue] = useState<IncomingItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +65,21 @@ export function LiveIncomingRequests() {
     setQueue([]);
     setError(null);
   }, [myUserId, canPlaymate, canVet]);
+
+  const openOnConversation = useCallback(
+    (item: IncomingItem) => {
+      emitIncomingRefresh({
+        kinds: [item.kind],
+        ids: [item.id],
+      });
+      if (isConversationPath(locationRef.current, item)) {
+        // Already on this گفتگو thread — inbox/thread soft-reload is enough.
+        return;
+      }
+      navigate(item.href);
+    },
+    [navigate],
+  );
 
   const poll = useCallback(async () => {
     if (!isLoggedIn || !myUserId) return;
@@ -117,11 +146,7 @@ export function LiveIncomingRequests() {
       if (!fresh.length) return;
 
       for (const i of fresh) seenRef.current.add(`${i.kind}:${i.id}`);
-      setQueue((prev) => {
-        const existing = new Set(prev.map((p) => `${p.kind}:${p.id}`));
-        const add = fresh.filter((i) => !existing.has(`${i.kind}:${i.id}`));
-        return add.length ? [...prev, ...add] : prev;
-      });
+
       emitIncomingRefresh({
         kinds: [
           ...(fresh.some((i) => i.kind === 'playmate') ? (['playmate'] as const) : []),
@@ -129,10 +154,16 @@ export function LiveIncomingRequests() {
         ],
         ids: fresh.map((i) => i.id),
       });
+
+      // Newest → open on گفتگو (thread request card), not desktop-only modal.
+      const primary = fresh[fresh.length - 1]!;
+      openOnConversation(primary);
+
+      // Extra simultaneous requests stay visible in the /chats inbox list.
     } catch {
       /* silent */
     }
-  }, [isLoggedIn, myUserId, canPlaymate, canVet]);
+  }, [isLoggedIn, myUserId, canPlaymate, canVet, openOnConversation]);
 
   const { connected: wsConnected } = useChatSocket({
     token,
@@ -200,9 +231,11 @@ export function LiveIncomingRequests() {
 
   function onViewAll() {
     dismissCurrent();
-    navigate(current?.kind === 'vet' || canVet ? '/vet-consult' : '/chats');
+    // گفتگو hub — not explore / vet-consult desktop panels
+    navigate('/chats');
   }
 
+  // Modal kept only if something was queued by an older client path.
   if (!current) return null;
 
   return (
@@ -213,14 +246,9 @@ export function LiveIncomingRequests() {
       aria-labelledby="live-incoming-title"
     >
       <div className="modal-sheet live-incoming-sheet">
-        <p className="live-incoming-kicker">
-          {current.kind === 'vet' ? 'درخواست مشاوره جدید' : 'درخواست همبازی جدید'}
-        </p>
-        <h2 id="live-incoming-title">{current.title}</h2>
-        <p>{current.subtitle}</p>
         {current.photo ? (
           <div className="live-incoming-photo">
-            <img src={current.photo} alt={current.title} />
+            <img src={current.photo} alt="" />
           </div>
         ) : (
           <div className="live-incoming-photo live-incoming-photo--icon" aria-hidden>
@@ -231,36 +259,47 @@ export function LiveIncomingRequests() {
             )}
           </div>
         )}
+        <div className="live-incoming-body">
+          <p className="live-incoming-kicker">
+            {current.kind === 'vet' ? 'درخواست مشاوره جدید' : 'درخواست همبازی جدید'}
+          </p>
+          <h2 id="live-incoming-title">{current.title}</h2>
+          <p className="live-incoming-subtitle">{current.subtitle}</p>
+        </div>
         {error ? (
-          <p className="auth-error" role="alert">
+          <p className="auth-error live-incoming-error" role="alert">
             {error}
           </p>
         ) : null}
         <div className="match-actions live-incoming-actions">
-          <button
-            type="button"
-            className="btn-accept"
-            disabled={busy}
-            onClick={() => void onAccept()}
-          >
-            <Check size={16} strokeWidth={2.5} />
-            {busy ? '…' : 'قبول'}
-          </button>
-          <button
-            type="button"
-            className="btn-reject"
-            disabled={busy}
-            onClick={() => void onReject()}
-          >
-            <X size={16} strokeWidth={2.5} />
-            رد
-          </button>
-          <button type="button" className="btn-profile" disabled={busy} onClick={onOpenInChat}>
-            مشاهده در چت
-          </button>
-          <button type="button" className="btn-profile" disabled={busy} onClick={onViewAll}>
-            همه درخواست‌ها
-          </button>
+          <div className="live-incoming-actions__primary">
+            <button
+              type="button"
+              className="btn-accept"
+              disabled={busy}
+              onClick={() => void onAccept()}
+            >
+              <Check size={16} strokeWidth={2.5} />
+              {busy ? '…' : 'قبول'}
+            </button>
+            <button
+              type="button"
+              className="btn-reject"
+              disabled={busy}
+              onClick={() => void onReject()}
+            >
+              <X size={16} strokeWidth={2.5} />
+              رد
+            </button>
+          </div>
+          <div className="live-incoming-actions__secondary">
+            <button type="button" className="btn-profile" disabled={busy} onClick={onOpenInChat}>
+              مشاهده در گفتگو
+            </button>
+            <button type="button" className="btn-profile" disabled={busy} onClick={onViewAll}>
+              همه گفتگوها
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -586,10 +586,21 @@ export function ChatPage() {
 
   useEffect(() => {
     if (!myUserId) return;
-    return subscribeIncomingRefresh(() => {
+    return subscribeIncomingRefresh((detail) => {
       softReloadConversations();
+      // Fresh playmate request → open گفتگو thread (request card).
+      const playmateId = detail?.kinds?.includes('playmate') ? detail.ids?.[0] : undefined;
+      if (!playmateId || inboxScope === 'vet') return;
+      const target = `/chats/${playmateId}`;
+      if (window.location.pathname === target) return;
+      if (
+        window.location.pathname === '/chats' ||
+        window.location.pathname.startsWith('/chats/')
+      ) {
+        navigate(target);
+      }
     });
-  }, [myUserId, softReloadConversations]);
+  }, [myUserId, softReloadConversations, inboxScope, navigate]);
 
   // Playmate threads belong to owner scope — leave them when acting as vet.
   useEffect(() => {
