@@ -1,8 +1,9 @@
 import { FormEvent, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Mail, Smartphone } from 'lucide-react';
+import { Mail, Send, Smartphone } from 'lucide-react';
 import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
+import { telegramWebLoginDeepLink } from '../../lib/api';
 import { postAuthPath, sanitizeNext } from '../../lib/authRedirect';
 import type { WebOtpChannel } from '../../lib/api';
 
@@ -20,6 +21,7 @@ export function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [devHint, setDevHint] = useState('');
+  const telegramLoginUrl = telegramWebLoginDeepLink(next);
 
   useEffect(() => {
     if (!isLoggedIn) return;
@@ -55,14 +57,32 @@ export function LoginPage() {
   return (
     <AuthShell
       bannerTitle="ورود به Pet Date"
-      bannerLead="با شماره موبایل یا ایمیل وارد شو — همان حساب وب و تلگرام"
+      bannerLead="با تلگرام، موبایل یا ایمیل — همان حساب وب و ربات"
       bannerImage="/pepito/uploads/3.jpg"
     >
       <p className="pepito-auth-kicker">ورود</p>
       <h1>خوش آمدی</h1>
       <p className="auth-lead">
-        مثل ربات تلگرام، با شماره موبایل یا ایمیل وارد شو — همان حساب، همان پت‌ها و چت‌ها.
+        با اکانت تلگرام یک‌ضرب وارد شو، یا مثل قبل با شماره موبایل / ایمیل کد بگیر — همان حساب،
+        همان پت‌ها و چت‌ها.
       </p>
+
+      <a
+        className="pepito-btn button-2 auth-telegram-cta"
+        href={telegramLoginUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Send size={16} strokeWidth={2} aria-hidden />
+        ورود با اکانت تلگرام
+      </a>
+      <p className="auth-telegram-hint">
+        ربات باز می‌شود؛ دکمهٔ «ورود به وبسایت» را بزن تا با لینک امن HMAC برگردی.
+      </p>
+
+      <div className="auth-or" role="separator">
+        <span>یا ورود با موبایل / ایمیل</span>
+      </div>
 
       <div className="auth-tabs" role="tablist">
         <button
@@ -105,7 +125,8 @@ export function LoginPage() {
       </form>
 
       <p className="auth-foot">
-        هنوز حساب نداری؟ با همان شماره/ایمیل کد بگیر — حساب خودکار ساخته می‌شود و با ربات همگام است.
+        هنوز حساب نداری؟ با تلگرام یا همان شماره/ایمیل وارد شو — حساب خودکار ساخته می‌شود و با ربات
+        همگام است.
         <br />
         <Link to="/">بازگشت به صفحه اصلی</Link>
       </p>

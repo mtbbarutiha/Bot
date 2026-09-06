@@ -465,6 +465,41 @@ export function telegramBotDeepLink(path = ''): string {
     : `https://t.me/${username}`;
 }
 
+const SAFE_WEB_LOGIN_NEXT = /^\/(?!\/)[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]*$/;
+
+function sanitizeTelegramLoginNext(raw: string | null | undefined, fallback = '/home'): string {
+  if (!raw) return fallback;
+  const value = raw.trim();
+  if (!value.startsWith('/') || value.startsWith('//')) return fallback;
+  if (value.startsWith('/auth') || value.startsWith('/welcome')) return fallback;
+  if (value === '/') return '/home';
+  if (!SAFE_WEB_LOGIN_NEXT.test(value)) return fallback;
+  return value;
+}
+
+function toBase64UrlUtf8(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  bytes.forEach((b) => {
+    binary += String.fromCharCode(b);
+  });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * Deep link that opens the bot; bot replies with a signed `/auth/telegram` URL
+ * (HMAC) so the user returns logged-in on the same users row.
+ * Start payload: `weblogin` or `weblogin_<base64url(next)>` (≤64 chars).
+ */
+export function telegramWebLoginDeepLink(next?: string | null): string {
+  const safeNext = sanitizeTelegramLoginNext(next, '/home');
+  if (safeNext === '/home') return telegramBotDeepLink('weblogin');
+  const encoded = toBase64UrlUtf8(safeNext);
+  const payload = `weblogin_${encoded}`;
+  if (payload.length > 64) return telegramBotDeepLink('weblogin');
+  return telegramBotDeepLink(payload);
+}
+
 export type ShopCoinCheckoutItem = { productId: string; qty: number };
 
 export type ShopCoinCheckoutResult = {

@@ -3211,6 +3211,43 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   line-height: 1.7;
   font-size: .92rem;
 }
+.auth-telegram-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 50px;
+  margin: 0 0 8px;
+  text-decoration: none;
+  box-sizing: border-box;
+}
+.auth-telegram-hint {
+  margin: 0 0 16px;
+  color: #757086;
+  font-size: 0.82rem;
+  line-height: 1.55;
+  text-align: center;
+}
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 16px;
+  color: #8a809c;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.auth-or::before,
+.auth-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(92, 77, 145, 0.18);
+}
+.auth-or span {
+  white-space: nowrap;
+}
 .auth-tabs {
   display: grid;
   grid-template-columns: 1fr 1fr;

@@ -1,8 +1,10 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Send } from 'lucide-react';
 import { normalizeRoles, userHasRole } from '@petdate/shared';
 import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
+import { telegramWebLoginDeepLink } from '../../lib/api';
 import { sanitizeNext } from '../../lib/authRedirect';
 
 type OtpCredentialLike = { code?: string };
@@ -45,6 +47,7 @@ export function OtpPage() {
   );
   const inputRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
+  const telegramLoginUrl = telegramWebLoginDeepLink(next);
 
   useEffect(() => {
     if (!pendingChannel || !pendingTarget) {
@@ -199,6 +202,19 @@ export function OtpPage() {
         </button>
         <Link to={`/auth/login?next=${encodeURIComponent(next)}`}>تغییر شماره / ایمیل</Link>
       </div>
+
+      <div className="auth-or" role="separator">
+        <span>یا</span>
+      </div>
+      <a
+        className="pepito-btn button-2 auth-telegram-cta"
+        href={telegramLoginUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        <Send size={16} strokeWidth={2} aria-hidden />
+        ورود با اکانت تلگرام
+      </a>
     </AuthShell>
   );
 }

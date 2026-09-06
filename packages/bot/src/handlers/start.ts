@@ -23,9 +23,11 @@ import {
   myRolesSwitchKeyboard,
   roleKeyboard,
   roleReplyKeyboard,
+  webAutoLoginKeyboard,
   webLinksKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
+import { parseWebLoginStartPayload } from '../telegram-web-link';
 import { webLinkHint } from '../urls';
 import { displayName, getCtxUser, menuKeyboardFor } from './helpers';
 import { startProfileWizard } from './profile';
@@ -116,6 +118,38 @@ export async function handleStart(ctx: Context): Promise<void> {
         locale: 'fa',
         pendingPhone: undefined,
       });
+      return;
+    }
+
+    const webLoginNext = parseWebLoginStartPayload(payload);
+    if (webLoginNext) {
+      const roles = normalizeRoles(user.roles, user.role);
+      await upsertSession(telegramId, {
+        userId: user.id,
+        role: user.role,
+        draftRoles: roles,
+        step: roles.length ? 'ready' : 'role_select',
+        locale: 'fa',
+        pendingPhone: undefined,
+      });
+
+      const kb = webAutoLoginKeyboard(telegramId, webLoginNext);
+      await ctx.reply(
+        [
+          '🔐 ورود امن به وبسایت Pet Date',
+          '',
+          'روی دکمه بزن تا با همان حساب تلگرام وارد وب شوی',
+          '(پت‌ها، چت‌ها و کیف پول مشترک می‌مانند).',
+          '',
+          'لینک حدود ۱۵ دقیقه اعتبار دارد.',
+        ].join('\n'),
+        kb ? { reply_markup: kb } : undefined
+      );
+      if (!kb) {
+        await ctx.reply(
+          'الان لینک وب در دسترس نیست. چند لحظه بعد دوباره از سایت «ورود با اکانت تلگرام» را بزن.'
+        );
+      }
       return;
     }
 

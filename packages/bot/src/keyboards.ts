@@ -774,6 +774,23 @@ export function webLinksKeyboard(telegramId: string): InlineKeyboard | undefined
     .primary();
 }
 
+/** One-tap signed login after web «ورود با اکانت تلگرام» deep link. */
+export function webAutoLoginKeyboard(
+  telegramId: string,
+  nextPath = '/home'
+): InlineKeyboard | undefined {
+  const login = telegramWebLoginUrl(telegramId, nextPath);
+  if (login) {
+    return new InlineKeyboard().url('🌐 ورود به وبسایت', login).primary();
+  }
+  const base = effectiveWebUrl();
+  if (!isTelegramInlineUrl(base)) return undefined;
+  const next = nextPath.startsWith('/') ? nextPath : `/${nextPath}`;
+  return new InlineKeyboard()
+    .url('🌐 باز کردن petdate', `${base}${next === '/home' ? '' : next}`)
+    .primary();
+}
+
 export function genderKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text(USER_GENDER_LABELS.male, 'profile:gender:male')
