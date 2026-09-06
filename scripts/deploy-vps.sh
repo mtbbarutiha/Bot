@@ -50,6 +50,35 @@ if [[ ! -f .env ]]; then
   echo "Created .env from example — edit secrets before production use."
 fi
 
+# Infra (Postgres / Redis / MinIO) — required when DATABASE_URL / REDIS_URL point at localhost
+if command -v docker >/dev/null 2>&1; then
+  sudo systemctl enable --now docker >/dev/null 2>&1 || true
+  docker compose up -d postgres redis minio
+  sudo tee /etc/systemd/system/petdate-infra.service >/dev/null <<'UNIT'
+[Unit]
+Description=PetDate infra (postgres redis minio)
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/petdate
+ExecStart=/usr/bin/docker compose up -d postgres redis minio
+ExecStop=/usr/bin/docker compose stop postgres redis minio
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+  # Keep WorkingDirectory aligned with REMOTE_DIR
+  sudo sed -i "s|WorkingDirectory=/opt/petdate|WorkingDirectory=$REMOTE_DIR|g" /etc/systemd/system/petdate-infra.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable --now petdate-infra.service
+else
+  echo "WARNING: docker not installed — Postgres/Redis probes in admin will fail if DATABASE_URL/REDIS_URL are set."
+fi
+
 npm install
 npm run build:all
 
