@@ -436,6 +436,7 @@ export interface BotSession {
   shopCheckout?: {
     productId: string;
     qty: number;
+    method?: 'coins' | 'stars';
     name?: string;
     phone?: string;
     address?: string;

@@ -95,6 +95,7 @@ import {
   handlePetShop,
   handleShopBackCategories,
   handleShopBuy,
+  handleShopBuyStars,
   handleShopCategory,
   handleShopCheckoutText,
   handleShopFeatured,
@@ -102,6 +103,7 @@ import {
   handleShopNoop,
   handleShopPage,
   handleShopPay,
+  handleShopPayStars,
   handleShopPetType,
   handleShopView,
 } from './shop';
@@ -583,8 +585,14 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery(/^shop:buy:([^:]+):(\d+)$/, (ctx) =>
     handleShopBuy(ctx, ctx.match![1]!, Number(ctx.match![2]))
   );
+  bot.callbackQuery(/^shop:buyStars:([^:]+):(\d+)$/, (ctx) =>
+    handleShopBuyStars(ctx, ctx.match![1]!, Number(ctx.match![2]))
+  );
   bot.callbackQuery(/^shop:pay:([^:]+):(\d+)$/, (ctx) =>
     handleShopPay(ctx, ctx.match![1]!, Number(ctx.match![2]))
+  );
+  bot.callbackQuery(/^shop:payStars:([^:]+):(\d+)$/, (ctx) =>
+    handleShopPayStars(ctx, ctx.match![1]!, Number(ctx.match![2]))
   );
   bot.callbackQuery(/^shop:/, (ctx) => handleShopHome(ctx));
   bot.callbackQuery(/^svc:/, (ctx) => handleComingSoon(ctx, 'خدمات'));
