@@ -30,7 +30,6 @@ import { LoginPage } from './pages/auth/LoginPage';
 import { OtpPage } from './pages/auth/OtpPage';
 import { AddPetPage } from './pages/AddPetPage';
 import { ChatPage } from './pages/ChatPage';
-import { ClinicsPage } from './pages/ClinicsPage';
 import { ExplorePage } from './pages/ExplorePage';
 import { HomePage } from './pages/HomePage';
 import { MatchesPage } from './pages/MatchesPage';
@@ -78,7 +77,6 @@ export default function App() {
             <Route path="matches" element={<MatchesPage />} />
             <Route path="chats/:matchId" element={<ChatPage />} />
             <Route path="profile" element={<ProfilePage />} />
-            <Route path="clinics" element={<ClinicsPage />} />
             <Route path="vet-consult" element={<VetConsultPage />} />
           </Route>
 

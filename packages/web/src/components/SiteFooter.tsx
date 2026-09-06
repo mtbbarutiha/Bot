@@ -17,7 +17,6 @@ const BOTTOM_LINKS: { to: string; label: string }[] = [
   { to: '/explore', label: 'همبازی' },
   { to: '/#news', label: 'اخبار' },
   { to: '/faq', label: 'سؤالات' },
-  { to: '/clinics', label: 'کلینیک‌ها' },
   { to: '/vet-consult', label: 'دامپزشک' },
   { to: '/auth/login', label: 'ورود' },
 ];
@@ -29,7 +28,6 @@ const QUICK_LINKS: { to: string; label: string }[] = [
   { to: '/add-pet', label: 'پت‌های من' },
   { to: '/matches', label: 'درخواست‌های همبازی' },
   { to: '/vet-consult', label: 'مشاوره دامپزشک' },
-  { to: '/clinics', label: 'کلینیک‌ها' },
   { to: '/auth/login', label: 'ورود / ثبت‌نام' },
 ];
 

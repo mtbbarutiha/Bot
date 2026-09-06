@@ -19,15 +19,15 @@ const ROLE_EMPTY_MESSAGES: Record<string, { title: string; desc: string; cta?: s
   },
   no_pet: {
     title: 'هنوز پتی نداری؟',
-    desc: 'می‌تونی فروشگاه و کلینیک‌ها رو ببینی یا پت ثبت کنی.',
+    desc: 'می‌تونی فروشگاه رو ببینی یا پت ثبت کنی.',
     cta: '🛒 فروشگاه پت',
     to: '/shop',
   },
   pet_seeker: {
     title: 'دنبال پت می‌گردی؟',
     desc: 'به زودی آگهی‌های پت‌های قابل‌انتخاب اضافه می‌شه.',
-    cta: '🏥 کلینیک‌های نزدیک',
-    to: '/clinics',
+    cta: '🩺 مشاوره دامپزشک',
+    to: '/vet-consult',
   },
   community_seeker: {
     title: 'جامعه petdate',

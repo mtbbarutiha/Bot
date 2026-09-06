@@ -28,7 +28,7 @@ const SERVICES: {
   { to: '/explore', title: 'نگهداری پت', desc: 'مراقبت روزانه در خانه با خیال راحت برای پت‌های خاص شما.', icon: 'flaticon-dog-and-pets-house', fill: 1 },
   { to: '/explore', title: 'پیاده‌روی سگ', desc: 'پیاده‌روی منظم و امن برای سگ‌ها در محله و پارک‌های نزدیک.', icon: 'flaticon-animals-11', fill: 2 },
   { to: '/vet-consult', title: 'دندان‌پزشکی پت', desc: 'بررسی و مراقبت از دندان و لثه با دامپزشکان مجرب.', icon: 'flaticon-veterinarian-hospital', fill: 3 },
-  { to: '/clinics', title: 'واکسیناسیون', desc: 'برنامه واکسن به‌موقع برای سلامت و ایمنی پت شما.', icon: 'flaticon-syringe', fill: 4 },
+  { to: '/vet-consult', title: 'واکسیناسیون', desc: 'برنامه واکسن به‌موقع برای سلامت و ایمنی پت شما.', icon: 'flaticon-syringe', fill: 4 },
   { to: '/shop', title: 'آرایش پت', desc: 'شست‌وشو، کوتاهی مو و نظافت حرفه‌ای برای ظاهر درخشان.', icon: 'flaticon-scissors', fill: 2 },
   { to: '/add-pet', title: 'برنامه توله', desc: 'آموزش پایه و مراقبت ویژه برای توله‌ها و گربه‌های جوان.', icon: 'flaticon-dog-puppy', fill: 1 },
   { to: '/vet-consult', title: 'خدمات دامپزشکی', desc: 'ویزیت، مشاوره و پیگیری درمان روی همان حساب مشترک.', icon: 'flaticon-cross', fill: 4 },
@@ -36,7 +36,7 @@ const SERVICES: {
   { to: '/shop', title: 'وعده‌های سالم', desc: 'تغذیه متعادل و وعده‌های مناسب سن و نژاد پت.', icon: 'flaticon-pet-food', fill: 1 },
   { to: '/explore', title: 'فعالیت‌های سرگرم‌کننده', desc: 'بازی و همبازی برای انرژی و شادی روزانه پت‌ها.', icon: 'flaticon-people-1', fill: 2 },
   { to: '/explore', title: 'خدمات آموزش', desc: 'تربیت رفتاری و فرمان‌پذیری با مربیان باتجربه.', icon: 'flaticon-dog-training-3', fill: 3 },
-  { to: '/clinics', title: 'میکروچیپ', desc: 'شناسایی دائمی پت برای امنیت بیشتر در گم‌شدن.', icon: 'flaticon-dog-with-first-aid-kit-bag', fill: 4 },
+  { to: '/vet-consult', title: 'میکروچیپ', desc: 'شناسایی دائمی پت برای امنیت بیشتر در گم‌شدن.', icon: 'flaticon-dog-with-first-aid-kit-bag', fill: 4 },
 ];
 
 const HERO_SLIDES = [

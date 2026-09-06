@@ -109,7 +109,7 @@ export function HomePage() {
             <span>
               {isPetOwner
                 ? 'ارسال و مدیریت درخواست‌های همبازی'
-                : 'کلینیک، پت شاپ، مشاوره'}
+                : 'پت شاپ و مشاوره'}
             </span>
           </Link>
         </div>
@@ -120,13 +120,9 @@ export function HomePage() {
           <header className="pepito-home-section-head">
             <p className="pepito-eyebrow">خدمات</p>
             <h2>ادامه در همین فضا</h2>
-            <p>کلینیک، پت شاپ و مشاوره — بدون ترک ظاهر لندینگ.</p>
+            <p>پت شاپ و مشاوره — بدون ترک ظاهر لندینگ.</p>
           </header>
           <div className="pepito-home-actions">
-            <Link to="/clinics" className="pepito-home-action">
-              <strong>کلینیک‌ها</strong>
-              <span>مراکز و نوبت‌ها</span>
-            </Link>
             <Link to="/shop" className="pepito-home-action">
               <strong>پت شاپ</strong>
               <span>لوازم و محصولات پت</span>
