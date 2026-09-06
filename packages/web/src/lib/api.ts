@@ -19,6 +19,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     // headers must come after ...init so Authorization does not wipe Content-Type
     res = await fetch(`${API_BASE}${path}`, {
+      cache: 'no-store',
       ...init,
       headers: { 'Content-Type': 'application/json', ...init?.headers },
     });

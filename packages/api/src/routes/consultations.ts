@@ -16,6 +16,13 @@ const VALID_STATUSES: VetConsultStatus[] = ['requested', 'active', 'completed', 
 
 export const consultationsRouter = Router();
 
+/** Inbox/chat status changes often — block CDN/browser stale GETs (WCDN SMART). */
+consultationsRouter.use((_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.setHeader('Pragma', 'no-cache');
+  next();
+});
+
 consultationsRouter.get('/', (req, res) => {
   const vetUserId = req.query.vetUserId ? Number(req.query.vetUserId) : undefined;
   const patientUserId = req.query.patientUserId

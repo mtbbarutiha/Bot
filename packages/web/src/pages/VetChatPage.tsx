@@ -168,7 +168,14 @@ export function VetChatPage() {
       void syncMessages();
       void loadConsult()
         .then((next) => {
-          if (next) setConsult(next);
+          if (!next) return;
+          setConsult((prev) => {
+            // Never let a stale CDN/list response downgrade an active chat back to requested
+            if (prev?.status === 'active' && next.status === 'requested' && prev.id === next.id) {
+              return { ...next, status: 'active' };
+            }
+            return next;
+          });
         })
         .catch(() => undefined);
     }, POLL_MS);
@@ -185,7 +192,7 @@ export function VetChatPage() {
     setError(null);
     try {
       const updated = await acceptVetConsultation(consult.id, token);
-      setConsult(updated);
+      setConsult({ ...updated, status: updated.status === 'cancelled' ? updated.status : 'active' });
       lastIdRef.current = 0;
       await syncMessages({ reset: true });
     } catch (err) {
