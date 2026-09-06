@@ -3436,6 +3436,60 @@ button.chip.is-on {
   inset-inline-end: auto;
   min-width: min(320px, calc(100vw - 2rem));
 }
+
+/* Profile page — full-width «تغییر نقش» (esp. mobile; rail hidden <860px) */
+.pepito-profile-role-switch-block {
+  margin-top: 0.15rem;
+}
+.pepito-role-switch--profile {
+  width: 100%;
+  z-index: 40;
+}
+.pepito-role-switch-trigger--profile {
+  width: 100%;
+  max-width: none;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.95rem 1.1rem !important;
+  border-radius: 16px;
+  border: 1px solid rgba(92, 77, 145, 0.14);
+  background: rgba(255, 255, 255, 0.88);
+  cursor: pointer;
+  font: inherit;
+  text-align: start;
+  box-shadow: 0 8px 22px rgba(25, 6, 61, 0.06);
+}
+.pepito-role-switch-trigger--profile .pepito-role-switch-trigger-label {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-weight: 800;
+  max-width: none;
+}
+.pepito-role-switch-trigger--profile .pepito-role-switch-trigger-hint {
+  flex-shrink: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #fff;
+  background: linear-gradient(135deg, #5c4d91, #4a3d78);
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+}
+.pepito-role-switch--profile .pepito-role-switch-panel {
+  inset-inline: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+}
+
+/* Desktop already has role switch in the app rail — avoid duplicate clutter */
+@media (min-width: 860px) {
+  .pepito-profile-role-switch-block {
+    display: none;
+  }
+}
+
 .pepito-role-switch-panel {
   position: absolute;
   top: calc(100% + 0.45rem);
@@ -3620,6 +3674,16 @@ button.chip.is-on {
   .pepito-role-switch-trigger-hint {
     font-size: 0.62rem;
   }
+  .pepito-role-switch-trigger--profile {
+    max-width: none;
+    padding: 0.95rem 1.1rem !important;
+  }
+  .pepito-role-switch-trigger--profile .pepito-role-switch-trigger-label {
+    font-size: 1rem;
+  }
+  .pepito-role-switch-trigger--profile .pepito-role-switch-trigger-hint {
+    font-size: 0.82rem;
+  }
   .pepito-nav-actions .pepito-btn--nav {
     display: inline-flex;
     padding: 0.4rem 0.7rem;
@@ -3632,6 +3696,14 @@ button.chip.is-on {
     inset-inline-end: 0.75rem;
     width: auto;
     max-height: calc(100dvh - var(--pepito-nav-h) - 1.5rem);
+  }
+  /* Keep profile panel anchored under the control (not floating under top nav) */
+  .pepito-role-switch--profile .pepito-role-switch-panel {
+    position: absolute;
+    top: calc(100% + 0.45rem);
+    inset-inline: 0;
+    width: 100%;
+    max-height: min(70vh, 520px);
   }
 }
 

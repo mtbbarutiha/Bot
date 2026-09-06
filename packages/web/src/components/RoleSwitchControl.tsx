@@ -30,8 +30,8 @@ export interface RoleSwitchControlProps {
   compact?: boolean;
   /** Extra class on the trigger button */
   className?: string;
-  /** Prefer inline rail-style button instead of nav chrome */
-  variant?: 'nav' | 'rail';
+  /** Prefer inline rail-style button instead of nav chrome; profile = full-width page block */
+  variant?: 'nav' | 'rail' | 'profile';
 }
 
 /**
@@ -160,16 +160,30 @@ export function RoleSwitchControl({
   const triggerClass =
     variant === 'rail'
       ? `pepito-app-rail-link pepito-role-switch-trigger--rail${className ? ` ${className}` : ''}`
-      : `pepito-nav-login pepito-nav-login--btn pepito-role-switch-trigger${className ? ` ${className}` : ''}`;
+      : variant === 'profile'
+        ? `pepito-role-switch-trigger pepito-role-switch-trigger--profile${className ? ` ${className}` : ''}`
+        : `pepito-nav-login pepito-nav-login--btn pepito-role-switch-trigger${className ? ` ${className}` : ''}`;
 
-  const triggerLabel = compact
-    ? 'نقش'
-    : active
-      ? USER_ROLE_LABELS[active]
-      : MY_ROLES_LABEL;
+  const triggerLabel =
+    variant === 'profile'
+      ? active
+        ? USER_ROLE_LABELS[active]
+        : MY_ROLES_LABEL
+      : compact
+        ? 'نقش'
+        : active
+          ? USER_ROLE_LABELS[active]
+          : MY_ROLES_LABEL;
+
+  const rootMod =
+    variant === 'rail'
+      ? ' pepito-role-switch--rail'
+      : variant === 'profile'
+        ? ' pepito-role-switch--profile'
+        : '';
 
   return (
-    <div className={`pepito-role-switch${variant === 'rail' ? ' pepito-role-switch--rail' : ''}`} ref={rootRef}>
+    <div className={`pepito-role-switch${rootMod}`} ref={rootRef}>
       <button
         type="button"
         className={triggerClass}

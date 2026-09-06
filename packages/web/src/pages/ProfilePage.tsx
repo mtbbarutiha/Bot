@@ -21,6 +21,7 @@ import {
   type UserGender,
 } from '@petdate/shared';
 import { PetAvatar } from '../components/PetAvatar';
+import { RoleSwitchControl } from '../components/RoleSwitchControl';
 import { formatAge } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { usePetStore } from '../hooks/usePetStore';
@@ -434,6 +435,18 @@ export function ProfilePage() {
             ))}
           </ul>
         ) : null}
+      </section>
+
+      <section
+        className="pepito-profile-block pepito-profile-role-switch-block"
+        aria-label="تغییر نقش"
+      >
+        <header className="pepito-home-section-head">
+          <p className="pepito-eyebrow">نقش</p>
+          <h2>تغییر نقش</h2>
+          <p>نقش فعال را عوض کن یا نقش جدید اضافه کن.</p>
+        </header>
+        <RoleSwitchControl variant="profile" />
       </section>
 
       {isPetOwner ? (
