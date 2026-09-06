@@ -33,7 +33,7 @@ export const infra = {
     webhookSecret: optional('BOT_WEBHOOK_SECRET'),
   },
   web: {
-    url: optional('WEB_URL') ?? 'http://localhost:5173',
+    url: optional('PUBLIC_WEB_URL') ?? optional('WEB_URL') ?? 'http://localhost:5173',
   },
   elasticsearch: {
     url: optional('ELASTICSEARCH_URL'),

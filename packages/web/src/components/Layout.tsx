@@ -27,7 +27,10 @@ const navItems: { to: string; icon: LucideIcon; label: string }[] = [
 
 export function Layout() {
   const { pathname } = useLocation();
-  const isChat = pathname === '/chats' || pathname.startsWith('/chats/');
+  const isChat =
+    pathname === '/chats' ||
+    pathname.startsWith('/chats/') ||
+    pathname.startsWith('/vet-chats/');
   return (
     <LandingChrome
       appNav

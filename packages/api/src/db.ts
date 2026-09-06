@@ -32,6 +32,7 @@ import type {
   VetRating,
   PreviousVet,
   VetConsultation,
+  VetConsultChatMessage,
   VetConsultStatus,
   VetCredentialStatus,
 } from '@petdate/shared';
@@ -321,6 +322,19 @@ function migrateSchema() {
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_vet_consultations_patient
       ON vet_consultations (patient_user_id, created_at DESC);
+  `);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS vet_consult_chat_messages (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      consult_id INTEGER NOT NULL REFERENCES vet_consultations(id) ON DELETE CASCADE,
+      sender_user_id INTEGER NOT NULL REFERENCES users(id),
+      text TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_vet_consult_chat_messages_consult
+      ON vet_consult_chat_messages (consult_id, id);
   `);
 
   db.exec(`
@@ -1496,6 +1510,16 @@ function mapPaymentOrder(row: Record<string, unknown>): PaymentOrder {
   };
 }
 
+function mapVetConsultChatMessage(row: Record<string, unknown>): VetConsultChatMessage {
+  return {
+    id: row.id as number,
+    consultId: row.consult_id as number,
+    senderUserId: row.sender_user_id as number,
+    text: row.text as string,
+    createdAt: row.created_at as string,
+  };
+}
+
 function mapVetConsultation(row: Record<string, unknown>): VetConsultation {
   return {
     id: row.id as number,
@@ -2023,6 +2047,45 @@ export const dbService = {
          ORDER BY
            CASE WHEN COALESCE(phone_verified, 0) = 1 THEN 0 ELSE 1 END,
            id DESC`
+      )
+      .all() as Record<string, unknown>[];
+    const vets = rows
+      .map(mapUser)
+      .filter((u) => {
+        const roles = u.roles?.length ? u.roles : u.role ? [u.role] : [];
+        return roles.includes('vet');
+      });
+    const phoneOk = vets.filter((v) => Boolean(v.phoneVerified));
+    return phoneOk.length > 0 ? phoneOk : vets;
+  },
+
+  /**
+   * هدف‌های اتصال سریع وب/دسکتاپ:
+   * - دامپزشک آنلاین ربات (vet_online=1)
+   * - دامپزشک با نشست فعال وب (آنلاین روی دسکتاپ/وب)
+   */
+  listOnlineVetsForQuickConnect(): User[] {
+    const rows = db
+      .prepare(
+        `SELECT DISTINCT u.*
+         FROM users u
+         LEFT JOIN web_sessions ws
+           ON ws.user_id = u.id
+          AND datetime(ws.expires_at) > datetime('now')
+         WHERE u.is_active = 1
+           AND COALESCE(u.vet_enabled, 1) = 1
+           AND (
+             u.role = 'vet'
+             OR u.roles LIKE '%"vet"%'
+           )
+           AND (
+             COALESCE(u.vet_online, 0) = 1
+             OR ws.user_id IS NOT NULL
+           )
+         ORDER BY
+           CASE WHEN COALESCE(u.phone_verified, 0) = 1 THEN 0 ELSE 1 END,
+           CASE WHEN COALESCE(u.vet_online, 0) = 1 THEN 0 ELSE 1 END,
+           u.id DESC`
       )
       .all() as Record<string, unknown>[];
     const vets = rows
@@ -3279,6 +3342,69 @@ export const dbService = {
     if (!existing) return null;
     db.prepare(`UPDATE vet_consultations SET status = ? WHERE id = ?`).run(status, id);
     return this.getVetConsultation(id);
+  },
+
+  /** وقتی یک پزشک قبول می‌کند، بقیهٔ درخواست‌های هم‌زمان همان بیمار لغو شوند */
+  cancelSiblingVetConsultations(patientUserId: number, keepId: number): number {
+    const result = db
+      .prepare(
+        `UPDATE vet_consultations
+         SET status = 'cancelled'
+         WHERE patient_user_id = ? AND id != ? AND status = 'requested'`
+      )
+      .run(patientUserId, keepId);
+    return result.changes;
+  },
+
+  listVetConsultChatMessages(
+    consultId: number,
+    opts?: { afterId?: number; limit?: number }
+  ): VetConsultChatMessage[] {
+    const limit = Math.min(Math.max(opts?.limit ?? 200, 1), 500);
+    const afterId = opts?.afterId;
+    if (afterId != null && Number.isFinite(afterId)) {
+      return (
+        db
+          .prepare(
+            `SELECT * FROM vet_consult_chat_messages
+             WHERE consult_id = ? AND id > ?
+             ORDER BY id ASC
+             LIMIT ?`
+          )
+          .all(consultId, afterId, limit) as Record<string, unknown>[]
+      ).map(mapVetConsultChatMessage);
+    }
+    return (
+      db
+        .prepare(
+          `SELECT * FROM vet_consult_chat_messages
+           WHERE consult_id = ?
+           ORDER BY id ASC
+           LIMIT ?`
+        )
+        .all(consultId, limit) as Record<string, unknown>[]
+    ).map(mapVetConsultChatMessage);
+  },
+
+  createVetConsultChatMessage(data: {
+    consultId: number;
+    senderUserId: number;
+    text: string;
+  }): VetConsultChatMessage {
+    const text = data.text.trim();
+    if (!text) throw new Error('EMPTY_TEXT');
+    if (text.length > 4000) throw new Error('TEXT_TOO_LONG');
+    const result = db
+      .prepare(
+        `INSERT INTO vet_consult_chat_messages (consult_id, sender_user_id, text)
+         VALUES (?, ?, ?)`
+      )
+      .run(data.consultId, data.senderUserId, text);
+    return mapVetConsultChatMessage(
+      db
+        .prepare('SELECT * FROM vet_consult_chat_messages WHERE id = ?')
+        .get(result.lastInsertRowid) as Record<string, unknown>
+    );
   },
 
   submitCoinSell(input: {

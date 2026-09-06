@@ -316,6 +316,15 @@ export interface VetConsultation {
   petBreed?: string;
 }
 
+/** پیام چت مشاوره دامپزشک (وب) */
+export interface VetConsultChatMessage {
+  id: number;
+  consultId: number;
+  senderUserId: number;
+  text: string;
+  createdAt: string;
+}
+
 /** دامپزشکی که بیمار قبلاً باهاش مشاوره داشته (برای ارتباط سریع) */
 export interface PreviousVet {
   id: number;

@@ -4767,9 +4767,138 @@ button.chip.is-on {
   margin-top: -0.25rem;
 }
 
+.pepito-vet-inbox-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  color: var(--pepito-dark, #1f2430);
+}
+.pepito-vet-inbox {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+.pepito-vet-inbox li {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(31, 36, 48, 0.08);
+}
+.pepito-vet-inbox li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.pepito-vet-inbox strong {
+  display: block;
+  color: var(--pepito-dark, #1f2430);
+}
+.pepito-vet-inbox span {
+  display: block;
+  color: var(--pepito-muted, #757086);
+  font-size: 0.86rem;
+  margin-top: 0.15rem;
+}
+.pepito-vet-inbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pepito-vet-inbox-actions .pepito-btn {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 8.5rem;
+}
+
+.pepito-vet-consult-incoming {
+  margin: 0 auto 1.25rem;
+  max-width: 720px;
+  padding: 1rem 1.1rem 1.15rem;
+  border-radius: 18px;
+  border: 1px solid rgba(31, 36, 48, 0.08);
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(21, 204, 160, 0.1), transparent 55%),
+    rgba(255, 255, 255, 0.92);
+}
+.pepito-vet-consult-incoming h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+  color: var(--pepito-dark, #1f2430);
+}
+.pepito-vet-consult-incoming-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.85rem;
+}
+.pepito-vet-consult-incoming-list li {
+  display: grid;
+  gap: 0.65rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid rgba(31, 36, 48, 0.08);
+}
+.pepito-vet-consult-incoming-list li:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.pepito-vet-consult-incoming-list strong {
+  display: block;
+  color: var(--pepito-dark, #1f2430);
+}
+.pepito-vet-consult-incoming-list span,
+.pepito-vet-consult-incoming-list small {
+  display: block;
+  color: var(--pepito-muted, #757086);
+  font-size: 0.86rem;
+  margin-top: 0.15rem;
+}
+.pepito-vet-consult-incoming-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.pepito-vet-consult-incoming-actions .pepito-btn {
+  flex: 1 1 auto;
+  justify-content: center;
+  min-width: 8.5rem;
+}
+
+/* Vet web chat (separate from playdate secure chat) */
+.pepito-vet-chat .pepito-vet-chat-card {
+  margin: 0.85rem 0.9rem;
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(31, 36, 48, 0.08);
+  color: #435366;
+  line-height: 1.7;
+}
+.pepito-vet-chat .pepito-vet-chat-card p {
+  margin: 0 0 0.55rem;
+}
+.pepito-vet-chat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+.pepito-vet-chat-actions .pepito-btn {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+.pepito-vet-chat-wait-hint {
+  margin: 0;
+  color: var(--pepito-muted, #757086);
+  font-size: 0.9rem;
+}
+
 @media (max-width: 768px) {
   .pepito-vet-consult {
     padding: 1.25rem 1rem 6.5rem;
+  }
+  .pepito-vet-consult-incoming {
+    margin-inline: 1rem;
   }
 }
 

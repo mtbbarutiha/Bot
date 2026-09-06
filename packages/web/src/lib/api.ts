@@ -6,6 +6,7 @@ import type {
   PlaydateStatus,
   User,
   UserRole,
+  VetConsultChatMessage,
   VetConsultation,
   VetConsultStatus,
 } from '@petdate/shared';
@@ -492,6 +493,57 @@ export async function listVetConsultations(filters: {
   if (filters.status) params.set('status', filters.status);
   const qs = params.toString();
   return request<VetConsultation[]>(`/api/consultations${qs ? `?${qs}` : ''}`);
+}
+
+export async function getVetConsultation(consultId: number): Promise<VetConsultation> {
+  return request<VetConsultation>(`/api/consultations/${consultId}`);
+}
+
+export async function acceptVetConsultation(
+  consultId: number,
+  token?: string | null
+): Promise<VetConsultation> {
+  return request<VetConsultation>(`/api/consultations/${consultId}/accept`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+}
+
+export async function rejectVetConsultation(
+  consultId: number,
+  token?: string | null
+): Promise<VetConsultation> {
+  return request<VetConsultation>(`/api/consultations/${consultId}/reject`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+}
+
+export async function listVetConsultChatMessages(
+  consultId: number,
+  opts?: { afterId?: number; token?: string | null }
+): Promise<VetConsultChatMessage[]> {
+  const params = new URLSearchParams();
+  if (opts?.afterId != null) params.set('afterId', String(opts.afterId));
+  const qs = params.toString();
+  return request<VetConsultChatMessage[]>(
+    `/api/consultations/${consultId}/messages${qs ? `?${qs}` : ''}`,
+    {
+      headers: opts?.token ? { Authorization: `Bearer ${opts.token}` } : undefined,
+    }
+  );
+}
+
+export async function postVetConsultChatMessage(
+  consultId: number,
+  text: string,
+  token?: string | null
+): Promise<VetConsultChatMessage> {
+  return request<VetConsultChatMessage>(`/api/consultations/${consultId}/messages`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: JSON.stringify({ text }),
+  });
 }
 
 export function telegramBotDeepLink(path = ''): string {

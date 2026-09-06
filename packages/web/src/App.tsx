@@ -45,6 +45,7 @@ import { ShopCategoryPage } from './pages/shop/ShopCategoryPage';
 import { ShopProductPage } from './pages/shop/ShopProductPage';
 import { ShopCartPage } from './pages/shop/ShopCartPage';
 import { VetConsultPage } from './pages/VetConsultPage';
+import { VetChatPage } from './pages/VetChatPage';
 import { WelcomePage } from './pages/WelcomePage';
 import { FaqPage } from './pages/FaqPage';
 import { AdoptionDetailPage } from './pages/AdoptionDetailPage';
@@ -86,6 +87,8 @@ export default function App() {
             <Route path="profile" element={<ProfilePage />} />
             <Route path="wallet" element={<WalletPage />} />
             <Route path="vet-consult" element={<VetConsultPage />} />
+            <Route path="vet-chats" element={<Navigate to="/vet-consult" replace />} />
+            <Route path="vet-chats/:consultId" element={<VetChatPage />} />
           </Route>
 
           <Route path="admin/login" element={<AdminLoginPage />} />

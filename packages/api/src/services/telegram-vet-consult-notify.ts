@@ -56,6 +56,7 @@ export async function notifyVetQuickConsultTelegram(opts: {
     patient.phone ? `تماس: <code>${escapeHtml(patient.phone)}</code>` : null,
     '',
     'اگر آماده‌ای قبول کن؛ بیمار منتظر پاسخته.',
+    'قبول از ربات یا از وب → چت وب برای هر دو طرف فعال می‌شود.',
     'از منو «🩺 آخرین بیمارها» هم می‌تونی بیماران قبلی را ببینی.',
   ]
     .filter(Boolean)

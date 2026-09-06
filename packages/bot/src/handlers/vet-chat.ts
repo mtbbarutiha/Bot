@@ -26,6 +26,7 @@ import {
 import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 import { MENU_LABELS } from '../keyboards';
+import { effectiveWebUrl, isTelegramInlineUrl } from '../urls';
 
 /** Reply-keyboard labels for vet chat (short so buttons stay compact). */
 export const VET_CHAT_BTNS = {
@@ -191,35 +192,47 @@ export async function startVetChat(
   vet: User,
   patient: User
 ): Promise<void> {
-  if (!vet.telegramId || !patient.telegramId) {
-    await ctx.reply('برای شروع چت، هر دو طرف باید از ربات استفاده کرده باشند.');
+  const webBase = effectiveWebUrl().replace(/\/$/, '');
+  const webChatUrl = `${webBase}/vet-chats/${consultId}`;
+  const webChatLine = [
+    '',
+    '🌐 می‌توانید در وب هم چت کنید:',
+    webChatUrl,
+  ].join('\n');
+
+  if (!vet.telegramId) {
+    await ctx.reply('برای شروع چت تلگرام، دامپزشک باید ربات را استارت کرده باشد.');
     return;
   }
 
   await upsertSession(String(vet.telegramId), {
     step: 'vet_chat',
     vetChatConsultId: consultId,
-    vetChatPeerTelegramId: String(patient.telegramId),
+    vetChatPeerTelegramId: patient.telegramId ? String(patient.telegramId) : undefined,
     vetChatRole: 'vet',
     medicalNotePetId: undefined,
     prescriptionPetId: undefined,
     prescriptionDraft: undefined,
   });
-  await upsertSession(String(patient.telegramId), {
-    step: 'vet_chat',
-    vetChatConsultId: consultId,
-    vetChatPeerTelegramId: String(vet.telegramId),
-    vetChatRole: 'patient',
-    medicalNotePetId: undefined,
-    prescriptionPetId: undefined,
-    prescriptionDraft: undefined,
-  });
+
+  if (patient.telegramId) {
+    await upsertSession(String(patient.telegramId), {
+      step: 'vet_chat',
+      vetChatConsultId: consultId,
+      vetChatPeerTelegramId: String(vet.telegramId),
+      vetChatRole: 'patient',
+      medicalNotePetId: undefined,
+      prescriptionPetId: undefined,
+      prescriptionDraft: undefined,
+    });
+  }
 
   const vetIntro = [
     '💬 <b>چت با صاحب پت فعال شد</b>',
     '',
     `صاحب پت: <b>${escapeHtml(patient.name)}</b>`,
     'هر پیامی بفرستی مستقیم به صاحب پت می‌رسد.',
+    webChatLine,
     '',
     `• ${VET_CHAT_BTNS.petProfile}`,
     `• ${VET_CHAT_BTNS.medical}`,
@@ -233,20 +246,44 @@ export async function startVetChat(
     '',
     `پزشک: <b>${escapeHtml(vet.name)}</b>`,
     'هر پیامی بفرستی مستقیم به پزشک می‌رسد.',
+    webChatLine,
     '',
     `پایان چت: ${VET_CHAT_BTNS.end}`,
   ].join('\n');
+
+  const webButton = isTelegramInlineUrl(webChatUrl)
+    ? { reply_markup: new InlineKeyboard().url('ورود به چت وب', webChatUrl) }
+    : {};
 
   await ctx.reply(vetIntro, {
     parse_mode: 'HTML',
     reply_markup: vetChatReplyKeyboard(true),
   });
+  if (isTelegramInlineUrl(webChatUrl)) {
+    try {
+      await ctx.reply('🌐 لینک چت وب:', {
+        ...webButton,
+      });
+    } catch {
+      /* ignore */
+    }
+  }
+
+  if (!patient.telegramId) {
+    await ctx.reply(
+      'بیمار تلگرام ندارد — چت وب برای او فعال است. پیام‌های وب از همین جلسه هم قابل پیگیری‌اند.'
+    );
+    return;
+  }
 
   try {
     await ctx.api.sendMessage(patient.telegramId, patientIntro, {
       parse_mode: 'HTML',
       reply_markup: vetChatReplyKeyboard(false),
     });
+    if (isTelegramInlineUrl(webChatUrl)) {
+      await ctx.api.sendMessage(patient.telegramId, '🌐 لینک چت وب:', webButton);
+    }
   } catch (err) {
     console.warn('notify patient chat start failed:', err);
   }
