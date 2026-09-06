@@ -116,7 +116,7 @@ export function HomePage() {
       </section>
 
       {!isPetOwner ? (
-        <section className="pepito-home-nearby pepito-home-nearby--role">
+        <section className="pepito-home-services" aria-label="خدمات">
           <header className="pepito-home-section-head">
             <p className="pepito-eyebrow">خدمات</p>
             <h2>ادامه در همین فضا</h2>
@@ -125,7 +125,7 @@ export function HomePage() {
           <div className="pepito-home-actions">
             <Link to="/clinics" className="pepito-home-action">
               <strong>کلینیک‌ها</strong>
-              <span>نزدیک‌ترین مراکز</span>
+              <span>مراکز و نوبت‌ها</span>
             </Link>
             <Link to="/shop" className="pepito-home-action">
               <strong>فروشگاه</strong>

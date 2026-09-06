@@ -44,8 +44,3 @@ export function PetAvatar({
     </div>
   );
 }
-
-export function CategoryPetIcon({ type }: { type: PetType | 'all' }) {
-  const src = type === 'all' ? DEFAULT_IMAGES.dog : DEFAULT_IMAGES[type];
-  return <img src={src} alt="" className="category-photo" />;
-}
