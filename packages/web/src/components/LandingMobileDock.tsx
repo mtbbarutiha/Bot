@@ -13,7 +13,12 @@ export function LandingMobileDock() {
   const { pathname } = useLocation();
   const { isLoggedIn } = useAuthStore();
 
-  if (pathname.startsWith('/admin') || pathname === '/chats' || pathname.startsWith('/chats/')) {
+  if (
+    pathname.startsWith('/admin') ||
+    pathname === '/chats' ||
+    pathname.startsWith('/chats/') ||
+    pathname.startsWith('/vet-chats')
+  ) {
     return null;
   }
 
