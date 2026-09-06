@@ -36,7 +36,8 @@ export default defineConfig({
       ],
       manifest: {
         name: 'پت‌دیت | PetDate',
-        short_name: 'پت‌دیت',
+        // iOS/Android home-screen label — English; keep Persian in page UI titles only.
+        short_name: 'petdate',
         description:
           'پت‌دیت (PetDate) پلتفرم فارسی پیدا کردن همبازی برای پت، پت‌شاپ، پذیرش پت و مشاوره دامپزشک.',
         theme_color: '#5c4d91',
