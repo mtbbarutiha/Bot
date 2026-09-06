@@ -283,24 +283,28 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   transition: box-shadow 0.25s ease;
 }
 @media (max-width: 859px) {
-  /* Avoid iOS “sticky jump” / horizontal thrash with fixed + absolute cluster */
+  /* Keep fixed like desktop — sticky + margin-top nav offset caused a large empty gap */
+  :root {
+    --pepito-nav-h: 64px;
+  }
   .pepito-nav {
-    position: sticky;
+    position: fixed;
+    inset-inline: 0;
     top: 0;
     width: 100%;
     max-width: 100vw;
     overflow: visible;
     gap: 0.55rem;
     padding-block: 0.65rem;
-    min-height: 64px;
+    min-height: var(--pepito-nav-h);
   }
   .pepito-landing,
   body:has(.pepito-landing) {
     overflow-x: clip;
   }
   .pepito-hero {
-    margin-top: 0; /* sticky nav occupies flow; don't double-offset */
-    min-height: calc(85vh - 64px);
+    margin-top: var(--pepito-nav-h);
+    min-height: calc(85vh - var(--pepito-nav-h));
   }
   .pepito-nav--app {
     padding-left: calc(var(--pepito-gutter-x) + 7.25rem);
@@ -309,11 +313,6 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     left: 0.65rem;
     gap: 0.3rem;
     max-width: calc(100vw - 8rem);
-  }
-  .pepito-nav-actions .pepito-btn--nav {
-    display: inline-flex;
-    padding: 0.4rem 0.7rem;
-    font-size: 0.78rem;
   }
 }
 .pepito-nav.is-scrolled {
@@ -3520,7 +3519,9 @@ button.chip.is-on {
     font-size: 0.62rem;
   }
   .pepito-nav-actions .pepito-btn--nav {
-    display: none;
+    display: inline-flex;
+    padding: 0.4rem 0.7rem;
+    font-size: 0.78rem;
   }
   .pepito-role-switch-panel {
     position: fixed;
