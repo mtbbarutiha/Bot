@@ -341,14 +341,64 @@ export async function verifyWebOtp(
   });
 }
 
-export async function fetchMe(token: string) {
-  return request<{ ok: true; user: User }>('/api/auth/me', {
+/**
+ * In-flight + short TTL coalesce for auth GETs.
+ * Survives React remounts / accidental effect re-fires that used to storm
+ * /api/auth/me + /api/auth/wallet (wallet page layout jump).
+ */
+const AUTH_GET_TTL_MS = 2500;
+const authGetInflight = new Map<string, Promise<unknown>>();
+const authGetCache = new Map<string, { at: number; value: unknown }>();
+
+function authGetKey(path: string, token: string) {
+  return `${path}::${token}`;
+}
+
+async function coalescedAuthGet<T>(path: string, token: string): Promise<T> {
+  const key = authGetKey(path, token);
+  const cached = authGetCache.get(key);
+  if (cached && Date.now() - cached.at < AUTH_GET_TTL_MS) {
+    return cached.value as T;
+  }
+  const pending = authGetInflight.get(key);
+  if (pending) return pending as Promise<T>;
+
+  const req = request<T>(path, {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  })
+    .then((value) => {
+      authGetCache.set(key, { at: Date.now(), value });
+      return value;
+    })
+    .finally(() => {
+      authGetInflight.delete(key);
+    });
+
+  authGetInflight.set(key, req);
+  return req;
+}
+
+/** Drop coalesced auth GET cache (after logout / wallet mutation). */
+export function invalidateAuthGetCache(token?: string) {
+  if (!token) {
+    authGetInflight.clear();
+    authGetCache.clear();
+    return;
+  }
+  for (const key of [...authGetInflight.keys()]) {
+    if (key.endsWith(`::${token}`)) authGetInflight.delete(key);
+  }
+  for (const key of [...authGetCache.keys()]) {
+    if (key.endsWith(`::${token}`)) authGetCache.delete(key);
+  }
+}
+
+export async function fetchMe(token: string) {
+  return coalescedAuthGet<{ ok: true; user: User }>('/api/auth/me', token);
 }
 
 export async function fetchWallet(token: string) {
-  return request<{
+  return coalescedAuthGet<{
     ok: true;
     wallet: {
       ton: number;
@@ -362,9 +412,7 @@ export async function fetchWallet(token: string) {
       telegramId: string | null;
       username: string | null;
     };
-  }>('/api/auth/wallet', {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+  }>('/api/auth/wallet', token);
 }
 
 /** Bot-signed deep link → web session (same users row). */

@@ -2,6 +2,7 @@ import type { OnboardingStatus, User, UserRole } from '@petdate/shared';
 import { normalizeRoles, primaryRole } from '@petdate/shared';
 import {
   fetchMe,
+  invalidateAuthGetCache,
   logoutWebSession,
   patchWebPrimaryRole,
   patchWebProfile,
@@ -15,6 +16,9 @@ import {
 import { userStore } from './userStore';
 
 const STORAGE_KEY = 'petdate_web_auth_v1';
+
+/** Single-flight refreshMe — AuthGuard + pages must not overlap /me calls. */
+let refreshMeInflight: Promise<User | null> | null = null;
 
 export interface WebAuthState {
   token?: string;
@@ -136,15 +140,23 @@ class AuthStore {
 
   async refreshMe() {
     if (!this.data.token) return null;
-    const me = await fetchMe(this.data.token);
-    // Skip persist/notify when payload is unchanged — avoids subscriber thrash
-    // (WalletChip / guards re-render storms that look like layout jump).
-    if (this.data.user && JSON.stringify(this.data.user) === JSON.stringify(me.user)) {
-      return me.user;
-    }
-    this.data = { ...this.data, user: me.user };
-    this.persist();
-    return me.user;
+    if (refreshMeInflight) return refreshMeInflight;
+    refreshMeInflight = (async () => {
+      try {
+        const me = await fetchMe(this.data.token!);
+        // Skip persist/notify when payload is unchanged — avoids subscriber thrash
+        // (WalletChip / guards re-render storms that look like layout jump).
+        if (this.data.user && JSON.stringify(this.data.user) === JSON.stringify(me.user)) {
+          return me.user;
+        }
+        this.data = { ...this.data, user: me.user };
+        this.persist();
+        return me.user;
+      } finally {
+        refreshMeInflight = null;
+      }
+    })();
+    return refreshMeInflight;
   }
 
   async saveProfile(patch: Record<string, unknown>) {
@@ -196,13 +208,16 @@ class AuthStore {
   }
 
   async logout() {
-    if (this.data.token) {
+    const prevToken = this.data.token;
+    if (prevToken) {
       try {
-        await logoutWebSession(this.data.token);
+        await logoutWebSession(prevToken);
       } catch {
         /* ignore */
       }
     }
+    invalidateAuthGetCache(prevToken);
+    refreshMeInflight = null;
     this.data = {};
     localStorage.setItem(STORAGE_KEY, JSON.stringify(this.data));
     userStore.reset();
