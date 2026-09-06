@@ -149,9 +149,14 @@ export function ProfileWizardPage() {
   }
 
   return (
-    <AuthShell wide>
+    <AuthShell
+      wide
+      bannerTitle="ساخت پروفایل"
+      bannerLead="همان مراحل ربات — داخل همان فضای برند Pepito"
+      bannerImage="/pepito/uploads/5.jpg"
+    >
       <p className="pepito-auth-kicker">پروفایل</p>
-      <h1>ساخت پروفایل</h1>
+      <h1>اطلاعات تو</h1>
       <p className="auth-lead">
         همان مراحل ربات — مرحله {stepIdx + 1} از {STEPS.length}. اگر الان وقت نداری می‌تونی فعلاً رد کنی.
       </p>

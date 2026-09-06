@@ -53,9 +53,13 @@ export function LoginPage() {
   }
 
   return (
-    <AuthShell>
+    <AuthShell
+      bannerTitle="ورود به Pet Date"
+      bannerLead="با شماره موبایل یا ایمیل وارد شو — همان حساب وب و تلگرام"
+      bannerImage="/pepito/uploads/3.jpg"
+    >
       <p className="pepito-auth-kicker">ورود</p>
-      <h1>ورود به Pet Date</h1>
+      <h1>خوش آمدی</h1>
       <p className="auth-lead">
         مثل ربات تلگرام، با شماره موبایل یا ایمیل وارد شو — همان حساب، همان پت‌ها و چت‌ها.
       </p>

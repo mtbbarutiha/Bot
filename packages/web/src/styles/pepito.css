@@ -1887,63 +1887,114 @@ button.chip.is-on {
   box-shadow: 0 24px 50px rgba(25, 6, 61, 0.1) !important;
 }
 
-/* Pepito auth shell — landing continuity */
-.pepito-auth {
+/* —— Landing-continuous auth / onboarding / app shell —— */
+.pepito-flow-page {
   min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  background:
-    radial-gradient(780px 360px at 100% -10%, rgba(219, 137, 202, 0.28), transparent 55%),
-    radial-gradient(640px 300px at -10% 55%, rgba(92, 77, 145, 0.2), transparent 52%),
-    linear-gradient(165deg, #ffffff 0%, var(--pepito-soft) 48%, var(--pepito-lilac) 100%);
+  background: var(--pepito-white);
   color: var(--pepito-muted);
   font-family: var(--font-body);
 }
-.pepito-auth-nav {
-  position: sticky;
-  top: 0;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding-block: 0.85rem;
-  padding-inline: var(--pepito-gutter-x);
-  box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.92);
-  backdrop-filter: blur(14px);
-  border-bottom: 1px solid rgba(92, 77, 145, 0.06);
+.pepito-nav-login--btn {
+  appearance: none;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
 }
-.pepito-auth-nav-link {
-  color: var(--pepito-dark);
-  font-weight: 700;
-  text-decoration: none;
-  font-size: 0.92rem;
-}
-.pepito-auth-nav-link:hover {
+.pepito-nav-links--app a.active,
+.pepito-nav-links--app a.is-active,
+.pepito-nav-links--app a[aria-current='page'] {
   color: var(--pepito-base);
 }
-.pepito-auth-body {
-  flex: 1;
-  display: grid;
-  place-items: center;
-  padding: 2rem 1rem 3rem;
+
+.pepito-flow-banner {
+  position: relative;
+  min-height: clamp(200px, 32vh, 320px);
+  margin-top: var(--pepito-nav-h);
+  background-position: center top;
+  background-size: cover;
+  background-repeat: no-repeat;
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+  animation: pepito-flow-banner-in 0.7s ease both;
 }
-.pepito-auth-card {
-  width: min(440px, 100%);
-  background: rgba(255, 255, 255, 0.94);
-  border: 1px solid rgba(92, 77, 145, 0.1);
-  border-radius: 28px;
-  padding: 28px 22px;
-  box-shadow: 0 24px 50px rgba(25, 6, 61, 0.1);
-  backdrop-filter: blur(10px);
-  /* opacity-only so position:fixed children are not trapped by transform */
-  animation: pepito-auth-rise 0.45s ease both;
+.pepito-flow-banner-wash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    100deg,
+    rgba(25, 6, 61, 0.62) 0%,
+    rgba(25, 6, 61, 0.32) 48%,
+    rgba(25, 6, 61, 0.1) 78%,
+    transparent 100%
+  );
+  z-index: 0;
+  pointer-events: none;
 }
-.pepito-auth-card--wide {
-  width: min(560px, 100%);
+[dir='rtl'] .pepito-flow-banner-wash {
+  background: linear-gradient(
+    260deg,
+    rgba(25, 6, 61, 0.62) 0%,
+    rgba(25, 6, 61, 0.32) 48%,
+    rgba(25, 6, 61, 0.1) 78%,
+    transparent 100%
+  );
 }
-.pepito-auth-kicker {
+.pepito-flow-banner-inner {
+  position: relative;
+  z-index: 1;
+  width: min(var(--pepito-container-max), 100%);
+  margin-inline: auto;
+  padding-inline: var(--pepito-container-pad);
+  padding-block: 2.25rem 2rem;
+  box-sizing: border-box;
+  color: #fff;
+  animation: pepito-flow-rise 0.65s ease 0.08s both;
+}
+.pepito-flow-banner-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0 0 0.55rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.15rem, 2.4vw, 1.45rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.pepito-flow-banner-inner h1 {
+  margin: 0 0 0.4rem;
+  font-size: clamp(1.45rem, 3vw, 2.1rem);
+  font-weight: 700;
+  line-height: 1.25;
+  color: #fff;
+  font-family: var(--font-display);
+}
+.pepito-flow-banner-inner > p:last-child {
+  margin: 0;
+  max-width: 36rem;
+  font-size: 1.02rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.pepito-flow-panel {
+  padding: 2.5rem 0 3.5rem;
+  background:
+    linear-gradient(180deg, #fff 0%, var(--pepito-soft) 55%, #fff 100%);
+}
+.pepito-flow-panel-inner {
+  width: min(480px, 100%);
+  margin-inline: auto;
+  padding-inline: var(--pepito-container-pad);
+  box-sizing: border-box;
+  animation: pepito-flow-rise 0.55s ease 0.12s both;
+}
+.pepito-flow-panel--wide .pepito-flow-panel-inner {
+  width: min(640px, 100%);
+}
+.pepito-auth-flow .pepito-auth-kicker {
   margin: 0 0 6px;
   font-family: var(--font-display);
   font-size: 0.78rem;
@@ -1952,44 +2003,67 @@ button.chip.is-on {
   text-transform: uppercase;
   color: var(--pepito-base);
 }
-.pepito-auth-card h1 {
+.pepito-auth-flow .pepito-flow-panel-inner > h1,
+.pepito-auth-flow .role-select > h1 {
   margin: 0 0 8px;
   font-size: 1.55rem;
   color: var(--pepito-dark);
   font-family: var(--font-display);
 }
-.pepito-auth .auth-submit,
-.pepito-auth .pepito-btn.auth-submit {
+.pepito-auth-flow .auth-submit,
+.pepito-auth-flow .pepito-btn.auth-submit {
   width: 100%;
 }
-.pepito-auth .auth-skip-btn.pepito-btn--ghost {
+.pepito-auth-flow .auth-skip-btn.pepito-btn--ghost {
   width: 100%;
+  margin-top: 0.65rem;
   background: transparent !important;
   color: var(--pepito-base) !important;
   border: 1.5px solid rgba(92, 77, 145, 0.28) !important;
   backdrop-filter: none;
 }
-.pepito-auth .auth-skip-btn.pepito-btn--ghost:hover {
+.pepito-auth-flow .auth-skip-btn.pepito-btn--ghost:hover {
   background: var(--pepito-lilac) !important;
   color: var(--pepito-dark) !important;
   transform: translate3d(0, -3px, 0.01px);
 }
-.pepito-auth .role-grid {
+.pepito-auth-flow .role-grid {
   margin: 0 0 1.25rem;
 }
-.pepito-auth .role-select {
+.pepito-auth-flow .role-select {
   display: flex;
   flex-direction: column;
-  /* room for fixed confirm bar (portaled to body) */
   padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
 }
-/* Portaled to document.body — must not nest under .pepito-auth-card transform */
+.pepito-auth-flow .form-group {
+  margin: 0;
+}
+.pepito-auth-flow .form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #4a3d78;
+}
+.pepito-auth-flow .form-input,
+.pepito-auth-flow .form-select,
+.pepito-auth-flow .form-textarea {
+  width: 100%;
+  border: 1px solid rgba(92, 77, 145, 0.2);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #fff;
+  font: inherit;
+  color: var(--pepito-dark);
+}
+
+/* Portaled to document.body — must not nest under transform */
 .role-select-actions {
   position: fixed;
   left: 50%;
   bottom: 0;
   z-index: 40;
-  width: min(560px, 100%);
+  width: min(640px, 100%);
   transform: translateX(-50%);
   box-sizing: border-box;
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
@@ -2007,46 +2081,177 @@ button.chip.is-on {
   margin: 0 0 10px;
   text-align: center;
 }
-.pepito-auth .role-select-error {
-  color: #b42318;
-  font-size: 0.86rem;
-  margin: 0 0 10px;
+
+/* Logged-in app — same landing nav, soft content plane */
+.pepito-app-shell {
+  min-height: 100dvh;
+  background: var(--pepito-white);
 }
-.pepito-auth .form-group {
-  margin: 0;
+.pepito-app-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 0;
+  max-width: var(--pepito-container-max);
+  margin-inline: auto;
+  padding-top: var(--pepito-nav-h);
+  min-height: calc(100dvh - var(--pepito-nav-h));
+  box-sizing: border-box;
 }
-.pepito-auth .form-label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.86rem;
+.pepito-app-rail {
+  position: sticky;
+  top: var(--pepito-nav-h);
+  align-self: start;
+  height: calc(100dvh - var(--pepito-nav-h));
+  padding: 1.25rem 0.85rem 1.5rem;
+  border-inline-end: 1px solid rgba(92, 77, 145, 0.08);
+  background: linear-gradient(180deg, #fff 0%, #faf9fc 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.pepito-app-rail-user {
+  margin: 0 0.35rem 0.35rem;
+  font-family: var(--font-display);
   font-weight: 700;
-  color: #4a3d78;
-}
-.pepito-auth .form-input {
-  width: 100%;
-  border: 1px solid rgba(92, 77, 145, 0.2);
-  border-radius: 16px;
-  padding: 12px 14px;
-  background: #fff;
-  font: inherit;
   color: var(--pepito-dark);
+  font-size: 0.95rem;
 }
-@keyframes pepito-auth-rise {
+.pepito-app-rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+  overflow: auto;
+}
+.pepito-app-rail-link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 14px;
+  color: var(--pepito-dark);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.pepito-app-rail-link:hover,
+.pepito-app-rail-link.is-active {
+  background: var(--pepito-lilac);
+  color: var(--pepito-base);
+}
+.pepito-app-rail-logout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: auto;
+  padding: 0.65rem 0.75rem;
+  border: 0;
+  border-radius: 14px;
+  background: rgba(219, 137, 202, 0.12);
+  color: #9b4d88;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pepito-app-main {
+  min-width: 0;
+  padding: 1.25rem var(--pepito-container-pad) 2.5rem;
+  background:
+    radial-gradient(640px 260px at 100% 0%, rgba(219, 137, 202, 0.1), transparent 55%),
+    radial-gradient(520px 220px at 0% 12%, rgba(92, 77, 145, 0.07), transparent 50%),
+    #fff;
+  animation: pepito-flow-rise 0.5s ease both;
+}
+.pepito-app-mobile-nav {
+  display: none;
+}
+
+.pepito-home {
+  background: transparent !important;
+}
+.pepito-home-header.home-header,
+.pepito-app-shell .home-header {
+  background:
+    linear-gradient(145deg, rgba(25, 6, 61, 0.78) 0%, rgba(92, 77, 145, 0.72) 52%, rgba(219, 137, 202, 0.45) 120%),
+    url('/pepito/uploads/3.jpg') center / cover no-repeat !important;
+  border-radius: 22px;
+  overflow: hidden;
+}
+.pepito-home-brand {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+@keyframes pepito-flow-rise {
   from {
     opacity: 0;
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
-@media (max-width: 640px) {
-  .pepito-auth-nav .pepito-nav-logo img {
-    height: 36px;
+@keyframes pepito-flow-banner-in {
+  from {
+    opacity: 0.55;
+    transform: scale(1.03);
   }
-  .pepito-auth-card {
-    padding: 22px 18px;
+  to {
+    opacity: 1;
+    transform: scale(1);
   }
 }
+
+@media (max-width: 859px) {
+  .pepito-app-layout {
+    grid-template-columns: 1fr;
+    padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px));
+  }
+  .pepito-app-rail {
+    display: none;
+  }
+  .pepito-app-mobile-nav {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    position: fixed;
+    inset-inline: 12px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 50;
+    gap: 0.15rem;
+    padding: 0.45rem 0.35rem;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid rgba(92, 77, 145, 0.1);
+    border-radius: 18px;
+    box-shadow: 0 14px 36px rgba(25, 6, 61, 0.12);
+  }
+  .pepito-app-mobile-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.15rem;
+    padding: 0.35rem 0.2rem;
+    color: var(--pepito-muted);
+    text-decoration: none;
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+  .pepito-app-mobile-link.is-active {
+    color: var(--pepito-base);
+  }
+  .pepito-flow-banner {
+    min-height: 190px;
+  }
+  .pepito-flow-panel {
+    padding: 1.75rem 0 2.75rem;
+  }
+}
+
 .home-service-chip {
   border-radius: 30px !important;
   background: #fff !important;
@@ -2270,4 +2475,25 @@ button.chip.is-on {
   .pepito-adopt-ctas .pepito-btn {
     width: 100%;
   }
+}
+
+/* Chat full-bleed inside landing-continuous app shell */
+.pepito-app-layout:has(.tg-chat) .pepito-app-rail,
+.pepito-app-layout:has(.tg-chat) .pepito-app-mobile-nav,
+.pepito-app-shell:has(.tg-chat) .pepito-nav {
+  display: none !important;
+}
+.pepito-app-layout:has(.tg-chat) {
+  grid-template-columns: 1fr !important;
+  max-width: 100% !important;
+  padding-top: 0 !important;
+  min-height: 100dvh !important;
+}
+.pepito-app-main:has(.tg-chat) {
+  padding: 0 !important;
+  background: transparent !important;
+  animation: none;
+}
+.pepito-app-layout:has(.chat-page) {
+  max-width: min(1280px, 100%);
 }

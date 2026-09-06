@@ -79,7 +79,13 @@ export function OtpPage() {
   }
 
   return (
-    <AuthShell backTo={`/auth/login?next=${encodeURIComponent(next)}`} backLabel="تغییر شماره / ایمیل">
+    <AuthShell
+      backTo={`/auth/login?next=${encodeURIComponent(next)}`}
+      backLabel="تغییر شماره / ایمیل"
+      bannerTitle="تأیید هویت"
+      bannerLead="کد یکبارمصرف را وارد کن تا وارد همان محیط لندینگ شوی"
+      bannerImage="/pepito/uploads/4.jpg"
+    >
       <p className="pepito-auth-kicker">تأیید هویت</p>
       <h1>کد یکبارمصرف</h1>
       <p className="auth-lead">

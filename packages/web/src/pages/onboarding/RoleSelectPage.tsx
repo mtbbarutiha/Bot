@@ -82,7 +82,12 @@ export function RoleSelectPage() {
   );
 
   return (
-    <AuthShell wide>
+    <AuthShell
+      wide
+      bannerTitle="شروع کن"
+      bannerLead="نقش‌هات را انتخاب کن — همه چیز در همان محیط لندینگ می‌ماند"
+      bannerImage="/pepito/uploads/1.jpg"
+    >
       <div className="role-select">
         <p className="pepito-auth-kicker">شروع</p>
         <h1>نقش‌هات رو انتخاب کن</h1>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight } from 'lucide-react';
+import { AuthShell } from '../../components/AuthShell';
 import { PetPhotoUpload } from '../../components/PetPhotoUpload';
 import { DEFAULT_IMAGES, imageForType } from '../../data/petImages';
 import { useAuthStore } from '../../hooks/useAuthStore';
@@ -151,18 +151,17 @@ export function PetOnboardingPage() {
   const isValid = Boolean(form.name.trim());
 
   return (
-    <div className="form-page onboarding-pet-page">
-      <button
-        type="button"
-        className="icon-btn icon-btn--spaced"
-        onClick={() => navigate(-1)}
-        aria-label="بازگشت"
-      >
-        <ArrowRight size={20} strokeWidth={2} />
-      </button>
-
+    <AuthShell
+      wide
+      backTo="/onboarding/profile"
+      backLabel="بازگشت به پروفایل"
+      bannerTitle="پروفایل پت"
+      bannerLead="عکس، نژاد و محله اختیاری‌اند — مثل ربات می‌تونی رد کنی"
+      bannerImage="/pepito/uploads/2.jpg"
+    >
+      <p className="pepito-auth-kicker">پت</p>
       <h1>پروفایل پت‌ات</h1>
-      <p className="subtitle">
+      <p className="auth-lead">
         اطلاعات پت رو وارد کن — عکس، نژاد و محله اختیاری‌اند (مثل ربات می‌تونی رد کنی)
       </p>
 
@@ -174,7 +173,7 @@ export function PetOnboardingPage() {
         label="عکس پت (اختیاری)"
       />
 
-      <form onSubmit={(e) => void handleSubmit(e)}>
+      <form className="auth-form" onSubmit={(e) => void handleSubmit(e)}>
         <div className="form-group">
           <label className="form-label">نام پت *</label>
           <input className="form-input" placeholder="مثلاً: رکس" value={form.name} onChange={(e) => update('name', e.target.value)} />
@@ -284,20 +283,20 @@ export function PetOnboardingPage() {
           </p>
         )}
 
-        <button type="submit" className="cta-btn" disabled={!isValid || saving}>
-          {saving ? 'در حال ذخیره…' : '✨ تکمیل پروفایل'}
+        <button type="submit" className="pepito-btn button-1 auth-submit" disabled={!isValid || saving}>
+          {saving ? 'در حال ذخیره…' : 'تکمیل پروفایل'}
         </button>
         <button
           type="button"
-          className="cta-btn cta-btn--ghost"
+          className="pepito-btn pepito-btn--ghost auth-skip-btn"
           disabled={saving}
           onClick={goHomeAfterSkip}
         >
-          ⏭ فعلاً رد کن
+          فعلاً رد کن
         </button>
       </form>
 
       {showToast && <div className="toast" role="status">پروفایل تکمیل شد!</div>}
-    </div>
+    </AuthShell>
   );
 }

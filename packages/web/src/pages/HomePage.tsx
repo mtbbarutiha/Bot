@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, Mail, MapPin, Search, ShoppingBag, Stethoscope, Zap } from 'lucide-react';
 import { userHasRole } from '@petdate/shared';
-import { BrandMark } from '../components/BrandMark';
 import { PetGridCard } from '../components/PetGridCard';
 import { CategoryPetIcon } from '../components/PetAvatar';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
@@ -73,8 +72,8 @@ export function HomePage() {
   const isPetOwner = !user.role || userHasRole(user, 'pet_owner');
 
   return (
-    <div className="home-page">
-      <div className="home-header">
+    <div className="home-page pepito-home">
+      <div className="home-header pepito-home-header">
         <div className="home-header-glow" aria-hidden />
 
         <div className="top-bar">
@@ -102,7 +101,7 @@ export function HomePage() {
         </div>
 
         <div className="greeting">
-          <BrandMark className="greeting-brand" iconSize={24} />
+          <p className="pepito-home-brand">Pet Date</p>
           <h1>همبازی برای {myPet.name}</h1>
           <p>پت‌های نزدیک رو کشف کن و درخواست بده</p>
         </div>

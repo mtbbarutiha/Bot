@@ -115,7 +115,14 @@ export function RoleWizardPage() {
   };
 
   return (
-    <AuthShell wide backTo="/onboarding/role" backLabel="بازگشت به انتخاب نقش">
+    <AuthShell
+      wide
+      backTo="/onboarding/role"
+      backLabel="بازگشت به انتخاب نقش"
+      bannerTitle={USER_ROLE_LABELS[role]}
+      bannerLead="اطلاعات پایه را وارد کن — می‌تونی فعلاً رد کنی"
+      bannerImage="/pepito/uploads/06.jpg"
+    >
       <p className="pepito-auth-kicker">{USER_ROLE_LABELS[role]}</p>
       <h1>{step.title}</h1>
       <p className="auth-lead">اطلاعات پایه رو وارد کن — می‌تونی فعلاً رد کنی و بعداً تکمیل کنی</p>
