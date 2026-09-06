@@ -1,24 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import {
-  Bone,
-  ChevronLeft,
-  ChevronRight,
-  Cross,
-  Dog,
-  Footprints,
-  GraduationCap,
-  Home,
-  Microscope,
-  Moon,
-  PartyPopper,
-  PawPrint,
-  Scissors,
-  Star,
-  Syringe,
-  Utensils,
-  type LucideIcon,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { SiteFooter } from '../components/SiteFooter';
 import { NavUserCluster } from '../components/NavUserCluster';
@@ -35,26 +17,32 @@ const CONTACT_PHONE_TEL = '+982188776655';
 const BLOB_PATH =
   'M30,16C46.588,6.484,54.481-2.058,64.3,1.452c3.145,1.125,6.861,3.657,10.212,9.426A40.611,40.611,0,0,1,59.5,66.544,41.151,41.151,0,0,1,3.482,51.629C0.134,45.865-.2,41.289.375,38.125,2.228,27.979,13.544,25.436,30,16Z';
 
-/** Pepito “Our pet care services” — 12 cards, rotating blob colors */
+/** Pepito about “We offer services for special pets!” — flaticon-pawprint-4 listext */
+const ABOUT_POINTS = [
+  'بیش از ۲۰ سال تجربه',
+  '۲۰ دامپزشک مستعد آماده کمک به شما',
+] as const;
+
+/** Pepito “Our pet care services” — 12 cards with original Flaticon glyphs */
 const SERVICES: {
   to: string;
   title: string;
   desc: string;
-  Icon: LucideIcon;
+  icon: string;
   fill: 1 | 2 | 3 | 4;
 }[] = [
-  { to: '/explore', title: 'نگهداری پت', desc: 'مراقبت روزانه در خانه با خیال راحت برای پت‌های خاص شما.', Icon: Home, fill: 1 },
-  { to: '/explore', title: 'پیاده‌روی سگ', desc: 'پیاده‌روی منظم و امن برای سگ‌ها در محله و پارک‌های نزدیک.', Icon: Footprints, fill: 2 },
-  { to: '/vet-consult', title: 'دندان‌پزشکی پت', desc: 'بررسی و مراقبت از دندان و لثه با دامپزشکان مجرب.', Icon: Bone, fill: 3 },
-  { to: '/clinics', title: 'واکسیناسیون', desc: 'برنامه واکسن به‌موقع برای سلامت و ایمنی پت شما.', Icon: Syringe, fill: 4 },
-  { to: '/shop', title: 'آرایش پت', desc: 'شست‌وشو، کوتاهی مو و نظافت حرفه‌ای برای ظاهر درخشان.', Icon: Scissors, fill: 2 },
-  { to: '/add-pet', title: 'برنامه توله', desc: 'آموزش پایه و مراقبت ویژه برای توله‌ها و گربه‌های جوان.', Icon: Dog, fill: 1 },
-  { to: '/vet-consult', title: 'خدمات دامپزشکی', desc: 'ویزیت، مشاوره و پیگیری درمان روی همان حساب مشترک.', Icon: Cross, fill: 4 },
-  { to: '/explore', title: 'مراقبت شبانه', desc: 'اقامت شبانه امن وقتی نمی‌توانید کنار پت‌تان باشید.', Icon: Moon, fill: 3 },
-  { to: '/shop', title: 'وعده‌های سالم', desc: 'تغذیه متعادل و وعده‌های مناسب سن و نژاد پت.', Icon: Utensils, fill: 1 },
-  { to: '/explore', title: 'فعالیت‌های سرگرم‌کننده', desc: 'بازی و همبازی برای انرژی و شادی روزانه پت‌ها.', Icon: PartyPopper, fill: 2 },
-  { to: '/explore', title: 'خدمات آموزش', desc: 'تربیت رفتاری و فرمان‌پذیری با مربیان باتجربه.', Icon: GraduationCap, fill: 3 },
-  { to: '/clinics', title: 'میکروچیپ', desc: 'شناسایی دائمی پت برای امنیت بیشتر در گم‌شدن.', Icon: Microscope, fill: 4 },
+  { to: '/explore', title: 'نگهداری پت', desc: 'مراقبت روزانه در خانه با خیال راحت برای پت‌های خاص شما.', icon: 'flaticon-dog-and-pets-house', fill: 1 },
+  { to: '/explore', title: 'پیاده‌روی سگ', desc: 'پیاده‌روی منظم و امن برای سگ‌ها در محله و پارک‌های نزدیک.', icon: 'flaticon-animals-11', fill: 2 },
+  { to: '/vet-consult', title: 'دندان‌پزشکی پت', desc: 'بررسی و مراقبت از دندان و لثه با دامپزشکان مجرب.', icon: 'flaticon-veterinarian-hospital', fill: 3 },
+  { to: '/clinics', title: 'واکسیناسیون', desc: 'برنامه واکسن به‌موقع برای سلامت و ایمنی پت شما.', icon: 'flaticon-syringe', fill: 4 },
+  { to: '/shop', title: 'آرایش پت', desc: 'شست‌وشو، کوتاهی مو و نظافت حرفه‌ای برای ظاهر درخشان.', icon: 'flaticon-scissors', fill: 2 },
+  { to: '/add-pet', title: 'برنامه توله', desc: 'آموزش پایه و مراقبت ویژه برای توله‌ها و گربه‌های جوان.', icon: 'flaticon-dog-puppy', fill: 1 },
+  { to: '/vet-consult', title: 'خدمات دامپزشکی', desc: 'ویزیت، مشاوره و پیگیری درمان روی همان حساب مشترک.', icon: 'flaticon-cross', fill: 4 },
+  { to: '/explore', title: 'مراقبت شبانه', desc: 'اقامت شبانه امن وقتی نمی‌توانید کنار پت‌تان باشید.', icon: 'flaticon-animal-13', fill: 3 },
+  { to: '/shop', title: 'وعده‌های سالم', desc: 'تغذیه متعادل و وعده‌های مناسب سن و نژاد پت.', icon: 'flaticon-pet-food', fill: 1 },
+  { to: '/explore', title: 'فعالیت‌های سرگرم‌کننده', desc: 'بازی و همبازی برای انرژی و شادی روزانه پت‌ها.', icon: 'flaticon-people-1', fill: 2 },
+  { to: '/explore', title: 'خدمات آموزش', desc: 'تربیت رفتاری و فرمان‌پذیری با مربیان باتجربه.', icon: 'flaticon-dog-training-3', fill: 3 },
+  { to: '/clinics', title: 'میکروچیپ', desc: 'شناسایی دائمی پت برای امنیت بیشتر در گم‌شدن.', icon: 'flaticon-dog-with-first-aid-kit-bag', fill: 4 },
 ];
 
 const HERO_SLIDES = [
@@ -62,38 +50,32 @@ const HERO_SLIDES = [
     img: `${P}/3.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'خدماتی برای پت‌های خاص شما!',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
-  },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
   {
     img: `${P}/2.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'مراقبت از پت‌های شما',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
-  },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
   {
     img: `${P}/4.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'آماده‌ایم از پت‌تان مراقبت کنیم',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
-  },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
   {
     img: `${P}/1.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'عشق و مراقبت، در کنار پت شما',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
-  },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
   {
     img: `${P}/5.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'پت‌تان شایسته بهترین‌هاست',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
-  },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
   {
     img: `${P}/06.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'مراقبت دامپزشکی حرفه‌ای',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
-  },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
 ] as const;
 
 /** Landing cards → Pepito adoption single pages (`/adoption/:slug`) */
@@ -101,8 +83,7 @@ const PETS = ADOPTION_PETS.map((p) => ({
   name: p.name,
   img: p.img,
   to: `/adoption/${p.slug}`,
-  details: p.details.slice(0, 3),
-}));
+  details: p.details.slice(0, 3) }));
 
 const TEAM = [
   { name: 'دکتر سارا نوری', role: 'دامپزشک', img: `${P}/01-3.jpg` },
@@ -116,42 +97,34 @@ const REVIEWS = [
   {
     handle: '@سارا',
     text: 'قابل اعتماد و مهربون؛ معلومه عاشق حیوانان‌اند!',
-    img: `${P}/01-4.jpg`,
-  },
+    img: `${P}/01-4.jpg` },
   {
     handle: '@مینا',
     text: 'سگم عاشق همبازی‌شه و زمان‌بندی‌شون انعطاف‌پذیره.',
-    img: `${P}/02-4.jpg`,
-  },
+    img: `${P}/02-4.jpg` },
   {
     handle: '@علی',
     text: 'درستکار و مطمئن؛ خرگوش‌هام عاشقشون شدن!',
-    img: `${P}/03-4.jpg`,
-  },
+    img: `${P}/03-4.jpg` },
   {
     handle: '@نگار',
     text: 'دیدن اینکه بچه‌هام خوب مراقبت می‌شن همیشه لذت‌بخشه.',
-    img: `${P}/04-4.jpg`,
-  },
+    img: `${P}/04-4.jpg` },
 ] as const;
 
 const FAQS = [
   {
     q: 'آیا حساب وب و ربات یکی است؟',
-    a: 'بله. با همان موبایل یا ایمیل وارد شو؛ پت‌ها، درخواست‌ها و چت‌ها روی یک دیتابیس مشترک می‌مانند.',
-  },
+    a: 'بله. با همان موبایل یا ایمیل وارد شو؛ پت‌ها، درخواست‌ها و چت‌ها روی یک دیتابیس مشترک می‌مانند.' },
   {
     q: 'برای دیدن لندینگ باید وارد شوم؟',
-    a: 'خیر. لندینگ و پت شاپ آزادند. برای همبازی، ثبت پت، دامپزشک و چت با OTP وارد شو؛ ثبت سفارش شاپ هم ورود می‌خواهد.',
-  },
+    a: 'خیر. لندینگ و پت شاپ آزادند. برای همبازی، ثبت پت، دامپزشک و چت با OTP وارد شو؛ ثبت سفارش شاپ هم ورود می‌خواهد.' },
   {
     q: 'اگر من وب باشم و طرف مقابل ربات؟',
-    a: 'پیام و درخواست از API مشترک رد می‌شود؛ هر دو طرف همان مکالمه را می‌بینند.',
-  },
+    a: 'پیام و درخواست از API مشترک رد می‌شود؛ هر دو طرف همان مکالمه را می‌بینند.' },
   {
     q: 'طراحی این صفحه از کجا آمده؟',
-    a: 'ظاهر و عکس‌ها بر پایه قالب Pepito تنظیم شده تا تجربه دسکتاپ شبیه یک سایت مراقبت از پت واقعی باشد.',
-  },
+    a: 'ظاهر و عکس‌ها بر پایه قالب Pepito تنظیم شده تا تجربه دسکتاپ شبیه یک سایت مراقبت از پت واقعی باشد.' },
 ] as const;
 
 /** Pepito “Why rely on us?” — two-column checklist + pet3.png */
@@ -175,8 +148,7 @@ const NEWS = [
     author: 'لیلی دورو',
     tag: 'مراقبت',
     img: `${P}/01.jpg`,
-    to: '/explore',
-  },
+    to: '/explore' },
   {
     title: 'سبک‌های آرایش سگ',
     excerpt: 'انتخاب کوتاهی مو متناسب با نژاد و فصل.',
@@ -184,8 +156,7 @@ const NEWS = [
     author: 'فرانک وایت',
     tag: 'پت',
     img: `${P}/06.jpg`,
-    to: '/explore',
-  },
+    to: '/explore' },
   {
     title: 'نکات ایمنی پت',
     excerpt: 'چطور خانه را برای پت‌ها امن‌تر کنیم.',
@@ -193,8 +164,7 @@ const NEWS = [
     author: 'اولیویا دان',
     tag: 'دندان',
     img: `${P}/03.jpg`,
-    to: '/explore',
-  },
+    to: '/explore' },
   {
     title: 'انگل‌های پت',
     excerpt: 'پیشگیری و درمان به‌موقع انگل‌های رایج.',
@@ -202,8 +172,7 @@ const NEWS = [
     author: 'فرانک وایت',
     tag: 'جراحی',
     img: `${P}/04.jpg`,
-    to: '/explore',
-  },
+    to: '/explore' },
   {
     title: 'خواب توله‌ها',
     excerpt: 'عادت‌های سالم خواب برای توله‌های پرانرژی.',
@@ -211,8 +180,7 @@ const NEWS = [
     author: 'لیلی دورو',
     tag: 'تشخیص',
     img: `${P}/05.jpg`,
-    to: '/explore',
-  },
+    to: '/explore' },
   {
     title: 'میکروچیپ گربه',
     excerpt: 'شناسایی دائمی برای امنیت بیشتر در گم‌شدن.',
@@ -220,16 +188,14 @@ const NEWS = [
     author: 'اولیویا دان',
     tag: 'ایمنی',
     img: `${P}/02.jpg`,
-    to: '/explore',
-  },
+    to: '/explore' },
 ] as const;
 
 function GatedLink({
   to,
   className,
   style,
-  children,
-}: {
+  children }: {
   to: string;
   className?: string;
   style?: CSSProperties;
@@ -244,10 +210,10 @@ function GatedLink({
   );
 }
 
-function PawIcon({ size = 16 }: { size?: number }) {
+function PawIcon() {
   return (
     <span className="pepito-btn-icon" aria-hidden>
-      <PawPrint size={size} />
+      <i className="flaticon-pawprint-4" />
     </span>
   );
 }
@@ -346,7 +312,7 @@ export function WelcomePage() {
                 ورود
               </Link>
               <GatedLink to="/explore" className="pepito-btn pepito-btn--nav">
-                <PawIcon size={14} />
+                <PawIcon />
                 پنل همبازی
               </GatedLink>
             </>
@@ -371,7 +337,7 @@ export function WelcomePage() {
           <div className="pepito-hero-copy">
             <p className="pepito-kicker">
               <span className="pepito-kicker-dot">
-                <PawPrint size={18} />
+                <i className="flaticon-pawprint-4" />
               </span>
               {current.kicker}
             </p>
@@ -453,26 +419,23 @@ export function WelcomePage() {
             دامپزشکان و همبازی‌ها روی یک حساب مشترک وب و تلگرام.
           </p>
           <ul className="pepito-about-features">
-            {SERVICES.slice(0, 3).map((s) => {
-              const Icon = s.Icon;
-              return (
-                <li key={s.title} className="pepito-about-feature">
-                  <span className="pepito-about-feature-icon" aria-hidden>
-                    <svg
-                      className={`pepito-service-blob fill-${s.fill}`}
-                      viewBox="0 0 80 72"
-                    >
-                      <path d={BLOB_PATH} />
-                    </svg>
-                    <Icon size={28} strokeWidth={1.4} />
-                  </span>
-                  <span>
-                    <strong>{s.title}</strong>
-                    <span>{s.desc}</span>
-                  </span>
-                </li>
-              );
-            })}
+            {SERVICES.slice(0, 3).map((s) => (
+              <li key={s.title} className="pepito-about-feature">
+                <span className="pepito-about-feature-icon" aria-hidden>
+                  <svg
+                    className={`pepito-service-blob fill-${s.fill}`}
+                    viewBox="0 0 80 72"
+                  >
+                    <path d={BLOB_PATH} />
+                  </svg>
+                  <i className={s.icon} />
+                </span>
+                <span>
+                  <strong>{s.title}</strong>
+                  <span>{s.desc}</span>
+                </span>
+              </li>
+            ))}
           </ul>
           <a href="#services" className="pepito-btn button-1">
             <PawIcon />
@@ -485,7 +448,7 @@ export function WelcomePage() {
         <div className="pepito-section-head pepito-section-head--center">
           <p className="pepito-eyebrow">
             <span className="pepito-eyebrow-icon" aria-hidden>
-              <PawPrint size={18} />
+              <i className="flaticon-pawprint-4" />
             </span>
             عاشق حیواناتیم
           </p>
@@ -497,27 +460,24 @@ export function WelcomePage() {
           onMouseLeave={() => setSvcPaused(false)}
         >
           <div className="pepito-services-track" ref={svcTrackRef}>
-            {SERVICES.map((s) => {
-              const Icon = s.Icon;
-              return (
-                <article key={s.title} className="pepito-service-card">
-                  <GatedLink to={s.to} className="pepito-service">
-                    <span className="pepito-service-icon">
-                      <svg
-                        className={`pepito-service-blob fill-${s.fill}`}
-                        viewBox="0 0 80 72"
-                        aria-hidden
-                      >
-                        <path d={BLOB_PATH} />
-                      </svg>
-                      <Icon size={48} strokeWidth={1.35} />
-                    </span>
-                    <h3>{s.title}</h3>
-                    <p>{s.desc}</p>
-                  </GatedLink>
-                </article>
-              );
-            })}
+            {SERVICES.map((s) => (
+              <article key={s.title} className="pepito-service-card">
+                <GatedLink to={s.to} className="pepito-service">
+                  <span className="pepito-service-icon">
+                    <svg
+                      className={`pepito-service-blob fill-${s.fill}`}
+                      viewBox="0 0 80 72"
+                      aria-hidden
+                    >
+                      <path d={BLOB_PATH} />
+                    </svg>
+                    <i className={s.icon} />
+                  </span>
+                  <h3>{s.title}</h3>
+                  <p>{s.desc}</p>
+                </GatedLink>
+              </article>
+            ))}
           </div>
         </div>
         <div className="pepito-services-dots" role="tablist" aria-label="خدمات">
@@ -544,7 +504,7 @@ export function WelcomePage() {
           <div className="pepito-rely-copy">
             <p className="pepito-eyebrow">
               <span className="pepito-eyebrow-icon" aria-hidden>
-                <PawPrint size={18} />
+                <i className="flaticon-pawprint-4" />
               </span>
               عاشق حیواناتیم
             </p>
@@ -557,7 +517,7 @@ export function WelcomePage() {
                 {RELY_ITEMS_LEFT.map((t) => (
                   <li key={t}>
                     <span className="pepito-listext-icon" aria-hidden>
-                      <PawPrint size={18} />
+                      <i className="flaticon-pawprint-4" />
                     </span>
                     <span className="pepito-listext-text">{t}</span>
                   </li>
@@ -567,7 +527,7 @@ export function WelcomePage() {
                 {RELY_ITEMS_RIGHT.map((t) => (
                   <li key={t}>
                     <span className="pepito-listext-icon" aria-hidden>
-                      <PawPrint size={18} />
+                      <i className="flaticon-pawprint-4" />
                     </span>
                     <span className="pepito-listext-text">{t}</span>
                   </li>
@@ -582,7 +542,7 @@ export function WelcomePage() {
         <div className="pepito-section-head pepito-section-head--center">
           <p className="pepito-eyebrow">
             <span className="pepito-eyebrow-icon" aria-hidden>
-              <PawPrint size={18} />
+              <i className="flaticon-pawprint-4" />
             </span>
             پذیرش یک پت
           </p>
@@ -654,7 +614,7 @@ export function WelcomePage() {
         <div className="pepito-section-head pepito-section-head--center">
           <p className="pepito-eyebrow">
             <span className="pepito-eyebrow-icon" aria-hidden>
-              <PawPrint size={18} />
+              <i className="flaticon-pawprint-4" />
             </span>
             عاشقان خوشحال پت
           </p>
@@ -694,7 +654,7 @@ export function WelcomePage() {
         <div className="pepito-section-head pepito-section-head--center">
           <p className="pepito-eyebrow">
             <span className="pepito-eyebrow-icon" aria-hidden>
-              <PawPrint size={18} />
+              <i className="flaticon-pawprint-4" />
             </span>
             پت شاپ
           </p>
@@ -771,7 +731,7 @@ export function WelcomePage() {
         <div className="pepito-section-head pepito-section-head--center pepito-news-head">
           <p className="pepito-eyebrow">
             <span className="pepito-eyebrow-icon" aria-hidden>
-              <PawPrint size={18} />
+              <i className="flaticon-pawprint-4" />
             </span>
             آخرین اخبار
           </p>

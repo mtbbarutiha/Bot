@@ -1,4 +1,6 @@
 /** Pepito theme tokens + surfaces — adapted from shthemes Pepito demo */
+@import url('/pepito/css/flaticon.css');
+
 :root {
   --pepito-base: #5c4d91;
   --pepito-dark: #19063d;
@@ -648,6 +650,22 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   width: 100%;
   height: 100%;
 }
+
+.pepito-about-feature-icon > i[class^='flaticon-'] {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  line-height: 1;
+  font-size: 1.35rem;
+}
+.pepito-about-feature-icon > i[class^='flaticon-']::before {
+  margin: 0;
+  font-size: inherit;
+  line-height: 1;
+}
 .pepito-about-feature-icon > svg:not(.pepito-service-blob) {
   position: relative;
   z-index: 1;
@@ -977,6 +995,40 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
 .pepito-service-icon > svg:not(.pepito-service-blob) {
   position: relative;
   z-index: 1;
+}
+.pepito-service-icon > i[class^='flaticon-'] {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  line-height: 1;
+  font-size: 2.35rem;
+}
+.pepito-service-icon > i[class^='flaticon-']::before {
+  margin: 0;
+  font-size: inherit;
+  line-height: 1;
+}
+/* Pepito Flaticon glyphs sit on the blob (white, like demo) */
+.pepito-service-icon > i[class^='flaticon-'] {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  line-height: 1;
+  font-size: 2.35rem;
+}
+.pepito-service-icon > i[class^='flaticon-']::before {
+  margin: 0;
+  font-size: inherit;
+  line-height: 1;
+}
+.pepito-service:hover .pepito-service-icon > i[class^='flaticon-'] {
+  color: #fff;
 }
 .pepito-service h3 {
   margin: 0;
@@ -1476,6 +1528,31 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   color: var(--pepito-pink);
   flex-shrink: 0;
   transform: rotate(30deg);
+  font-size: 1.15rem;
+  line-height: 1;
+}
+.pepito-listext-icon i[class^='flaticon-']::before {
+  margin: 0;
+  font-size: inherit;
+  line-height: 1;
+}
+.pepito-about-listext {
+  margin: 0 0 1.35rem;
+}
+.pepito-about-listext .pepito-listext-text {
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+.pepito-btn-icon i[class^='flaticon-'],
+.pepito-eyebrow-icon i[class^='flaticon-'] {
+  display: inline-flex;
+  line-height: 1;
+  font-size: 1em;
+}
+.pepito-btn-icon i[class^='flaticon-']::before,
+.pepito-eyebrow-icon i[class^='flaticon-']::before {
+  margin: 0;
+  font-size: inherit;
 }
 .pepito-listext-text {
   margin: 0;
