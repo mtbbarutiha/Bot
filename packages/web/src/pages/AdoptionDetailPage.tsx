@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
+import { SiteFooter } from '../components/SiteFooter';
 import { ADOPTION_PETS, getAdoptionPet } from '../data/adoptionPets';
 import { loginPath } from '../lib/authRedirect';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -202,16 +203,7 @@ export function AdoptionDetailPage() {
         </div>
       </section>
 
-      <footer className="pepito-footer">
-        <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
-          <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
-        </Link>
-        <p>
-          داده مشترک API با ربات تلگرام
-          <br />
-          {BRAND.taglineEn}
-        </p>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

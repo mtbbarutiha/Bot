@@ -20,6 +20,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
+import { SiteFooter } from '../components/SiteFooter';
 import { NavUserCluster } from '../components/NavUserCluster';
 import { ADOPTION_PETS } from '../data/adoptionPets';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -829,16 +830,7 @@ export function WelcomePage() {
         </div>
       </section>
 
-      <footer className="pepito-footer">
-        <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
-          <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
-        </Link>
-        <p>
-          داده مشترک API با ربات تلگرام
-          <br />
-          {BRAND.taglineEn}
-        </p>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

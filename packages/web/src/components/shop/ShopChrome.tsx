@@ -6,6 +6,7 @@ import { useAuthStore } from '../../hooks/useAuthStore';
 import { useShopCart } from '../../hooks/useShopCart';
 import { loginPath } from '../../lib/authRedirect';
 import { NavUserCluster } from '../NavUserCluster';
+import { SiteFooter } from '../SiteFooter';
 
 function PawIcon({ size = 14 }: { size?: number }) {
   return (
@@ -110,16 +111,7 @@ export function ShopChrome({
 
       <main className="pd-shop-main">{children}</main>
 
-      <footer className="pepito-footer">
-        <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
-          <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
-        </Link>
-        <p>
-          پت دیت شاپ — قیمت‌ها به تومان
-          <br />
-          {BRAND.taglineEn}
-        </p>
-      </footer>
+      <SiteFooter />
     </div>
   );
 }

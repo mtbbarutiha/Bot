@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
+import { SiteFooter } from './SiteFooter';
 import { NavUserCluster } from './NavUserCluster';
 
 const BANNER_IMG = '/pepito/uploads/3.jpg';
@@ -148,18 +149,7 @@ export function LandingChrome({
 
       {children}
 
-      {footer ? (
-        <footer className="pepito-footer">
-          <Link to="/" className="pepito-nav-logo" aria-label={BRAND.displayName}>
-            <img src="/pepito/img/logo.png" alt={BRAND.displayName} />
-          </Link>
-          <p>
-            داده مشترک API با ربات تلگرام
-            <br />
-            {BRAND.taglineEn}
-          </p>
-        </footer>
-      ) : null}
+      {footer ? <SiteFooter /> : null}
     </div>
   );
 }
