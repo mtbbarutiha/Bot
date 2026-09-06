@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Send } from 'lucide-react';
-import { normalizeRoles, userHasRole } from '@petdate/shared';
+import { normalizeRoles, userHasRole, dashboardPathForUser, primaryRole } from '@petdate/shared';
 import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { telegramWebLoginDeepLink } from '../../lib/api';
@@ -28,10 +28,11 @@ export function OtpPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
-  const next = sanitizeNext(
+  const nextRaw = sanitizeNext(
     searchParams.get('next') || (location.state as { next?: string } | null)?.next,
     '/home'
   );
+  const next = nextRaw;
   const {
     pendingChannel,
     pendingTarget,
@@ -74,14 +75,21 @@ export function OtpPage() {
       const complete =
         user.onboarding === 'profile_complete' ||
         Boolean(user.name?.trim() && user.age && user.gender && user.country && user.city);
+      const homeForRole = dashboardPathForUser(user);
+      const destination =
+        nextRaw === '/home' || nextRaw === '/vet-consult' ? homeForRole : nextRaw;
       if (!roles.length) {
-        navigate('/onboarding/role', { replace: true, state: { next } });
+        navigate('/onboarding/role', { replace: true, state: { next: destination } });
       } else if (!complete) {
-        navigate('/onboarding/profile', { replace: true, state: { next } });
-      } else if (userHasRole(user, 'pet_owner') && user.onboarding !== 'profile_complete') {
-        navigate('/onboarding/pet', { replace: true, state: { next } });
+        navigate('/onboarding/profile', { replace: true, state: { next: destination } });
+      } else if (
+        primaryRole(user.roles, user.role) === 'pet_owner' &&
+        user.onboarding !== 'profile_complete' &&
+        userHasRole(user, 'pet_owner')
+      ) {
+        navigate('/onboarding/pet', { replace: true, state: { next: destination } });
       } else {
-        navigate(next, { replace: true });
+        navigate(destination, { replace: true });
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'تأیید کد ناموفق بود');

@@ -9,6 +9,7 @@ import {
   ROLE_CONFIRM_LABEL,
   USER_ROLE_LABELS,
   USER_ROLES,
+  dashboardPathForRole,
   normalizeRoles,
   primaryRole,
 } from '@petdate/shared';
@@ -100,15 +101,16 @@ export function RoleSwitchControl({
     setMode('add');
   };
 
+  const goToRoleDashboard = (nextActive: UserRole | undefined) => {
+    const path = dashboardPathForRole(nextActive);
+    navigate(path, { replace: false });
+  };
+
   const afterRoleChange = (nextActive: UserRole | undefined, message: string) => {
     if (!isProfile) setMode('closed');
     else setMode('switch');
     setToast(message);
-    if (nextActive === 'vet') {
-      navigate('/vet-consult', { replace: false });
-    } else {
-      navigate('/home', { replace: false });
-    }
+    goToRoleDashboard(nextActive);
   };
 
   const handleSwitch = async (role: UserRole) => {
@@ -116,6 +118,7 @@ export function RoleSwitchControl({
     if (active === role) {
       setToast(`نقش فعال: ${USER_ROLE_LABELS[role]}`);
       if (!isProfile) setMode('closed');
+      goToRoleDashboard(role);
       return;
     }
     setBusy(true);

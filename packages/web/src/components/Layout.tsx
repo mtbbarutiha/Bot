@@ -5,18 +5,18 @@ import {
   LayoutGrid,
   PawPrint,
   ShoppingBag,
+  Stethoscope,
   Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
+import { primaryRole, type UserRole } from '@petdate/shared';
+import { useAuthStore } from '../hooks/useAuthStore';
 import { LandingChrome } from './LandingChrome';
 import { LiveIncomingRequests } from './LiveIncomingRequests';
 import { RoleSwitchControl } from './RoleSwitchControl';
 
-/** Bot-parity destinations — web labels stay clean (icons carry the cue).
- *  «خانه» is the Pepito landing (`/`); in-app dashboard stays at `/home` as «پنل».
- *  Profile lives in the top-left ProfileMenu (avatar), not this rail.
- *  Clinics nav/route temporarily hidden from product UX. */
-const navItems: { to: string; icon: LucideIcon; label: string }[] = [
+/** Bot-parity destinations — nav follows active/primary role (like bot reply menus). */
+const OWNER_NAV: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/', icon: Home, label: 'خانه' },
   { to: '/home', icon: LayoutDashboard, label: 'پنل' },
   { to: '/explore', icon: LayoutGrid, label: 'پیدا کردن همبازی' },
@@ -25,8 +25,32 @@ const navItems: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
 ];
 
+const VET_NAV: { to: string; icon: LucideIcon; label: string }[] = [
+  { to: '/', icon: Home, label: 'خانه' },
+  { to: '/vet-consult', icon: Stethoscope, label: 'پنل پزشک' },
+  { to: '/profile', icon: LayoutDashboard, label: 'پروفایل' },
+  { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
+];
+
+const DEFAULT_NAV: { to: string; icon: LucideIcon; label: string }[] = [
+  { to: '/', icon: Home, label: 'خانه' },
+  { to: '/home', icon: LayoutDashboard, label: 'پنل' },
+  { to: '/profile', icon: PawPrint, label: 'پروفایل' },
+  { to: '/vet-consult', icon: Zap, label: 'ارتباط با پزشک' },
+  { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
+];
+
+function navForRole(role?: UserRole): { to: string; icon: LucideIcon; label: string }[] {
+  if (role === 'vet') return VET_NAV;
+  if (role === 'pet_owner') return OWNER_NAV;
+  return DEFAULT_NAV;
+}
+
 export function Layout() {
   const { pathname } = useLocation();
+  const { user } = useAuthStore();
+  const active = primaryRole(user?.roles, user?.role);
+  const navItems = navForRole(active);
   const isChat =
     pathname === '/chats' ||
     pathname.startsWith('/chats/') ||

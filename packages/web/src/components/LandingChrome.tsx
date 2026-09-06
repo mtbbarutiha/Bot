@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
-import { BRAND } from '@petdate/shared';
+import { BRAND, primaryRole } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { SiteFooter } from './SiteFooter';
 import { NavUserCluster } from './NavUserCluster';
@@ -59,7 +59,8 @@ export function LandingChrome({
   footer = true,
 }: LandingChromeProps) {
   const [scrolled, setScrolled] = useState(false);
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, user } = useAuthStore();
+  const userPrimary = primaryRole(user?.roles, user?.role);
   // App shell uses ProfileMenu for logout — no default “back” action in the top bar.
   const actionLabel =
     actionLabelProp !== undefined
@@ -102,7 +103,11 @@ export function LandingChrome({
             <NavLink to="/" end>
               خانه
             </NavLink>
-            <NavLink to="/add-pet">پت‌های من</NavLink>
+            {userPrimary === 'vet' ? (
+              <NavLink to="/vet-consult">پنل پزشک</NavLink>
+            ) : (
+              <NavLink to="/add-pet">پت‌های من</NavLink>
+            )}
           </nav>
         ) : (
           <nav className="pepito-nav-links" aria-label="بخش‌ها">

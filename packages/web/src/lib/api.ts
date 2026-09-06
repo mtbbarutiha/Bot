@@ -462,6 +462,15 @@ export async function patchWebPrimaryRole(token: string, role: UserRole) {
   });
 }
 
+/** آنلاین/آفلاین دامپزشک (وب — هم‌تراز ربات) */
+export async function patchWebVetOnline(token: string, online: boolean) {
+  return request<{ ok: true; user: User }>('/api/auth/vet-online', {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ online }),
+  });
+}
+
 export type QuickVetConnectResult = {
   ok: true;
   sent: number;

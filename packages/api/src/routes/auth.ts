@@ -2,7 +2,7 @@ import fs from 'fs';
 import { Router } from 'express';
 import multer from 'multer';
 import type { OnboardingStatus, UserGender, UserRole } from '@petdate/shared';
-import { USER_ROLES, normalizeRoles } from '@petdate/shared';
+import { USER_ROLES, normalizeRoles, userHasRole } from '@petdate/shared';
 import { dbService } from '../db';
 import {
   completeTelegramAttach,
@@ -303,6 +303,34 @@ authRouter.get('/avatar/:userId/:filename', (req, res) => {
   res.setHeader('Content-Type', mimeFromUserAvatarKey(storageKey));
   res.setHeader('Cache-Control', 'public, max-age=86400');
   res.send(fs.readFileSync(abs));
+});
+
+/** وضعیت آنلاین/آفلاین دامپزشک (وب — هم‌تراز ربات) */
+authRouter.patch('/vet-online', (req, res) => {
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  if (!session) {
+    res.status(401).json({ error: 'وارد نشده‌اید' });
+    return;
+  }
+  if (!userHasRole(session.user, 'vet')) {
+    res.status(403).json({ error: 'این بخش مخصوص دامپزشکان است' });
+    return;
+  }
+  const online = Boolean(req.body?.online);
+  const existing = dbService.getUserById(session.user.id) ?? session.user;
+  if (online && existing.vetEnabled === false) {
+    res.status(403).json({
+      error: 'حساب دامپزشکی شما توسط مدیر غیرفعال شده است',
+      reason: 'vet_disabled',
+    });
+    return;
+  }
+  const updated = dbService.setVetOnline(session.user.id, online);
+  if (!updated) {
+    res.status(400).json({ error: 'تغییر وضعیت آنلاین ممکن نشد' });
+    return;
+  }
+  res.json({ ok: true, user: updated });
 });
 
 authRouter.patch('/roles', (req, res) => {

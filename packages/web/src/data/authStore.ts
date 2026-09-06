@@ -6,6 +6,7 @@ import {
   patchWebPrimaryRole,
   patchWebProfile,
   patchWebRoles,
+  patchWebVetOnline,
   requestWebOtp,
   uploadUserAvatar,
   verifyWebOtp,
@@ -174,6 +175,15 @@ class AuthStore {
   async setPrimaryRole(role: UserRole) {
     if (!this.data.token) throw new Error('وارد نشده‌اید');
     const res = await patchWebPrimaryRole(this.data.token, role);
+    this.data = { ...this.data, user: res.user };
+    this.persist();
+    return res.user;
+  }
+
+  /** آنلاین/آفلاین دامپزشک برای پذیرش بیمار */
+  async setVetOnline(online: boolean) {
+    if (!this.data.token) throw new Error('وارد نشده‌اید');
+    const res = await patchWebVetOnline(this.data.token, online);
     this.data = { ...this.data, user: res.user };
     this.persist();
     return res.user;

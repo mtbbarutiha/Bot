@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
-import { BRAND, userHasRole } from '@petdate/shared';
+import { BRAND, dashboardPathForRole, primaryRole } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { usePetStore } from '../hooks/usePetStore';
 import { useUserStore } from '../hooks/useUserStore';
@@ -20,7 +20,17 @@ export function HomePage() {
   const { user } = useUserStore();
   const { user: authUser, isProfileComplete } = useAuthStore();
 
-  const isPetOwner = !user.role || userHasRole(user, 'pet_owner');
+  // نقش فعال (نه فقط «داشتن نقش») — هم‌تراز ربات و RoleSwitchControl
+  const active =
+    primaryRole(authUser?.roles, authUser?.role) ??
+    primaryRole(user.roles, user.role);
+
+  // دامپزشک فعال → داشبورد اختصاصی پزشک (نه پنل صاحب‌پت)
+  if (active === 'vet') {
+    return <Navigate to={dashboardPathForRole('vet')} replace />;
+  }
+
+  const isPetOwner = active === 'pet_owner';
   const displayName = authUser?.name?.trim() || 'دوست';
   const hasPetName = Boolean(myPet?.name && myPet.name !== 'پت من');
   const needsProfile = !isProfileComplete;

@@ -4,6 +4,7 @@ import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { exchangeTelegramWebLink } from '../../lib/api';
 import { postAuthPath, sanitizeNext } from '../../lib/authRedirect';
+import { dashboardPathForUser } from '@petdate/shared';
 
 /**
  * Consumes a bot-signed deep link and opens a web session on the same user row.
@@ -42,6 +43,7 @@ export function TelegramLinkPage() {
             hasRole: rolesOk,
             isProfileComplete: profileOk,
             next,
+            roleHome: dashboardPathForUser(res.user),
           }),
           { replace: true }
         );
@@ -65,10 +67,11 @@ export function TelegramLinkPage() {
         hasRole,
         isProfileComplete,
         next: sanitizeNext(searchParams.get('next'), '/wallet'),
+        roleHome: dashboardPathForUser(user),
       }),
       { replace: true }
     );
-  }, [isLoggedIn, busy, error, hasRole, isProfileComplete, navigate, searchParams]);
+  }, [isLoggedIn, busy, error, hasRole, isProfileComplete, navigate, searchParams, user]);
 
   return (
     <AuthShell

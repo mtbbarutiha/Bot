@@ -13,7 +13,7 @@ export function sanitizeNext(raw: string | null | undefined, fallback = '/home')
 
 export function loginPath(next?: string | null): string {
   const target = sanitizeNext(next, '/home');
-  if (target === '/home') return '/auth/login';
+  if (target === '/home' || target === '/vet-consult') return '/auth/login';
   return `/auth/login?next=${encodeURIComponent(target)}`;
 }
 
@@ -26,8 +26,17 @@ export function postAuthPath(opts: {
   hasRole: boolean;
   isProfileComplete: boolean;
   next?: string | null;
+  /** When set and next is default home, route to this role dashboard */
+  roleHome?: string | null;
 }): string {
   if (!opts.hasRole) return '/onboarding/role';
   if (!opts.isProfileComplete) return '/onboarding/profile';
-  return sanitizeNext(opts.next, '/home');
+  const sanitized = sanitizeNext(opts.next, '/home');
+  if (
+    opts.roleHome &&
+    (sanitized === '/home' || sanitized === '/vet-consult')
+  ) {
+    return opts.roleHome;
+  }
+  return sanitized;
 }

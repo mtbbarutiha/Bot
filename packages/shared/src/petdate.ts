@@ -644,6 +644,20 @@ export const MY_ROLES_LABEL = '🎭 نقش‌های من';
 export const ROLE_ADD_LABEL = '➕ افزودن نقش';
 
 /**
+ * مسیر داشبورد اختصاصی هر نقش (وب).
+ * ربات معادل همین را با منوی reply keyboard نشان می‌دهد.
+ */
+export const ROLE_DASHBOARD_PATHS: Record<UserRole, string> = {
+  pet_owner: '/home',
+  vet: '/vet-consult',
+  no_pet: '/home',
+  pet_seeker: '/home',
+  community_seeker: '/home',
+  trainer: '/home',
+  pet_sitter: '/home',
+};
+
+/**
  * نقش فعال/اصلی.
  * اگر fallback (ستون role) بین نقش‌های کاربر باشد، همان اولویت دارد؛
  * وگرنه صاحب پت، وگرنه اولین نقش.
@@ -673,6 +687,27 @@ export function userHasRole(
   if (!user) return false;
   const roles = normalizeRoles(user.roles, user.role);
   return roles.includes(role);
+}
+
+/** آیا نقش فعال/اصلی کاربر همین است؟ (متفاوت از userHasRole که مالکیت نقش را چک می‌کند) */
+export function isPrimaryRole(
+  user: { role?: UserRole | null; roles?: UserRole[] | null } | null | undefined,
+  role: UserRole
+): boolean {
+  if (!user) return false;
+  return primaryRole(user.roles, user.role) === role;
+}
+
+/** مسیر داشبورد وب برای نقش فعال کاربر */
+export function dashboardPathForRole(role?: UserRole | null): string {
+  if (!role || !(role in ROLE_DASHBOARD_PATHS)) return '/home';
+  return ROLE_DASHBOARD_PATHS[role];
+}
+
+export function dashboardPathForUser(
+  user: { role?: UserRole | null; roles?: UserRole[] | null } | null | undefined
+): string {
+  return dashboardPathForRole(primaryRole(user?.roles, user?.role));
 }
 
 export const USER_GENDER_LABELS: Record<UserGender, string> = {

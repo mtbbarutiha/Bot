@@ -45,6 +45,7 @@ import {
   PROFILE_REWARD_SECTIONS,
   PROFILE_SECTION_REWARD,
   SIGNUP_BONUS,
+  USER_ROLES,
   walletFromUserFields,
   type PetMedicalField,
   type WalletCurrency,
@@ -1252,16 +1253,9 @@ function parseRoles(value: unknown, fallbackRole?: unknown): UserRole[] {
     }
     return [];
   })();
-  const roles = fromJson.filter((r): r is UserRole =>
-    ['pet_owner', 'vet', 'no_pet', 'pet_seeker', 'community_seeker', 'trainer', 'pet_sitter'].includes(r)
-  );
+  const roles = fromJson.filter((r): r is UserRole => USER_ROLES.includes(r as UserRole));
   if (roles.length) return [...new Set(roles)];
-  if (
-    typeof fallbackRole === 'string' &&
-    ['pet_owner', 'vet', 'no_pet', 'pet_seeker', 'community_seeker', 'trainer', 'pet_sitter'].includes(
-      fallbackRole
-    )
-  ) {
+  if (typeof fallbackRole === 'string' && USER_ROLES.includes(fallbackRole as UserRole)) {
     return [fallbackRole as UserRole];
   }
   return [];

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { UserRole } from '@petdate/shared';
-import { USER_ROLE_LABELS } from '@petdate/shared';
+import { USER_ROLE_LABELS, dashboardPathForRole } from '@petdate/shared';
 import { AuthShell } from '../../components/AuthShell';
 import { useUserStore } from '../../hooks/useUserStore';
 
@@ -98,7 +98,7 @@ export function RoleWizardPage() {
         return;
       }
       await saveOnboardingToApi('profile_complete');
-      navigate('/home', { replace: true });
+      navigate(dashboardPathForRole(role), { replace: true });
     } finally {
       setSaving(false);
     }
@@ -108,7 +108,7 @@ export function RoleWizardPage() {
     setSaving(true);
     try {
       await saveOnboardingToApi('profile_incomplete');
-      navigate('/home', { replace: true });
+      navigate(dashboardPathForRole(role), { replace: true });
     } finally {
       setSaving(false);
     }

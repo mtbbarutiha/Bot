@@ -6,6 +6,7 @@ import { useAuthStore } from '../../hooks/useAuthStore';
 import { telegramWebLoginDeepLink } from '../../lib/api';
 import { postAuthPath, sanitizeNext } from '../../lib/authRedirect';
 import type { WebOtpChannel } from '../../lib/api';
+import { dashboardPathForUser } from '@petdate/shared';
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -15,7 +16,7 @@ export function LoginPage() {
     searchParams.get('next') || (location.state as { from?: string } | null)?.from,
     '/home'
   );
-  const { requestOtp, isLoggedIn, isProfileComplete, hasRole } = useAuthStore();
+  const { requestOtp, isLoggedIn, isProfileComplete, hasRole, user } = useAuthStore();
   const [channel, setChannel] = useState<WebOtpChannel>('phone');
   const [target, setTarget] = useState('');
   const [busy, setBusy] = useState(false);
@@ -26,10 +27,15 @@ export function LoginPage() {
   useEffect(() => {
     if (!isLoggedIn) return;
     navigate(
-      postAuthPath({ hasRole, isProfileComplete, next }),
+      postAuthPath({
+        hasRole,
+        isProfileComplete,
+        next,
+        roleHome: dashboardPathForUser(user),
+      }),
       { replace: true }
     );
-  }, [isLoggedIn, hasRole, isProfileComplete, navigate, next]);
+  }, [isLoggedIn, hasRole, isProfileComplete, navigate, next, user]);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { PawPrint } from 'lucide-react';
-import { BRAND, primaryRole, userHasRole, type PetProfile } from '@petdate/shared';
+import { BRAND, primaryRole, type PetProfile } from '@petdate/shared';
 import { PlaymateRequestsPanel } from '../components/PlaymateRequestsPanel';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -69,8 +69,10 @@ export function ExplorePage() {
   const [statusLine, setStatusLine] = useState<string | null>(null);
 
   const myUserId = authUser?.id ?? user.id;
-  const isPetOwner = !user.role || userHasRole(user, 'pet_owner');
-  const emptyRole = !isPetOwner ? primaryRole(user.roles, user.role) : undefined;
+  const active =
+    primaryRole(authUser?.roles, authUser?.role) ?? primaryRole(user.roles, user.role);
+  const isPetOwner = active === 'pet_owner';
+  const emptyRole = !isPetOwner ? active : undefined;
   const roleEmpty = emptyRole ? ROLE_EMPTY_MESSAGES[emptyRole] : null;
   const focusRequests = location.hash === '#requests';
 

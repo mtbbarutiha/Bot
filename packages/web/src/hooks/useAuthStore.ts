@@ -15,6 +15,7 @@ const authActions = {
   uploadAvatar: authStore.uploadAvatar.bind(authStore),
   saveRoles: authStore.saveRoles.bind(authStore),
   setPrimaryRole: authStore.setPrimaryRole.bind(authStore),
+  setVetOnline: authStore.setVetOnline.bind(authStore),
   logout: authStore.logout.bind(authStore),
   setPending: authStore.setPending.bind(authStore),
   clearPending: authStore.clearPending.bind(authStore),

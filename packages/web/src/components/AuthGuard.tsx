@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { loginPath, postAuthPath, readNextFromSearch, sanitizeNext } from '../lib/authRedirect';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { TelegramSync } from './OnboardingGuard';
+import { dashboardPathForUser } from '@petdate/shared';
 
 const PUBLIC_EXACT = new Set(['/', '/welcome', '/faq']);
 const PUBLIC_PREFIXES = ['/auth', '/admin', '/adoption', '/shop'];
@@ -14,12 +15,13 @@ function isPublic(pathname: string) {
 
 export function AuthGuard({ children }: { children?: React.ReactNode }) {
   const location = useLocation();
-  const { isLoggedIn, hasRole, isProfileComplete, refreshMe, token } = useAuthStore();
+  const { isLoggedIn, hasRole, isProfileComplete, refreshMe, token, user } = useAuthStore();
   const nextFromQuery = readNextFromSearch(location.search);
   const nextFromState = sanitizeNext(
     (location.state as { from?: string } | null)?.from,
     nextFromQuery
   );
+  const roleHome = dashboardPathForUser(user);
 
   // Depend on token only — refreshMe is a stable module-level bind, but keeping
   // it out of deps prevents accidental re-fetch loops if the hook regresses.
@@ -52,7 +54,7 @@ export function AuthGuard({ children }: { children?: React.ReactNode }) {
 
   if (isLoggedIn && isPublic(location.pathname) && location.pathname.startsWith('/auth')) {
     if (!hasRole) return <Navigate to="/onboarding/role" replace />;
-    return <Navigate to={postAuthPath({ hasRole, isProfileComplete, next: nextFromQuery })} replace />;
+    return <Navigate to={postAuthPath({ hasRole, isProfileComplete, next: nextFromQuery, roleHome })} replace />;
   }
 
   return <>{children ?? <Outlet />}</>;

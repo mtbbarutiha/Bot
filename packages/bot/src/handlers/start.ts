@@ -6,7 +6,6 @@ import {
   USER_ROLE_LABELS,
   normalizeRoles,
   primaryRole,
-  userHasRole,
 } from '@petdate/shared';
 import {
   registerTelegramUser,
@@ -197,8 +196,9 @@ export async function handleStart(ctx: Context): Promise<void> {
 }
 
 export async function sendWelcomeBack(ctx: Context, user: User, name: string): Promise<void> {
-  const isOwner = userHasRole(user, 'pet_owner');
-  const isVetOnly = !isOwner && userHasRole(user, 'vet');
+  const active = primaryRole(user.roles, user.role);
+  const isOwner = active === 'pet_owner';
+  const isVet = active === 'vet';
   const profileDone = Boolean(
     user.name &&
       user.age &&
@@ -211,7 +211,7 @@ export async function sendWelcomeBack(ctx: Context, user: User, name: string): P
     ? 'پروفایلت هنوز کامل نیست — الان می‌تونی تکمیل کنی یا «⏭ فعلاً رد کن» بزنی.'
     : isOwner
       ? 'از منوی زیر می‌تونی همبازی پیدا کنی، پت‌هات رو مدیریت کنی و از خدمات استفاده کنی.'
-      : isVetOnly
+      : isVet
         ? 'از منوی زیر لیست بیماران و مشاوره‌هات رو ببین.'
         : 'از منوی زیر استفاده کن.';
 
@@ -569,8 +569,9 @@ export async function handleMyRolesAdd(ctx: Context): Promise<void> {
 
 export async function handleHelp(ctx: Context): Promise<void> {
   const user = await getCtxUser(ctx);
-  const isOwner = userHasRole(user, 'pet_owner');
-  const isVetOnly = !isOwner && userHasRole(user, 'vet');
+  const active = primaryRole(user?.roles, user?.role);
+  const isOwner = active === 'pet_owner';
+  const isVet = active === 'vet';
 
   const lines = isOwner
     ? [
@@ -596,7 +597,7 @@ export async function handleHelp(ctx: Context): Promise<void> {
         '/menu — نمایش منو',
         '/cancel — لغو عملیات جاری',
       ]
-    : isVetOnly
+    : isVet
       ? [
           `🐾 **${BRAND.name}** — راهنمای دامپزشک`,
           `_${BRAND.taglineEn}_`,
