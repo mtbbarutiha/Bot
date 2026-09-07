@@ -36,7 +36,24 @@ usersRouter.get('/telegram/:telegramId', (req, res) => {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;
   }
-  res.json(user);
+  res.json(dbService.enrichUserProfileCard(user));
+});
+
+/** Touch last_seen for Telegram bot activity (marks user online). */
+usersRouter.post('/telegram/:telegramId/presence', async (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const lastSeenAt = dbService.touchUserLastSeen(user.id);
+  try {
+    const { notifyPresence } = await import('../ws/chatHub');
+    notifyPresence(user.id, true, lastSeenAt);
+  } catch {
+    /* optional */
+  }
+  res.json(dbService.getUserPresence(user.id));
 });
 
 usersRouter.get('/id/:id', (req, res) => {
@@ -45,7 +62,22 @@ usersRouter.get('/id/:id', (req, res) => {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;
   }
-  res.json(user);
+  res.json(dbService.enrichUserProfileCard(user));
+});
+
+/** خلاصه کارت پروفایل + آمار تعاملات */
+usersRouter.get('/:id/profile-card', (req, res) => {
+  const userId = Number(req.params.id);
+  const user = dbService.getUserById(userId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const extras = dbService.getProfileCardExtras(userId);
+  res.json({
+    user: dbService.enrichUserProfileCard(user),
+    extras,
+  });
 });
 
 function isOnboardingStatus(value: unknown): value is OnboardingStatus {
@@ -178,12 +210,14 @@ usersRouter.patch('/telegram/:telegramId/profile', (req, res) => {
     coins: patch.coins != null ? Number(patch.coins) : undefined,
     onboarding: patch.onboarding,
     isActive: typeof patch.isActive === 'boolean' ? patch.isActive : undefined,
+    silentChatRequests:
+      typeof patch.silentChatRequests === 'boolean' ? patch.silentChatRequests : undefined,
   });
   if (!user) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;
   }
-  res.json(user);
+  res.json(dbService.enrichUserProfileCard(user));
 });
 
 usersRouter.patch('/telegram/:telegramId/active', (req, res) => {
@@ -221,12 +255,14 @@ usersRouter.patch('/:id/profile', (req, res) => {
     coins: patch.coins != null ? Number(patch.coins) : undefined,
     onboarding: patch.onboarding,
     isActive: typeof patch.isActive === 'boolean' ? patch.isActive : undefined,
+    silentChatRequests:
+      typeof patch.silentChatRequests === 'boolean' ? patch.silentChatRequests : undefined,
   });
   if (!user) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;
   }
-  res.json(user);
+  res.json(dbService.enrichUserProfileCard(user));
 });
 
 usersRouter.patch('/:id/section', (req, res) => {
@@ -726,8 +762,75 @@ usersRouter.post('/:id/contacts', (req, res) => {
   res.status(result.created ? 201 : 200).json(result);
 });
 
+usersRouter.get('/:id/blocks', (req, res) => {
+  const userId = Number(req.params.id);
+  if (!Number.isFinite(userId) || !dbService.getUserById(userId)) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(dbService.listUserBlocks(userId));
+});
+
+usersRouter.post('/:id/blocks', (req, res) => {
+  const userId = Number(req.params.id);
+  const blockedUserId = Number(req.body?.blockedUserId);
+  if (!Number.isFinite(userId) || !Number.isFinite(blockedUserId)) {
+    res.status(400).json({ error: 'شناسه کاربر نامعتبر است' });
+    return;
+  }
+  const result = dbService.addUserBlock(userId, blockedUserId);
+  if (!result.ok) {
+    const status = result.reason === 'self' ? 400 : 404;
+    const message =
+      result.reason === 'self'
+        ? 'نمی‌توانید خودتان را بلاک کنید'
+        : result.reason === 'missing_user'
+          ? 'کاربر پیدا نشد'
+          : 'کاربر هدف پیدا نشد';
+    res.status(status).json({ error: message, reason: result.reason });
+    return;
+  }
+  res.status(result.created ? 201 : 200).json(result);
+});
+
+usersRouter.delete('/:id/blocks/:blockedUserId', (req, res) => {
+  const userId = Number(req.params.id);
+  const blockedUserId = Number(req.params.blockedUserId);
+  if (!Number.isFinite(userId) || !Number.isFinite(blockedUserId)) {
+    res.status(400).json({ error: 'شناسه کاربر نامعتبر است' });
+    return;
+  }
+  const ok = dbService.removeUserBlock(userId, blockedUserId);
+  if (!ok) {
+    res.status(404).json({ error: 'بلاک پیدا نشد' });
+    return;
+  }
+  res.json({ ok: true });
+});
+
+usersRouter.patch('/:id/silent-chat', (req, res) => {
+  const userId = Number(req.params.id);
+  const enabled = Boolean(req.body?.enabled ?? req.body?.silentChatRequests);
+  const user = dbService.updateUserProfile(userId, { silentChatRequests: enabled });
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json(dbService.enrichUserProfileCard(user));
+});
+
+usersRouter.delete('/:id', (req, res) => {
+  const userId = Number(req.params.id);
+  const ok = dbService.deleteUserById(userId);
+  if (!ok) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  res.json({ ok: true });
+});
+
 /** Heartbeat — touch last_seen_at (online window = 90s). */
-usersRouter.post('/:id/presence', (req, res) => {
+usersRouter.post('/:id/presence', async (req, res) => {
   const userId = Number(req.params.id);
   if (!Number.isFinite(userId) || userId <= 0) {
     res.status(400).json({ error: 'شناسه نامعتبر' });
@@ -738,7 +841,14 @@ usersRouter.post('/:id/presence', (req, res) => {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;
   }
-  res.json(dbService.getUserPresence(userId));
+  const presence = dbService.getUserPresence(userId);
+  try {
+    const { notifyPresence } = await import('../ws/chatHub');
+    notifyPresence(userId, true, lastSeenAt);
+  } catch {
+    /* ws hub optional */
+  }
+  res.json(presence);
 });
 
 usersRouter.get('/:id/presence', (req, res) => {

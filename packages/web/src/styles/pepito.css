@@ -3193,6 +3193,101 @@ button.chip.is-on {
   font-weight: 700;
 }
 
+/* Profile card (bot/web/PWA parity) */
+.pepito-profile-card-block {
+  background: linear-gradient(165deg, rgba(45, 52, 68, 0.96), rgba(28, 33, 44, 0.98));
+  color: #f2f4f8;
+  border-radius: 1rem;
+  padding: 1.1rem 1.15rem 1.2rem;
+  box-shadow: 0 12px 32px rgba(20, 24, 36, 0.18);
+}
+.pepito-profile-card-lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+.pepito-profile-card-lines code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  color: #9ec5ff;
+}
+.pepito-profile-completion-bar {
+  display: block;
+  margin-top: 0.35rem;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+.pepito-profile-completion-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #5b9dff, #7dd3a7);
+  border-radius: inherit;
+}
+.pepito-profile-inactive-note {
+  margin: 0.85rem 0 0;
+  font-size: 0.9rem;
+  color: #ffc48a;
+}
+.pepito-profile-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+.pepito-profile-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 2.75rem;
+  padding: 0.55rem 0.7rem;
+  border: 0;
+  border-radius: 0.75rem;
+  background: #3d7dd6;
+  color: #fff;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  text-align: center;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.pepito-profile-action:hover { filter: brightness(1.06); }
+.pepito-profile-action:active { transform: scale(0.98); }
+.pepito-profile-action--wide { grid-column: 1 / -1; }
+.pepito-profile-action--ok { background: #2f9e6b; }
+.pepito-profile-action--danger { background: #c44747; }
+.pepito-profile-action--danger-solid {
+  background: #c44747 !important;
+  color: #fff !important;
+  border: 0;
+}
+.pepito-profile-panel-list {
+  list-style: none;
+  margin: 0 0 0.85rem;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.pepito-profile-account-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-bottom: 0.5rem;
+}
+@media (max-width: 640px) {
+  .pepito-profile-actions { gap: 0.45rem; }
+  .pepito-profile-action { font-size: 0.82rem; min-height: 2.55rem; }
+}
+
 /* Pet row — interaction link, not a decorative card */
 .pepito-profile-pet-row {
   display: flex;

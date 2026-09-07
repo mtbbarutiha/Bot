@@ -3,6 +3,7 @@ export * from './catalog';
 export * from './brand';
 export * from './economy';
 export * from './rx-suggestions';
+export * from './profile-card';
 
 import type {
   OnboardingStatus,
@@ -174,6 +175,12 @@ export interface User {
   likesCount?: number;
   /** false = حساب غیرفعال (سبک دوردوریا) */
   isActive?: boolean;
+  /** درخواست چت/همبازی بدون اعلان مزاحم */
+  silentChatRequests?: boolean;
+  /** تعداد مخاطبین (غنی‌سازی در پاسخ پروفایل) */
+  contactsCount?: number;
+  /** تعداد بلاک‌شده‌ها (غنی‌سازی در پاسخ پروفایل) */
+  blockedCount?: number;
   /** احراز هویت پروفایل مالک (سبک دوردوریا) */
   verificationStatus?: VerificationStatus;
   verificationPhotoFileId?: string;

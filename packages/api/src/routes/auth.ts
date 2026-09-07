@@ -156,7 +156,8 @@ authRouter.get('/me', (req, res) => {
     res.status(401).json({ error: 'وارد نشده‌اید' });
     return;
   }
-  res.json({ ok: true, user: session.user });
+  const fresh = dbService.getUserById(session.user.id) ?? session.user;
+  res.json({ ok: true, user: dbService.enrichUserProfileCard(fresh) });
 });
 
 /** کیف پول چندارزی — TON / Stars / سکه ربات / تومان (همان منبع ربات) */
@@ -218,13 +219,17 @@ authRouter.patch('/profile', (req, res) => {
   ) {
     patch.onboarding = body.onboarding as OnboardingStatus;
   }
+  if (typeof body.isActive === 'boolean') patch.isActive = body.isActive;
+  if (typeof body.silentChatRequests === 'boolean') {
+    patch.silentChatRequests = body.silentChatRequests;
+  }
 
   const updated = dbService.updateUserProfile(session.user.id, patch);
   if (!updated) {
     res.status(404).json({ error: 'کاربر پیدا نشد' });
     return;
   }
-  res.json({ ok: true, user: updated });
+  res.json({ ok: true, user: dbService.enrichUserProfileCard(updated) });
 });
 
 /** Upload profile avatar (multipart field: `file`). Auth required. Sets user.avatarUrl. */

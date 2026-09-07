@@ -1,5 +1,5 @@
 import type { OnboardingStatus, User, UserRole } from '@petdate/shared';
-import { normalizeRoles, primaryRole } from '@petdate/shared';
+import { isProfileComplete as sharedProfileComplete, normalizeRoles, primaryRole } from '@petdate/shared';
 import {
   fetchMe,
   invalidateAuthGetCache,
@@ -89,7 +89,7 @@ class AuthStore {
     const u = this.data.user;
     if (!u) return false;
     if (u.onboarding === 'profile_complete') return true;
-    return Boolean(u.name?.trim() && u.age && u.gender && u.country && u.city);
+    return sharedProfileComplete(u);
   }
 
   setPending(channel: WebOtpChannel, target: string, devCode?: string) {

@@ -94,6 +94,15 @@ export async function notifyPlaydateRequestTelegram(opts: {
 }): Promise<boolean> {
   if (!infra.telegram.botToken || !opts.toTelegramId) return false;
 
+  // سایلنت درخواست چت: درخواست در لیست می‌ماند؛ نوتیف تلگرام ارسال نمی‌شود
+  try {
+    const { dbService } = await import('../db');
+    const recipient = dbService.getUserByTelegramId(opts.toTelegramId);
+    if (recipient?.silentChatRequests) return false;
+  } catch {
+    /* ignore — still notify */
+  }
+
   const speciesLabel =
     opts.speciesLabel ?? PET_SPECIES_LABELS[opts.fromPet.species] ?? opts.fromPet.species;
   const caption = [

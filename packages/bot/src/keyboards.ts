@@ -818,36 +818,63 @@ export function profileActionsKeyboard(
   complete: boolean,
   isActive = true,
   verificationStatus: 'none' | 'pending' | 'verified' | 'rejected' = 'none',
-  opts?: { isVet?: boolean }
+  opts?: {
+    isVet?: boolean;
+    likesCount?: number;
+    contactsCount?: number;
+    silentChatRequests?: boolean;
+    faceReward?: number;
+  }
 ): InlineKeyboard {
   const kb = new InlineKeyboard();
+  const fa = new Intl.NumberFormat('fa-IR');
+  const likes = fa.format(opts?.likesCount ?? 0);
+  const contacts = opts?.contactsCount ?? 0;
+  const contactsLabel =
+    contacts > 0 ? `👥 مخاطبین (${fa.format(contacts)})` : '👥 مخاطبین (-)';
+  const reward = fa.format(opts?.faceReward ?? 100);
+
+  kb.text(`❤️ ${likes}`, 'profile:likes')
+    .text(contactsLabel, 'profile:contacts')
+    .row();
+
   if (complete) {
-    kb.text('✏️ ویرایش پروفایل', 'profile:edit').primary().row();
+    kb.text('📝 ویرایش پروفایل', 'profile:edit').primary();
+    kb.text('📋 تکمیل پروفایل', 'profile:edit:all').primary().row();
   } else {
-    kb.text('✨ تکمیل پروفایل', 'profile:edit').success().row();
+    kb.text('📝 ویرایش پروفایل', 'profile:edit').primary();
+    kb.text('📋 تکمیل پروفایل', 'profile:edit').success().row();
+  }
+
+  kb.text('🔄 تعاملات', 'profile:interactions').primary();
+  if (verificationStatus === 'verified') {
+    kb.text('✅ احراز چهره شده', 'verify:status').success().row();
+  } else if (verificationStatus === 'pending') {
+    kb.text('⏳ در انتظار احراز', 'verify:status').primary().row();
+  } else {
+    kb.text(`💰 احراز چهره (+${reward})`, 'verify:start').success().row();
   }
 
   if (opts?.isVet) {
     kb.text('📄 آپلود مدرک', 'profile:vet_credential').primary().row();
   }
 
-  // Face verify lives only in profile (not main reply menus)
-  if (verificationStatus === 'verified') {
-    kb.text('✅ احراز چهره شده', 'verify:status').success().row();
-  } else if (verificationStatus === 'pending') {
-    kb.text('⏳ در انتظار احراز چهره', 'verify:status').primary().row();
-  } else {
-    kb.text('🛡 احراز چهره', 'verify:start').primary().row();
-  }
-
   kb.text('📱 احراز موبایل', 'phone:verify:start').primary().row();
 
-  kb.text('🗑 حذف', 'profile:delete').danger();
-  if (isActive) {
-    kb.text('⏸ غیرفعال‌سازی', 'profile:deactivate').danger();
+  kb.text('🚫 بلاک‌شده‌ها', 'profile:blocked').danger().row();
+
+  if (opts?.silentChatRequests) {
+    kb.text('🔔 سایلنت خاموش (روشن است)', 'profile:silent').primary().row();
   } else {
-    kb.text('▶️ فعال‌سازی', 'profile:activate').success();
+    kb.text('🔇 سایلنت درخواست چت', 'profile:silent').primary().row();
   }
+
+  kb.text('🔴 حذف / غیرفعال‌سازی حساب', 'profile:account').danger().row();
+
+  if (!isActive) {
+    kb.text('▶️ فعال‌سازی حساب', 'profile:activate').success().row();
+  }
+
   return kb;
 }
 

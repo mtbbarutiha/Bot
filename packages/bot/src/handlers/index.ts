@@ -51,14 +51,20 @@ import {
 } from './pet-edit';
 import {
   handleProfile,
+  handleProfileAccountMenu,
+  handleProfileBlocked,
   handleProfileContact,
+  handleProfileContacts,
   handleProfileDeactivateAsk,
   handleProfileDeactivateConfirm,
   handleProfileDeleteAsk,
   handleProfileDeleteConfirm,
   handleProfileActivate,
   handleProfileGender,
+  handleProfileInteractions,
+  handleProfileLikes,
   handleProfilePhoto,
+  handleProfileSilentToggle,
   handleProfileSkip,
   handleProfileWizardText,
   handleVetCredentialDocument,
@@ -195,10 +201,18 @@ import {
   handlePhoneVerifyStart,
   handlePhoneVerifyText,
 } from './phone-verify';
+import { touchTelegramPresence } from '../api-client';
 
 export function registerHandlers(bot: Bot): void {
   // عضویت اجباری در کانال‌ها — قبل از همهٔ دستورات
   bot.use(forceJoinMiddleware);
+
+  // Heartbeat آنلاین بودن برای کاربرانی که در ربات فعال‌اند
+  bot.use(async (ctx, next) => {
+    const tid = ctx.from?.id;
+    if (tid) void touchTelegramPresence(String(tid));
+    await next();
+  });
 
   bot.callbackQuery('join:check', async (ctx) => {
     try {
@@ -440,6 +454,12 @@ export function registerHandlers(bot: Bot): void {
   bot.callbackQuery('profile:skip_phone', (ctx) => handleProfileSkip(ctx, 'phone'));
   bot.callbackQuery('profile:skip_photo', (ctx) => handleProfileSkip(ctx, 'photo'));
   bot.callbackQuery('profile:skip_bio', (ctx) => handleProfileSkip(ctx, 'bio'));
+  bot.callbackQuery('profile:likes', (ctx) => handleProfileLikes(ctx));
+  bot.callbackQuery('profile:contacts', (ctx) => handleProfileContacts(ctx));
+  bot.callbackQuery('profile:interactions', (ctx) => handleProfileInteractions(ctx));
+  bot.callbackQuery('profile:blocked', (ctx) => handleProfileBlocked(ctx));
+  bot.callbackQuery('profile:silent', (ctx) => handleProfileSilentToggle(ctx));
+  bot.callbackQuery('profile:account', (ctx) => handleProfileAccountMenu(ctx));
   bot.callbackQuery('profile:deactivate', (ctx) => handleProfileDeactivateAsk(ctx));
   bot.callbackQuery('profile:activate', async (ctx) => {
     if (!(await ensureVetPhoneVerified(ctx))) return;

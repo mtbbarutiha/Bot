@@ -36,6 +36,18 @@ export async function registerTelegramUser(data: {
   });
 }
 
+/** Mark Telegram user online (bot activity heartbeat). */
+export async function touchTelegramPresence(telegramId: string): Promise<void> {
+  try {
+    await request(`/api/users/telegram/${encodeURIComponent(telegramId)}/presence`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  } catch {
+    /* non-fatal */
+  }
+}
+
 /** Complete web→Telegram attach from /start wlink_<token>. */
 export async function completeWebTelegramLink(data: {
   token: string;
@@ -934,6 +946,56 @@ export async function addUserContact(
   }
   const data = (await res.json()) as { ok: true; created: boolean };
   return data;
+}
+
+export async function listUserContacts(userId: number): Promise<
+  Array<{
+    id: number;
+    userId: number;
+    contactUserId: number;
+    createdAt: string;
+    contactName?: string;
+    contactUsername?: string;
+  }>
+> {
+  return request(`/api/users/${userId}/contacts`);
+}
+
+export async function listUserBlocks(userId: number): Promise<
+  Array<{
+    id: number;
+    userId: number;
+    blockedUserId: number;
+    createdAt: string;
+    blockedName?: string;
+    blockedUsername?: string;
+  }>
+> {
+  return request(`/api/users/${userId}/blocks`);
+}
+
+export async function fetchProfileCard(userId: number): Promise<{
+  user: User;
+  extras: {
+    contactsCount: number;
+    blockedCount: number;
+    interactions: {
+      likes: number;
+      views: number;
+      playdatesTotal: number;
+      playdatesPending: number;
+      playdatesAccepted: number;
+    };
+  } | null;
+}> {
+  return request(`/api/users/${userId}/profile-card`);
+}
+
+export async function setSilentChatRequests(userId: number, enabled: boolean): Promise<User> {
+  return request(`/api/users/${userId}/silent-chat`, {
+    method: 'PATCH',
+    body: JSON.stringify({ enabled }),
+  });
 }
 
 /* —— پت شاپ (کاتالوگ مشترک با وب از DB) —— */

@@ -1,18 +1,17 @@
 import type { Context } from 'grammy';
-import type { BotStep, ProfileDraft, User, UserGender, VerificationStatus } from '@petdate/shared';
+import type { BotStep, ProfileDraft, User, UserGender } from '@petdate/shared';
 import {
   COUNTRY_IRAN,
+  FACE_VERIFY_REWARD,
   IRAN_PROVINCES,
   PROFILE_INTEREST_OPTIONS,
   USER_AGE_CUSTOM_LABEL,
   USER_AGE_MAX,
   USER_AGE_MIN,
   USER_GENDER_LABELS,
-  USER_ROLE_LABELS,
-  VERIFIED_BADGE,
-  VERIFICATION_STATUS_LABELS,
   VET_CREDENTIAL_STATUS_LABELS,
-  normalizeRoles,
+  formatProfileCardHtml,
+  isProfileComplete,
   parseUserAge,
   toEnglishDigits,
   toPersianDigits,
@@ -21,6 +20,10 @@ import {
 import {
   deleteUserAccount,
   listPets,
+  listUserBlocks,
+  listUserContacts,
+  fetchProfileCard,
+  setSilentChatRequests,
   setUserActive,
   submitVetCredential,
   updateUserProfile,
@@ -66,84 +69,25 @@ function stepTitle(n: number): string {
   return `مرحله ${n} از ${PROFILE_TOTAL}`;
 }
 
-function isProfileComplete(user: User): boolean {
-  return Boolean(
-    user.name &&
-      user.age &&
-      user.gender &&
-      user.country &&
-      user.city &&
-      (user.country !== 'ایران' || user.province)
-  );
-}
-
-function formatNum(n: number | undefined | null): string {
-  return new Intl.NumberFormat('fa-IR').format(n ?? 0);
-}
-
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/** کارت کامل پروفایل کاربر */
+/** کارت کامل پروفایل کاربر — هم‌تراز وب/PWA */
 function formatProfileCard(user: User, petCount: number, petNames: string[] = []): string {
-  const gender = user.gender ? USER_GENDER_LABELS[user.gender] : '—';
-  const roles = normalizeRoles(user.roles, user.role);
-  const role = roles.length ? roles.map((r) => USER_ROLE_LABELS[r]).join(' · ') : '—';
-  const interests =
-    user.interests && user.interests.length > 0
-      ? user.interests.map(escapeHtml).join(' · ')
-      : '—';
-  const activeLabel = user.isActive === false ? '⏸ غیرفعال' : '✅ فعال';
-  const phone = user.phone ? escapeHtml(user.phone) : '—';
-  const petsLine =
-    petNames.length > 0
-      ? petNames.map((n) => `• ${escapeHtml(n)}`).join('\n')
-      : 'هنوز پتی ثبت نشده';
-  const status = (user.verificationStatus ?? 'none') as VerificationStatus;
-  const verifyLine =
-    status === 'verified'
-      ? VERIFIED_BADGE
-      : `🛡 احراز: ${VERIFICATION_STATUS_LABELS[status]}`;
-
   const isVet = userHasRole(user, 'vet');
   const vetCredStatus = user.vetCredentialStatus ?? 'none';
   const vetCredLine = isVet
-    ? `📄 <b>مدرک:</b> ${VET_CREDENTIAL_STATUS_LABELS[vetCredStatus]}`
+    ? `📄 مدرک: ${VET_CREDENTIAL_STATUS_LABELS[vetCredStatus]}`
     : null;
 
-  return [
-    '👤 <b>پروفایل من</b>',
-    verifyLine,
-    vetCredLine,
-    '',
-    `<b>نام:</b> ${escapeHtml(user.name)}${status === 'verified' ? ' ✅' : ''}`,
-    user.username ? `<b>یوزرنیم:</b> @${escapeHtml(user.username)}` : null,
-    `<b>سن:</b> ${user.age != null ? formatNum(user.age) : '—'}`,
-    `<b>جنسیت:</b> ${gender}`,
-    `<b>نقش:</b> ${role}`,
-    '',
-    '📍 <b>موقعیت</b>',
-    `<b>کشور:</b> ${user.country ? escapeHtml(user.country) : '—'}`,
-    `<b>استان:</b> ${user.province ? escapeHtml(user.province) : '—'}`,
-    `<b>شهر:</b> ${user.city ? escapeHtml(user.city) : '—'}`,
-    '',
-    `📱 <b>موبایل:</b> ${phone}${user.phoneVerified ? ' ✅ تأیید شده' : ''}`,
-    user.bio ? `💬 <b>درباره من:</b>\n${escapeHtml(user.bio)}` : '💬 <b>درباره من:</b> —',
-    '',
-    `🏷 <b>علایق:</b>\n${interests}`,
-    '',
-    `🐾 <b>پت‌های من</b> (${formatNum(petCount)})`,
-    petsLine,
-    '',
-    '📊 <b>آمار</b>',
-    `🪙 سکه ربات: ${formatNum(user.coins)}`,
-    `👁 بازدید: ${formatNum(user.profileViews)}`,
-    `❤️ لایک: ${formatNum(user.likesCount)}`,
-    `وضعیت حساب: ${activeLabel}`,
-  ]
-    .filter((line) => line !== null)
-    .join('\n');
+  const card = formatProfileCardHtml(user, {
+    contactsCount: user.contactsCount,
+    petCount,
+    petNames,
+  });
+
+  return [card, vetCredLine].filter(Boolean).join('\n');
 }
 
 async function sendOwnProfileCard(
@@ -156,7 +100,13 @@ async function sendOwnProfileCard(
     isProfileComplete(user),
     user.isActive !== false,
     user.verificationStatus ?? 'none',
-    { isVet: userHasRole(user, 'vet') }
+    {
+      isVet: userHasRole(user, 'vet'),
+      likesCount: user.likesCount ?? 0,
+      contactsCount: user.contactsCount ?? 0,
+      silentChatRequests: Boolean(user.silentChatRequests),
+      faceReward: FACE_VERIFY_REWARD,
+    }
   );
   if (user.avatarUrl) {
     try {
@@ -267,13 +217,21 @@ export async function handleProfile(ctx: Context): Promise<void> {
     return;
   }
 
-  const pets = await listPets({ ownerId: user.id });
-  const petNames = pets.map((p) => p.name);
-  const card = formatProfileCard(user, pets.length, petNames);
+  let cardUser = user;
+  try {
+    const card = await fetchProfileCard(user.id);
+    cardUser = card.user;
+  } catch {
+    /* keep local user */
+  }
 
-  if (!isProfileComplete(user)) {
+  const pets = await listPets({ ownerId: cardUser.id });
+  const petNames = pets.map((p) => p.name);
+  const card = formatProfileCard(cardUser, pets.length, petNames);
+
+  if (!isProfileComplete(cardUser)) {
     // اگر onboarding اشتباه کامل علامت خورده، اصلاح کن
-    if (user.onboarding === 'profile_complete') {
+    if (cardUser.onboarding === 'profile_complete') {
       try {
         await updateUserProfile(String(ctx.from!.id), { onboarding: 'profile_incomplete' });
       } catch {
@@ -282,7 +240,7 @@ export async function handleProfile(ctx: Context): Promise<void> {
     }
     await sendOwnProfileCard(
       ctx,
-      user,
+      cardUser,
       pets.length,
       `${card}\n\n⚠️ <b>پروفایلت هنوز کامل نیست.</b>\nهر بخش رو جداگانه ویرایش کن یا «تکمیل همه» رو بزن 👇`
     );
@@ -290,8 +248,8 @@ export async function handleProfile(ctx: Context): Promise<void> {
     return;
   }
 
-  await sendOwnProfileCard(ctx, user, pets.length, card);
-  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, user) });
+  await sendOwnProfileCard(ctx, cardUser, pets.length, card);
+  await ctx.reply('منوی اصلی 👇', { reply_markup: menuKeyboardFor(ctx, cardUser) });
 }
 
 export async function startProfileWizard(ctx: Context): Promise<void> {
@@ -1155,6 +1113,168 @@ export async function handleProfileActivate(ctx: Context): Promise<void> {
   await setUserActive(String(from.id), true);
   await ctx.answerCallbackQuery({ text: 'حساب فعال شد' });
   await handleProfile(ctx);
+}
+
+export async function handleProfileLikes(ctx: Context): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن' });
+    return;
+  }
+  const likes = user.likesCount ?? 0;
+  await ctx.answerCallbackQuery();
+  await ctx.reply(
+    [
+      '❤️ <b>لایک‌های پروفایل</b>',
+      '',
+      `تعداد لایک دریافتی: <b>${new Intl.NumberFormat('fa-IR').format(likes)}</b>`,
+      '',
+      'لایک‌ها از بازدید و تعامل دیگران روی پروفایل/پت‌ات جمع می‌شه.',
+    ].join('\n'),
+    { parse_mode: 'HTML' }
+  );
+}
+
+export async function handleProfileContacts(ctx: Context): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن' });
+    return;
+  }
+  await ctx.answerCallbackQuery();
+  try {
+    const contacts = await listUserContacts(user.id);
+    if (!contacts.length) {
+      await ctx.reply('👥 هنوز مخاطبی نداری.\nاز چت همبازی می‌تونی مخاطب اضافه کنی.');
+      return;
+    }
+    const lines = contacts.slice(0, 30).map((c, i) => {
+      const name = c.contactName || 'بدون نام';
+      const un = c.contactUsername ? ` @${c.contactUsername}` : '';
+      return `${new Intl.NumberFormat('fa-IR').format(i + 1)}. ${name}${un}`;
+    });
+    await ctx.reply(
+      [`👥 <b>مخاطبین</b> (${new Intl.NumberFormat('fa-IR').format(contacts.length)})`, '', ...lines].join(
+        '\n'
+      ),
+      { parse_mode: 'HTML' }
+    );
+  } catch (err) {
+    console.error('listUserContacts failed:', err);
+    await ctx.reply('لیست مخاطبین در دسترس نیست. کمی بعد دوباره امتحان کن.');
+  }
+}
+
+export async function handleProfileInteractions(ctx: Context): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن' });
+    return;
+  }
+  await ctx.answerCallbackQuery();
+  try {
+    const card = await fetchProfileCard(user.id);
+    const ix = card.extras?.interactions;
+    const fa = new Intl.NumberFormat('fa-IR');
+    await ctx.reply(
+      [
+        '🔄 <b>تعاملات</b>',
+        '',
+        `❤️ لایک: ${fa.format(ix?.likes ?? user.likesCount ?? 0)}`,
+        `👁️ بازدید پروفایل: ${fa.format(ix?.views ?? user.profileViews ?? 0)}`,
+        `🐾 درخواست همبازی: ${fa.format(ix?.playdatesTotal ?? 0)}`,
+        `⏳ در انتظار: ${fa.format(ix?.playdatesPending ?? 0)}`,
+        `✅ پذیرفته: ${fa.format(ix?.playdatesAccepted ?? 0)}`,
+      ].join('\n'),
+      { parse_mode: 'HTML' }
+    );
+  } catch (err) {
+    console.error('interactions failed:', err);
+    await ctx.reply('آمار تعاملات الان در دسترس نیست.');
+  }
+}
+
+export async function handleProfileBlocked(ctx: Context): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن' });
+    return;
+  }
+  await ctx.answerCallbackQuery();
+  try {
+    const blocks = await listUserBlocks(user.id);
+    if (!blocks.length) {
+      await ctx.reply('🚫 لیست بلاک خالی است.');
+      return;
+    }
+    const lines = blocks.slice(0, 30).map((b, i) => {
+      const name = b.blockedName || 'بدون نام';
+      const un = b.blockedUsername ? ` @${b.blockedUsername}` : '';
+      return `${new Intl.NumberFormat('fa-IR').format(i + 1)}. ${name}${un}`;
+    });
+    await ctx.reply(
+      [`🚫 <b>بلاک‌شده‌ها</b> (${new Intl.NumberFormat('fa-IR').format(blocks.length)})`, '', ...lines].join(
+        '\n'
+      ),
+      { parse_mode: 'HTML' }
+    );
+  } catch (err) {
+    console.error('listUserBlocks failed:', err);
+    await ctx.reply('لیست بلاک در دسترس نیست.');
+  }
+}
+
+export async function handleProfileSilentToggle(ctx: Context): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const user = await getCtxUser(ctx);
+  if (!user) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن' });
+    return;
+  }
+  const next = !user.silentChatRequests;
+  try {
+    await setSilentChatRequests(user.id, next);
+    await ctx.answerCallbackQuery({
+      text: next ? 'سایلنت روشن شد' : 'سایلنت خاموش شد',
+    });
+    await ctx.reply(
+      next
+        ? '🔇 سایلنت درخواست چت/همبازی روشن شد.\nاعلان‌های مزاحم کمتر می‌شه؛ درخواست‌ها همچنان در لیست می‌مونه.'
+        : '🔔 سایلنت خاموش شد — اعلان درخواست‌ها دوباره فعال است.'
+    );
+  } catch (err) {
+    console.error('silent toggle failed:', err);
+    await ctx.answerCallbackQuery({ text: 'خطا' });
+    await ctx.reply('تغییر سایلنت ناموفق بود.');
+  }
+}
+
+export async function handleProfileAccountMenu(ctx: Context): Promise<void> {
+  await ctx.answerCallbackQuery();
+  const user = await getCtxUser(ctx);
+  const active = user?.isActive !== false;
+  const rows: { text: string; callback_data: string }[][] = [
+    [
+      { text: '⏸ غیرفعال‌سازی', callback_data: 'profile:deactivate' },
+      { text: '🗑 حذف حساب', callback_data: 'profile:delete' },
+    ],
+  ];
+  if (!active) {
+    rows.push([{ text: '▶️ فعال‌سازی', callback_data: 'profile:activate' }]);
+  }
+  await ctx.reply(
+    [
+      '🔴 <b>حذف / غیرفعال‌سازی حساب</b>',
+      '',
+      'غیرفعال: موقتاً از جستجو خارج می‌شی.',
+      'حذف: حساب ناشناس می‌شه و برگشت‌پذیر نیست.',
+    ].join('\n'),
+    {
+      parse_mode: 'HTML',
+      reply_markup: { inline_keyboard: rows },
+    }
+  );
 }
 
 export async function handleProfileDeleteConfirm(ctx: Context, yes: boolean): Promise<void> {

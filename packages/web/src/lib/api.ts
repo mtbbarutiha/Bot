@@ -302,6 +302,60 @@ export async function addUserContact(
   });
 }
 
+export async function listUserContacts(userId: number) {
+  return request<
+    Array<{
+      id: number;
+      userId: number;
+      contactUserId: number;
+      createdAt: string;
+      contactName?: string;
+      contactUsername?: string;
+    }>
+  >(`/api/users/${userId}/contacts`);
+}
+
+export async function listUserBlocks(userId: number) {
+  return request<
+    Array<{
+      id: number;
+      userId: number;
+      blockedUserId: number;
+      createdAt: string;
+      blockedName?: string;
+      blockedUsername?: string;
+    }>
+  >(`/api/users/${userId}/blocks`);
+}
+
+export async function fetchProfileCard(userId: number) {
+  return request<{
+    user: User;
+    extras: {
+      contactsCount: number;
+      blockedCount: number;
+      interactions: {
+        likes: number;
+        views: number;
+        playdatesTotal: number;
+        playdatesPending: number;
+        playdatesAccepted: number;
+      };
+    } | null;
+  }>(`/api/users/${userId}/profile-card`);
+}
+
+export async function setSilentChatRequests(userId: number, enabled: boolean) {
+  return request<User>(`/api/users/${userId}/silent-chat`, {
+    method: 'PATCH',
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function deleteUserAccountById(userId: number) {
+  return request<{ ok: true }>(`/api/users/${userId}`, { method: 'DELETE' });
+}
+
 export async function endPlaydateChat(
   playdateId: number,
   userId: number

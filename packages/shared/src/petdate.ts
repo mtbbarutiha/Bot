@@ -174,6 +174,10 @@ export interface PetdateUser {
   profileViews?: number;
   likesCount?: number;
   isActive?: boolean;
+  /** درخواست چت/همبازی بدون نوتیف مزاحم */
+  silentChatRequests?: boolean;
+  contactsCount?: number;
+  blockedCount?: number;
   verificationStatus?: VerificationStatus;
   verificationPhotoFileId?: string;
   verifiedAt?: string;

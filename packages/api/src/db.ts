@@ -232,6 +232,9 @@ function migrateSchema() {
   if (!names.has('profile_views')) db.exec('ALTER TABLE users ADD COLUMN profile_views INTEGER NOT NULL DEFAULT 0');
   if (!names.has('likes_count')) db.exec('ALTER TABLE users ADD COLUMN likes_count INTEGER NOT NULL DEFAULT 0');
   if (!names.has('is_active')) db.exec('ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1');
+  if (!names.has('silent_chat_requests')) {
+    db.exec('ALTER TABLE users ADD COLUMN silent_chat_requests INTEGER NOT NULL DEFAULT 0');
+  }
   if (!names.has('verification_status')) {
     db.exec("ALTER TABLE users ADD COLUMN verification_status TEXT NOT NULL DEFAULT 'none'");
   }
@@ -421,10 +424,24 @@ function migrateSchema() {
   
   db.exec(`CREATE INDEX IF NOT EXISTS idx_user_contacts_user ON user_contacts (user_id);`);
 
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_blocks (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      blocked_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(user_id, blocked_user_id)
+    )
+  `);
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_user_blocks_user ON user_blocks (user_id);`);
+
   const userCols2 = db.prepare('PRAGMA table_info(users)').all() as { name: string }[];
   const userNames2 = new Set(userCols2.map((c) => c.name));
   if (!userNames2.has('email')) db.exec('ALTER TABLE users ADD COLUMN email TEXT');
   if (!userNames2.has('email_verified')) db.exec('ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0');
+  if (!userNames2.has('silent_chat_requests')) {
+    db.exec('ALTER TABLE users ADD COLUMN silent_chat_requests INTEGER NOT NULL DEFAULT 0');
+  }
 
   db.exec(`
     CREATE TABLE IF NOT EXISTS web_otps (
@@ -1414,6 +1431,8 @@ function mapUser(row: Record<string, unknown>): User {
     profileViews: row.profile_views != null ? Number(row.profile_views) : 0,
     likesCount: row.likes_count != null ? Number(row.likes_count) : 0,
     isActive: row.is_active == null ? true : Boolean(row.is_active),
+    silentChatRequests:
+      row.silent_chat_requests == null ? false : Boolean(row.silent_chat_requests),
     verificationStatus: parseVerificationStatus(row.verification_status),
     verificationPhotoFileId: (row.verification_photo_file_id as string | undefined) ?? undefined,
     verifiedAt: (row.verified_at as string | undefined) ?? undefined,
@@ -1824,6 +1843,7 @@ export const dbService = {
       coins: number;
       onboarding: OnboardingStatus;
       isActive: boolean;
+      silentChatRequests: boolean;
     }>
   ): User | null {
     const existing = this.getUserById(userId);
@@ -1866,6 +1886,10 @@ export const dbService = {
     if (patch.coins !== undefined) { fields.push('coins = ?'); values.push(patch.coins); }
     if (patch.onboarding !== undefined) { fields.push('onboarding = ?'); values.push(patch.onboarding); }
     if (patch.isActive !== undefined) { fields.push('is_active = ?'); values.push(patch.isActive ? 1 : 0); }
+    if (patch.silentChatRequests !== undefined) {
+      fields.push('silent_chat_requests = ?');
+      values.push(patch.silentChatRequests ? 1 : 0);
+    }
 
     if (fields.length === 0) return existing;
     values.push(userId);
@@ -1896,6 +1920,7 @@ export const dbService = {
       coins: number;
       onboarding: OnboardingStatus;
       isActive: boolean;
+      silentChatRequests: boolean;
     }>
   ): User | null {
     const user = this.getUserByTelegramId(telegramId);
@@ -1910,6 +1935,12 @@ export const dbService = {
   /** Soft-delete: anonymize + detach telegram so /start can create a fresh account */
   deleteUserByTelegramId(telegramId: string): boolean {
     const user = this.getUserByTelegramId(telegramId);
+    if (!user) return false;
+    return this.deleteUserById(user.id);
+  },
+
+  deleteUserById(userId: number): boolean {
+    const user = this.getUserById(userId);
     if (!user) return false;
     db.prepare(
       `UPDATE users SET
@@ -4374,6 +4405,165 @@ export const dbService = {
       contactName: row.contact_name || undefined,
       contactUsername: row.contact_username || undefined,
     }));
+  },
+
+  countUserContacts(userId: number): number {
+    const row = db
+      .prepare(`SELECT COUNT(*) AS c FROM user_contacts WHERE user_id = ?`)
+      .get(userId) as { c: number } | undefined;
+    return Number(row?.c ?? 0);
+  },
+
+  countUserBlocks(userId: number): number {
+    const row = db
+      .prepare(`SELECT COUNT(*) AS c FROM user_blocks WHERE user_id = ?`)
+      .get(userId) as { c: number } | undefined;
+    return Number(row?.c ?? 0);
+  },
+
+  /** غنی‌سازی آمار کارت پروفایل (مخاطب / بلاک / تعاملات) */
+  getProfileCardExtras(userId: number): {
+    contactsCount: number;
+    blockedCount: number;
+    interactions: {
+      likes: number;
+      views: number;
+      playdatesTotal: number;
+      playdatesPending: number;
+      playdatesAccepted: number;
+    };
+  } | null {
+    const user = this.getUserById(userId);
+    if (!user) return null;
+    const playdates = this.listPlaydateRequests({ userId });
+    return {
+      contactsCount: this.countUserContacts(userId),
+      blockedCount: this.countUserBlocks(userId),
+      interactions: {
+        likes: user.likesCount ?? 0,
+        views: user.profileViews ?? 0,
+        playdatesTotal: playdates.length,
+        playdatesPending: playdates.filter((p) => p.status === 'pending').length,
+        playdatesAccepted: playdates.filter((p) => p.status === 'accepted').length,
+      },
+    };
+  },
+
+  enrichUserProfileCard(user: User): User {
+    const extras = this.getProfileCardExtras(user.id);
+    if (!extras) return user;
+    return {
+      ...user,
+      contactsCount: extras.contactsCount,
+      blockedCount: extras.blockedCount,
+    };
+  },
+
+  listUserBlocks(userId: number): Array<{
+    id: number;
+    userId: number;
+    blockedUserId: number;
+    createdAt: string;
+    blockedName?: string;
+    blockedUsername?: string;
+  }> {
+    const rows = db
+      .prepare(
+        `SELECT b.id, b.user_id, b.blocked_user_id, b.created_at,
+                u.name AS blocked_name, u.username AS blocked_username
+         FROM user_blocks b
+         LEFT JOIN users u ON u.id = b.blocked_user_id
+         WHERE b.user_id = ?
+         ORDER BY b.created_at DESC, b.id DESC`
+      )
+      .all(userId) as Array<{
+      id: number;
+      user_id: number;
+      blocked_user_id: number;
+      created_at: string;
+      blocked_name: string | null;
+      blocked_username: string | null;
+    }>;
+    return rows.map((row) => ({
+      id: row.id,
+      userId: row.user_id,
+      blockedUserId: row.blocked_user_id,
+      createdAt: row.created_at,
+      blockedName: row.blocked_name || undefined,
+      blockedUsername: row.blocked_username || undefined,
+    }));
+  },
+
+  addUserBlock(
+    userId: number,
+    blockedUserId: number
+  ):
+    | { ok: true; created: boolean; block: { id: number; userId: number; blockedUserId: number; createdAt: string } }
+    | { ok: false; reason: 'self' | 'missing_user' | 'missing_blocked' } {
+    if (userId === blockedUserId) return { ok: false, reason: 'self' };
+    if (!this.getUserById(userId)) return { ok: false, reason: 'missing_user' };
+    if (!this.getUserById(blockedUserId)) return { ok: false, reason: 'missing_blocked' };
+
+    const existing = db
+      .prepare(
+        `SELECT id, user_id, blocked_user_id, created_at
+         FROM user_blocks WHERE user_id = ? AND blocked_user_id = ?`
+      )
+      .get(userId, blockedUserId) as
+      | { id: number; user_id: number; blocked_user_id: number; created_at: string }
+      | undefined;
+    if (existing) {
+      return {
+        ok: true,
+        created: false,
+        block: {
+          id: existing.id,
+          userId: existing.user_id,
+          blockedUserId: existing.blocked_user_id,
+          createdAt: existing.created_at,
+        },
+      };
+    }
+    const result = db
+      .prepare(`INSERT INTO user_blocks (user_id, blocked_user_id) VALUES (?, ?)`)
+      .run(userId, blockedUserId);
+    const row = db
+      .prepare(`SELECT id, user_id, blocked_user_id, created_at FROM user_blocks WHERE id = ?`)
+      .get(Number(result.lastInsertRowid)) as {
+      id: number;
+      user_id: number;
+      blocked_user_id: number;
+      created_at: string;
+    };
+    return {
+      ok: true,
+      created: true,
+      block: {
+        id: row.id,
+        userId: row.user_id,
+        blockedUserId: row.blocked_user_id,
+        createdAt: row.created_at,
+      },
+    };
+  },
+
+  removeUserBlock(userId: number, blockedUserId: number): boolean {
+    const result = db
+      .prepare(`DELETE FROM user_blocks WHERE user_id = ? AND blocked_user_id = ?`)
+      .run(userId, blockedUserId);
+    return result.changes > 0;
+  },
+
+  isUserBlocked(userId: number, otherUserId: number): boolean {
+    const row = db
+      .prepare(
+        `SELECT 1 AS ok FROM user_blocks
+         WHERE (user_id = ? AND blocked_user_id = ?)
+            OR (user_id = ? AND blocked_user_id = ?)
+         LIMIT 1`
+      )
+      .get(userId, otherUserId, otherUserId, userId) as { ok: number } | undefined;
+    return Boolean(row);
   },
 
   getUserByPhone(phone: string): User | null {
