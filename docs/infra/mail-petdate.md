@@ -1,6 +1,8 @@
 # ایمیل petdate.ir — Postfix + Dovecot + OpenDKIM
 
-Mailbox هدف: **`info@petdate.ir`** (آلیاس برند: `hello@petdate.ir` → همان inbox).
+Mailbox هدف: **`info@petdate.ir`** (آلیاس‌ها: `hello@` / `no-reply@` / `noreply@` / postmaster / abuse → همان inbox).
+
+ارسال OTP اپ از **`no-reply@petdate.ir`** (هویت From؛ mailbox جدا لازم نیست).
 
 VPS مبدأ: `185.110.189.218` — هاست میل: `mail.petdate.ir`
 
@@ -56,7 +58,8 @@ bash /opt/petdate/infra/mail/setup-mail.sh
 | | |
 |--|--|
 | آدرس | `info@petdate.ir` |
-| آلیاس | `hello@petdate.ir` |
+| آلیاس | `hello@`، `no-reply@`، `noreply@` → `info@` |
+| From اپ (OTP) | `no-reply@petdate.ir` |
 | IMAP | `mail.petdate.ir` پورت **993** (SSL) |
 | SMTP | `mail.petdate.ir` پورت **587** (STARTTLS) یا **465** (SSL) |
 | Username | `info@petdate.ir` (آدرس کامل) |
@@ -82,7 +85,7 @@ cd /opt/petdate
 bash infra/mail/setup-mail.sh
 ```
 
-اسکریپت: Postfix + Dovecot + OpenDKIM، فایروال پورت‌های 25/465/587/993، mailbox مجازی، آلیاس hello/postmaster/abuse. nginx روی 80/443 دست نخورده می‌ماند.
+اسکریپت: Postfix + Dovecot + OpenDKIM، فایروال پورت‌های 25/465/587/993، mailbox مجازی، آلیاس hello/no-reply/noreply/postmaster/abuse. nginx روی 80/443 دست نخورده می‌ماند.
 
 ## SMTP اپ (OTP ایمیل)
 
@@ -91,14 +94,16 @@ bash infra/mail/setup-mail.sh
 ```
 SMTP_HOST=127.0.0.1
 SMTP_PORT=25
-SMTP_FROM=info@petdate.ir
+SMTP_FROM=no-reply@petdate.ir
 SMTP_FROM_NAME=petdate
 SMTP_TLS_REJECT_UNAUTHORIZED=0
 ```
 
-API کد OTP تب ایمیل را از طریق Postfix محلی می‌فرستد (از آدرس `info@`).
+API کد OTP تب ایمیل را از طریق Postfix محلی می‌فرستد با From = `no-reply@petdate.ir` (OpenDKIM برای `*@petdate.ir` امضا می‌کند).
 
 `SMTP_TLS_REJECT_UNAUTHORIZED=0` لازم است چون گواهی فعلی `mail.petdate.ir` هنوز self-signed است (تا بعد از certbot روی DNS درست).
+
+> **Deliverability:** تا وقتی `A mail` / DKIM TXT / DMARC در DNS درست نشوند، OTP ممکن است به spam برود یا توسط گیرنده رد شود — ارسال از سرور کار می‌کند ولی inbox تضمین نیست.
 
 ### پنل مشاهده ارسال (ادمین وب)
 

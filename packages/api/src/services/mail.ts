@@ -18,7 +18,7 @@ function smtpAuth(): { user: string; pass: string } {
 
 function smtpFrom(): { addr: string; name: string } {
   const { user } = smtpAuth();
-  const addr = String(process.env.SMTP_FROM ?? '').trim() || user || 'noreply@petdate.ir';
+  const addr = String(process.env.SMTP_FROM ?? '').trim() || user || 'no-reply@petdate.ir';
   const name = String(process.env.SMTP_FROM_NAME ?? '').trim() || 'PetDate';
   return { addr, name };
 }

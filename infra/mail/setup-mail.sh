@@ -300,10 +300,12 @@ ensure_mailbox() {
   echo "${email} ${DOMAIN}/${MAILBOX_USER}/Maildir/" >/etc/postfix/vmailbox
   postmap /etc/postfix/vmailbox
 
-  # hello@ → info@ (brand alias)
+  # Brand / ops aliases → info@; no-reply is send-only identity (inbound still lands in info)
   echo "${ALIAS_HELLO}@${DOMAIN} ${email}" >/etc/postfix/virtual
   echo "postmaster@${DOMAIN} ${email}" >>/etc/postfix/virtual
   echo "abuse@${DOMAIN} ${email}" >>/etc/postfix/virtual
+  echo "no-reply@${DOMAIN} ${email}" >>/etc/postfix/virtual
+  echo "noreply@${DOMAIN} ${email}" >>/etc/postfix/virtual
   postmap /etc/postfix/virtual
 
   mkdir -p "${CRED_DIR}"
