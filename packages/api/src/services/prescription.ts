@@ -44,15 +44,14 @@ export type CreatePrescriptionResult = {
 };
 
 /**
- * Exported for selftest — Persian SMS with public HTTPS PDF download link.
- * Prefer the direct pdf.petdate.ir /rx/{id}.pdf URL so the patient can open the file immediately.
+ * Exported for selftest — Persian SMS with a single HTTPS PDF download link.
+ * Only pdf.petdate.ir /rx/{id}.pdf (PUBLIC_PDF_URL) — no HTML page URL.
  */
 export function buildPrescriptionSmsBody(opts: {
   vetName: string;
   petName: string;
   text: string;
   pdfUrl: string;
-  webUrl?: string;
 }): string {
   const abbrev = opts.text.replace(/\s+/g, ' ').trim().slice(0, 200);
   const parts = [
@@ -61,9 +60,6 @@ export function buildPrescriptionSmsBody(opts: {
     'دانلود فایل PDF:',
     opts.pdfUrl,
   ];
-  if (opts.webUrl && opts.webUrl !== opts.pdfUrl) {
-    parts.push(`مشاهده نسخه: ${opts.webUrl}`);
-  }
   if (abbrev.length <= 80) {
     parts.push(`دارو: ${abbrev}`);
   }
@@ -223,7 +219,6 @@ export async function createPrescriptionWithDelivery(
         petName: pet.name,
         text,
         pdfUrl: pdfPublicUrl,
-        webUrl,
       });
       let sent = await candooSendWithSrcFallback({
         recipient,

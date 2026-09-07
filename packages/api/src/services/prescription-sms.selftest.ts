@@ -47,22 +47,23 @@ assert(
 );
 
 const pdfUrl = prescriptionPdfPublicUrl(42);
-const webUrl = prescriptionPublicUrl(42);
 const body = buildPrescriptionSmsBody({
   vetName: 'آزمایشی',
   petName: 'لوکی',
   text: 'آموکسی سیلین 50mg',
   pdfUrl,
-  webUrl,
 });
 
 assert(body.includes('https://pdf.petdate.ir/rx/42.pdf'), 'SMS must include HTTPS PDF download link');
-assert(body.includes('https://petdate.ir/rx/42'), 'SMS may keep readable page link');
+assert(!body.includes('https://petdate.ir/rx/42'), 'SMS must not include HTML page link');
+assert(!body.includes('مشاهده نسخه'), 'SMS must not mention page view link');
 assert(body.includes('PDF'), 'SMS must mention PDF');
 assert(body.includes('دانلود'), 'SMS must say download');
 assert(!body.includes('تلگرام'), 'SMS must not tell user to use Telegram for PDF');
 assert(!body.includes('185.110'), 'SMS must not leak VPS IP');
 assert(!/[🐾💊]/.test(body), 'SMS should avoid emoji for carrier encoding');
+// Exactly one https URL in the SMS body
+assert((body.match(/https:\/\//g) || []).length === 1, 'SMS must have exactly one HTTPS link');
 
 // Without PUBLIC_PDF_URL → default pdf.petdate.ir
 delete process.env.PUBLIC_PDF_URL;
