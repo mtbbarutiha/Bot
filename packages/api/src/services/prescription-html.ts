@@ -4,7 +4,7 @@
  */
 import fs from 'fs';
 import path from 'path';
-import { PET_SPECIES_LABELS } from '@petdate/shared';
+import { PET_SPECIES_LABELS, SITE } from '@petdate/shared';
 
 const RX_BRAND_EN = 'Pet Date Dr';
 
@@ -81,23 +81,68 @@ function medLinesHtml(text: string): string {
     .join('\n');
 }
 
-/** Absolute public base URL for bot / SMS links. */
-export function publicApiBaseUrl(reqHost?: string): string {
-  const fromEnv =
-    process.env.PUBLIC_API_URL ||
-    process.env.PUBLIC_WEB_URL ||
-    process.env.API_PUBLIC_URL;
-  if (fromEnv) return fromEnv.replace(/\/$/, '');
-  if (reqHost) {
-    const proto = process.env.PUBLIC_API_PROTO || 'https';
-    if (/localhost|127\.0\.0\.1/.test(reqHost)) return `http://${reqHost}`;
-    return `${proto}://${reqHost}`;
+/** True when hostname is a raw IPv4 (never use for user-facing rx / SMS links). */
+function isRawIpHostname(host: string): boolean {
+  const h = String(host || '')
+    .trim()
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '');
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(h.split('%')[0] || '');
+}
+
+function originFromCandidate(raw: string | undefined | null): string | null {
+  if (!raw || !String(raw).trim()) return null;
+  const trimmed = String(raw).trim().replace(/\/$/, '');
+  try {
+    const u = new URL(trimmed.includes('://') ? trimmed : `https://${trimmed}`);
+    if (isRawIpHostname(u.hostname)) return null;
+    if (/^localhost$|^127\.0\.0\.1$/i.test(u.hostname)) return null;
+    return `${u.protocol}//${u.host}`.replace(/\/$/, '');
+  } catch {
+    return null;
   }
-  return `http://localhost:${process.env.PORT || 3001}`;
+}
+
+/**
+ * Absolute public site origin for user-facing links (SMS / Telegram / chat).
+ * Prefers PUBLIC_WEB_URL / WEB_URL — never a bare VPS IP.
+ */
+export function publicWebOrigin(reqHost?: string): string {
+  const fromEnv =
+    originFromCandidate(process.env.PUBLIC_WEB_URL) ||
+    originFromCandidate(process.env.WEB_URL) ||
+    originFromCandidate(process.env.PUBLIC_ORIGIN) ||
+    originFromCandidate(process.env.APP_PUBLIC_URL) ||
+    originFromCandidate(process.env.WEB_PUBLIC_URL) ||
+    originFromCandidate(process.env.PUBLIC_API_URL) ||
+    originFromCandidate(process.env.API_PUBLIC_URL);
+  if (fromEnv) return fromEnv;
+
+  if (reqHost) {
+    const hostOnly = String(reqHost).split(',')[0]!.trim().split(':')[0]!;
+    if (
+      !isRawIpHostname(hostOnly) &&
+      !/^localhost$|^127\.0\.0\.1$/i.test(hostOnly)
+    ) {
+      const proto = process.env.PUBLIC_API_PROTO || 'https';
+      return `${proto}://${reqHost.replace(/\/$/, '')}`;
+    }
+  }
+
+  return SITE.origin;
+}
+
+/** @deprecated Prefer publicWebOrigin for user-facing rx links. */
+export function publicApiBaseUrl(reqHost?: string): string {
+  return publicWebOrigin(reqHost);
 }
 
 export function prescriptionWebPath(id: number): string {
   return `/rx/${id}`;
+}
+
+export function prescriptionPublicUrl(id: number, reqHost?: string): string {
+  return `${publicWebOrigin(reqHost)}${prescriptionWebPath(id)}`;
 }
 
 export function renderPrescriptionHtml(input: PrescriptionHtmlInput): string {

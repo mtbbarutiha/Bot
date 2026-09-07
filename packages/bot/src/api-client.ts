@@ -993,6 +993,7 @@ export type CreatePrescriptionResponse = {
   pdfUrl: string;
   webPath?: string;
   webUrl?: string;
+  chatMessage?: import('@petdate/shared').VetConsultChatMessage | null;
   sms:
     | { sent: true; phone: string }
     | { sent: false; skipped: true; reason: string };

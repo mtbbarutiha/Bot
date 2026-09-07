@@ -970,7 +970,10 @@ export function VetChatPage() {
     return (
       <a className="tg-media-file" href={src} target="_blank" rel="noreferrer">
         {'📎 '}
-        {msg.fileName || mediaLabel(msg.mediaKind)}
+        {msg.mimeType === 'application/pdf' ||
+        (msg.fileName && /\.pdf$/i.test(msg.fileName))
+          ? msg.fileName || 'نسخه PDF'
+          : msg.fileName || mediaLabel(msg.mediaKind)}
       </a>
     );
   }
@@ -1720,6 +1723,15 @@ export function VetChatPage() {
                 : result.sms && 'skipped' in result.sms && result.sms.skipped
                   ? `پیامک ارسال نشد: ${result.sms.reason}`
                   : null;
+            if (result.chatMessage && user) {
+              const row = result.chatMessage;
+              setMessages((msgs) => {
+                if (msgs.some((m) => m.numericId === row.id)) return msgs;
+                return [...msgs, toUi(row, user.id)];
+              });
+              lastIdRef.current = Math.max(lastIdRef.current, row.id);
+              return;
+            }
             setMessages((msgs) => [
               ...msgs,
               systemMessage(

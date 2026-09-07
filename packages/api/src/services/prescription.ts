@@ -6,6 +6,7 @@ import { normalizeIranMobile, formatIranMobileDisplay } from '@petdate/shared';
 import { dbService } from '../db';
 import { candooSendWithSrcFallback, isCandooConfigured } from './candoo';
 import { generatePrescriptionPdf, prescriptionsDir } from './prescription-pdf';
+import { prescriptionPublicUrl } from './prescription-html';
 
 export type CreatePrescriptionInput = {
   consultId: number;
@@ -22,6 +23,7 @@ export type CreatePrescriptionResult = {
   prescription: NonNullable<ReturnType<typeof dbService.getPrescription>>;
   pdfPath: string;
   sms: SmsDeliveryStatus;
+  webUrl: string;
   patient: NonNullable<ReturnType<typeof dbService.getUserById>>;
   vet: NonNullable<ReturnType<typeof dbService.getUserById>>;
   pet: NonNullable<ReturnType<typeof dbService.getPet>>;
@@ -31,14 +33,15 @@ function buildSmsBody(opts: {
   vetName: string;
   petName: string;
   text: string;
+  webUrl: string;
 }): string {
-  const abbrev = opts.text.replace(/\s+/g, ' ').trim().slice(0, 280);
+  const abbrev = opts.text.replace(/\s+/g, ' ').trim().slice(0, 200);
   const parts = [
     'پت دیت دکتر',
     `نسخه دارویی برای «${opts.petName}» توسط دکتر ${opts.vetName} صادر شد.`,
-    'فایل PDF را در تلگرام ربات پت دیت دریافت کنید.',
+    `مشاهده: ${opts.webUrl}`,
   ];
-  if (abbrev.length <= 120) {
+  if (abbrev.length <= 100) {
     parts.push(`دارو: ${abbrev}`);
   }
   let body = parts.join('\n');
@@ -118,6 +121,8 @@ export async function createPrescriptionWithDelivery(
 
   prescription = dbService.updatePrescriptionPdfPath(prescription.id, pdfPath) ?? prescription;
 
+  const webUrl = prescriptionPublicUrl(prescription.id);
+
   // Update medical record medications + clinical entry (attributed to vet)
   const prevMeds = dbService.getPetMedicalRecord(pet.id).medications;
   const medStamp = new Date().toISOString().slice(0, 10);
@@ -170,6 +175,7 @@ export async function createPrescriptionWithDelivery(
         vetName: vet.name,
         petName: pet.name,
         text,
+        webUrl,
       });
       const sent = await candooSendWithSrcFallback({
         recipient,
@@ -196,6 +202,7 @@ export async function createPrescriptionWithDelivery(
       prescription,
       pdfPath,
       sms,
+      webUrl,
       patient,
       vet,
       pet,

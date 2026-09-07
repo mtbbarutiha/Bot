@@ -866,6 +866,8 @@ export type CreatePrescriptionResponse = {
   pdfUrl: string;
   webPath?: string;
   webUrl?: string;
+  /** Persisted consult chat message that carries the PDF (web thread). */
+  chatMessage?: VetConsultChatMessage | null;
   sms:
     | { sent: true; phone: string }
     | { sent: false; skipped: true; reason: string };

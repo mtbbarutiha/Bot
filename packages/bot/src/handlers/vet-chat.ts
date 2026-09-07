@@ -1028,7 +1028,9 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
   const fileName = `petdate-dr-rx-${created.prescription.id}.pdf`;
   const webLink =
     created.webUrl ||
-    (created.webPath ? `${process.env.PUBLIC_API_URL || ''}${created.webPath}` : '');
+    (created.webPath
+      ? `${process.env.PUBLIC_WEB_URL || process.env.WEB_URL || 'https://petdate.ir'}${created.webPath}`
+      : '');
   const captionPatient = [
     '💊 <b>نسخه دارویی Pet Date Dr</b>',
     `پت: <b>${escapeHtml(created.pet.name)}</b>`,

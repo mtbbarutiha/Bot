@@ -6,8 +6,9 @@ import { infra } from '../config/infra';
 import { dbService } from '../db';
 import { createPrescriptionWithDelivery } from '../services/prescription';
 import {
-  publicApiBaseUrl,
+  publicWebOrigin,
   prescriptionWebPath,
+  prescriptionPublicUrl,
   renderPrescriptionHtml,
 } from '../services/prescription-html';
 import { notifyVetQuickConsultTelegram } from '../services/telegram-vet-consult-notify';
@@ -1030,13 +1031,57 @@ consultationsRouter.post('/:id/prescription', async (req, res) => {
   const { result } = created;
   const id = result.prescription.id;
   const host = req.get('host') || undefined;
-  const base = publicApiBaseUrl(host);
+  const webUrl =
+    result.webUrl ||
+    prescriptionPublicUrl(id, host) ||
+    `${publicWebOrigin(host)}${prescriptionWebPath(id)}`;
+
+  /** Persist PDF as a consult chat document so web (vet + patient) see it in-thread. */
+  let chatMessage: ReturnType<typeof dbService.createVetConsultChatMessage> | null = null;
+  try {
+    if (result.pdfPath && fs.existsSync(result.pdfPath)) {
+      const pdfBuf = fs.readFileSync(result.pdfPath);
+      const fileName = `petdate-dr-rx-${id}.pdf`;
+      const saved = saveChatUpload({
+        folderId: vetUploadFolder(consultId),
+        originalName: fileName,
+        buffer: pdfBuf,
+      });
+      const smsLine =
+        result.sms.sent === true ? 'پیامک نسخه برای بیمار ارسال شد.' : null;
+      const caption = [
+        `💊 نسخه شماره ${id} صادر شد.`,
+        result.pet.name ? `پت: ${result.pet.name}` : null,
+        `مشاهده: ${webUrl}`,
+        smsLine,
+      ]
+        .filter(Boolean)
+        .join('\n');
+      chatMessage = dbService.createVetConsultChatMessage({
+        consultId,
+        senderUserId: result.vet.id,
+        text: caption,
+        mediaKind: 'document',
+        storageKey: saved.storageKey,
+        mimeType: 'application/pdf',
+        fileName,
+      });
+      notifyVetMessage(consultId, chatMessage, [
+        result.vet.id,
+        result.patient.id,
+      ]);
+    }
+  } catch (err) {
+    console.error('prescription chat PDF message failed:', err);
+  }
+
   res.status(201).json({
     prescription: result.prescription,
     pdfPath: result.pdfPath,
     pdfUrl: `/api/prescriptions/${id}/pdf`,
     webPath: prescriptionWebPath(id),
-    webUrl: `${base}${prescriptionWebPath(id)}`,
+    webUrl,
+    chatMessage,
     sms: result.sms,
     patient: {
       id: result.patient.id,
