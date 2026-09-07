@@ -45,6 +45,11 @@ import {
   prepareChatUploadFile,
 } from '../lib/chatMediaUpload';
 import { RequestCountdown } from '../components/RequestCountdown';
+import {
+  VetChatDoctorSheets,
+  VetChatDoctorToolbar,
+  type VetDoctorPanel,
+} from '../components/VetChatDoctorTools';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useChatSocket, type ChatSocketEvent } from '../hooks/useChatSocket';
 import { useChatViewportHeight } from '../hooks/useChatViewportHeight';
@@ -199,6 +204,7 @@ export function VetChatPage() {
   const listReadyRef = useRef(false);
   const [listError, setListError] = useState<string | null>(null);
   const [listActionKey, setListActionKey] = useState<string | null>(null);
+  const [doctorPanel, setDoctorPanel] = useState<VetDoctorPanel>(null);
 
   const scrollerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -1240,6 +1246,18 @@ export function VetChatPage() {
                     </button>
                     {menuOpen ? (
                       <div className="tg-chat-menu" role="menu">
+                        {isVetSide ? (
+                          <button
+                            type="button"
+                            role="menuitem"
+                            onClick={() => {
+                              setMenuOpen(false);
+                              setDoctorPanel('rx');
+                            }}
+                          >
+                            صدور نسخه
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           role="menuitem"
@@ -1467,6 +1485,16 @@ export function VetChatPage() {
                 </div>
               ) : chatUnlocked ? (
                 <>
+                  {isVetSide ? (
+                    <VetChatDoctorToolbar
+                      disabled={sending || ending}
+                      onOpen={(panel) => {
+                        setEmojiOpen(false);
+                        setMenuOpen(false);
+                        setDoctorPanel(panel);
+                      }}
+                    />
+                  ) : null}
                   {pendingFile ? (
                     <div className="tg-attach-preview">
                       {pendingPreview ? (
@@ -1565,6 +1593,48 @@ export function VetChatPage() {
                       </button>
                     </form>
                   </div>
+                  {isVetSide && consult && user ? (
+                    <VetChatDoctorSheets
+                      open={doctorPanel}
+                      onClose={() => setDoctorPanel(null)}
+                      consult={consult}
+                      vetUserId={user.id}
+                      vetName={user.name}
+                      token={token}
+                      onIssued={(result) => {
+                        const web = result.webUrl || result.webPath || '';
+                        const smsLine =
+                          result.sms && 'sent' in result.sms && result.sms.sent
+                            ? 'پیامک نسخه برای بیمار ارسال شد.'
+                            : result.sms && 'skipped' in result.sms && result.sms.skipped
+                              ? `پیامک ارسال نشد: ${result.sms.reason}`
+                              : null;
+                        setMessages((msgs) => [
+                          ...msgs,
+                          systemMessage(
+                            [
+                              `💊 نسخه شماره ${result.prescription.id} صادر شد.`,
+                              result.pet?.name ? `پت: ${result.pet.name}` : null,
+                              web ? `مشاهده: ${web}` : null,
+                              smsLine,
+                            ]
+                              .filter(Boolean)
+                              .join('\n'),
+                          ),
+                        ]);
+                      }}
+                      onNoteSaved={(text) => {
+                        setMessages((msgs) => [
+                          ...msgs,
+                          systemMessage(
+                            `📝 موردی در پرونده پزشکی ثبت شد:\n«${text.slice(0, 280)}${
+                              text.length > 280 ? '…' : ''
+                            }»`,
+                          ),
+                        ]);
+                      }}
+                    />
+                  ) : null}
                 </>
               ) : (
                 <div className="tg-ended-bar">

@@ -1,9 +1,12 @@
 import type {
   OnboardingStatus,
+  PetMedicalEntry,
+  PetMedicalRecord,
   PetProfile,
   PlaydateChatMessage,
   PlaydateRequest,
   PlaydateStatus,
+  Prescription,
   User,
   UserPresence,
   UserRole,
@@ -809,6 +812,70 @@ export function vetConsultChatMediaUrl(
   userId: number
 ): string {
   return `${API_BASE}/api/consultations/${consultId}/messages/${messageId}/media?userId=${userId}`;
+}
+
+export type CreatePrescriptionResponse = {
+  prescription: Prescription;
+  pdfPath: string;
+  pdfUrl: string;
+  webPath?: string;
+  webUrl?: string;
+  sms:
+    | { sent: true; phone: string }
+    | { sent: false; skipped: true; reason: string };
+  patient: {
+    id: number;
+    name: string;
+    telegramId?: string;
+    phoneVerified?: boolean;
+  };
+  vet: { id: number; name: string; telegramId?: string };
+  pet: { id: number; name: string; species?: string; breed?: string };
+};
+
+/** صدور نسخه در مشاوره فعال (هم‌تراز ربات) */
+export async function createConsultationPrescription(
+  consultId: number,
+  data: { vetUserId: number; petId: number; text: string },
+  token?: string | null
+): Promise<CreatePrescriptionResponse> {
+  return request<CreatePrescriptionResponse>(`/api/consultations/${consultId}/prescription`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: JSON.stringify(data),
+  });
+}
+
+export function prescriptionPdfUrl(prescriptionId: number): string {
+  return `${API_BASE}/api/prescriptions/${prescriptionId}/pdf`;
+}
+
+export function prescriptionWebPath(prescriptionId: number): string {
+  return `/rx/${prescriptionId}`;
+}
+
+export async function getPetMedical(
+  petId: number,
+  viewerId: number
+): Promise<{ record: PetMedicalRecord; entries: PetMedicalEntry[]; pet: PetProfile }> {
+  return request(`/api/pets/${petId}/medical-record?viewerId=${viewerId}`);
+}
+
+export async function addPetMedicalEntry(
+  petId: number,
+  data: {
+    authorUserId: number;
+    authorName?: string;
+    consultId?: number;
+    text: string;
+  },
+  token?: string | null
+): Promise<PetMedicalEntry> {
+  return request<PetMedicalEntry>(`/api/pets/${petId}/medical-entries`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: JSON.stringify(data),
+  });
 }
 
 export async function heartbeatPresence(userId: number): Promise<UserPresence> {

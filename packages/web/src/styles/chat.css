@@ -561,3 +561,303 @@ html.tg-chat-open body {
 .tg-thread-empty .tg-chat-empty-logo {
   filter: drop-shadow(0 6px 14px rgba(21, 39, 64, 0.1));
 }
+
+/* ── Vet doctor tools (bot parity) — do not alter kb-inset / composer layout rules above ── */
+.tg-vet-tools {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.4rem;
+  padding: 0.45rem 0.65rem 0.15rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  background: rgba(247, 248, 251, 0.96);
+  border-top: 1px solid rgba(25, 6, 61, 0.06);
+}
+.tg-vet-tools::-webkit-scrollbar {
+  display: none;
+}
+.tg-vet-tool-btn {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: 0.45rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(25, 6, 61, 0.1);
+  background: #fff;
+  color: var(--pepito-dark, #19063d);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tg-vet-tool-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.tg-vet-tool-btn--rx {
+  background: linear-gradient(145deg, rgba(21, 204, 160, 0.18), rgba(11, 165, 242, 0.12));
+  border-color: rgba(21, 204, 160, 0.35);
+  color: #0b7a5c;
+}
+
+.tg-vet-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: var(--tg-kb-inset, 0px);
+  box-sizing: border-box;
+}
+.tg-vet-sheet {
+  width: min(100%, 520px);
+  max-height: min(88dvh, calc(100dvh - var(--tg-kb-inset, 0px) - 12px));
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -12px 40px rgba(25, 6, 61, 0.18);
+  overflow: hidden;
+}
+.tg-vet-sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem 0.65rem;
+  border-bottom: 1px solid rgba(25, 6, 61, 0.08);
+  flex: 0 0 auto;
+}
+.tg-vet-sheet-head h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--pepito-dark, #19063d);
+}
+.tg-vet-sheet-close {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: rgba(25, 6, 61, 0.06);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.tg-vet-sheet-body {
+  padding: 0.85rem 1rem calc(1rem + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 0.75rem;
+}
+.tg-vet-sheet-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 120px;
+  color: var(--pepito-muted, #6b6280);
+}
+.tg-vet-sheet-hint,
+.tg-vet-sheet-kicker {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--pepito-muted, #6b6280);
+}
+.tg-vet-sheet-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--pepito-dark, #19063d);
+  font-weight: 700;
+}
+.tg-vet-sheet-error {
+  margin: 0;
+  color: #c62828;
+  font-size: 0.88rem;
+}
+.tg-vet-linkish {
+  border: 0;
+  background: transparent;
+  color: var(--pepito-sky, #0ba5f2);
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0.25rem 0.35rem;
+  min-height: 36px;
+}
+.tg-vet-chip-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+  gap: 0.45rem;
+}
+.tg-vet-chip-grid--compact {
+  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
+}
+.tg-vet-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  min-height: 44px;
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(25, 6, 61, 0.1);
+  background: #f7f8fb;
+  color: var(--pepito-dark, #19063d);
+  font-weight: 700;
+  font-size: 0.86rem;
+  text-align: start;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tg-vet-chip small {
+  font-weight: 500;
+  color: var(--pepito-muted, #6b6280);
+  font-size: 0.72rem;
+}
+.tg-vet-chip.is-active,
+.tg-vet-chip--med:active {
+  border-color: rgba(21, 204, 160, 0.45);
+  background: rgba(21, 204, 160, 0.12);
+}
+.tg-vet-med-block {
+  display: grid;
+  gap: 0.55rem;
+}
+.tg-vet-med-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.tg-vet-field {
+  display: grid;
+  gap: 0.35rem;
+}
+.tg-vet-field > span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--pepito-dark, #19063d);
+}
+.tg-vet-field textarea {
+  width: 100%;
+  min-height: 8.5rem;
+  resize: vertical;
+  border-radius: 14px;
+  border: 1px solid rgba(25, 6, 61, 0.12);
+  background: #f7f8fb;
+  padding: 0.75rem 0.85rem;
+  font: inherit;
+  font-size: 16px; /* avoid iOS zoom */
+  line-height: 1.5;
+  color: var(--pepito-dark, #19063d);
+}
+.tg-vet-field textarea:focus {
+  outline: none;
+  border-color: rgba(11, 165, 242, 0.45);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(11, 165, 242, 0.14);
+}
+.tg-vet-sheet-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  position: sticky;
+  bottom: 0;
+  padding-top: 0.35rem;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0), #fff 28%);
+}
+.tg-vet-action-primary,
+.tg-vet-action-secondary {
+  flex: 1 1 8rem;
+  min-height: 46px;
+  border-radius: 14px;
+  border: 0;
+  font-weight: 800;
+  font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.tg-vet-action-primary {
+  background: linear-gradient(145deg, var(--pepito-mint, #15cca0), #0ba88a);
+  color: #fff;
+}
+.tg-vet-action-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.tg-vet-action-secondary {
+  background: rgba(25, 6, 61, 0.06);
+  color: var(--pepito-dark, #19063d);
+}
+.tg-vet-medical h3,
+.tg-vet-pet-card h3,
+.tg-vet-entries h4 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+.tg-vet-medical dl,
+.tg-vet-pet-card dl {
+  margin: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.tg-vet-medical dl > div,
+.tg-vet-pet-card dl > div {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 12px;
+  background: #f7f8fb;
+}
+.tg-vet-medical dt,
+.tg-vet-pet-card dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--pepito-muted, #6b6280);
+}
+.tg-vet-medical dd,
+.tg-vet-pet-card dd {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+.tg-vet-entries ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.tg-vet-entries li {
+  padding: 0.65rem 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(25, 6, 61, 0.08);
+  background: #fff;
+}
+.tg-vet-entries small {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--pepito-muted, #6b6280);
+}
+.tg-vet-entries p {
+  margin: 0;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}

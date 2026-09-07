@@ -5327,6 +5327,28 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 .pepito-vet-dashboard {
   max-width: 780px;
 }
+.pepito-vet-panel-caps {
+  margin-top: 0.85rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 14px;
+  background: rgba(11, 165, 242, 0.08);
+  border: 1px solid rgba(11, 165, 242, 0.16);
+}
+.pepito-vet-panel-caps p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--pepito-dark, #19063d);
+}
+.pepito-vet-cred-line {
+  margin-top: 0.45rem !important;
+  color: var(--pepito-muted, #6b6280) !important;
+  font-size: 0.82rem !important;
+}
+.pepito-vet-cred-line a {
+  color: var(--pepito-sky, #0ba5f2);
+  font-weight: 700;
+}
 .pepito-vet-dashboard .pepito-vet-consult-incoming {
   max-width: none;
   margin-inline: 0;

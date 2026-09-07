@@ -4,12 +4,14 @@ import { PawPrint, Stethoscope } from 'lucide-react';
 import {
   BRAND,
   QUICK_VET_COST,
+  VET_CREDENTIAL_STATUS_LABELS,
   formatPersianDateTime,
   isPrimaryRole,
   toPersianDigits,
   userHasRole,
   type PetProfile,
   type VetConsultation,
+  type VetCredentialStatus,
 } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
@@ -27,6 +29,11 @@ type Phase = 'ready' | 'sending' | 'waiting' | 'connected';
 
 function formatCoins(n: number): string {
   return toPersianDigits(String(n));
+}
+
+function credentialLabel(status?: VetCredentialStatus | null): string {
+  const key: VetCredentialStatus = status && status in VET_CREDENTIAL_STATUS_LABELS ? status : 'none';
+  return VET_CREDENTIAL_STATUS_LABELS[key];
 }
 
 function PawIcon({ size = 16 }: { size?: number }) {
@@ -490,6 +497,21 @@ export function VetConsultPage() {
                 ? '🔴 آفلاین شو'
                 : '🟢 آنلاین هستم و آماده پذیرش بیمار'}
           </button>
+          <div className="pepito-vet-panel-caps" data-testid="vet-panel-capabilities">
+            <p>
+              در چت فعال بیمار می‌توانی مثل ربات: <strong>نسخه بنویسی</strong>، پرونده را ببینی، مورد
+              بالینی ثبت کنی و چت را ببندی.
+            </p>
+            <p className="pepito-vet-cred-line">
+              {credentialLabel(user?.vetCredentialStatus)}
+              {user?.vetCredentialStatus !== 'verified' ? (
+                <>
+                  {' · '}
+                  <Link to="/profile">آپلود مدرک از پروفایل</Link>
+                </>
+              ) : null}
+            </p>
+          </div>
           {error ? (
             <p className="auth-error pepito-vet-consult-status" role="alert">
               {error}
@@ -517,15 +539,44 @@ export function VetConsultPage() {
         <p>{lead}</p>
       </header>
 
-      {/* Dual-role: keep vet inbox visible even when primary is pet_owner */}
+      {/* Dual-role: keep vet inbox + online toggle even when primary is pet_owner */}
       {hasVetRole ? (
-        <VetInboxSection
-          incoming={incoming}
-          recent={recent}
-          actingId={actingId}
-          onAccept={(id) => void onAcceptIncoming(id)}
-          onReject={(id) => void onRejectIncoming(id)}
-        />
+        <>
+          <section className="pepito-vet-consult-panel" aria-label="وضعیت آنلاین پزشک">
+            <div className="pepito-vet-consult-cost" role="status">
+              <Stethoscope size={20} strokeWidth={2} aria-hidden />
+              <div>
+                <strong>{vetOnline ? 'آنلاین — آماده پذیرش' : 'آفلاین'}</strong>
+                <span>نقش دامپزشک فعال است؛ درخواست‌ها همین‌جا می‌آیند</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className={`pepito-btn ${vetOnline ? 'pepito-btn--ghost' : 'button-1'}`}
+              disabled={onlineBusy || needsLogin}
+              onClick={() => void onToggleOnline()}
+              data-testid="vet-online-toggle-dual"
+            >
+              {onlineBusy
+                ? 'در حال تغییر…'
+                : vetOnline
+                  ? '🔴 آفلاین شو'
+                  : '🟢 آنلاین هستم و آماده پذیرش بیمار'}
+            </button>
+            <div className="pepito-vet-panel-caps">
+              <p>
+                در چت بیمار: صدور نسخه، پرونده، ثبت مورد بالینی و بستن چت — مثل ربات.
+              </p>
+            </div>
+          </section>
+          <VetInboxSection
+            incoming={incoming}
+            recent={recent}
+            actingId={actingId}
+            onAccept={(id) => void onAcceptIncoming(id)}
+            onReject={(id) => void onRejectIncoming(id)}
+          />
+        </>
       ) : null}
 
       <section className="pepito-vet-consult-panel" aria-label="ارتباط سریع با پزشک">
