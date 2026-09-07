@@ -61,11 +61,6 @@
   background: linear-gradient(135deg, rgba(21, 204, 160, 0.18), rgba(11, 165, 242, 0.12)) !important;
 }
 
-.tg-thread {
-  min-height: 0;
-  height: 100%;
-}
-
 .tg-chat-wallpaper {
   background:
     radial-gradient(900px 320px at 100% -10%, rgba(11, 165, 242, 0.12), transparent 55%),
@@ -98,31 +93,75 @@ html.tg-chat-open body {
   }
 
   /*
-   * Full-screen fixed shell. Soft keyboard lifts content via --tg-kb-inset
-   * (padding-bottom only). Do not shrink/move the shell with visualViewport
-   * height/offsetTop — that parks the composer under the iOS URL bar.
+   * Mobile chat shell — visualViewport pin (marker: tg-shell-vv-pin-v3).
+   * Must set BOTH top and height. Height-only shrink leaves a short shell under
+   * the status bar with a white void above the keyboard.
    */
   .tg-chat {
+    --tg-shell: vv-pin-v3;
     position: fixed !important;
-    inset: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    top: var(--tg-vv-top, 0px) !important;
+    bottom: auto !important;
+    inset: unset !important;
     width: 100% !important;
-    height: auto !important;
-    max-height: none !important;
-    padding-bottom: var(--tg-kb-inset, 0px) !important;
+    height: var(--tg-vv-height, 100dvh) !important;
+    max-height: var(--tg-vv-height, 100dvh) !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
     box-sizing: border-box !important;
     z-index: 40;
     overscroll-behavior: none;
     touch-action: manipulation;
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    grid-template-rows: minmax(0, 1fr) !important;
   }
 
+  .tg-chat .tg-chat-list,
   .tg-chat .tg-thread {
     height: 100% !important;
     min-height: 0 !important;
+    max-height: 100% !important;
   }
 
-  .tg-chat .tg-chat-wallpaper,
+  .tg-chat .tg-thread {
+    display: grid !important;
+    grid-template-rows: auto minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      'thread-top'
+      'thread-scroll'
+      'thread-foot' !important;
+  }
+
+  .tg-chat .tg-thread--blank {
+    grid-template-rows: minmax(0, 1fr) !important;
+    grid-template-areas: 'thread-scroll' !important;
+  }
+
+  .tg-chat .tg-thread-top {
+    grid-area: thread-top !important;
+  }
+
+  .tg-chat .tg-thread-scroll {
+    grid-area: thread-scroll !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+  }
+
+  .tg-chat .tg-thread-foot {
+    grid-area: thread-foot !important;
+  }
+
   .tg-chat .tg-composer,
-  .tg-chat .tg-composer-shell {
+  .tg-chat .tg-composer-shell,
+  .tg-chat .tg-request-composer-bar,
+  .tg-chat .tg-ended-bar,
+  .tg-chat .tg-attach-preview,
+  .tg-chat .tg-vet-doctor-toolbar {
+    flex: 0 0 auto !important;
     overscroll-behavior: contain;
   }
 
@@ -132,6 +171,7 @@ html.tg-chat-open body {
     font-size: 16px !important; /* iOS won't auto-zoom if >= 16px */
   }
 
+  /* Parents keep layout height; only .tg-chat tracks the visual viewport. */
   .pepito-app-layout:has(.tg-chat),
   .pepito-app-main:has(.tg-chat) {
     min-height: 100dvh !important;
@@ -141,6 +181,7 @@ html.tg-chat-open body {
   html.tg-kb-open .tg-composer,
   html.tg-kb-open .tg-request-composer-bar,
   html.tg-kb-open .tg-ended-bar {
+    /* Home-indicator inset is irrelevant while the keyboard covers it */
     padding-bottom: 10px !important;
   }
 

@@ -1150,47 +1150,57 @@ export function VetChatPage() {
       ) : null}
 
       {showThread ? (
-        <section className="tg-thread" aria-label="چت مشاوره دامپزشک">
+        <section
+          className={`tg-thread${!hasThread || loading || !consult ? ' tg-thread--blank' : ''}`}
+          aria-label="چت مشاوره دامپزشک"
+        >
           {!hasThread ? (
-            <div className="tg-thread-empty">
-              <SiteLogo className="tg-chat-empty-logo" height={48} />
-              <h2>{inboxScope === 'vet' ? 'مشاوره‌ای را شروع کن' : 'هم بازی'}</h2>
-              <Link
-                to={inboxScope === 'vet' ? '/vet-consult' : '/chats'}
-                className={
-                  inboxScope === 'vet'
-                    ? 'tg-chat-link-btn'
-                    : 'pepito-btn button-1 tg-chat-playmate-cta'
-                }
-              >
-                {inboxScope === 'vet' ? (
-                  'رفتن به پنل پزشک'
-                ) : (
-                  <>
-                    <span className="pepito-btn-icon" aria-hidden>
-                      <i className="flaticon-pawprint-4" />
-                    </span>
-                    هم بازی
-                  </>
-                )}
-              </Link>
+            <div className="tg-thread-scroll">
+              <div className="tg-thread-empty">
+                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <h2>{inboxScope === 'vet' ? 'مشاوره‌ای را شروع کن' : 'هم بازی'}</h2>
+                <Link
+                  to={inboxScope === 'vet' ? '/vet-consult' : '/chats'}
+                  className={
+                    inboxScope === 'vet'
+                      ? 'tg-chat-link-btn'
+                      : 'pepito-btn button-1 tg-chat-playmate-cta'
+                  }
+                >
+                  {inboxScope === 'vet' ? (
+                    'رفتن به پنل پزشک'
+                  ) : (
+                    <>
+                      <span className="pepito-btn-icon" aria-hidden>
+                        <i className="flaticon-pawprint-4" />
+                      </span>
+                      هم بازی
+                    </>
+                  )}
+                </Link>
+              </div>
             </div>
           ) : loading ? (
-            <div className="tg-thread-empty">
-              <Loader2 className="tg-spin" size={28} />
-              <h2>در حال آماده‌سازی چت پزشک…</h2>
+            <div className="tg-thread-scroll">
+              <div className="tg-thread-empty">
+                <Loader2 className="tg-spin" size={28} />
+                <h2>در حال آماده‌سازی چت پزشک…</h2>
+              </div>
             </div>
           ) : !consult ? (
-            <div className="tg-thread-empty">
-              <SiteLogo className="tg-chat-empty-logo" height={48} />
-              <h2>مشاوره پیدا نشد</h2>
-              <p role="alert">{error ?? 'این گفتگو در دسترس نیست.'}</p>
-              <Link to="/chats" className="tg-chat-link-btn">
-                بازگشت به گفتگوها
-              </Link>
+            <div className="tg-thread-scroll">
+              <div className="tg-thread-empty">
+                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <h2>مشاوره پیدا نشد</h2>
+                <p role="alert">{error ?? 'این گفتگو در دسترس نیست.'}</p>
+                <Link to="/chats" className="tg-chat-link-btn">
+                  بازگشت به گفتگوها
+                </Link>
+              </div>
             </div>
           ) : (
             <>
+              <div className="tg-thread-top">
               <header className="tg-chat-header">
                 <button
                   type="button"
@@ -1314,8 +1324,9 @@ export function VetChatPage() {
                   </button>
                 </div>
               ) : null}
+              </div>
 
-              <div className="tg-chat-wallpaper" ref={scrollerRef} onScroll={onScrollerScroll}>
+              <div className="tg-thread-scroll tg-chat-wallpaper" ref={scrollerRef} onScroll={onScrollerScroll}>
                 <div className="tg-chat-messages">
                   <article
                     className={`tg-request-card${
@@ -1448,6 +1459,7 @@ export function VetChatPage() {
                 </div>
               </div>
 
+              <div className="tg-thread-foot">
               {error ? (
                 <p className="tg-error" role="alert">
                   {error}
@@ -1660,6 +1672,7 @@ export function VetChatPage() {
                   </Link>
                 </div>
               )}
+              </div>
             </>
           )}
         </section>

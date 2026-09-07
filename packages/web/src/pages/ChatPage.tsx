@@ -1296,25 +1296,35 @@ export function ChatPage() {
       ) : null}
 
       {showThread ? (
-        <section className="tg-thread" aria-label="پنجره گفتگو">
+        <section
+          className={`tg-thread${!hasThread || threadLoading || !match || !peerPet ? ' tg-thread--blank' : ''}`}
+          aria-label="پنجره گفتگو"
+        >
           {!hasThread ? (
-            <ThreadEmptyState scope={inboxScope} desktop={desktop} />
+            <div className="tg-thread-scroll">
+              <ThreadEmptyState scope={inboxScope} desktop={desktop} />
+            </div>
           ) : threadLoading ? (
-            <div className="tg-thread-empty">
-              <SiteLogo className="tg-chat-empty-logo" height={48} />
-              <h2>در حال باز کردن چت…</h2>
+            <div className="tg-thread-scroll">
+              <div className="tg-thread-empty">
+                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <h2>در حال باز کردن چت…</h2>
+              </div>
             </div>
           ) : !match || !peerPet ? (
-            <div className="tg-thread-empty">
-              <SiteLogo className="tg-chat-empty-logo" height={48} />
-              <h2>گفتگو پیدا نشد</h2>
-              <p>این درخواست در دسترس نیست یا مال تو نیست.</p>
-              <Link to="/chats" className="tg-chat-link-btn">
-                بازگشت به گفتگوها
-              </Link>
+            <div className="tg-thread-scroll">
+              <div className="tg-thread-empty">
+                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <h2>گفتگو پیدا نشد</h2>
+                <p>این درخواست در دسترس نیست یا مال تو نیست.</p>
+                <Link to="/chats" className="tg-chat-link-btn">
+                  بازگشت به گفتگوها
+                </Link>
+              </div>
             </div>
           ) : (
             <>
+              <div className="tg-thread-top">
               <header className="tg-chat-header">
                 <button
                   type="button"
@@ -1438,9 +1448,10 @@ export function ChatPage() {
                   چت امن فعال است — پیام‌ها قابل ذخیره یا فوروارد نیستند
                 </div>
               ) : null}
+              </div>
 
               <div
-                className="tg-chat-wallpaper"
+                className="tg-thread-scroll tg-chat-wallpaper"
                 ref={scrollerRef}
                 onScroll={onScrollerScroll}
               >
@@ -1652,6 +1663,7 @@ export function ChatPage() {
                 </div>
               </div>
 
+              <div className="tg-thread-foot">
               {actionError ? <p className="tg-error">{actionError}</p> : null}
               {sendError ? <p className="tg-error">{sendError}</p> : null}
 
@@ -1796,6 +1808,7 @@ export function ChatPage() {
                   </Link>
                 </div>
               )}
+              </div>
             </>
           )}
         </section>

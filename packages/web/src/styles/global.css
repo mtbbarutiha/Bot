@@ -4269,6 +4269,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   --tg-list-w: min(360px, 38vw);
   position: relative;
   display: grid;
+  /* Desktop / fallback: layout viewport. Mobile shell overrides via --tg-vv-* */
   height: 100dvh;
   max-height: 100dvh;
   margin: 0;
@@ -4479,21 +4480,55 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   100% { background-position: -100% 0; }
 }
 
+/*
+ * Thread = three-row shell (structural, not a CSS band-aid):
+ *   top (header/strips) | scroll (messages) | foot (composer)
+ */
 .tg-thread {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-areas:
+    'thread-top'
+    'thread-scroll'
+    'thread-foot';
   min-width: 0;
   min-height: 0;
   height: 100%;
   background: transparent;
 }
 
-.tg-thread:has(.tg-thread-empty) {
-  display: flex;
+.tg-thread--blank {
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: 'thread-scroll';
 }
 
-.tg-thread > .tg-chat-wallpaper {
-  flex: 1 1 auto;
+.tg-thread-top {
+  grid-area: thread-top;
+  flex: 0 0 auto;
+  z-index: 2;
+}
+
+.tg-thread-scroll {
+  grid-area: thread-scroll;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tg-thread-foot {
+  grid-area: thread-foot;
+  flex: 0 0 auto;
+  z-index: 3;
+}
+
+.tg-thread:has(.tg-thread-empty) {
+  display: grid;
+}
+
+.tg-thread > .tg-chat-wallpaper,
+.tg-thread-scroll.tg-chat-wallpaper {
   min-height: 0;
 }
 
