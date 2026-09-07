@@ -864,13 +864,17 @@ export type CreatePrescriptionResponse = {
   prescription: Prescription;
   pdfPath: string;
   pdfUrl: string;
+  /** Relative public PDF path e.g. /rx/12/pdf */
+  pdfPathPublic?: string;
+  /** Absolute HTTPS PDF download URL under petdate.ir */
+  pdfPublicUrl?: string;
   webPath?: string;
   webUrl?: string;
   /** Persisted consult chat message that carries the PDF (web thread). */
   chatMessage?: VetConsultChatMessage | null;
   sms:
-    | { sent: true; phone: string }
-    | { sent: false; skipped: true; reason: string };
+    | { sent: true; phone: string; pdfUrl?: string; webUrl?: string }
+    | { sent: false; skipped: true; reason: string; pdfUrl?: string; webUrl?: string };
   patient: {
     id: number;
     name: string;
@@ -895,7 +899,7 @@ export async function createConsultationPrescription(
 }
 
 export function prescriptionPdfUrl(prescriptionId: number): string {
-  return `${API_BASE}/api/prescriptions/${prescriptionId}/pdf`;
+  return `/rx/${prescriptionId}/pdf`;
 }
 
 export function prescriptionWebPath(prescriptionId: number): string {

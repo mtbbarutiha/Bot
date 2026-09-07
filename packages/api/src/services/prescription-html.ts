@@ -141,8 +141,18 @@ export function prescriptionWebPath(id: number): string {
   return `/rx/${id}`;
 }
 
+/** Stable public path for direct PDF download (patient SMS / share). */
+export function prescriptionPdfWebPath(id: number): string {
+  return `/rx/${id}/pdf`;
+}
+
 export function prescriptionPublicUrl(id: number, reqHost?: string): string {
   return `${publicWebOrigin(reqHost)}${prescriptionWebPath(id)}`;
+}
+
+/** Absolute HTTPS URL that serves the PDF file (never a raw VPS IP). */
+export function prescriptionPdfPublicUrl(id: number, reqHost?: string): string {
+  return `${publicWebOrigin(reqHost)}${prescriptionPdfWebPath(id)}`;
 }
 
 export function renderPrescriptionHtml(input: PrescriptionHtmlInput): string {
@@ -152,7 +162,7 @@ export function renderPrescriptionHtml(input: PrescriptionHtmlInput): string {
     .filter(Boolean)
     .join(' — ');
   const logoUrl = input.logoUrl || '/assets/brand/petdate-dr-logo.png';
-  const pdfUrl = input.pdfUrl || `/api/prescriptions/${input.prescriptionId}/pdf`;
+  const pdfUrl = input.pdfUrl || prescriptionPdfWebPath(input.prescriptionId);
   const disclaimer =
     'این نسخه صرفاً جهت اطلاع صاحب حیوان خانگی است و جایگزین معاینه حضوری نیست. در صورت بروز عارضه با دامپزشک خود تماس بگیرید.';
 

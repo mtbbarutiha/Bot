@@ -991,12 +991,16 @@ export type CreatePrescriptionResponse = {
   prescription: import('@petdate/shared').Prescription;
   pdfPath: string;
   pdfUrl: string;
+  /** Relative public PDF path e.g. /rx/12/pdf */
+  pdfPathPublic?: string;
+  /** Absolute HTTPS PDF download URL under petdate.ir */
+  pdfPublicUrl?: string;
   webPath?: string;
   webUrl?: string;
   chatMessage?: import('@petdate/shared').VetConsultChatMessage | null;
   sms:
-    | { sent: true; phone: string }
-    | { sent: false; skipped: true; reason: string };
+    | { sent: true; phone: string; pdfUrl?: string; webUrl?: string }
+    | { sent: false; skipped: true; reason: string; pdfUrl?: string; webUrl?: string };
   patient: {
     id: number;
     name: string;

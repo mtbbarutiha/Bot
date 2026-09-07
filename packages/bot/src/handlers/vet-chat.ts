@@ -1031,11 +1031,19 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
     (created.webPath
       ? `${process.env.PUBLIC_WEB_URL || process.env.WEB_URL || 'https://petdate.ir'}${created.webPath}`
       : '');
+  const pdfLink =
+    created.pdfPublicUrl ||
+    (created.pdfPathPublic
+      ? `${process.env.PUBLIC_WEB_URL || process.env.WEB_URL || 'https://petdate.ir'}${created.pdfPathPublic}`
+      : webLink
+        ? `${webLink.replace(/\/$/, '')}/pdf`
+        : '');
   const captionPatient = [
     '💊 <b>نسخه دارویی Pet Date Dr</b>',
     `پت: <b>${escapeHtml(created.pet.name)}</b>`,
     `پزشک: ${escapeHtml(created.vet.name)}`,
-    webLink ? `\n🌐 مشاهده وب:\n${webLink}` : '',
+    pdfLink ? `\n📄 دانلود PDF:\n${pdfLink}` : '',
+    webLink ? `🌐 مشاهده وب:\n${webLink}` : '',
     '',
     escapeHtml(text.slice(0, 500)),
   ]
@@ -1079,6 +1087,7 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
       '✅ نسخه صادر شد.',
       telegramOk ? '✉️ PDF در تلگرام برای بیمار ارسال شد.' : '⚠️ ارسال تلگرام به بیمار ناموفق بود.',
       smsLine,
+      pdfLink ? `📄 ${pdfLink}` : '',
       webLink ? `🌐 ${webLink}` : '',
       'می‌تونی ادامه چت بدی.',
     ].join('\n'),

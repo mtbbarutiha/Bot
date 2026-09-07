@@ -8,7 +8,9 @@ import { createPrescriptionWithDelivery } from '../services/prescription';
 import {
   publicWebOrigin,
   prescriptionWebPath,
+  prescriptionPdfWebPath,
   prescriptionPublicUrl,
+  prescriptionPdfPublicUrl,
   renderPrescriptionHtml,
 } from '../services/prescription-html';
 import { notifyVetQuickConsultTelegram } from '../services/telegram-vet-consult-notify';
@@ -1035,6 +1037,10 @@ consultationsRouter.post('/:id/prescription', async (req, res) => {
     result.webUrl ||
     prescriptionPublicUrl(id, host) ||
     `${publicWebOrigin(host)}${prescriptionWebPath(id)}`;
+  const pdfPublicUrl =
+    result.pdfPublicUrl ||
+    prescriptionPdfPublicUrl(id, host) ||
+    `${publicWebOrigin(host)}${prescriptionPdfWebPath(id)}`;
 
   /** Persist PDF as a consult chat document so web (vet + patient) see it in-thread. */
   let chatMessage: ReturnType<typeof dbService.createVetConsultChatMessage> | null = null;
@@ -1052,6 +1058,7 @@ consultationsRouter.post('/:id/prescription', async (req, res) => {
       const caption = [
         `💊 نسخه شماره ${id} صادر شد.`,
         result.pet.name ? `پت: ${result.pet.name}` : null,
+        `دانلود PDF: ${pdfPublicUrl}`,
         `مشاهده: ${webUrl}`,
         smsLine,
       ]
@@ -1079,6 +1086,8 @@ consultationsRouter.post('/:id/prescription', async (req, res) => {
     prescription: result.prescription,
     pdfPath: result.pdfPath,
     pdfUrl: `/api/prescriptions/${id}/pdf`,
+    pdfPathPublic: prescriptionPdfWebPath(id),
+    pdfPublicUrl,
     webPath: prescriptionWebPath(id),
     webUrl,
     chatMessage,
@@ -1121,7 +1130,7 @@ function sendPrescriptionHtml(req: { get(name: string): string | undefined }, re
     petBreed: rx.petBreed,
     medicationText: rx.text,
     dateIso: rx.createdAt,
-    pdfUrl: `/api/prescriptions/${rx.id}/pdf`,
+    pdfUrl: prescriptionPdfWebPath(rx.id),
     logoUrl: '/assets/brand/petdate-dr-logo.png',
   });
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -1129,12 +1138,7 @@ function sendPrescriptionHtml(req: { get(name: string): string | undefined }, re
   res.send(html);
 }
 
-prescriptionsFileRouter.get('/:id/pdf', (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isFinite(id) || id <= 0) {
-    res.status(400).json({ error: 'شناسه نامعتبر' });
-    return;
-  }
+function sendPrescriptionPdf(res: import('express').Response, id: number) {
   const rx = dbService.getPrescription(id);
   if (!rx?.pdfPath || !fs.existsSync(rx.pdfPath)) {
     res.status(404).json({ error: 'فایل نسخه پیدا نشد' });
@@ -1146,6 +1150,15 @@ prescriptionsFileRouter.get('/:id/pdf', (req, res) => {
     `inline; filename="petdate-dr-prescription-${id}.pdf"`
   );
   fs.createReadStream(rx.pdfPath).pipe(res);
+}
+
+prescriptionsFileRouter.get('/:id/pdf', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+  sendPrescriptionPdf(res, id);
 });
 
 prescriptionsFileRouter.get('/:id', (req, res) => {
@@ -1157,8 +1170,16 @@ prescriptionsFileRouter.get('/:id', (req, res) => {
   sendPrescriptionHtml(req, res, id);
 });
 
-/** Short public URL: /rx/:id */
+/** Short public URL: /rx/:id and /rx/:id/pdf */
 export const prescriptionWebRouter = Router();
+prescriptionWebRouter.get('/:id/pdf', (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id) || id <= 0) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+  sendPrescriptionPdf(res, id);
+});
 prescriptionWebRouter.get('/:id', (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isFinite(id) || id <= 0) {

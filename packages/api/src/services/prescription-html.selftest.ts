@@ -5,7 +5,9 @@
 import {
   publicWebOrigin,
   prescriptionPublicUrl,
+  prescriptionPdfPublicUrl,
   prescriptionWebPath,
+  prescriptionPdfWebPath,
 } from './prescription-html';
 
 function assert(cond: unknown, msg: string): asserts cond {
@@ -44,6 +46,10 @@ try {
     prescriptionPublicUrl(3) === 'https://petdate.ir/rx/3',
     `expected domain rx link, got ${prescriptionPublicUrl(3)}`
   );
+  assert(
+    prescriptionPdfPublicUrl(3) === 'https://petdate.ir/rx/3/pdf',
+    `expected domain pdf link, got ${prescriptionPdfPublicUrl(3)}`
+  );
 
   clear();
   process.env.PUBLIC_API_URL = 'http://185.110.189.218';
@@ -57,6 +63,7 @@ try {
   clear();
   assert(publicWebOrigin('185.110.189.218') === 'https://petdate.ir', 'reqHost IP ignored');
   assert(prescriptionWebPath(12) === '/rx/12', 'path');
+  assert(prescriptionPdfWebPath(12) === '/rx/12/pdf', 'pdf path');
 
   console.log('prescription-html.selftest: ok');
 } finally {
