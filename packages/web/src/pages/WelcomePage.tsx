@@ -40,38 +40,60 @@ const SERVICES: {
   { to: '/vet-consult', title: 'میکروچیپ', desc: 'شناسایی دائمی پت برای امنیت بیشتر در گم‌شدن.', icon: 'flaticon-dog-with-first-aid-kit-bag', fill: 4 },
 ];
 
-const HERO_SLIDES = [
+type HeroCta =
+  | { kind: 'hash'; href: string; label: string }
+  | { kind: 'gated'; to: string; label: string };
+
+const HERO_SLIDES: {
+  img: string;
+  kicker: string;
+  title: string;
+  lead: string;
+  cta: HeroCta;
+}[] = [
   {
     img: `${P}/3.jpg`,
-    kicker: 'عشق ما حیوانات‌اند',
-    title: 'خدماتی برای پت‌های خاص شما!',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
+    kicker: 'مشاوره سریع با پزشک',
+    title: 'همین حالا به دامپزشک وصل شو',
+    lead: 'درخواست اتصال فوری به پزشک آنلاین — پس از تأیید پرداخت سکه، چت مشاوره شروع می‌شود.',
+    cta: { kind: 'gated', to: '/vet-consult', label: 'درخواست اتصال به پزشک' },
+  },
   {
     img: `${P}/2.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'مراقبت از پت‌های شما',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
+    cta: { kind: 'hash', href: '#services', label: 'کشف کن' },
+  },
   {
     img: `${P}/4.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'آماده‌ایم از پت‌تان مراقبت کنیم',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
+    cta: { kind: 'hash', href: '#services', label: 'کشف کن' },
+  },
   {
     img: `${P}/1.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'عشق و مراقبت، در کنار پت شما',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
+    cta: { kind: 'hash', href: '#services', label: 'کشف کن' },
+  },
   {
     img: `${P}/5.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'پت‌تان شایسته بهترین‌هاست',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
+    cta: { kind: 'hash', href: '#services', label: 'کشف کن' },
+  },
   {
     img: `${P}/06.jpg`,
     kicker: 'عشق ما حیوانات‌اند',
     title: 'مراقبت دامپزشکی حرفه‌ای',
-    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.' },
-] as const;
+    lead: 'دامپزشکان قابل‌اعتماد که پت‌تان را در اولویت می‌گذارند.',
+    cta: { kind: 'hash', href: '#services', label: 'کشف کن' },
+  },
+];
 
 /** Landing cards → Pepito adoption single pages (`/adoption/:slug`) */
 const PETS = ADOPTION_PETS.map((p) => ({
@@ -190,16 +212,24 @@ function GatedLink({
   to,
   className,
   style,
-  children }: {
+  children,
+  'data-testid': dataTestId,
+}: {
   to: string;
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
+  'data-testid'?: string;
 }) {
   const { isLoggedIn, hasRole, isProfileComplete } = useAuthStore();
   const ready = isLoggedIn && hasRole && isProfileComplete;
   return (
-    <Link to={ready ? to : loginPath(to)} className={className} style={style}>
+    <Link
+      to={ready ? to : loginPath(to)}
+      className={className}
+      style={style}
+      data-testid={dataTestId}
+    >
       {children}
     </Link>
   );
@@ -335,12 +365,23 @@ export function WelcomePage() {
             </p>
             <h1>{current.title}</h1>
             <p className="pepito-hero-lead">{current.lead}</p>
-            {/* Pepito: Discover only → button-1 */}
+            {/* First slide → /vet-consult (coin-paid quick connect). Others keep Discover. */}
             <div className="pepito-hero-cta">
-              <a href="#services" className="pepito-btn button-1">
-                <PawIcon />
-                کشف کن
-              </a>
+              {current.cta.kind === 'gated' ? (
+                <GatedLink
+                  to={current.cta.to}
+                  className="pepito-btn button-1"
+                  data-testid="hero-vet-consult-cta"
+                >
+                  <PawIcon />
+                  {current.cta.label}
+                </GatedLink>
+              ) : (
+                <a href={current.cta.href} className="pepito-btn button-1">
+                  <PawIcon />
+                  {current.cta.label}
+                </a>
+              )}
             </div>
           </div>
         </div>
