@@ -1,5 +1,6 @@
 import type { Server as HttpServer } from 'http';
 import { WebSocketServer, type RawData, type WebSocket } from 'ws';
+import { dbService } from '../db';
 import { getUserFromBearer } from '../services/web-otp';
 
 export type ChatSocketEvent =
@@ -193,7 +194,20 @@ export function attachChatWebSocket(server: HttpServer) {
         const threadId = Number(data.threadId);
         if (!Number.isFinite(threadId) || threadId <= 0) return;
         if (channel === 'playmate') client.rooms.add(roomPlaymate(threadId));
-        if (channel === 'vet') client.rooms.add(roomVet(threadId));
+        if (channel === 'vet') {
+          // Chat room only after vet accepts — pending consults must not join.
+          const consult = dbService.getVetConsultation(threadId);
+          if (
+            !consult ||
+            consult.status !== 'active' ||
+            Boolean(consult.chatEnded) ||
+            (consult.vetUserId !== client.userId &&
+              consult.patientUserId !== client.userId)
+          ) {
+            return;
+          }
+          client.rooms.add(roomVet(threadId));
+        }
         return;
       }
 

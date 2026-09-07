@@ -258,11 +258,14 @@ export async function handleQuickVetConnect(
     [
       '✅ درخواستت برای پزشک‌های آنلاین ارسال شد.',
       '',
+      '⏳ در انتظار پذیرش دامپزشک',
+      '',
       `پزشک‌های هدف: ${formatNum(result.sent)}`,
       `سکه کسر شده: ${formatNum(result.cost)}`,
       `موجودی باقی‌مانده: ${formatNum(result.coins)}`,
       '',
-      'به‌زودی یکی از دامپزشک‌ها باهات هماهنگ می‌کنه.',
+      'تا وقتی یکی از دامپزشک‌ها قبول نکند، چت باز نمی‌شود.',
+      'بعد از قبول، همین‌جا در ربات (یا وب) چت فعال می‌شود.',
     ].join('\n'),
     { reply_markup: menuKeyboardFor(ctx, user) }
   );

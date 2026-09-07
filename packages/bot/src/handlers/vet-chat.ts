@@ -197,6 +197,42 @@ function formatMedicalRecord(
 }
 
 const CHAT_STEPS = new Set(['vet_chat', 'vet_medical_note', 'vet_prescription']);
+const CHAT_INACTIVE_FA =
+  'چت فقط بعد از قبول دامپزشک فعال است — هنوز وارد گفتگو نشده‌ای.';
+const CHAT_ENDED_FA = 'چت پایان یافته — پیام جدید در این گفتگو پذیرفته نمی‌شود.';
+
+function clearVetChatPatch() {
+  return {
+    step: 'ready' as const,
+    vetChatConsultId: undefined as number | undefined,
+    vetChatPeerTelegramId: undefined as string | undefined,
+    vetChatRole: undefined as 'vet' | 'patient' | undefined,
+    medicalNotePetId: undefined as number | undefined,
+    prescriptionPetId: undefined as number | undefined,
+    prescriptionDraft: undefined as string | undefined,
+  };
+}
+
+async function exitInactiveVetChat(
+  ctx: Context,
+  telegramId: string,
+  reason: 'pending' | 'ended'
+): Promise<void> {
+  const user = await getCtxUser(ctx);
+  await upsertSession(telegramId, clearVetChatPatch());
+  const text = reason === 'ended' ? CHAT_ENDED_FA : CHAT_INACTIVE_FA;
+  try {
+    await ctx.reply(text, {
+      reply_markup: menuKeyboardFor(ctx, user),
+    });
+  } catch {
+    try {
+      await ctx.reply(text);
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 export async function startVetChat(
   ctx: Context,
@@ -204,6 +240,17 @@ export async function startVetChat(
   vet: User,
   patient: User
 ): Promise<void> {
+  // Never open bot chat sessions while consult is still pending/requested.
+  const current = await getVetConsultation(consultId).catch(() => null);
+  if (!current || current.status !== 'active' || current.chatEnded) {
+    await ctx.reply(
+      current?.chatEnded
+        ? CHAT_ENDED_FA
+        : 'چت فقط بعد از قبول درخواست فعال می‌شود.'
+    );
+    return;
+  }
+
   const webBase = effectiveWebUrl().replace(/\/$/, '');
   const webChatUrl = `${webBase}/vet-chats/${consultId}`;
   const webChatLine = [
@@ -321,26 +368,10 @@ export async function handleVetChatEnd(ctx: Context): Promise<boolean> {
     }
   }
 
-  await upsertSession(String(from.id), {
-    step: 'ready',
-    vetChatConsultId: undefined,
-    vetChatPeerTelegramId: undefined,
-    vetChatRole: undefined,
-    medicalNotePetId: undefined,
-    prescriptionPetId: undefined,
-    prescriptionDraft: undefined,
-  });
+  await upsertSession(String(from.id), clearVetChatPatch());
 
   if (peerId) {
-    await upsertSession(peerId, {
-      step: 'ready',
-      vetChatConsultId: undefined,
-      vetChatPeerTelegramId: undefined,
-      vetChatRole: undefined,
-      medicalNotePetId: undefined,
-      prescriptionPetId: undefined,
-      prescriptionDraft: undefined,
-    });
+    await upsertSession(peerId, clearVetChatPatch());
     try {
       await ctx.api.sendMessage(peerId, '🔌 چت مشاوره قطع شد.');
     } catch {
@@ -1069,15 +1100,7 @@ export async function handleVetChatRelay(ctx: Context): Promise<boolean> {
     if (text === VET_CHAT_BTNS.prescription) return handleVetChatPrescriptionStart(ctx);
     // Main-menu buttons must not be relayed into the consultation chat
     if (MENU_LABELS.has(text)) {
-      await upsertSession(String(from.id), {
-        step: 'ready',
-        vetChatRole: undefined,
-        vetChatPeerTelegramId: undefined,
-        vetChatConsultId: undefined,
-        medicalNotePetId: undefined,
-        prescriptionPetId: undefined,
-        prescriptionDraft: undefined,
-      });
+      await upsertSession(String(from.id), clearVetChatPatch());
       return false;
     }
     if (session.step === 'vet_medical_note') return handleVetChatNoteText(ctx, text);
@@ -1085,6 +1108,22 @@ export async function handleVetChatRelay(ctx: Context): Promise<boolean> {
   }
 
   if (session.step !== 'vet_chat') return false;
+
+  // Hard lock: never relay until consult is accepted (active) / after end.
+  if (session.vetChatConsultId) {
+    const consult = await getVetConsultation(session.vetChatConsultId).catch(() => null);
+    if (!consult || consult.status !== 'active' || consult.chatEnded) {
+      await exitInactiveVetChat(
+        ctx,
+        String(from.id),
+        consult?.chatEnded || consult?.status === 'completed' ? 'ended' : 'pending'
+      );
+      return true;
+    }
+  } else {
+    await exitInactiveVetChat(ctx, String(from.id), 'pending');
+    return true;
+  }
 
   const peer = session.vetChatPeerTelegramId;
 

@@ -5623,6 +5623,12 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   padding-top: 0.35rem;
   border-top: 1px solid rgba(31, 36, 48, 0.08);
 }
+.pepito-vet-consult-wait-title {
+  margin: 0 0 0.55rem !important;
+  font-weight: 700;
+  color: #1f2430;
+  font-size: 1.02rem;
+}
 .pepito-vet-consult-bot {
   margin-top: -0.25rem;
 }

@@ -346,9 +346,15 @@ export function VetConsultPage() {
     if (!user?.id || isVetDashboard) return;
     try {
       const rows = await listVetConsultations({ patientUserId: user.id });
-      const active = rows.find((c) => c.status === 'active') ?? null;
-      if (active) {
-        setActiveConsult(active);
+      // Only treat as "connected" when THIS request was accepted — never jump into
+      // an unrelated older active consult right after paying.
+      const accepted =
+        requestedIds.length > 0
+          ? rows.find((c) => c.status === 'active' && requestedIds.includes(c.id)) ??
+            null
+          : null;
+      if (accepted) {
+        setActiveConsult(accepted);
         setPhase('connected');
         return;
       }
@@ -359,6 +365,7 @@ export function VetConsultPage() {
       );
       if (pending.length && phase !== 'sending') {
         setPhase('waiting');
+        setActiveConsult(null);
       }
     } catch {
       /* ignore poll errors */
@@ -562,7 +569,7 @@ export function VetConsultPage() {
         `پزشک‌های هدف: ${formatCoins(result.sent)}`,
         `سکه کسر شده: ${formatCoins(result.cost)}`,
         `موجودی باقی‌مانده: ${formatCoins(result.coins)}`,
-        'به‌محض قبول پزشک، همین‌جا وارد چت وب می‌شوی.',
+        'در انتظار پذیرش دامپزشک — تا قبول پزشک چت باز نمی‌شود.',
       ]);
       setPhase('waiting');
       try {
@@ -750,21 +757,23 @@ export function VetConsultPage() {
         ) : null}
 
         {phase === 'waiting' ? (
-          <div className="pepito-vet-consult-wait">
+          <div
+            className="pepito-vet-consult-wait"
+            role="status"
+            data-testid="vet-consult-waiting"
+          >
+            <p className="pepito-vet-consult-wait-title">
+              ⏳ در انتظار پذیرش دامپزشک
+            </p>
             <p>
               درخواست برای{' '}
               <strong>{formatCoins(sentCount || requestedIds.length)}</strong> پزشک آنلاین (ربات و
-              وب) ارسال شد. منتظر قبول باش.
+              وب) ارسال شد.
             </p>
             <p>
-              وقتی پزشک قبول کند، <strong>همین‌جا وارد چت وب</strong> می‌شوی — پزشک‌های آنلاین ربات
-              هم در تلگرام مطلع می‌شوند.
+              تا وقتی یکی از دامپزشک‌ها قبول نکند، چت باز نمی‌شود. بعد از قبول، همین‌جا وارد چت وب
+              می‌شوی.
             </p>
-            {requestedIds[0] ? (
-              <Link className="pepito-btn pepito-btn--ghost" to={`/vet-chats/${requestedIds[0]}`}>
-                مشاهده وضعیت درخواست
-              </Link>
-            ) : null}
           </div>
         ) : null}
 

@@ -426,7 +426,9 @@ export function VetChatPage() {
     token,
     enabled: Boolean(token && user?.id),
     thread:
-      hasThread && consultId > 0 ? { channel: 'vet', threadId: consultId } : null,
+      hasThread && consultId > 0 && consult?.status === 'active' && !consult.chatEnded
+        ? { channel: 'vet', threadId: consultId }
+        : null,
     onEvent: onChatSocket,
   });
 
@@ -448,6 +450,9 @@ export function VetChatPage() {
         return;
       }
       softReloadConversations();
+      // Only auto-open for the vet receiving a request (accept UI) — never shove
+      // the patient into a pending chat thread before accept.
+      if (!isVetUser) return;
       const vetId = detail?.kinds?.includes('vet') ? detail.ids?.[0] : undefined;
       if (!vetId) return;
       const target = `/vet-chats/${vetId}`;
@@ -459,7 +464,7 @@ export function VetChatPage() {
         navigate(target);
       }
     });
-  }, [user?.id, softReloadConversations]);
+  }, [user?.id, softReloadConversations, isVetUser, navigate]);
 
   useEffect(() => {
     if (!isLoggedIn || !user?.id) {
@@ -503,6 +508,15 @@ export function VetChatPage() {
         setBrokenMedia({});
         lastIdRef.current = 0;
         stickToBottomRef.current = true;
+        // Owner/patient must wait on /vet-consult — do not open live chat while pending.
+        if (
+          found.status === 'requested' &&
+          found.patientUserId === user.id &&
+          found.vetUserId !== user.id
+        ) {
+          navigate('/vet-consult', { replace: true });
+          return;
+        }
         await syncMessages({ reset: true });
         if (found.status === 'active' && !found.chatEnded) {
           setMessages((prev) =>
@@ -1001,7 +1015,7 @@ export function VetChatPage() {
       : pending
         ? isVetSide
           ? 'درخواست مشاوره جدید'
-          : 'منتظر پاسخ پزشک'
+          : 'در انتظار پذیرش دامپزشک'
         : chatUnlocked
           ? secure
             ? 'چت امن فعال'
@@ -1354,7 +1368,7 @@ export function VetChatPage() {
                 <div className={`tg-status-strip${isVetSide ? '' : ' is-wait'}`} role="status">
                   {isVetSide
                     ? 'درخواست مشاوره در انتظار پاسخ شماست'
-                    : 'درخواست ارسال شد — به‌محض قبول پزشک، چت باز می‌شود'}
+                    : 'در انتظار پذیرش دامپزشک — تا قبول پزشک چت باز نمی‌شود'}
                   {' · '}
                   <RequestCountdown
                     createdAt={consult.createdAt}
@@ -1442,7 +1456,7 @@ export function VetChatPage() {
                         </div>
                       ) : pending ? (
                         <p className="tg-request-card-wait" role="status">
-                          منتظر پاسخ پزشک باش.
+                          در انتظار پذیرش دامپزشک.
                           {' · '}
                           <RequestCountdown
                             createdAt={consult.createdAt}
@@ -1537,7 +1551,7 @@ export function VetChatPage() {
                     : expired
                       ? 'این درخواست منقضی شده است.'
                       : pending
-                        ? 'چت بعد از قبول پزشک فعال می‌شود.'
+                        ? 'در انتظار پذیرش دامپزشک — چت هنوز فعال نیست.'
                         : 'این مشاوره دیگر فعال نیست.'}
                   {expired && !isVetSide ? (
                     <Link

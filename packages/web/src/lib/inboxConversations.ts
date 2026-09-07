@@ -140,7 +140,7 @@ export function vetToInbox(
   const preview = pending
     ? mode === 'as_vet'
       ? 'درخواست مشاوره جدید'
-      : 'منتظر پاسخ پزشک'
+      : 'در انتظار پذیرش دامپزشک'
     : ended
       ? 'مشاوره پایان یافته'
       : c.petName
@@ -160,7 +160,8 @@ export function vetToInbox(
     ongoing,
     direction,
     canDecide: pending && mode === 'as_vet',
-    href: `/vet-chats/${c.id}`,
+    // Patient pending → waiting page, not a live chat thread.
+    href: pending && mode === 'as_patient' ? '/vet-consult' : `/vet-chats/${c.id}`,
   };
 }
 

@@ -11,6 +11,7 @@ import {
   renderPrescriptionHtml,
 } from '../services/prescription-html';
 import { notifyVetQuickConsultTelegram } from '../services/telegram-vet-consult-notify';
+import { startVetChatFromApi } from '../services/telegram-vet-chat-start';
 import { resolveTelegramFile } from '../services/telegram-chat-notify';
 import {
   MAX_UPLOAD_BYTES,
@@ -344,7 +345,8 @@ consultationsRouter.patch('/:id/status', async (req, res) => {
     return;
   }
 
-  // Bot / Telegram accept path: activate web chat for both sides
+  // Accept path: open web chat thread state; bot accept calls startVetChat itself.
+  // Web POST /:id/accept is responsible for activating bot sessions + Telegram intros.
   if (status === 'active' && previous?.status === 'requested') {
     dbService.cancelSiblingVetConsultations(updated.patientUserId, updated.id);
     const existing = dbService.listVetConsultChatMessages(updated.id, { limit: 1 });
@@ -353,19 +355,12 @@ consultationsRouter.patch('/:id/status', async (req, res) => {
         dbService.createVetConsultChatMessage({
           consultId: updated.id,
           senderUserId: updated.vetUserId,
-          text: '✅ درخواست قبول شد — چت وب فعال است. می‌توانید پیام بفرستید.',
+          text: '✅ درخواست قبول شد — چت فعال است. می‌توانید پیام بفرستید.',
         });
       } catch {
         /* ignore seed message errors */
       }
     }
-    const patient = dbService.getUserById(updated.patientUserId);
-    await notifyPeerWebVetChat({
-      peerTelegramId: patient?.telegramId,
-      peerName: patient?.name ?? 'بیمار',
-      consultId: updated.id,
-      roleLabel: 'دامپزشک',
-    });
   }
 
   notifyVetThread(updated.id, [updated.vetUserId, updated.patientUserId], {
@@ -383,51 +378,7 @@ function requireConsultParticipant(consultId: number, userId: number) {
   return { consult };
 }
 
-async function notifyPeerWebVetChat(opts: {
-  peerTelegramId?: string | null;
-  peerName: string;
-  consultId: number;
-  roleLabel: string;
-}): Promise<void> {
-  const token = infra.telegram.botToken;
-  const peerId = opts.peerTelegramId?.trim();
-  if (!token || !peerId) return;
-  const chatUrl = `${infra.web.url.replace(/\/$/, '')}/vet-chats/${opts.consultId}`;
-  const canInline = (() => {
-    try {
-      const u = new URL(chatUrl);
-      return u.protocol === 'https:';
-    } catch {
-      return false;
-    }
-  })();
-  try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: peerId,
-        text: [
-          `💬 چت وب با ${opts.roleLabel} آماده است.`,
-          '',
-          'همین حالا از وب وارد محیط چت شو:',
-          chatUrl,
-        ].join('\n'),
-        ...(canInline
-          ? {
-              reply_markup: {
-                inline_keyboard: [[{ text: 'ورود به چت وب', url: chatUrl }]],
-              },
-            }
-          : {}),
-      }),
-    });
-  } catch (err) {
-    console.warn('notify peer web vet chat failed:', (err as Error).message);
-  }
-}
-
-/** قبول درخواست توسط دامپزشک از وب → فعال‌سازی چت وب برای دو طرف */
+/** قبول درخواست توسط دامپزشک از وب → فعال‌سازی چت برای دو طرف (وب + ربات) */
 consultationsRouter.post('/:id/accept', async (req, res) => {
   const id = Number(req.params.id);
   const session = getUserFromBearer(req.header('authorization') ?? undefined);
@@ -472,19 +423,21 @@ consultationsRouter.post('/:id/accept', async (req, res) => {
     dbService.createVetConsultChatMessage({
       consultId: updated.id,
       senderUserId: session.user.id,
-      text: '✅ درخواست قبول شد — چت وب فعال است. می‌توانید پیام بفرستید.',
+      text: '✅ درخواست قبول شد — چت فعال است. می‌توانید پیام بفرستید.',
     });
   } catch {
     /* ignore seed message errors */
   }
 
   const patient = dbService.getUserById(updated.patientUserId);
-  await notifyPeerWebVetChat({
-    peerTelegramId: patient?.telegramId,
-    peerName: patient?.name ?? 'بیمار',
-    consultId: updated.id,
-    roleLabel: 'دامپزشک',
-  });
+  const vet = dbService.getUserById(updated.vetUserId);
+  if (patient && vet) {
+    await startVetChatFromApi({
+      consultId: updated.id,
+      vet,
+      patient,
+    });
+  }
 
   notifyVetThread(updated.id, [updated.vetUserId, updated.patientUserId], {
     status: 'active',
