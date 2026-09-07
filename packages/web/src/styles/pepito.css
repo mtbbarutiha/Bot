@@ -8048,22 +8048,34 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   }
   .pd-shop-journey {
     display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 0.4rem !important;
-    margin-bottom: 0.85rem !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.35rem !important;
+    margin-bottom: 0.75rem !important;
   }
   .pd-shop-journey-step {
-    padding: 0.55rem 0.75rem !important;
-    gap: 0.45rem !important;
+    padding: 0.45rem 0.35rem !important;
+    gap: 0.25rem !important;
     min-height: 0 !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+  .pd-shop-journey-icon {
+    display: none !important;
+  }
+  .pd-shop-journey-copy {
+    min-width: 0 !important;
+  }
+  .pd-shop-journey-copy strong {
+    font-size: 0.78rem !important;
   }
   .pd-shop-journey-copy span {
     display: none !important; /* keep title only on narrow screens — categories come sooner */
   }
   .pd-shop-journey-num {
-    width: 1.7rem !important;
-    height: 1.7rem !important;
-    font-size: 0.78rem !important;
+    width: 1.45rem !important;
+    height: 1.45rem !important;
+    font-size: 0.72rem !important;
   }
   .pd-shop-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;

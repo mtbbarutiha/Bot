@@ -1,5 +1,5 @@
 import { FormEvent, MouseEvent, useEffect, useRef, useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Send, Smartphone } from 'lucide-react';
 import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
@@ -265,8 +265,6 @@ export function LoginPage() {
       <p className="auth-foot">
         هنوز حساب نداری؟ با تلگرام یا همان شماره/ایمیل وارد شو — حساب خودکار ساخته می‌شود و با ربات
         همگام است.
-        <br />
-        <Link to="/">خانه</Link>
       </p>
     </AuthShell>
   );
