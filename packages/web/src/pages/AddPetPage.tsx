@@ -113,7 +113,7 @@ export function AddPetPage() {
       setShowToast(true);
       setTimeout(() => {
         setShowToast(false);
-        navigate('/profile');
+        navigate('/my-pets');
       }, 2000);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'ثبت پت ناموفق بود');

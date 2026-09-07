@@ -106,7 +106,7 @@ export function LandingChrome({
             {userPrimary === 'vet' ? (
               <NavLink to="/vet-consult">پنل پزشک</NavLink>
             ) : (
-              <NavLink to="/add-pet">پت‌های من</NavLink>
+              <NavLink to="/my-pets">پت‌های من</NavLink>
             )}
           </nav>
         ) : (

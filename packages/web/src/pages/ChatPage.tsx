@@ -229,6 +229,7 @@ function ConversationListPane({
           <SiteLogo className="tg-chat-list-logo" height={34} />
           <h1>{scope === 'vet' ? 'گفتگوهای پزشک' : 'هم بازی'}</h1>
         </div>
+        {scope !== 'vet' ? <FindPlaymatePanel variant="header" onSent={onRefresh} /> : null}
         <button
           type="button"
           className="tg-icon-btn"
@@ -268,11 +269,6 @@ function ConversationListPane({
           </div>
         ) : (
           <ul className="tg-chat-list-items">
-            {scope !== 'vet' ? (
-              <li className="tg-chat-list-hub-cta" key="find-playmate-cta">
-                <FindPlaymatePanel compact showRequests={false} onSent={onRefresh} />
-              </li>
-            ) : null}
             {conversations.map((c) => {
               const active = activeKey === c.key;
               const busy = busyKey === c.key;

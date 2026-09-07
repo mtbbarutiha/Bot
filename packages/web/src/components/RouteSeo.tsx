@@ -79,6 +79,12 @@ function metaForPath(pathname: string): PageMeta {
   if (p === '/add-pet') {
     return { title: SEO.titleTemplate('افزودن پت'), robots: 'noindex,follow' };
   }
+  if (p === '/my-pets') {
+    return { title: SEO.titleTemplate('پت‌های من'), robots: 'noindex,follow' };
+  }
+  if (p.startsWith('/pets/') && p.endsWith('/edit')) {
+    return { title: SEO.titleTemplate('ویرایش پت'), robots: 'noindex,follow' };
+  }
   if (p.startsWith('/pets/')) {
     return { title: SEO.titleTemplate('پروفایل پت'), robots: 'noindex,follow' };
   }

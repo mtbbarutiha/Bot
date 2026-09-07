@@ -61,7 +61,18 @@ export function OtpPage() {
   const usePendingFlow = prefersSameBrowserTelegramLogin();
   const [tgWaiting, setTgWaiting] = useState<{ id: string; deepLink: string } | null>(null);
   const [tgBusy, setTgBusy] = useState(false);
+  const [resendIn, setResendIn] = useState(60);
   const tgFinishingRef = useRef(false);
+
+  useEffect(() => {
+    setResendIn(60);
+  }, [pendingChannel, pendingTarget]);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = window.setTimeout(() => setResendIn((s) => Math.max(0, s - 1)), 1000);
+    return () => window.clearTimeout(t);
+  }, [resendIn]);
 
   useEffect(() => {
     codeRef.current = code;
@@ -267,12 +278,13 @@ export function OtpPage() {
   }
 
   async function resend() {
-    if (!pendingChannel || !pendingTarget) return;
+    if (!pendingChannel || !pendingTarget || resendIn > 0) return;
     setBusy(true);
     setError('');
     submittingRef.current = false;
     try {
       const res = await requestOtp(pendingChannel, pendingTarget);
+      setResendIn(60);
       if (res.devCode) {
         setDevHint(`کد توسعه (فقط لوکال): ${res.devCode}`);
         setCode(digitsOnly(res.devCode));
@@ -352,8 +364,15 @@ export function OtpPage() {
         </button>
       </form>
       <div className="auth-secondary-actions">
-        <button type="button" className="auth-link-btn" onClick={resend} disabled={busy}>
-          ارسال دوباره کد
+        <button
+          type="button"
+          className="auth-link-btn"
+          onClick={() => void resend()}
+          disabled={busy || resendIn > 0}
+        >
+          {resendIn > 0
+            ? `ارسال دوباره تا ${resendIn.toLocaleString('fa-IR')} ثانیه`
+            : 'ارسال دوباره کد'}
         </button>
         <Link to={`/auth/login?next=${encodeURIComponent(next)}`}>تغییر شماره / ایمیل</Link>
       </div>

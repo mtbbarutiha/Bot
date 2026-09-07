@@ -35,7 +35,9 @@ import { AddPetPage } from './pages/AddPetPage';
 import { ChatPage } from './pages/ChatPage';
 import { HomePage } from './pages/HomePage';
 import { MatchesPage } from './pages/MatchesPage';
+import { MyPetsPage } from './pages/MyPetsPage';
 import { PetDetailPage } from './pages/PetDetailPage';
+import { PetEditPage } from './pages/PetEditPage';
 import { ProfilePage } from './pages/ProfilePage';
 import { WalletPage } from './pages/WalletPage';
 import { ShopCartProvider } from './hooks/useShopCart';
@@ -80,6 +82,8 @@ export default function App() {
             <Route path="home" element={<HomePage />} />
             <Route path="explore" element={<Navigate to="/chats" replace />} />
             <Route path="pets/:id" element={<PetDetailPage />} />
+            <Route path="pets/:id/edit" element={<PetEditPage />} />
+            <Route path="my-pets" element={<MyPetsPage />} />
             <Route path="add-pet" element={<AddPetPage />} />
             <Route path="matches" element={<MatchesPage />} />
             <Route path="chats" element={<ChatPage />} />

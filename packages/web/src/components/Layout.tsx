@@ -21,7 +21,7 @@ const OWNER_NAV: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/', icon: Home, label: 'خانه' },
   { to: '/home', icon: LayoutDashboard, label: 'پنل' },
   { to: '/chats', icon: HeartHandshake, label: 'هم بازی' },
-  { to: '/add-pet', icon: PawPrint, label: 'پت‌های من' },
+  { to: '/my-pets', icon: PawPrint, label: 'پت‌های من' },
   { to: '/vet-consult', icon: Stethoscope, label: 'ارتباط با پزشک' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },
 ];

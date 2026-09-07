@@ -25,6 +25,8 @@ export function OnboardingGuard({ children }: { children: React.ReactNode }) {
     user.onboarding === 'profile_incomplete' &&
     !location.pathname.startsWith('/onboarding') &&
     !location.pathname.startsWith('/add-pet') &&
+    !location.pathname.startsWith('/my-pets') &&
+    !location.pathname.startsWith('/pets/') &&
     !location.pathname.startsWith('/profile')
   ) {
     return <Navigate to="/onboarding/pet" replace />;

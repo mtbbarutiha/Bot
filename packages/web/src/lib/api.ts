@@ -163,6 +163,52 @@ export async function createPet(data: Record<string, unknown>): Promise<PetProfi
   });
 }
 
+export async function updatePet(
+  id: number,
+  data: Record<string, unknown>
+): Promise<PetProfile> {
+  const ownerId = data.ownerId != null ? Number(data.ownerId) : undefined;
+  const qs = ownerId ? `?ownerId=${ownerId}` : '';
+  return request<PetProfile>(`/api/pets/${id}${qs}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listPetPrescriptions(
+  petId: number,
+  viewerId: number
+): Promise<Prescription[]> {
+  return request<Prescription[]>(
+    `/api/pets/${petId}/prescriptions?viewerId=${viewerId}`
+  );
+}
+
+export async function listPetWishlist(petId: number): Promise<PetProfile[]> {
+  return request<PetProfile[]>(`/api/pets/${petId}/wishlist`);
+}
+
+export async function addPetWishlistTarget(
+  petId: number,
+  targetPetId: number,
+  ownerId: number
+): Promise<{ ok: true }> {
+  return request(`/api/pets/${petId}/wishlist`, {
+    method: 'POST',
+    body: JSON.stringify({ targetPetId, ownerId }),
+  });
+}
+
+export async function removePetWishlistTarget(
+  petId: number,
+  targetPetId: number,
+  ownerId: number
+): Promise<{ ok: true }> {
+  return request(`/api/pets/${petId}/wishlist/${targetPetId}?ownerId=${ownerId}`, {
+    method: 'DELETE',
+  });
+}
+
 /** Upload a pet profile photo; returns a public URL path under /api/pets/photos/... */
 export async function uploadPetPhoto(
   ownerId: number,

@@ -288,7 +288,90 @@ petsRouter.get('/:id/medical-record', (req, res) => {
   }
   const record = dbService.getPetMedicalRecord(petId);
   const entries = dbService.listPetMedicalEntries(petId);
-  res.json({ record, entries, pet });
+  const prescriptions = dbService.listPrescriptionsForPet(petId, 30);
+  res.json({ record, entries, prescriptions, pet });
+});
+
+petsRouter.get('/:id/prescriptions', (req, res) => {
+  const petId = Number(req.params.id);
+  const viewerId = req.query.viewerId ? Number(req.query.viewerId) : undefined;
+  if (!Number.isFinite(petId) || petId <= 0) {
+    res.status(400).json({ error: 'شناسه پت نامعتبر' });
+    return;
+  }
+  const pet = dbService.getPet(petId);
+  if (!pet) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+  if (viewerId != null) {
+    const access = dbService.canAccessPetMedical(petId, viewerId);
+    if (!access.ok) {
+      res.status(403).json({ error: 'دسترسی به نسخه‌ها نداری' });
+      return;
+    }
+  }
+  res.json(dbService.listPrescriptionsForPet(petId, 40));
+});
+
+petsRouter.get('/:id/wishlist', (req, res) => {
+  const petId = Number(req.params.id);
+  if (!Number.isFinite(petId) || petId <= 0) {
+    res.status(400).json({ error: 'شناسه پت نامعتبر' });
+    return;
+  }
+  if (!dbService.getPet(petId)) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+  res.json(dbService.listPetWishlist(petId));
+});
+
+petsRouter.post('/:id/wishlist', (req, res) => {
+  const petId = Number(req.params.id);
+  const targetPetId = Number(req.body?.targetPetId);
+  const ownerId = Number(req.body?.ownerId);
+  if (!Number.isFinite(petId) || !Number.isFinite(targetPetId)) {
+    res.status(400).json({ error: 'شناسه نامعتبر' });
+    return;
+  }
+  const pet = dbService.getPet(petId);
+  if (!pet) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+  if (Number.isFinite(ownerId) && pet.ownerId !== ownerId) {
+    res.status(403).json({ error: 'فقط صاحب پت می‌تواند ویش‌لیست را تغییر دهد' });
+    return;
+  }
+  const result = dbService.addPetWishlist(petId, targetPetId);
+  if (!result.ok) {
+    res.status(400).json({
+      error:
+        result.reason === 'self'
+          ? 'نمی‌توانی پت را به ویش‌لیست خودش اضافه کنی'
+          : 'پت پیدا نشد',
+    });
+    return;
+  }
+  res.status(result.created ? 201 : 200).json({ ok: true, created: result.created });
+});
+
+petsRouter.delete('/:id/wishlist/:targetPetId', (req, res) => {
+  const petId = Number(req.params.id);
+  const targetPetId = Number(req.params.targetPetId);
+  const ownerId = req.query.ownerId ? Number(req.query.ownerId) : undefined;
+  const pet = dbService.getPet(petId);
+  if (!pet) {
+    res.status(404).json({ error: 'پت پیدا نشد' });
+    return;
+  }
+  if (ownerId != null && pet.ownerId !== ownerId) {
+    res.status(403).json({ error: 'اجازه نداری' });
+    return;
+  }
+  dbService.removePetWishlist(petId, targetPetId);
+  res.json({ ok: true });
 });
 
 petsRouter.put('/:id/medical-record', (req, res) => {

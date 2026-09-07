@@ -751,11 +751,15 @@ export function ProfilePage() {
             <h2>پت‌های من</h2>
             <p>خلاصه پت ثبت‌شده — مدیریت کامل از مسیر پت‌ها.</p>
           </header>
-          <Link to="/add-pet" className="pepito-profile-pet-row">
+          <Link to="/my-pets" className="pepito-profile-pet-row">
             <PetAvatar type={myPet.type} size="sm" imageUrl={myPet.imageUrl} name={myPet.name} />
             <div className="pepito-profile-pet-row-text">
               <strong>{hasPetName ? myPet.name : 'هنوز پتی ثبت نشده'}</strong>
-              <span>{hasPetName ? `${myPet.breed} · ${formatAge(myPet)} · ${myPet.neighborhood || locationLabel}` : 'اولین پت را اضافه کن'}</span>
+              <span>
+                {hasPetName
+                  ? `${myPet.breed} · ${formatAge(myPet)} · ${myPet.neighborhood || locationLabel}`
+                  : 'پروفایل، ویرایش و پرونده پزشکی'}
+              </span>
             </div>
             <ChevronLeft size={18} strokeWidth={2.25} className="pepito-profile-pet-row-chevron" aria-hidden />
           </Link>

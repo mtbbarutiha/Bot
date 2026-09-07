@@ -93,13 +93,12 @@ html.tg-chat-open body {
   }
 
   /*
-   * Mobile chat shell — composer-fixed-v6.
+   * Mobile chat shell — composer-fixed-v7.
    * Shell stays full-screen (inset:0). Only the foot/composer is fixed to
-   * bottom: --tg-kb-inset. Foot is height-capped so long typing / stacked
-   * chrome cannot push the composer off the visible viewport.
+   * bottom: --tg-kb-inset (capped). Bad VV peaks must not park the foot at top.
    */
   .tg-chat {
-    --tg-shell: composer-fixed-v6;
+    --tg-shell: composer-fixed-v7;
     position: fixed !important;
     inset: 0 !important;
     top: 0 !important;

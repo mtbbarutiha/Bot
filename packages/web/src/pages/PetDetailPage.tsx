@@ -1,63 +1,91 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowRight,
-  Check,
+  FileText,
   Heart,
-  MessageCircle,
-  PawPrint,
-  Phone,
+  Pencil,
   Share2,
+  Stethoscope,
 } from 'lucide-react';
-import type { PetProfile } from '@petdate/shared';
-import { formatAge, formatDistance } from '../data/mock';
+import type { PetMedicalEntry, PetMedicalRecord, PetProfile, Prescription } from '@petdate/shared';
+import {
+  PET_MEDICAL_FIELD_LABELS,
+  type PetMedicalField,
+  toPersianDigits,
+} from '@petdate/shared';
+import { formatAge } from '../data/mock';
 import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { useAuthStore } from '../hooks/useAuthStore';
-import { usePetStore } from '../hooks/usePetStore';
-import { listPets, listPlaydateRequests } from '../lib/api';
+import {
+  addPetWishlistTarget,
+  getPet,
+  getPetMedical,
+  listPetPrescriptions,
+  listPetWishlist,
+  listPets,
+  prescriptionPdfUrl,
+  prescriptionWebPath,
+  removePetWishlistTarget,
+} from '../lib/api';
 import { petProfileToUiPet } from '../lib/playdateMap';
 import { sendPlaymateRequestNow } from '../lib/playmateActions';
 import { PET_TYPE_LABELS } from '../types';
 
+const MED_FIELDS = Object.keys(PET_MEDICAL_FIELD_LABELS) as PetMedicalField[];
+
 export function PetDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { getPetById: getPet, myPet } = usePetStore();
   const { user: authUser, isLoggedIn } = useAuthStore();
-  const pet = getPet(Number(id));
-  const [liked, setLiked] = useState(false);
-  const [showPickFrom, setShowPickFrom] = useState(false);
-  const [myPets, setMyPets] = useState<PetProfile[]>([]);
-  const [alreadyRequested, setAlreadyRequested] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const petId = Number(id);
+
+  const [pet, setPet] = useState<PetProfile | null>(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [myPets, setMyPets] = useState<PetProfile[]>([]);
+  const [showPickFrom, setShowPickFrom] = useState(false);
+  const [alreadyRequested, setAlreadyRequested] = useState(false);
+
+  const [record, setRecord] = useState<PetMedicalRecord | null>(null);
+  const [entries, setEntries] = useState<PetMedicalEntry[]>([]);
+  const [rxList, setRxList] = useState<Prescription[]>([]);
+  const [medicalError, setMedicalError] = useState('');
+  const [wishlist, setWishlist] = useState<PetProfile[]>([]);
+  const [wishBusy, setWishBusy] = useState(false);
 
   const myUserId = authUser?.id;
-  const isMyPet = pet?.id === myPet.id || (myUserId != null && pet?.ownerId === myUserId);
+  const isMyPet = Boolean(myUserId && pet && pet.ownerId === myUserId);
+  const tabMedical = searchParams.get('tab') === 'medical';
 
-  const refreshPending = useCallback(async () => {
-    if (!myUserId || !pet) {
-      setAlreadyRequested(false);
+  const ui = useMemo(() => (pet ? petProfileToUiPet(pet) : null), [pet]);
+
+  const loadPet = useCallback(async () => {
+    if (!Number.isFinite(petId) || petId <= 0) {
+      setPet(null);
+      setLoading(false);
       return;
     }
+    setLoading(true);
+    setError(null);
     try {
-      const rows = await listPlaydateRequests({ userId: myUserId, status: 'pending' });
-      setAlreadyRequested(
-        rows.some(
-          (r) =>
-            r.toPetId === pet.id &&
-            (r.fromUserId === myUserId || r.fromPet?.ownerId === myUserId)
-        )
-      );
-    } catch {
-      setAlreadyRequested(false);
+      const row = await getPet(petId);
+      setPet(row);
+      if (!row) setError('پت پیدا نشد');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'بارگذاری پت ناموفق بود');
+      setPet(null);
+    } finally {
+      setLoading(false);
     }
-  }, [myUserId, pet]);
+  }, [petId]);
 
   useEffect(() => {
-    void refreshPending();
-  }, [refreshPending]);
+    void loadPet();
+  }, [loadPet]);
 
   useEffect(() => {
     if (!myUserId) {
@@ -69,17 +97,48 @@ export function PetDetailPage() {
       .catch(() => setMyPets([]));
   }, [myUserId]);
 
-  if (!pet) {
-    return (
-      <div className="empty-state empty-state--top">
-        <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
-        <h3>پت پیدا نشد</h3>
-        <button className="cta-btn cta-btn--inline" onClick={() => navigate('/chats')}>
-          ↩️ بازگشت
-        </button>
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!pet || !myUserId) {
+      setRecord(null);
+      setEntries([]);
+      setRxList([]);
+      return;
+    }
+    let cancelled = false;
+    void getPetMedical(pet.id, myUserId)
+      .then((data) => {
+        if (cancelled) return;
+        setRecord(data.record);
+        setEntries(data.entries || []);
+        setMedicalError('');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        setRecord(null);
+        setEntries([]);
+        setMedicalError(err instanceof Error ? err.message : '');
+      });
+    void listPetPrescriptions(pet.id, myUserId)
+      .then((rows) => {
+        if (!cancelled) setRxList(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setRxList([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pet, myUserId]);
+
+  useEffect(() => {
+    if (!pet || !isMyPet) {
+      setWishlist([]);
+      return;
+    }
+    void listPetWishlist(pet.id)
+      .then(setWishlist)
+      .catch(() => setWishlist([]));
+  }, [pet, isMyPet]);
 
   async function sendFrom(fromPetId: number) {
     if (!myUserId || !pet) return;
@@ -93,12 +152,9 @@ export function PetDetailPage() {
       });
       setAlreadyRequested(true);
       setShowPickFrom(false);
-      setToast('✅ درخواست همبازی ارسال شد!');
-      setTimeout(() => setToast(null), 1200);
-      if (req?.id) {
-        navigate(`/chats/${req.id}`);
-        return;
-      }
+      setToast('درخواست همبازی ارسال شد');
+      window.setTimeout(() => setToast(null), 1200);
+      if (req?.id) navigate(`/chats/${req.id}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ارسال درخواست ناموفق بود');
     } finally {
@@ -123,141 +179,250 @@ export function PetDetailPage() {
     setShowPickFrom(true);
   }
 
+  async function toggleWish(target: PetProfile) {
+    if (!pet || !myUserId || !isMyPet) return;
+    setWishBusy(true);
+    try {
+      const exists = wishlist.some((w) => w.id === target.id);
+      if (exists) {
+        await removePetWishlistTarget(pet.id, target.id, myUserId);
+        setWishlist((rows) => rows.filter((w) => w.id !== target.id));
+      } else {
+        await addPetWishlistTarget(pet.id, target.id, myUserId);
+        setWishlist((rows) => [...rows, target]);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'ویش‌لیست به‌روز نشد');
+    } finally {
+      setWishBusy(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="pepito-pet-profile">
+        <p>در حال بارگذاری…</p>
+      </div>
+    );
+  }
+
+  if (!pet || !ui) {
+    return (
+      <div className="pepito-pet-profile pepito-pet-profile--empty">
+        <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
+        <h3>پت پیدا نشد</h3>
+        <Link to="/my-pets" className="pepito-btn button-1">
+          پت‌های من
+        </Link>
+      </div>
+    );
+  }
+
+  const traits = Array.isArray((pet.personality as { traits?: string[] })?.traits)
+    ? (pet.personality as { traits: string[] }).traits
+    : [];
+
   return (
-    <div className="detail-page">
-      <div className="detail-hero-banner">
-        <img src={pet.imageUrl} alt={pet.name} className="detail-hero-img" />
-        <div className="detail-hero-overlay" />
-        <div className="detail-header detail-header--overlay">
-          <button className="icon-btn icon-btn--glass" onClick={() => navigate(-1)} aria-label="↩️ بازگشت">
-            <ArrowRight size={20} strokeWidth={2} />
+    <div className={`pepito-pet-profile${tabMedical ? ' is-medical-focus' : ''}`}>
+      <div className="pepito-pet-profile-hero">
+        <img src={ui.imageUrl || EMPTY_STATE_PHOTO} alt={pet.name} />
+        <div className="pepito-pet-profile-hero-bar">
+          <button type="button" className="icon-btn icon-btn--glass" onClick={() => navigate(-1)} aria-label="بازگشت">
+            <ArrowRight size={20} />
           </button>
           <h1>{pet.name}</h1>
-          <div className="detail-header-actions">
-            <button className="icon-btn icon-btn--glass" onClick={() => setLiked(!liked)} aria-label="علاقه‌مندی">
-              <Heart size={20} strokeWidth={2} fill={liked ? 'currentColor' : 'none'} className={liked ? 'icon-liked' : ''} />
-            </button>
-            <button className="icon-btn icon-btn--glass" aria-label="اشتراک">
-              <Share2 size={20} strokeWidth={2} />
+          <div className="pepito-pet-profile-hero-actions">
+            {isMyPet ? (
+              <Link to={`/pets/${pet.id}/edit`} className="icon-btn icon-btn--glass" aria-label="ویرایش">
+                <Pencil size={18} />
+              </Link>
+            ) : (
+              <button
+                type="button"
+                className="icon-btn icon-btn--glass"
+                aria-label="علاقه‌مندی پت"
+                disabled={wishBusy || myPets.length === 0}
+                onClick={() => {
+                  if (myPets.length === 1) void toggleWish(pet);
+                  else setToast('از پروفایل پت خودت ویش‌لیست را مدیریت کن');
+                }}
+              >
+                <Heart size={18} />
+              </button>
+            )}
+            <button type="button" className="icon-btn icon-btn--glass" aria-label="اشتراک">
+              <Share2 size={18} />
             </button>
           </div>
-        </div>
-        <div className="detail-hero-caption">
-          <span className="brand">{pet.breed}</span>
-          <span className="price-pill">{formatDistance(pet.distanceKm)}</span>
         </div>
       </div>
 
-      <div className="detail-info">
-        <div className="detail-title-row">
-          <div>
-            <h2 className="title">{pet.name}</h2>
-            <p className="subtitle">{PET_TYPE_LABELS[pet.type]} · {formatAge(pet)}</p>
-          </div>
-        </div>
+      <div className="pepito-pet-profile-body">
+        <p className="pepito-pet-profile-sub">
+          {PET_TYPE_LABELS[ui.type] || pet.species} · {formatAge(ui)}
+          {pet.breed ? ` · ${pet.breed}` : ''}
+        </p>
+        <p className="pepito-pet-profile-loc">
+          {[pet.neighborhood, pet.city || pet.ownerCity].filter(Boolean).join('، ') || '—'}
+        </p>
 
-        <div className="detail-specs">
-          <div className="spec-item">
-            <div className="spec-value">{formatAge(pet)}</div>
-            <div className="spec-label">سن</div>
+        {isMyPet ? (
+          <div className="pepito-pet-profile-owner-actions">
+            <Link to={`/pets/${pet.id}/edit`} className="pepito-btn button-2">
+              <Pencil size={16} aria-hidden />
+              ویرایش پروفایل پت
+            </Link>
+            <a href="#pet-medical" className="pepito-btn button-1">
+              <Stethoscope size={16} aria-hidden />
+              پرونده پزشکی
+            </a>
           </div>
-          <div className="spec-divider" />
-          <div className="spec-item">
-            <div className="spec-value">{pet.neighborhood || pet.city || '—'}</div>
-            <div className="spec-label">محله</div>
-          </div>
-          <div className="spec-divider" />
-          <div className="spec-item">
-            <div className="spec-value">{pet.ownerName || '—'}</div>
-            <div className="spec-label">صاحب</div>
-          </div>
-        </div>
+        ) : null}
 
-        {pet.bio && <p className="detail-bio">{pet.bio}</p>}
+        {pet.bio ? <p className="pepito-pet-profile-bio">{pet.bio}</p> : null}
 
-        <div className="detail-tags">
-          {pet.traits.map((t) => (
-            <span key={t} className="tag">{t}</span>
+        <div className="pepito-pet-profile-tags">
+          {traits.map((t) => (
+            <span key={t} className="tag">
+              {t}
+            </span>
           ))}
-          {pet.vaccinated && <span className="tag green">واکسینه</span>}
-          {pet.neutered && <span className="tag green">عقیم</span>}
-          {pet.lookingForPlaymate && <span className="tag blue">دنبال همبازی</span>}
+          {pet.vaccinated ? <span className="tag green">واکسینه</span> : null}
+          {pet.neutered ? <span className="tag green">عقیم</span> : null}
+          {pet.lookingForPlaymate ? <span className="tag blue">دنبال همبازی</span> : null}
         </div>
 
-        {pet.healthNotes && (
-          <div className="detail-health">
-            <strong>سلامت:</strong> {pet.healthNotes}
-          </div>
-        )}
-
-        {error && <p className="auth-error" style={{ marginTop: 12 }}>{error}</p>}
-      </div>
-
-      {!isMyPet && (
-        <div className="detail-action-bar">
-          <button className="action-circle" aria-label="تماس" type="button">
-            <Phone size={18} strokeWidth={2} />
-          </button>
-          <Link to="/chats" className="action-circle" aria-label="گفتگو و درخواست‌ها">
-            <MessageCircle size={18} strokeWidth={2} />
-          </Link>
-          <button
-            type="button"
-            className="cta-main"
-            onClick={onRequestClick}
-            disabled={alreadyRequested || busy}
-          >
-            <span className="paw">
-              {alreadyRequested ? <Check size={16} strokeWidth={2.5} /> : <PawPrint size={16} strokeWidth={2} />}
-            </span>
-            <span>
-              {busy
-                ? 'در حال ارسال…'
-                : alreadyRequested
-                  ? 'درخواست ارسال شد'
-                  : 'درخواست همبازی'}
-            </span>
-          </button>
-        </div>
-      )}
-
-      {showPickFrom && (
-        <div className="modal-overlay" onClick={() => setShowPickFrom(false)}>
-          <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
-            <h2>کدوم پتت رو می‌فرستی؟</h2>
-            <p>برای {pet.name} — مثل ربات، بدون نوشتن پیام</p>
-            <div className="find-playmate-pet-list">
-              {myPets.map((p) => {
-                const ui = petProfileToUiPet(p);
-                return (
-                  <button
-                    key={p.id}
-                    type="button"
-                    className="find-playmate-pet-btn"
-                    disabled={busy}
-                    onClick={() => void sendFrom(p.id)}
-                  >
-                    <img src={ui.imageUrl} alt="" />
-                    <span>
-                      <strong>{p.name}</strong>
-                      <small>{[p.breed, p.city || p.ownerCity].filter(Boolean).join(' · ')}</small>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <button type="button" className="btn-reject" style={{ width: '100%', marginTop: 12 }} onClick={() => setShowPickFrom(false)}>
-              ❌ انصراف
+        {!isMyPet ? (
+          <div className="pepito-pet-profile-cta">
+            <button
+              type="button"
+              className="pepito-btn button-1"
+              disabled={busy || alreadyRequested}
+              onClick={onRequestClick}
+            >
+              {alreadyRequested ? 'درخواست ارسال شده' : 'درخواست همبازی'}
             </button>
           </div>
-        </div>
-      )}
+        ) : null}
 
-      {toast && (
-        <div className="toast" role="status">
-          {toast}
-        </div>
-      )}
+        {showPickFrom ? (
+          <div className="pepito-pet-profile-pick">
+            <p>از طرف کدوم پت؟</p>
+            {myPets.map((p) => (
+              <button key={p.id} type="button" className="pepito-btn button-2" onClick={() => void sendFrom(p.id)}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {error ? <p className="auth-error">{error}</p> : null}
+        {toast ? <p className="pepito-pet-profile-toast" role="status">{toast}</p> : null}
+
+        <section id="pet-medical" className="pepito-pet-medical" aria-label="پرونده پزشکی">
+          <header className="pepito-pet-medical-head">
+            <Stethoscope size={20} aria-hidden />
+            <div>
+              <h2>پرونده پزشکی</h2>
+              <p>خلاصه سلامت + یادداشت پزشکان + نسخه‌ها — پزشک بعدی هم می‌بیند.</p>
+            </div>
+          </header>
+
+          {medicalError && !record ? (
+            <p className="pepito-pet-medical-muted">{medicalError || 'پرونده در دسترس نیست'}</p>
+          ) : (
+            <>
+              <div className="pepito-pet-medical-cards">
+                {MED_FIELDS.map((field) => {
+                  const value = record?.[field];
+                  if (!value && !isMyPet) return null;
+                  return (
+                    <article key={field} className="pepito-pet-medical-card">
+                      <h3>{PET_MEDICAL_FIELD_LABELS[field]}</h3>
+                      <p>{value || 'هنوز ثبت نشده'}</p>
+                    </article>
+                  );
+                })}
+              </div>
+
+              {record?.lastUpdatedByName ? (
+                <p className="pepito-pet-medical-meta">
+                  آخرین به‌روزرسانی توسط {record.lastUpdatedByName}
+                  {record.updatedAt ? ` · ${toPersianDigits(record.updatedAt.slice(0, 10))}` : ''}
+                </p>
+              ) : null}
+
+              <div className="pepito-pet-medical-entries">
+                <h3>یادداشت‌های بالینی</h3>
+                {entries.length === 0 ? (
+                  <p className="pepito-pet-medical-muted">هنوز یادداشتی نیست — پزشک از چت مشاوره ثبت می‌کند.</p>
+                ) : (
+                  <ul>
+                    {entries.map((e) => (
+                      <li key={e.id} className="pepito-pet-medical-entry">
+                        <header>
+                          <strong>{e.authorName || `پزشک #${e.authorUserId}`}</strong>
+                          <time>{toPersianDigits(e.createdAt.slice(0, 16).replace('T', ' '))}</time>
+                        </header>
+                        <p>{e.text}</p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div className="pepito-pet-medical-rx">
+                <h3>
+                  <FileText size={16} aria-hidden /> نسخه‌ها
+                </h3>
+                {rxList.length === 0 ? (
+                  <p className="pepito-pet-medical-muted">نسخه‌ای ثبت نشده.</p>
+                ) : (
+                  <ul>
+                    {rxList.map((rx) => (
+                      <li key={rx.id} className="pepito-pet-medical-rx-card">
+                        <strong>نسخه {toPersianDigits(String(rx.id))}</strong>
+                        <p>{rx.text.slice(0, 160)}{rx.text.length > 160 ? '…' : ''}</p>
+                        <div className="pepito-pet-medical-rx-links">
+                          <a href={prescriptionWebPath(rx.id)} target="_blank" rel="noreferrer">
+                            مشاهده
+                          </a>
+                          <a href={prescriptionPdfUrl(rx.id)} target="_blank" rel="noreferrer">
+                            PDF
+                          </a>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </>
+          )}
+        </section>
+
+        {isMyPet ? (
+          <section className="pepito-pet-wishlist" aria-label="ویش‌لیست پت">
+            <header>
+              <h2>ویش‌لیست این پت</h2>
+              <p>جدا از علاقه‌مندی‌های حساب کاربری — مخصوص همین پت.</p>
+            </header>
+            {wishlist.length === 0 ? (
+              <p className="pepito-pet-medical-muted">هنوز پتی به ویش‌لیست اضافه نشده.</p>
+            ) : (
+              <ul className="pepito-pet-wishlist-grid">
+                {wishlist.map((w) => (
+                  <li key={w.id}>
+                    <Link to={`/pets/${w.id}`}>{w.name}</Link>
+                    <button type="button" onClick={() => void removePetWishlistTarget(pet.id, w.id, myUserId!).then(() => setWishlist((rows) => rows.filter((x) => x.id !== w.id)))}>
+                      حذف
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
+      </div>
     </div>
   );
 }

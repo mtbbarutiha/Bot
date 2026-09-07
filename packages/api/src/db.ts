@@ -413,6 +413,20 @@ function migrateSchema() {
   `);
 
   db.exec(`
+    CREATE TABLE IF NOT EXISTS pet_wishlists (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+      target_pet_id INTEGER NOT NULL REFERENCES pets(id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(pet_id, target_pet_id)
+    );
+  `);
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_pet_wishlists_pet
+      ON pet_wishlists (pet_id, created_at DESC);
+  `);
+
+  db.exec(`
     CREATE TABLE IF NOT EXISTS user_contacts (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -4380,6 +4394,42 @@ export const dbService = {
       )
       .all(petId, limit) as Record<string, unknown>[];
     return rows.map(mapPrescription);
+  },
+
+  listPetWishlist(petId: number): PetProfile[] {
+    const rows = db
+      .prepare(
+        `SELECT target_pet_id FROM pet_wishlists WHERE pet_id = ? ORDER BY created_at DESC, id DESC`
+      )
+      .all(petId) as { target_pet_id: number }[];
+    return rows
+      .map((r) => this.getPet(Number(r.target_pet_id)))
+      .filter((p): p is PetProfile => Boolean(p));
+  },
+
+  addPetWishlist(
+    petId: number,
+    targetPetId: number
+  ): { ok: true; created: boolean } | { ok: false; reason: string } {
+    if (petId === targetPetId) return { ok: false, reason: 'self' };
+    if (!this.getPet(petId) || !this.getPet(targetPetId)) return { ok: false, reason: 'missing' };
+    try {
+      const info = db
+        .prepare(
+          `INSERT INTO pet_wishlists (pet_id, target_pet_id) VALUES (?, ?)`
+        )
+        .run(petId, targetPetId);
+      return { ok: true, created: info.changes > 0 };
+    } catch {
+      return { ok: true, created: false };
+    }
+  },
+
+  removePetWishlist(petId: number, targetPetId: number): boolean {
+    const info = db
+      .prepare(`DELETE FROM pet_wishlists WHERE pet_id = ? AND target_pet_id = ?`)
+      .run(petId, targetPetId);
+    return info.changes > 0;
   },
 
   addUserContact(

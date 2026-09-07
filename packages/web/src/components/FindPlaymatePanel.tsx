@@ -23,6 +23,8 @@ function PawIcon({ size = 16 }: { size?: number }) {
 export type FindPlaymatePanelProps = {
   /** Tighter layout for chat list empty state */
   compact?: boolean;
+  /** Ghost header control for mobile chat list */
+  variant?: 'panel' | 'header';
   /** Show PlaymateRequestsPanel under the find CTA (default true) */
   showRequests?: boolean;
   /** Called after a successful find/send so parent can refresh inbox */
@@ -34,6 +36,7 @@ export type FindPlaymatePanelProps = {
  */
 export function FindPlaymatePanel({
   compact = false,
+  variant = 'panel',
   showRequests = true,
   onSent,
 }: FindPlaymatePanelProps) {
@@ -128,6 +131,48 @@ export function FindPlaymatePanel({
   const needsPet = !needsLogin && !petsLoading && myPets.length === 0;
   const showPetPick = findPhase === 'pick' && myPets.length > 1;
   const sending = findPhase === 'sending';
+
+  if (variant === 'header') {
+    if (!isPetOwner) return null;
+    return (
+      <div className="find-playmate-header">
+        {needsLogin ? (
+          <Link to="/auth/login" className="find-playmate-header-btn">
+            ورود
+          </Link>
+        ) : needsPet ? (
+          <Link to="/add-pet" className="find-playmate-header-btn">
+            ثبت پت
+          </Link>
+        ) : showPetPick ? (
+          <div className="find-playmate-header-pick" role="menu">
+            {myPets.map((pet) => (
+              <button
+                key={pet.id}
+                type="button"
+                className="find-playmate-header-btn"
+                disabled={sending}
+                onClick={() => void runFindForPet(pet)}
+              >
+                {pet.name}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <button
+            type="button"
+            className="find-playmate-header-btn"
+            data-testid="find-playmate-header"
+            disabled={sending || petsLoading}
+            onClick={() => void onPrimaryClick()}
+          >
+            {sending ? '…' : 'پیدا کردن'}
+          </button>
+        )}
+        {findError ? <span className="find-playmate-header-err">{findError}</span> : null}
+      </div>
+    );
+  }
 
   return (
     <div className={`find-playmate-panel${compact ? ' is-compact' : ''}`}>

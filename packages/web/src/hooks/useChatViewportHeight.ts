@@ -1,18 +1,16 @@
 import { useEffect } from 'react';
 
 /**
- * Mobile chat keyboard — composer-fixed-v6.
+ * Mobile chat keyboard — composer-fixed-v7.
  *
- * v5 kept the shell full-screen and lifted only the foot with --tg-kb-inset.
- * Remaining failure: after typing a lot (or when iOS shifts visualViewport
- * while the caret moves), the foot could sink under the keyboard / grow past
- * the visible area so the composer vanished.
+ * v6 peak-inset lock could freeze a BAD huge inset (transient tiny
+ * visualViewport.height), which parks `bottom: inset` near the TOP.
  *
- * v6:
- * - Peak-inset lock while the composer is focused (ignore VV jitter that
- *   collapses inset mid-typing)
- * - Cap foot max-height to the visible band above the keyboard
- * - Remeasure foot on every apply so growing textarea stays accounted for
+ * v7:
+ * - Reject garbage VV readings (height too small)
+ * - Cap keyboard inset to ~55% of layout height
+ * - Peak lock only within that cap
+ * - Foot stays fixed to visual viewport bottom
  */
 export function useChatViewportHeight(active: boolean) {
   useEffect(() => {
@@ -23,6 +21,7 @@ export function useChatViewportHeight(active: boolean) {
     let raf = 0;
     let ro: ResizeObserver | null = null;
     let peakInset = 0;
+    let lastGoodInset = 0;
     const timers: number[] = [];
 
     const prevBody = {
@@ -42,13 +41,16 @@ export function useChatViewportHeight(active: boolean) {
     body.style.width = '100%';
     body.style.overflow = 'hidden';
     root.classList.add('tg-chat-open');
-    root.dataset.tgShell = 'composer-fixed-v6';
+    root.dataset.tgShell = 'composer-fixed-v7';
     root.style.removeProperty('--tg-vv-top');
     root.style.removeProperty('--tg-vv-height');
 
     const composerFocused = () => {
       const el = document.activeElement;
-      return el instanceof HTMLElement && Boolean(el.closest('.tg-chat .tg-composer, .tg-chat textarea'));
+      return (
+        el instanceof HTMLElement &&
+        Boolean(el.closest('.tg-chat .tg-composer, .tg-chat textarea'))
+      );
     };
 
     const measureFoot = () => {
@@ -66,30 +68,39 @@ export function useChatViewportHeight(active: boolean) {
       raf = requestAnimationFrame(() => {
         const vv = window.visualViewport;
         const layoutH = Math.max(window.innerHeight || 0, root.clientHeight || 0, 1);
+        const maxKb = Math.round(layoutH * 0.55);
         const vvH = vv?.height ?? layoutH;
         const offsetTop = vv?.offsetTop ?? 0;
-        // Distance from layout bottom → visual viewport bottom (= soft keyboard band).
-        let inset = Math.max(0, Math.round(layoutH - vvH - offsetTop));
-        // Ignore URL-bar jitter; real keyboards are taller.
-        if (inset > 0 && inset < 60) inset = 0;
-        inset = Math.min(inset, Math.round(layoutH * 0.72));
+
+        let inset = 0;
+        // Ignore one-frame collapse / URL-bar noise / absurd VV heights.
+        if (vvH >= Math.min(180, layoutH * 0.35)) {
+          inset = Math.max(0, Math.round(layoutH - vvH - offsetTop));
+          if (inset > 0 && inset < 70) inset = 0;
+          inset = Math.min(inset, maxKb);
+          if (inset >= 70) lastGoodInset = inset;
+        } else if (composerFocused() && lastGoodInset >= 70) {
+          inset = lastGoodInset;
+        }
 
         const focused = composerFocused();
         if (focused) {
-          if (inset > peakInset) peakInset = inset;
-          // Mid-typing iOS often shrinks inset as offsetTop jumps — keep the foot up.
-          if (peakInset >= 80) inset = Math.max(inset, peakInset - 16);
+          if (inset >= 70 && inset > peakInset) peakInset = inset;
+          if (peakInset >= 70) {
+            inset = Math.max(inset, Math.min(peakInset, maxKb) - 12);
+          }
         } else {
-          peakInset = inset >= 80 ? inset : 0;
+          peakInset = inset >= 70 ? inset : 0;
+          if (!inset) lastGoodInset = 0;
         }
 
-        // Visible band above keyboard for foot max-height (header ~56–72px).
-        const visible = Math.max(160, Math.round((vvH || layoutH) - 72));
+        inset = Math.min(Math.max(0, inset), maxKb);
+        const visible = Math.max(160, Math.round((vvH > 120 ? vvH : layoutH - inset) - 72));
         root.style.setProperty('--tg-kb-inset', `${inset}px`);
         root.style.setProperty('--tg-foot-max', `${visible}px`);
         root.style.removeProperty('--tg-vv-top');
         root.style.removeProperty('--tg-vv-height');
-        root.classList.toggle('tg-kb-open', inset > 60);
+        root.classList.toggle('tg-kb-open', inset > 70);
         measureFoot();
       });
     };
