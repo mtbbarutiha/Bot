@@ -130,41 +130,16 @@ if [[ -x ./scripts/backup-sqlite.sh ]]; then
   (sudo crontab -l 2>/dev/null | grep -v backup-sqlite || true; echo "15 2 * * * $REMOTE_DIR/scripts/backup-sqlite.sh >> /var/log/petdate-backup.log 2>&1") | sudo crontab - || true
 fi
 
-# PM2 process file
-cp -f ecosystem.config.cjs ecosystem.config.cjs.bak 2>/dev/null || true
-cat > ecosystem.config.cjs <<'PM2'
-module.exports = {
-  apps: [
-    {
-      name: 'petdate-api',
-      cwd: '$REMOTE_DIR',
-      script: 'packages/api/dist/index.js',
-      instances: 1,
-      exec_mode: 'fork',
-      autorestart: true,
-      max_restarts: 20,
-      min_uptime: '10s',
-      max_memory_restart: '512M',
-      env: { NODE_ENV: 'production', PORT: 3001, NODE_OPTIONS: '--dns-result-order=ipv4first' },
-    },
-    {
-      name: 'petdate-bot',
-      cwd: '$REMOTE_DIR',
-      script: 'packages/bot/dist/index.js',
-      instances: 1,
-      exec_mode: 'fork',
-      autorestart: true,
-      max_restarts: 20,
-      min_uptime: '10s',
-      max_memory_restart: '512M',
-      env: { NODE_ENV: 'production', NODE_OPTIONS: '--dns-result-order=ipv4first' },
-    },
-  ],
-};
-PM2
-
-# Expand REMOTE_DIR in generated ecosystem (heredoc quoted kept literals)
-sed -i "s|'\$REMOTE_DIR'|'$REMOTE_DIR'|g; s|\$REMOTE_DIR|$REMOTE_DIR|g" ecosystem.config.cjs || true
+# PM2 process file — use checked-in ecosystem (DATABASE_PATH absolute SoT).
+# Do NOT regenerate a bare ecosystem here: that reintroduces split-DB / missing env.
+if [[ ! -f ecosystem.config.cjs ]]; then
+  echo "ERROR: ecosystem.config.cjs missing after rsync" >&2
+  exit 1
+fi
+grep -q 'DATABASE_PATH' ecosystem.config.cjs || {
+  echo "ERROR: ecosystem.config.cjs must set DATABASE_PATH for single-SQLite SoT" >&2
+  exit 1
+}
 
 pm2 startOrReload ecosystem.config.cjs
 pm2 save
