@@ -9,18 +9,20 @@ ALL surface assets are derived from this single file. Do not invent alternate
 marks or neon icons.
 
 Outputs:
-  - favicon.svg / favicon.png / favicon.ico  (tiny sizes: pink mark crop from mother)
-  - apple-touch-icon.png                    (full mother wordmark on soft square)
-  - pwa-192.png, pwa-512.png, pwa-512-maskable.png  (full mother wordmark on soft square)
-  - brand/petdate-mark.png, brand/petdate-mark-192.png  (same as PWA — mother on square)
-  - brand/petdate-og.png, brand/petdate-og.jpg
-  - brand/petdate-channel.png, brand/petdate-banner.jpg
-  - packages/api/assets/brand/petdate-email-logo.png
+  - favicon.svg / favicon.png / favicon.ico  (mark-only, TRANSPARENT bg)
+  - apple-touch-icon.png                    (mark-only on soft opaque square)
+  - pwa-192.png, pwa-512.png                (mark-only, transparent bg)
+  - pwa-512-maskable.png                    (mark-only, soft padded safe zone)
+  - brand/petdate-mark.png, brand/petdate-mark-192.png  (same as PWA — mark-only)
+  - brand/petdate-og.png, brand/petdate-og.jpg  (FULL mother wordmark)
+  - brand/petdate-channel.png, brand/petdate-banner.jpg  (FULL mother wordmark)
+  - packages/api/assets/brand/petdate-email-logo.png  (FULL mother wordmark)
 
-PWA / Home Screen policy:
-  User rejected mark-only crops that looked unrelated. PWA icons use the FULL
-  mother wordmark fitted on a light square canvas with padding so the icon
-  clearly reads as the same logo as the site header.
+PWA / Home Screen policy (Mohammad):
+  PWA icons must NOT include logo type/wordmark text — mark/icon only
+  (pink dog+cat). Favicon must be transparent (no cream/white fill).
+  Site header keeps full لوگو مادر via SiteLogo /
+  pepito/img/logo.png / logo-light.png (untouched by this script).
 """
 
 from __future__ import annotations
@@ -40,6 +42,7 @@ LOGO = PUBLIC / "pepito" / "img" / "logo.png"
 API_EMAIL = ROOT.parent / "api" / "assets" / "brand" / "petdate-email-logo.png"
 
 SOFT = (244, 244, 247, 255)
+TRANSPARENT = (0, 0, 0, 0)
 OG_TOP = (252, 240, 248, 255)
 OG_BOTTOM = (244, 244, 247, 255)
 
@@ -53,7 +56,7 @@ def load_logo() -> Image.Image:
 def extract_mark(logo: Image.Image) -> Image.Image:
     """Crop the left dog+cat heart before the wordmark gap (from لوگو مادر).
 
-    Used only for favicon/ico/svg where the full horizontal wordmark is illegible.
+    Used for PWA / favicon / apple-touch — no «Pet Date» type on home screen.
     """
     w, h = logo.size
     pixels = logo.load()
@@ -117,7 +120,6 @@ def fit_on_canvas(
     aw, ah = asset.size
     cw, ch = size
     ratio = 0.55 if maskable_safe else content_ratio
-    # For wide wordmarks, fit by width so «Pet Date» stays readable.
     target_w = int(cw * ratio)
     target_h = int(ch * ratio)
     scale = min(target_w / aw, target_h / ah)
@@ -129,8 +131,14 @@ def fit_on_canvas(
     return canvas
 
 
-def make_square_icon(asset: Image.Image, size: int, content_ratio: float = 0.68) -> Image.Image:
-    return fit_on_canvas(asset, (size, size), content_ratio=content_ratio)
+def make_square_icon(
+    asset: Image.Image,
+    size: int,
+    content_ratio: float = 0.68,
+    *,
+    bg: tuple[int, int, int, int] = SOFT,
+) -> Image.Image:
+    return fit_on_canvas(asset, (size, size), bg=bg, content_ratio=content_ratio)
 
 
 def vertical_gradient(size: tuple[int, int], top: tuple, bottom: tuple) -> Image.Image:
@@ -179,7 +187,7 @@ def write_favicon_svg(mark: Image.Image, dest: Path) -> None:
     sq.resize((128, 128), Image.Resampling.LANCZOS).save(buf, format="PNG", optimize=True)
     b64 = base64.b64encode(buf.getvalue()).decode("ascii")
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Pet Date">
-  <!-- Derived from لوگو مادر packages/web/public/pepito/img/logo.png (mark crop for tiny favicon) -->
+  <!-- Derived from لوگو مادر packages/web/public/pepito/img/logo.png (mark crop — no wordmark) -->
   <image href="data:image/png;base64,{b64}" width="128" height="128" preserveAspectRatio="xMidYMid meet"/>
 </svg>
 """
@@ -199,23 +207,26 @@ def main() -> int:
     logo = load_logo()
     mark = extract_mark(logo)
     print(f"لوگو مادر: {LOGO} ({logo.size[0]}x{logo.size[1]})")
-    print(f"Mark crop (favicon only): {mark.size[0]}x{mark.size[1]}")
+    print(f"Mark crop (PWA/favicon — no type): {mark.size[0]}x{mark.size[1]}")
 
-    # PWA + apple-touch + brand marks: FULL mother wordmark on soft square
-    # (not mark-only — Home Screen must match header logo).
-    pwa_512 = make_square_icon(logo, 512, 0.86)
-    pwa_192 = make_square_icon(logo, 192, 0.86)
-    apple = make_square_icon(logo, 180, 0.86)
-    maskable = fit_on_canvas(logo, (512, 512), content_ratio=0.72, maskable_safe=True)
-    # Tiny favicon: pink mark crop from mother (wordmark illegible at 32px)
-    favicon_32 = make_square_icon(mark, 32, 0.78)
-    save_png(pwa_512, PUBLIC / "pwa-512.png", rgb=True)
-    save_png(pwa_192, PUBLIC / "pwa-192.png", rgb=True)
+    # PWA + apple-touch + brand marks: MARK ONLY (pink dog+cat), no «Pet Date» text.
+    # Favicon + any/maskable-any PWA: transparent bg (no cream/white fill).
+    # Maskable + apple-touch: soft opaque fill (safe zone / iOS).
+    # Site header keeps full mother via pepito/img/logo.png (not rewritten here).
+    pwa_512 = make_square_icon(mark, 512, 0.78, bg=TRANSPARENT)
+    pwa_192 = make_square_icon(mark, 192, 0.78, bg=TRANSPARENT)
+    apple = make_square_icon(mark, 180, 0.78, bg=SOFT)
+    maskable = fit_on_canvas(
+        mark, (512, 512), bg=SOFT, content_ratio=0.72, maskable_safe=True
+    )
+    favicon_32 = make_square_icon(mark, 32, 0.78, bg=TRANSPARENT)
+    save_png(pwa_512, PUBLIC / "pwa-512.png")
+    save_png(pwa_192, PUBLIC / "pwa-192.png")
     save_png(apple, PUBLIC / "apple-touch-icon.png", rgb=True)
     save_png(maskable, PUBLIC / "pwa-512-maskable.png", rgb=True)
-    save_png(favicon_32, PUBLIC / "favicon.png", rgb=True)
-    save_png(pwa_512, BRAND / "petdate-mark.png", rgb=True)
-    save_png(pwa_192, BRAND / "petdate-mark-192.png", rgb=True)
+    save_png(favicon_32, PUBLIC / "favicon.png")
+    save_png(pwa_512, BRAND / "petdate-mark.png")
+    save_png(pwa_192, BRAND / "petdate-mark-192.png")
 
     # Email CID: full horizontal mother logo on soft bg.
     email_w = 240
@@ -227,8 +238,8 @@ def main() -> int:
     email_canvas.alpha_composite(email_logo, (pad_x, pad_y))
     save_png(email_canvas, API_EMAIL, rgb=True)
 
-    # ICO from mark crop (readable at 16/32/48)
-    ico_base = make_square_icon(mark, 256, 0.78).convert("RGBA")
+    # ICO from mark crop — transparent bg (readable at 16/32/48)
+    ico_base = make_square_icon(mark, 256, 0.78, bg=TRANSPARENT).convert("RGBA")
     ico_base.save(
         PUBLIC / "favicon.ico",
         format="ICO",
@@ -237,6 +248,7 @@ def main() -> int:
 
     write_favicon_svg(mark, PUBLIC / "favicon.svg")
 
+    # OG / channel / banner: FULL mother wordmark (marketing surfaces)
     og = make_og(logo)
     save_png(og, BRAND / "petdate-og.png")
     og.convert("RGB").save(BRAND / "petdate-og.jpg", "JPEG", quality=90, optimize=True)
@@ -245,7 +257,7 @@ def main() -> int:
     og.convert("RGB").save(BRAND / "petdate-banner.jpg", "JPEG", quality=90, optimize=True)
 
     repo = ROOT.parent.parent
-    print("Wrote (all derived from لوگو مادر):")
+    print("Wrote (PWA/favicon = mark-only; OG/email = full mother):")
     for p in [
         PUBLIC / "favicon.ico",
         PUBLIC / "favicon.png",

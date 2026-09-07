@@ -4,7 +4,7 @@ import { SITE_LOGO_SRC } from './SiteLogo';
 /**
  * Brand lockup for in-app chrome.
  * Always uses لوگو مادر (`/pepito/img/logo.png`) — same as header SiteLogo.
- * Square PWA/schema assets live at `/brand/petdate-mark.png` (also derived from mother).
+ * Square PWA/schema assets live at `/brand/petdate-mark.png` (mark-only crop from mother — no type).
  */
 interface BrandMarkProps {
   className?: string;

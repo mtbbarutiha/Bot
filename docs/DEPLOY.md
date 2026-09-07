@@ -37,9 +37,10 @@ So the site “reverts” after every random agent update.
 |------|------|
 | **لوگو مادر (source of truth)** | `packages/web/public/pepito/img/logo.png` (md5 `beda5e5ccdd11c32dd06a4f1bce2c6bf`) |
 | Footer light | `packages/web/public/pepito/img/logo-light.png` |
-| PWA / favicon / apple-touch / brand / email | `packages/web/scripts/generate-brand-assets.py` from لوگو مادر |
+| PWA / favicon / apple-touch / brand marks | `packages/web/scripts/generate-brand-assets.py` — **mark-only** (pink dog+cat, no «Pet Date» type) |
+| OG / channel / email | same script — **full** mother wordmark |
 
-**Rule:** Everywhere uses لوگو مادر. PWA Home Screen icons are the **full wordmark** fitted on a soft square canvas (not a mark-only crop). Favicon 16–32px is the pink dog+cat mark crop (wordmark illegible at that size) — still extracted from mother. Regenerate with:
+**Rule:** Site header / SiteLogo / `logo.png` / `logo-light` keep full لوگو مادر with type. PWA Home Screen / favicon / apple-touch use the **mark-only** crop (no wordmark text) extracted from mother. Regenerate with:
 
 ```bash
 python3 packages/web/scripts/generate-brand-assets.py
