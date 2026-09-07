@@ -4269,8 +4269,8 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   --tg-list-w: min(360px, 38vw);
   position: relative;
   display: grid;
-  height: var(--tg-vv-height, 100dvh);
-  max-height: var(--tg-vv-height, 100dvh);
+  height: 100dvh;
+  max-height: 100dvh;
   margin: 0;
   color: var(--tg-ink);
   background:

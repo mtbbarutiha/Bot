@@ -37,6 +37,7 @@ import { RequestCountdown } from '../components/RequestCountdown';
 import { formatAge, formatTimeAgo } from '../data/mock';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useChatSocket, type ChatSocketEvent } from '../hooks/useChatSocket';
+import { useChatViewportHeight } from '../hooks/useChatViewportHeight';
 import { useLiveAjaxPoll } from '../hooks/useLiveAjaxPoll';
 import { usePeerPresence, usePresenceHeartbeat } from '../hooks/usePresence';
 import {
@@ -184,28 +185,6 @@ function useIsDesktop() {
     return () => mq.removeEventListener('change', onChange);
   }, []);
   return desktop;
-}
-
-function useChatViewportHeight(active: boolean) {
-  useEffect(() => {
-    if (!active) return;
-    const root = document.documentElement;
-    const apply = () => {
-      const h = window.visualViewport?.height ?? window.innerHeight;
-      root.style.setProperty('--tg-vv-height', `${Math.round(h)}px`);
-    };
-    apply();
-    const vv = window.visualViewport;
-    vv?.addEventListener('resize', apply);
-    vv?.addEventListener('scroll', apply);
-    window.addEventListener('resize', apply);
-    return () => {
-      vv?.removeEventListener('resize', apply);
-      vv?.removeEventListener('scroll', apply);
-      window.removeEventListener('resize', apply);
-      root.style.removeProperty('--tg-vv-height');
-    };
-  }, [active]);
 }
 
 function ConversationListPane({
@@ -888,7 +867,12 @@ export function ChatPage() {
   useEffect(() => {
     const ta = inputRef.current;
     if (!ta) return;
-    ta.style.height = '0px';
+    // Mobile: fixed composer height — growing on every keystroke fights the keyboard.
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 859.98px)').matches) {
+      ta.style.height = '44px';
+      return;
+    }
+    ta.style.height = 'auto';
     ta.style.height = `${Math.min(128, Math.max(44, ta.scrollHeight))}px`;
   }, [draft, hasThread, match?.id]);
 
@@ -1030,7 +1014,7 @@ export function ChatPage() {
     requestAnimationFrame(() => {
       const el = inputRef.current;
       if (!el) return;
-      el.focus();
+      el.focus({ preventScroll: true });
       el.setSelectionRange(caret, caret);
     });
   }
@@ -1080,7 +1064,7 @@ export function ChatPage() {
       setSendError(err instanceof Error ? err.message : 'ارسال پیام ناموفق بود');
     } finally {
       setSending(false);
-      inputRef.current?.focus();
+      inputRef.current?.focus({ preventScroll: true });
     }
   }
 

@@ -82,8 +82,11 @@
 }
 
 html:has(.tg-chat),
-html:has(.tg-chat) body {
+html:has(.tg-chat) body,
+html.tg-chat-open,
+html.tg-chat-open body {
   overflow: hidden;
+  overscroll-behavior: none;
 }
 
 @media (max-width: 859.98px) {
@@ -92,6 +95,65 @@ html:has(.tg-chat) body {
   }
   body:has(.tg-chat) {
     padding-bottom: 0 !important;
+  }
+
+  /*
+   * Full-screen fixed shell. Soft keyboard lifts content via --tg-kb-inset
+   * (padding-bottom only). Do not shrink/move the shell with visualViewport
+   * height/offsetTop — that parks the composer under the iOS URL bar.
+   */
+  .tg-chat {
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    padding-bottom: var(--tg-kb-inset, 0px) !important;
+    box-sizing: border-box !important;
+    z-index: 40;
+    overscroll-behavior: none;
+    touch-action: manipulation;
+  }
+
+  .tg-chat .tg-thread {
+    height: 100% !important;
+    min-height: 0 !important;
+  }
+
+  .tg-chat .tg-chat-wallpaper,
+  .tg-chat .tg-composer,
+  .tg-chat .tg-composer-shell {
+    overscroll-behavior: contain;
+  }
+
+  .tg-chat .tg-composer textarea {
+    scroll-margin: 0 !important;
+    scroll-padding: 0 !important;
+    font-size: 16px !important; /* iOS won't auto-zoom if >= 16px */
+  }
+
+  .pepito-app-layout:has(.tg-chat),
+  .pepito-app-main:has(.tg-chat) {
+    min-height: 100dvh !important;
+    height: 100dvh !important;
+  }
+
+  html.tg-kb-open .tg-composer,
+  html.tg-kb-open .tg-request-composer-bar,
+  html.tg-kb-open .tg-ended-bar {
+    padding-bottom: 10px !important;
+  }
+
+  html:has(.tg-chat),
+  html:has(.tg-chat) body,
+  html.tg-chat-open,
+  html.tg-chat-open body,
+  html.tg-kb-open,
+  html.tg-kb-open body {
+    overflow: hidden !important;
+    overscroll-behavior: none;
+    height: 100% !important;
+    max-height: 100% !important;
   }
 }
 
