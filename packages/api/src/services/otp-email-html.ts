@@ -1,6 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { join } from 'node:path';
 
 /** Minutes shown in OTP email footer — keep in sync with web-otp TTL. */
 export const OTP_EMAIL_EXPIRES_MINUTES = 5;
@@ -18,12 +17,11 @@ function escapeHtml(s: string): string {
 
 /** Absolute path to the small opaque PNG embedded in outbound mail. */
 export function resolveEmailLogoPath(): string {
-  const here = dirname(fileURLToPath(import.meta.url));
   const candidates = [
-    join(here, '../assets/brand/petdate-email-logo.png'), // dist/services → dist/assets
-    join(here, '../../assets/brand/petdate-email-logo.png'), // src or dist → package assets
-    join(process.cwd(), 'assets/brand/petdate-email-logo.png'),
-    join(process.cwd(), 'packages/api/assets/brand/petdate-email-logo.png'),
+    join(__dirname, '..', 'assets', 'brand', 'petdate-email-logo.png'), // dist/services → dist/assets
+    join(__dirname, '..', '..', 'assets', 'brand', 'petdate-email-logo.png'), // src → package assets
+    join(process.cwd(), 'assets', 'brand', 'petdate-email-logo.png'),
+    join(process.cwd(), 'packages', 'api', 'assets', 'brand', 'petdate-email-logo.png'),
   ];
   for (const p of candidates) {
     if (existsSync(p)) return p;

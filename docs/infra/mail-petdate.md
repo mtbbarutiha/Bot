@@ -139,7 +139,7 @@ bash infra/mail/setup-mail.sh
 SMTP_HOST=127.0.0.1
 SMTP_PORT=25
 SMTP_FROM=no-reply@petdate.ir
-SMTP_FROM_NAME=petdate
+SMTP_FROM_NAME=پت‌دیت
 SMTP_HELO_NAME=mail.petdate.ir
 SMTP_REPLY_TO=info@petdate.ir
 SMTP_TLS_REJECT_UNAUTHORIZED=0
