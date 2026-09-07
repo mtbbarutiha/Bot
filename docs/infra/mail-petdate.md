@@ -153,7 +153,8 @@ API کد OTP را با From + Return-Path = `no-reply@petdate.ir` می‌فرس�
 
 - URL: `https://petdate.ir/admin/mail`
 - ورود: `https://petdate.ir/admin/login` با رمز `ADMIN_PASSWORD`
-- نشان می‌دهد: host/port/from، وضعیت پورت، لاگ ارسال‌ها، OTPهای ایمیل فعال، و دکمهٔ تست ارسال
+- نشان می‌دهد: host/port/from، وضعیت پورت، **صندوق ورودی `info@`** (خواندن + ریپلای)، لاگ ارسال‌ها، OTPهای ایمیل فعال، و دکمهٔ تست ارسال
+- مسیر: `/admin/mail` — صندوق ورودی از Maildir محلی (`MAIL_INBOX_PATH`) خوانده می‌شود؛ پاسخ با From=`info@petdate.ir` می‌رود
 
 ## تست روی سرور
 
