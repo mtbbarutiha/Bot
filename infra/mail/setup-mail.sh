@@ -106,6 +106,7 @@ SignatureAlgorithm      rsa-sha256
 Socket                  inet:8891@localhost
 PidFile                 /run/opendkim/opendkim.pid
 OversignHeaders         From
+SignHeaders             From,Sender,Reply-To,Subject,Date,To,Cc,MIME-Version,Content-Type,Message-ID
 TrustAnchorFile         /usr/share/dns/root.key
 UserID                  opendkim
 KeyTable                /etc/opendkim/key.table
@@ -138,6 +139,10 @@ configure_postfix() {
   postconf -e "myhostname = ${MAIL_HOST}"
   postconf -e "mydomain = ${DOMAIN}"
   postconf -e "myorigin = \$mydomain"
+  # Outbound EHLO/HELO must be the mail hostname (not OS hostname srv…)
+  postconf -e "smtp_helo_name = ${MAIL_HOST}"
+  postconf -e "smtp_address_preference = ipv4"
+  postconf -e "disable_vrfy_command = yes"
   postconf -e "inet_interfaces = all"
   postconf -e "inet_protocols = ipv4"
   postconf -e "mydestination = localhost"
@@ -368,10 +373,24 @@ open_firewall() {
 
 write_dkim_public() {
   local txt_file="${CRED_DIR}/dkim-dns.txt"
+  local oneline_file="${CRED_DIR}/dkim-txt-oneline.txt"
+  mkdir -p "${CRED_DIR}"
   if [[ -f "${DKIM_DIR}/${DKIM_SELECTOR}.txt" ]]; then
     cp "${DKIM_DIR}/${DKIM_SELECTOR}.txt" "${txt_file}"
     chmod 644 "${txt_file}"
-    log "DKIM public record copied to ${txt_file}"
+    # Single-line TXT for DNS panels (ParsPack / Arvan) — strip quotes/whitespace
+    python3 - "${DKIM_DIR}/${DKIM_SELECTOR}.txt" "${oneline_file}" <<'PY'
+import re, sys
+raw = open(sys.argv[1], encoding="utf-8").read()
+parts = re.findall(r'"([^"]+)"', raw)
+val = "".join(parts).replace(" ", "")
+# Keep spaces only after semicolons for readability in panels
+val = re.sub(r";(?=\S)", "; ", val)
+open(sys.argv[2], "w", encoding="utf-8").write(val + "\n")
+print(val)
+PY
+    chmod 644 "${oneline_file}"
+    log "DKIM public record → ${txt_file} and ${oneline_file}"
   fi
 }
 
@@ -399,18 +418,23 @@ Local delivery smoke test $(date -u +%Y-%m-%dT%H:%M:%SZ)
 }
 
 print_dns_hints() {
-  log "===== DNS records required (DNS-only / no WCDN proxy for mail) ====="
-  echo "A     mail.${DOMAIN}              ${ORIGIN_IP}   # MUST NOT be CDN 185.239.1.100"
-  echo "MX    ${DOMAIN}                   10 mail.${DOMAIN}."
-  echo "TXT   ${DOMAIN}                   \"v=spf1 ip4:${ORIGIN_IP} a:mail.${DOMAIN} mx -all\""
-  echo "TXT   _dmarc.${DOMAIN}            \"v=DMARC1; p=none; rua=mailto:${MAILBOX_USER}@${DOMAIN}; fo=1\""
-  if [[ -f "${DKIM_DIR}/${DKIM_SELECTOR}.txt" ]]; then
-    echo "----- DKIM (paste as TXT at ${DKIM_SELECTOR}._domainkey.${DOMAIN}) -----"
+  local dkim_oneline="${CRED_DIR}/dkim-txt-oneline.txt"
+  log "===== DNS records required (DNS-only / grey cloud — NO CDN proxy for mail) ====="
+  echo "1) A     name=mail          value=${ORIGIN_IP}     # MUST NOT be 185.239.1.100 / proxy OFF"
+  echo "2) MX    name=@             value=mail.${DOMAIN}. priority=10"
+  echo "3) TXT   name=@             value=v=spf1 ip4:${ORIGIN_IP} -all"
+  echo "   (after mail A is correct you may use: v=spf1 ip4:${ORIGIN_IP} a:mail.${DOMAIN} mx -all)"
+  echo "4) TXT   name=_dmarc        value=v=DMARC1; p=none; rua=mailto:${MAILBOX_USER}@${DOMAIN}; fo=1; adkim=r; aspf=r"
+  echo "5) TXT   name=${DKIM_SELECTOR}._domainkey   (ONE record — paste one-liner below)"
+  if [[ -f "${dkim_oneline}" ]]; then
+    echo "----- DKIM one-liner (copy ALL of it) -----"
+    cat "${dkim_oneline}"
+  elif [[ -f "${DKIM_DIR}/${DKIM_SELECTOR}.txt" ]]; then
     cat "${DKIM_DIR}/${DKIM_SELECTOR}.txt"
   fi
-  echo "PTR (ask host): ${ORIGIN_IP} → ${MAIL_HOST}"
-  echo "After DNS A for mail.* points to origin: certbot certonly --nginx -d ${MAIL_HOST}"
-  echo "Then re-run this script to pick up LE certs."
+  echo "6) PTR (ticket to BitCommand/ParsPack): ${ORIGIN_IP} → ${MAIL_HOST}"
+  echo "DELETE wrong TXT values currently set as literally: RSA / ${ORIGIN_IP} / SPF"
+  echo "After mail A → origin: certbot certonly --nginx -d ${MAIL_HOST} && re-run this script"
 }
 
 main() {

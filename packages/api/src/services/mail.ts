@@ -125,10 +125,20 @@ export async function sendMail(opts: {
       opts.text
     )}</div>`;
 
+  const fromDomain = fromAddr.includes('@') ? fromAddr.split('@').pop()! : 'petdate.ir';
+  const mailHost = String(process.env.SMTP_HELO_NAME ?? '').trim() || 'mail.petdate.ir';
+  const replyTo =
+    String(process.env.SMTP_REPLY_TO ?? '').trim() ||
+    (fromAddr.toLowerCase().startsWith('no-reply@') || fromAddr.toLowerCase().startsWith('noreply@')
+      ? `info@${fromDomain}`
+      : undefined);
+
   try {
     const transporter = nodemailer.createTransport({
       host,
       port,
+      // EHLO/HELO identity — must match mail hostname (not OS hostname)
+      name: mailHost,
       secure: ignoreTls ? false : secure,
       auth: hasAuth ? { user, pass } : undefined,
       connectionTimeout: 15_000,
@@ -138,12 +148,29 @@ export async function sendMail(opts: {
       tls: { rejectUnauthorized },
     });
 
+    const messageId = `<${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 12)}@${fromDomain}>`;
+    const isTransactional =
+      purpose === 'login_otp' || purpose.endsWith('_otp') || purpose === 'admin_test';
+
     await transporter.sendMail({
       from: `"${fromName.replace(/"/g, '')}" <${fromAddr}>`,
+      // Envelope-from (Return-Path) must align with From for SPF/DMARC
+      envelope: { from: fromAddr, to: opts.to },
       to: opts.to,
+      replyTo: replyTo || undefined,
       subject: opts.subject,
       text: opts.text,
       html,
+      messageId,
+      headers: {
+        'MIME-Version': '1.0',
+        ...(isTransactional
+          ? {
+              'Auto-Submitted': 'auto-generated',
+              'X-Auto-Response-Suppress': 'All',
+            }
+          : {}),
+      },
     });
     dbService.createEmailSendLog({
       to: opts.to,
