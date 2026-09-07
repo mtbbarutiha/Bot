@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<meta charset="utf-8" />
+<title>petdate panels seed</title>
+<body style="font-family:sans-serif;padding:24px">
+<p>در حال آماده‌سازی پنل‌ها…</p>
+<script>
+const params = new URLSearchParams(location.search);
+const next = params.get('next') || '/profile';
+const user = {
+  id: 42,
+  name: 'محمد',
+  role: 'vet',
+  roles: ['vet', 'pet_owner'],
+  onboarding: 'profile_complete',
+  telegramId: '1001',
+  age: 22,
+  gender: 'male',
+  city: 'تهران',
+  province: 'تهران',
+  country: 'ایران',
+  language: 'Fa',
+  bio: 'دامپزشک پت‌دیت',
+  profileCompletion: 100,
+  coins: 994899,
+  likes: 0,
+  views: 0,
+  contacts: 1,
+  vetOnline: true,
+};
+localStorage.setItem(
+  'petdate_web_auth_v1',
+  JSON.stringify({ token: 'panels-ui-seed', user })
+);
+localStorage.setItem(
+  'petdate_user_v1',
+  JSON.stringify({
+    id: user.id,
+    telegramId: user.telegramId,
+    name: user.name,
+    role: user.role,
+    roles: user.roles,
+    onboarding: user.onboarding,
+  })
+);
+location.replace(next);
+</script>
+</body>
+</html>

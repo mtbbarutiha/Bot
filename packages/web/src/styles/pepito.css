@@ -8790,6 +8790,41 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
     align-items: flex-start !important;
     animation: none !important;
   }
+  /* Visual continuity: pale hero tops read as “white gap” under white nav —
+     pin a brand tint at the first pixels under the header. */
+  .pepito-wallet-hero {
+    background:
+      linear-gradient(180deg, rgba(253, 150, 30, 0.16) 0%, transparent 42%),
+      radial-gradient(ellipse 70% 80% at 10% 0%, rgba(253, 150, 30, 0.2), transparent 55%),
+      radial-gradient(ellipse 55% 60% at 95% 40%, rgba(92, 77, 145, 0.16), transparent 50%),
+      linear-gradient(160deg, #fff1e4 0%, #f4f4f7 55%, #ebe8f6 100%) !important;
+  }
+  .pepito-my-pets-hero {
+    background:
+      linear-gradient(180deg, rgba(219, 137, 202, 0.18) 0%, transparent 42%),
+      radial-gradient(ellipse 75% 70% at 12% 0%, rgba(219, 137, 202, 0.24), transparent 55%),
+      radial-gradient(ellipse 55% 55% at 95% 35%, rgba(11, 165, 242, 0.14), transparent 50%),
+      linear-gradient(160deg, #f7eaf4 0%, #f4f4f7 55%, #ebe8f6 100%) !important;
+  }
+  .pepito-vet-hero {
+    background:
+      linear-gradient(180deg, rgba(21, 204, 160, 0.16) 0%, transparent 42%),
+      radial-gradient(ellipse 80% 70% at 15% 0%, rgba(21, 204, 160, 0.24), transparent 55%),
+      radial-gradient(ellipse 60% 50% at 90% 30%, rgba(11, 165, 242, 0.18), transparent 50%),
+      linear-gradient(165deg, #e6f7f3 0%, #f4f4f7 55%, #ebe8f6 100%) !important;
+  }
+  .pepito-profile-hero-wash {
+    background:
+      linear-gradient(180deg, rgba(25, 6, 61, 0.45) 0%, transparent 28%),
+      radial-gradient(ellipse 70% 55% at 15% 15%, rgba(219, 137, 202, 0.28), transparent 55%),
+      linear-gradient(
+        255deg,
+        rgba(25, 6, 61, 0.9) 0%,
+        rgba(25, 6, 61, 0.58) 42%,
+        rgba(92, 77, 145, 0.22) 74%,
+        transparent 100%
+      ) !important;
+  }
   .pepito-wallet-hero-inner,
   .pepito-my-pets-hero-inner,
   .pepito-vet-hero-inner {
