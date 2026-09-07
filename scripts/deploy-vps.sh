@@ -94,7 +94,7 @@ npm install
 # PWA/brand assets may have been chattr +i locked; unlock so Vite can empty dist/
 if command -v chattr >/dev/null 2>&1 && [[ -d packages/web/dist ]]; then
   find packages/web/dist -type f -exec lsattr {} + 2>/dev/null | awk '/i/ {print \$NF}' | while read -r f; do
-    sudo chattr -i "$f" 2>/dev/null || true
+    sudo chattr -i "\$f" 2>/dev/null || true
   done
 fi
 npm run build:all
