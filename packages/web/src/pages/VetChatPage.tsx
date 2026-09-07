@@ -83,7 +83,8 @@ import { formatTimeAgo } from '../data/mock';
 const CHAT_WIPE_HINT =
   'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
-const FALLBACK_POLL_MS = 45_000;
+const FALLBACK_POLL_MS = 12_000;
+const OFFLINE_FALLBACK_POLL_MS = 8_000;
 const MESSAGE_FALLBACK_POLL_MS = 15_000;
 const DESKTOP_MQ = '(min-width: 860px)';
 
@@ -433,7 +434,11 @@ export function VetChatPage() {
     () => {
       softReloadConversations();
     },
-    { enabled: Boolean(user?.id) && !wsConnected, intervalMs: FALLBACK_POLL_MS },
+    {
+      enabled: Boolean(user?.id),
+      intervalMs: wsConnected ? FALLBACK_POLL_MS : OFFLINE_FALLBACK_POLL_MS,
+      runOnEnable: true,
+    },
   );
 
   useEffect(() => {

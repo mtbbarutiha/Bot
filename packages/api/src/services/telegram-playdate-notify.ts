@@ -93,11 +93,13 @@ export async function notifyPlaydateRequestTelegram(opts: {
   speciesLabel?: string;
 }): Promise<boolean> {
   if (!infra.telegram.botToken || !opts.toTelegramId) return false;
+  const tgId = String(opts.toTelegramId).trim();
+  if (!tgId || /^(fake_|demo_)/i.test(tgId)) return false;
 
   // سایلنت درخواست چت: درخواست در لیست می‌ماند؛ نوتیف تلگرام ارسال نمی‌شود
   try {
     const { dbService } = await import('../db');
-    const recipient = dbService.getUserByTelegramId(opts.toTelegramId);
+    const recipient = dbService.getUserByTelegramId(tgId);
     if (recipient?.silentChatRequests) return false;
   } catch {
     /* ignore — still notify */
@@ -128,7 +130,7 @@ export async function notifyPlaydateRequestTelegram(opts: {
   };
 
   const sentPhoto = await telegramCall('sendPhoto', {
-    chat_id: opts.toTelegramId,
+    chat_id: tgId,
     photo,
     caption,
     parse_mode: 'HTML',
@@ -137,7 +139,7 @@ export async function notifyPlaydateRequestTelegram(opts: {
   if (sentPhoto) return true;
 
   return telegramCall('sendMessage', {
-    chat_id: opts.toTelegramId,
+    chat_id: tgId,
     text: caption,
     parse_mode: 'HTML',
     reply_markup,

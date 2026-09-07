@@ -15,12 +15,40 @@ import {
 import { emitIncomingRefresh } from '../lib/liveIncoming';
 import { isIncomingPlaydate } from '../lib/playdateMap';
 
-/** Ajax poll — short so desktop doctor / owner screens update quickly. */
-const FALLBACK_POLL_MS = 45_000;
+/**
+ * Backup ajax even when WebSocket is up — CDN/idle tabs drop inbox events.
+ * Offline poll is faster because pending playmate TTL is only 2 minutes.
+ */
+const WS_BACKUP_POLL_MS = 12_000;
+const OFFLINE_POLL_MS = 8_000;
 
 type IncomingItem =
   | { kind: 'playmate'; id: number; title: string; subtitle: string; photo?: string; href: string }
   | { kind: 'vet'; id: number; title: string; subtitle: string; photo?: string; href: string };
+
+function seenStorageKey(userId: number) {
+  return `petdate:incoming-seen:${userId}`;
+}
+
+function loadSeenKeys(userId: number): Set<string> {
+  try {
+    const raw = sessionStorage.getItem(seenStorageKey(userId));
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((k): k is string => typeof k === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+function saveSeenKeys(userId: number, keys: Set<string>) {
+  try {
+    sessionStorage.setItem(seenStorageKey(userId), JSON.stringify([...keys]));
+  } catch {
+    /* private mode / quota — in-memory still works for this tab */
+  }
+}
 
 function isConversationPath(pathname: string, item: IncomingItem): boolean {
   if (item.kind === 'playmate') {
@@ -36,6 +64,9 @@ function isConversationPath(pathname: string, item: IncomingItem): boolean {
  * chrome. Fresh requests open `/chats/:id` or `/vet-chats/:id` where the
  * in-thread request card already has accept/reject. A modal is only a
  * fallback when something was queued by an older client path.
+ *
+ * Seen keys live in sessionStorage so a mount/WS race cannot swallow the
+ * request that triggered the first poll (previous seededRef bug).
  */
 export function LiveIncomingRequests() {
   const navigate = useNavigate();
@@ -45,7 +76,6 @@ export function LiveIncomingRequests() {
   const canPlaymate = Boolean(myUserId && userHasRole(user, 'pet_owner'));
   const canVet = Boolean(myUserId && userHasRole(user, 'vet'));
   const seenRef = useRef<Set<string>>(new Set());
-  const seededRef = useRef(false);
   const locationRef = useRef(location.pathname);
   locationRef.current = location.pathname;
   const [queue, setQueue] = useState<IncomingItem[]>([]);
@@ -60,8 +90,7 @@ export function LiveIncomingRequests() {
   }, []);
 
   useEffect(() => {
-    seededRef.current = false;
-    seenRef.current = new Set();
+    seenRef.current = myUserId ? loadSeenKeys(myUserId) : new Set();
     setQueue([]);
     setError(null);
   }, [myUserId, canPlaymate, canVet]);
@@ -84,6 +113,10 @@ export function LiveIncomingRequests() {
   const poll = useCallback(async () => {
     if (!isLoggedIn || !myUserId) return;
     try {
+      // Merge session seen before diffing so a fast first poll cannot
+      // re-open requests already handled earlier in this browser session.
+      for (const key of loadSeenKeys(myUserId)) seenRef.current.add(key);
+
       const items: IncomingItem[] = [];
 
       if (canPlaymate) {
@@ -130,22 +163,19 @@ export function LiveIncomingRequests() {
         }
       }
 
-      if (!seededRef.current) {
-        seenRef.current = new Set(items.map((i) => `${i.kind}:${i.id}`));
-        seededRef.current = true;
-        // Do not emit on seed — that was soft-reloading /chats on every mount.
-        return;
-      }
-
       const liveKeys = new Set(items.map((i) => `${i.kind}:${i.id}`));
       for (const key of [...seenRef.current]) {
         if (!liveKeys.has(key)) seenRef.current.delete(key);
       }
 
       const fresh = items.filter((i) => !seenRef.current.has(`${i.kind}:${i.id}`));
-      if (!fresh.length) return;
+      if (!fresh.length) {
+        saveSeenKeys(myUserId, seenRef.current);
+        return;
+      }
 
       for (const i of fresh) seenRef.current.add(`${i.kind}:${i.id}`);
+      saveSeenKeys(myUserId, seenRef.current);
 
       emitIncomingRefresh({
         kinds: [
@@ -175,9 +205,12 @@ export function LiveIncomingRequests() {
     },
   });
 
+  // Always poll as a safety net — do not disable when WS reports connected.
+  // runOnEnable so the first check is immediate (2‑minute request TTL).
   useLiveAjaxPoll(poll, {
-    enabled: Boolean(isLoggedIn && myUserId && (canPlaymate || canVet) && !wsConnected),
-    intervalMs: FALLBACK_POLL_MS,
+    enabled: Boolean(isLoggedIn && myUserId && (canPlaymate || canVet)),
+    intervalMs: wsConnected ? WS_BACKUP_POLL_MS : OFFLINE_POLL_MS,
+    runOnEnable: true,
   });
 
   async function onAccept() {

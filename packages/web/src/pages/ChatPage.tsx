@@ -83,8 +83,9 @@ import {
 const CHAT_WIPE_HINT =
   'لطفاً کل این گفتگو را پاک کنید تا اثری از پیام‌ها (متن، عکس، ویس و …) نماند.';
 
-/** Soft inbox refresh when WebSocket is unavailable (CDN often blocks WS). */
-const FALLBACK_POLL_MS = 45_000;
+/** Soft inbox refresh — backup even when WS is up (missed inbox events). */
+const FALLBACK_POLL_MS = 12_000;
+const OFFLINE_FALLBACK_POLL_MS = 8_000;
 /** Message/status poll when WS is down — keep gentle to avoid UI thrash. */
 const MESSAGE_FALLBACK_POLL_MS = 15_000;
 const DESKTOP_MQ = '(min-width: 860px)';
@@ -586,13 +587,17 @@ export function ChatPage() {
   const wsConnectedRef = useRef(wsConnected);
   wsConnectedRef.current = wsConnected;
 
-  // Soft inbox refresh when WebSocket is unavailable (CDN often blocks WS).
-  // Vet inbox on /chats uses the same path — keep soft-only after first paint.
+  // Soft inbox refresh — always on as a safety net (WS can miss playmate
+  // request events on mobile/desktop). Soft reload skips identical rows.
   useLiveAjaxPoll(
     () => {
       softReloadConversations();
     },
-    { enabled: Boolean(myUserId) && !wsConnected, intervalMs: FALLBACK_POLL_MS },
+    {
+      enabled: Boolean(myUserId),
+      intervalMs: wsConnected ? FALLBACK_POLL_MS : OFFLINE_FALLBACK_POLL_MS,
+      runOnEnable: true,
+    },
   );
 
   useEffect(() => {

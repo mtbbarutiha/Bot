@@ -1562,7 +1562,7 @@ function mapPlaydate(row: Record<string, unknown>): PlaydateRequest {
     fromPetId: row.from_pet_id as number,
     toPetId: row.to_pet_id as number,
     fromUserId: row.from_user_id as number,
-    toUserId: row.to_user_id as number | undefined,
+    toUserId: row.to_user_id == null ? undefined : Number(row.to_user_id),
     message: row.message as string | undefined,
     status: row.status as PlaydateStatus,
     scheduledAt: row.scheduled_at as string | undefined,

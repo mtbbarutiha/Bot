@@ -8,6 +8,7 @@ import { EMPTY_STATE_PHOTO } from '../data/petImages';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useUserStore } from '../hooks/useUserStore';
 import { listPlaydateRequests, updatePlaydateStatus } from '../lib/api';
+import { subscribeIncomingRefresh } from '../lib/liveIncoming';
 import { playdateToMatchRequest } from '../lib/playdateMap';
 import type { MatchRequest } from '../types';
 
@@ -74,6 +75,15 @@ export function PlaymateRequestsPanel({
 
   useEffect(() => {
     void reload();
+  }, [reload]);
+
+  useEffect(() => {
+    return subscribeIncomingRefresh((detail) => {
+      if (detail?.kinds && detail.kinds.length > 0 && !detail.kinds.includes('playmate')) {
+        return;
+      }
+      void reload();
+    });
   }, [reload]);
 
   const incomingPending = useMemo(

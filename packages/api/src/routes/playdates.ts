@@ -86,16 +86,26 @@ function requireParticipant(playdateId: number, userId: number) {
   return { playdate };
 }
 
+function isUsableTelegramId(telegramId: string | null | undefined): boolean {
+  const id = String(telegramId ?? '').trim();
+  if (!id) return false;
+  // Demo / seed accounts and placeholders never have a real bot chat.
+  if (/^(fake_|demo_)/i.test(id)) return false;
+  return true;
+}
+
 /** Fire-and-forget Telegram notify to recipient (bot-equivalent). */
 async function notifyNewPlaydateTelegram(
   request: NonNullable<ReturnType<typeof enrichPlaydate>>
 ): Promise<boolean> {
-  if (!request.toUserId || !request.fromPet || !request.toPet) return false;
-  const owner = dbService.getUserById(request.toUserId);
-  if (!owner?.telegramId) return false;
+  const toUserId =
+    request.toUserId ?? dbService.getPet(request.toPetId)?.ownerId ?? undefined;
+  if (!toUserId || !request.fromPet || !request.toPet) return false;
+  const owner = dbService.getUserById(toUserId);
+  if (!isUsableTelegramId(owner?.telegramId)) return false;
   return notifyPlaydateRequestTelegram({
     requestId: request.id,
-    toTelegramId: owner.telegramId,
+    toTelegramId: owner!.telegramId!,
     fromPet: request.fromPet,
     toPetName: request.toPet.name,
   });
@@ -724,19 +734,34 @@ playdatesRouter.post('/', async (req, res) => {
   });
 
   const enriched = enrichPlaydate(request)!;
+  const recipientUserId =
+    enriched.toUserId ?? enriched.toPet?.ownerId ?? toUid ?? undefined;
   // Never block HTTP on Telegram — slow/failed TG was hanging find-playmate
   // for minutes (bot loops up to 30 creates, each awaiting notify).
   void notifyNewPlaydateTelegram(enriched).catch((err) => {
     console.warn('playdate telegram notify failed:', (err as Error).message);
   });
-  notifyInbox([enriched.toUserId, enriched.fromUserId], {
+  // Always fan-out to resolved recipient + sender so web desktop/mobile
+  // inboxes refresh even when to_user_id was null at insert time.
+  notifyInbox([recipientUserId, enriched.fromUserId], {
     kind: 'playmate',
     reason: 'request',
     id: enriched.id,
   });
+  console.log(
+    'playdate request created',
+    enriched.id,
+    'from',
+    enriched.fromUserId,
+    'to',
+    recipientUserId,
+    'pets',
+    `${enriched.fromPetId}->${enriched.toPetId}`,
+  );
   // telegramNotified:true = API owns delivery (async); bot must not double-send
   res.status(201).json({
     ...enriched,
+    toUserId: recipientUserId ?? enriched.toUserId,
     telegramNotified: true,
   });
 });
