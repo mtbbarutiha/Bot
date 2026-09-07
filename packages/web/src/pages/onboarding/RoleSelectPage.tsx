@@ -30,12 +30,17 @@ export function RoleSelectPage() {
   const [selected, setSelected] = useState<UserRole[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [portalReady, setPortalReady] = useState(false);
 
   useEffect(() => {
     if (!isLoggedIn) {
       navigate(`/auth/login?next=${encodeURIComponent(next)}`, { replace: true });
     }
   }, [isLoggedIn, navigate, next]);
+
+  useEffect(() => {
+    setPortalReady(typeof document !== 'undefined');
+  }, []);
 
   if (!isLoggedIn) return null;
 
@@ -63,20 +68,28 @@ export function RoleSelectPage() {
     }
   };
 
+  const confirmLabel = saving
+    ? 'در حال ثبت…'
+    : selected.length
+      ? ROLE_CONFIRM_LABEL
+      : 'اول یک نقش انتخاب کن';
+
   const actions = (
-    <div className="role-select-actions">
-      {error && <p className="role-select-error">{error}</p>}
+    <div className="role-select-actions" role="region" aria-label={ROLE_CONFIRM_LABEL}>
+      {error ? <p className="role-select-error">{error}</p> : null}
+      {selected.length > 0 ? (
+        <p className="role-select-hint">
+          {selected.length} نقش انتخاب شد
+        </p>
+      ) : null}
       <button
         type="button"
         className="pepito-btn button-1 auth-submit"
-        onClick={handleConfirm}
+        onClick={() => void handleConfirm()}
         disabled={saving || selected.length === 0}
+        aria-label={ROLE_CONFIRM_LABEL}
       >
-        {saving
-          ? 'در حال ثبت…'
-          : selected.length
-            ? ROLE_CONFIRM_LABEL
-            : 'اول یک نقش انتخاب کن'}
+        {confirmLabel}
       </button>
     </div>
   );
@@ -84,6 +97,7 @@ export function RoleSelectPage() {
   return (
     <AuthShell
       wide
+      footer={false}
       bannerTitle="شروع کن"
       bannerLead="نقش‌هات را انتخاب کن — همه چیز در همان محیط لندینگ می‌ماند"
       bannerImage="/pepito/uploads/1.jpg"
@@ -95,7 +109,7 @@ export function RoleSelectPage() {
           یک یا چند نقش انتخاب کن، بعد «{ROLE_CONFIRM_LABEL}» رو بزن · {BRAND.taglineFa}
         </p>
 
-        <div className="role-grid">
+        <div className="role-grid" role="group" aria-label="انتخاب نقش">
           {USER_ROLES.map((role) => {
             const active = selected.includes(role);
             return (
@@ -113,7 +127,7 @@ export function RoleSelectPage() {
           })}
         </div>
       </div>
-      {createPortal(actions, document.body)}
+      {portalReady ? createPortal(actions, document.body) : actions}
     </AuthShell>
   );
 }

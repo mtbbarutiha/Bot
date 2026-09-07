@@ -12,6 +12,8 @@ interface AuthShellProps {
   bannerTitle?: string;
   bannerLead?: string;
   bannerImage?: string;
+  /** Hide site footer (e.g. role select with fixed bottom CTA) */
+  footer?: boolean;
 }
 
 /** Auth / onboarding shell — same Pepito landing chrome as Welcome, not a detached auth app. */
@@ -23,6 +25,7 @@ export function AuthShell({
   bannerTitle = 'همراه پت‌های خاص شما',
   bannerLead = 'همان حساب وب و تلگرام — ورود و تکمیل پروفایل در همین محیط',
   bannerImage,
+  footer = true,
 }: AuthShellProps) {
   return (
     <LandingChrome
@@ -32,6 +35,7 @@ export function AuthShell({
       actionLabel={backLabel}
       actionTo={backTo}
       className="pepito-auth-flow"
+      footer={footer}
     >
       <section className={`pepito-flow-panel${wide ? ' pepito-flow-panel--wide' : ''}`}>
         <div className="pepito-flow-panel-inner">{children}</div>

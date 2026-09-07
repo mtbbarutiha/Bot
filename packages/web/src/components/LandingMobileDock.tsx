@@ -13,8 +13,12 @@ export function LandingMobileDock() {
   const { pathname } = useLocation();
   const { isLoggedIn, user } = useAuthStore();
 
+  // Hide during auth / onboarding so primary CTAs (esp. «ثبت نقش‌ها») are not
+  // covered by the fixed dock (z-index 60 vs role bar previously at 40).
   if (
     pathname.startsWith('/admin') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/onboarding') ||
     pathname === '/chats' ||
     pathname.startsWith('/chats/') ||
     pathname.startsWith('/vet-chats')
