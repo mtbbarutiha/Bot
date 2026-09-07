@@ -35,12 +35,13 @@ const SHOP_AUTH: SiteNavItem = {
   match: (p) => p === '/shop' || p.startsWith('/shop/'),
 };
 
-const PLAYMATE: SiteNavItem = {
+/** Owner/guest playmate hub — lives in /chats (find + inbox), not a separate page. */
+const PLAYMATE_CHATS: SiteNavItem = {
   key: 'playmate',
-  label: 'همبازی',
-  to: '/explore',
+  label: 'هم بازی',
+  to: '/chats',
   icon: HeartHandshake,
-  match: (p) => p === '/explore' || p.startsWith('/explore'),
+  match: (p) => p === '/chats' || p.startsWith('/chats/') || p.startsWith('/vet-chats'),
 };
 
 const CHATS: SiteNavItem = {
@@ -94,16 +95,16 @@ const LOGIN: SiteNavItem = {
 /** Guest primary destinations (mobile dock + desktop header). */
 export const SITE_NAV_GUEST: SiteNavItem[] = [
   SHOP,
-  { ...PLAYMATE, gate: true },
+  { ...PLAYMATE_CHATS, gate: true },
   CART,
   LOGIN,
 ];
 
 /**
  * Logged-in owner set (legacy default). Prefer `siteNavMobileForUser`.
- * Owner: شاپ / همبازی / گفتگو / کیف پول / پروفایل
+ * Owner: شاپ / هم بازی / کیف پول / پروفایل
  */
-export const SITE_NAV_AUTH: SiteNavItem[] = [SHOP_AUTH, PLAYMATE, CHATS, WALLET, PROFILE];
+export const SITE_NAV_AUTH: SiteNavItem[] = [SHOP_AUTH, PLAYMATE_CHATS, WALLET, PROFILE];
 
 /**
  * Desktop header shortcuts — avoid duplicating left-cluster tools.
@@ -124,7 +125,8 @@ export function siteNavMobileForRole(role?: UserRole | null): SiteNavItem[] {
       // دامپزشک: بدون همبازی — پنل پزشک + گفتگو
       return [SHOP_AUTH, VET_PANEL, CHATS, WALLET, PROFILE];
     case 'pet_owner':
-      return [SHOP_AUTH, PLAYMATE, CHATS, WALLET, PROFILE];
+      // صاحب پت: یک مقصد «هم بازی» (= /chats با پیدا کردن همبازی داخلش)
+      return [SHOP_AUTH, PLAYMATE_CHATS, WALLET, PROFILE];
     case 'trainer':
     case 'pet_sitter':
     case 'pet_seeker':

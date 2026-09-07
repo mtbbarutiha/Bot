@@ -5,8 +5,8 @@ import { SITE_NAV_DESKTOP_GUEST, siteNavDesktopForUser } from '../lib/siteNav';
 
 /**
  * Desktop primary actions (≥860px) — follow active primary role.
- * Owner: شاپ / همبازی / گفتگو
- * Vet: شاپ / پنل پزشک / گفتگو (بدون همبازی)
+ * Owner: شاپ / هم بازی
+ * Vet: شاپ / پنل پزشک / گفتگو
  * Wallet chip + circular profile avatar live in NavUserCluster.
  */
 export function SiteDesktopNav() {

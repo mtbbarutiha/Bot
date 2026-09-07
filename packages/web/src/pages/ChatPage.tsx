@@ -243,7 +243,7 @@ function ConversationListPane({
         </Link>
         <div className="tg-chat-list-brand">
           <SiteLogo className="tg-chat-list-logo" height={34} />
-          <h1>{scope === 'vet' ? 'گفتگوهای پزشک' : 'پیدا کردن همبازی'}</h1>
+          <h1>{scope === 'vet' ? 'گفتگوهای پزشک' : 'هم بازی'}</h1>
         </div>
         <button
           type="button"
@@ -1252,7 +1252,7 @@ export function ChatPage() {
           <SiteLogo className="tg-chat-empty-logo" height={52} />
           <h1>پروفایلت هنوز کامل نیست</h1>
           <p>
-            برای دیدن گفتگوها و پیدا کردن همبازی، اول ثبت‌نام را تمام کن
+            برای دیدن هم بازی و پیدا کردن همبازی، اول ثبت‌نام را تمام کن
             (نام، سن، جنسیت و شهر).
           </p>
           <Link to="/onboarding/profile" className="pepito-btn button-1 tg-profile-gate__cta">

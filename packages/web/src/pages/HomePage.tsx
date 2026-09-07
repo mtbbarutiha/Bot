@@ -48,14 +48,14 @@ export function HomePage() {
     : isPetOwner && !hasPetName
       ? '/add-pet'
       : isPetOwner
-        ? '/explore'
+        ? '/chats'
         : '/profile';
   const primaryLabel = needsProfile
     ? 'تکمیل پروفایل'
     : isPetOwner && !hasPetName
       ? 'ثبت پت'
       : isPetOwner
-        ? 'پیدا کردن همبازی'
+        ? 'هم بازی'
         : 'پروفایل من';
 
   return (
@@ -81,9 +81,9 @@ export function HomePage() {
               <PawIcon />
               {primaryLabel}
             </Link>
-            {isPetOwner && primaryTo !== '/explore' ? (
-              <Link to="/explore" className="pepito-btn pepito-btn--ghost pepito-home-cta-ghost">
-                همبازی
+            {isPetOwner && primaryTo !== '/chats' ? (
+              <Link to="/chats" className="pepito-btn pepito-btn--ghost pepito-home-cta-ghost">
+                هم بازی
               </Link>
             ) : null}
             {primaryTo !== '/add-pet' && isPetOwner ? (
@@ -114,11 +114,11 @@ export function HomePage() {
               <span>ثبت یا ویرایش پت‌ها</span>
             </Link>
           ) : null}
-          <Link to={isPetOwner ? '/explore' : '/profile'} className="pepito-home-action">
-            <strong>{isPetOwner ? 'پیدا کردن همبازی' : 'پروفایل و خدمات'}</strong>
+          <Link to={isPetOwner ? '/chats' : '/profile'} className="pepito-home-action">
+            <strong>{isPetOwner ? 'هم بازی' : 'پروفایل و خدمات'}</strong>
             <span>
               {isPetOwner
-                ? 'ارسال و مدیریت درخواست‌های همبازی'
+                ? 'پیدا کردن همبازی و مدیریت گفتگوها'
                 : 'پت شاپ و مشاوره'}
             </span>
           </Link>

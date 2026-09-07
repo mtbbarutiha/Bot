@@ -26,17 +26,17 @@ const SERVICES: {
   icon: string;
   fill: 1 | 2 | 3 | 4;
 }[] = [
-  { to: '/explore', title: 'نگهداری پت', desc: 'مراقبت روزانه در خانه با خیال راحت برای پت‌های خاص شما.', icon: 'flaticon-dog-and-pets-house', fill: 1 },
-  { to: '/explore', title: 'پیاده‌روی سگ', desc: 'پیاده‌روی منظم و امن برای سگ‌ها در محله و پارک‌های نزدیک.', icon: 'flaticon-animals-11', fill: 2 },
+  { to: '/chats', title: 'نگهداری پت', desc: 'مراقبت روزانه در خانه با خیال راحت برای پت‌های خاص شما.', icon: 'flaticon-dog-and-pets-house', fill: 1 },
+  { to: '/chats', title: 'پیاده‌روی سگ', desc: 'پیاده‌روی منظم و امن برای سگ‌ها در محله و پارک‌های نزدیک.', icon: 'flaticon-animals-11', fill: 2 },
   { to: '/vet-consult', title: 'دندان‌پزشکی پت', desc: 'بررسی و مراقبت از دندان و لثه با دامپزشکان مجرب.', icon: 'flaticon-veterinarian-hospital', fill: 3 },
   { to: '/vet-consult', title: 'واکسیناسیون', desc: 'برنامه واکسن به‌موقع برای سلامت و ایمنی پت شما.', icon: 'flaticon-syringe', fill: 4 },
   { to: '/shop', title: 'آرایش پت', desc: 'شست‌وشو، کوتاهی مو و نظافت حرفه‌ای برای ظاهر درخشان.', icon: 'flaticon-scissors', fill: 2 },
   { to: '/add-pet', title: 'برنامه توله', desc: 'آموزش پایه و مراقبت ویژه برای توله‌ها و گربه‌های جوان.', icon: 'flaticon-dog-puppy', fill: 1 },
   { to: '/vet-consult', title: 'خدمات دامپزشکی', desc: 'ویزیت، مشاوره و پیگیری درمان روی همان حساب مشترک.', icon: 'flaticon-cross', fill: 4 },
-  { to: '/explore', title: 'مراقبت شبانه', desc: 'اقامت شبانه امن وقتی نمی‌توانید کنار پت‌تان باشید.', icon: 'flaticon-animal-13', fill: 3 },
+  { to: '/chats', title: 'مراقبت شبانه', desc: 'اقامت شبانه امن وقتی نمی‌توانید کنار پت‌تان باشید.', icon: 'flaticon-animal-13', fill: 3 },
   { to: '/shop', title: 'وعده‌های سالم', desc: 'تغذیه متعادل و وعده‌های مناسب سن و نژاد پت.', icon: 'flaticon-pet-food', fill: 1 },
-  { to: '/explore', title: 'فعالیت‌های سرگرم‌کننده', desc: 'بازی و همبازی برای انرژی و شادی روزانه پت‌ها.', icon: 'flaticon-people-1', fill: 2 },
-  { to: '/explore', title: 'خدمات آموزش', desc: 'تربیت رفتاری و فرمان‌پذیری با مربیان باتجربه.', icon: 'flaticon-dog-training-3', fill: 3 },
+  { to: '/chats', title: 'فعالیت‌های سرگرم‌کننده', desc: 'بازی و همبازی برای انرژی و شادی روزانه پت‌ها.', icon: 'flaticon-people-1', fill: 2 },
+  { to: '/chats', title: 'خدمات آموزش', desc: 'تربیت رفتاری و فرمان‌پذیری با مربیان باتجربه.', icon: 'flaticon-dog-training-3', fill: 3 },
   { to: '/vet-consult', title: 'میکروچیپ', desc: 'شناسایی دائمی پت برای امنیت بیشتر در گم‌شدن.', icon: 'flaticon-dog-with-first-aid-kit-bag', fill: 4 },
 ];
 
@@ -143,7 +143,7 @@ const NEWS = [
     author: 'لیلی دورو',
     tag: 'مراقبت',
     img: `${P}/01.jpg`,
-    to: '/explore' },
+    to: '/chats' },
   {
     title: 'سبک‌های آرایش سگ',
     excerpt: 'انتخاب کوتاهی مو متناسب با نژاد و فصل.',
@@ -151,7 +151,7 @@ const NEWS = [
     author: 'فرانک وایت',
     tag: 'پت',
     img: `${P}/06.jpg`,
-    to: '/explore' },
+    to: '/chats' },
   {
     title: 'نکات ایمنی پت',
     excerpt: 'چطور خانه را برای پت‌ها امن‌تر کنیم.',
@@ -159,7 +159,7 @@ const NEWS = [
     author: 'اولیویا دان',
     tag: 'دندان',
     img: `${P}/03.jpg`,
-    to: '/explore' },
+    to: '/chats' },
   {
     title: 'انگل‌های پت',
     excerpt: 'پیشگیری و درمان به‌موقع انگل‌های رایج.',
@@ -167,7 +167,7 @@ const NEWS = [
     author: 'فرانک وایت',
     tag: 'جراحی',
     img: `${P}/04.jpg`,
-    to: '/explore' },
+    to: '/chats' },
   {
     title: 'خواب توله‌ها',
     excerpt: 'عادت‌های سالم خواب برای توله‌های پرانرژی.',
@@ -175,7 +175,7 @@ const NEWS = [
     author: 'لیلی دورو',
     tag: 'تشخیص',
     img: `${P}/05.jpg`,
-    to: '/explore' },
+    to: '/chats' },
   {
     title: 'میکروچیپ گربه',
     excerpt: 'شناسایی دائمی برای امنیت بیشتر در گم‌شدن.',
@@ -183,7 +183,7 @@ const NEWS = [
     author: 'اولیویا دان',
     tag: 'ایمنی',
     img: `${P}/02.jpg`,
-    to: '/explore' },
+    to: '/chats' },
 ] as const;
 
 function GatedLink({
@@ -799,7 +799,7 @@ export function WelcomePage() {
           <p>
             لندینگ آزاد است؛ برای امکانات اصلی با یک کد یکبارمصرف وارد دنیای مشترک وب و ربات شو.
           </p>
-          <GatedLink to="/explore" className="pepito-btn button-1 pepito-btn--lg pepito-btn--on-dark">
+          <GatedLink to="/chats" className="pepito-btn button-1 pepito-btn--lg pepito-btn--on-dark">
             <PawIcon />
             پذیرش یک پت
           </GatedLink>

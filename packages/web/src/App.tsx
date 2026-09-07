@@ -33,7 +33,6 @@ import { OtpPage } from './pages/auth/OtpPage';
 import { TelegramLinkPage } from './pages/auth/TelegramLinkPage';
 import { AddPetPage } from './pages/AddPetPage';
 import { ChatPage } from './pages/ChatPage';
-import { ExplorePage } from './pages/ExplorePage';
 import { HomePage } from './pages/HomePage';
 import { MatchesPage } from './pages/MatchesPage';
 import { PetDetailPage } from './pages/PetDetailPage';
@@ -79,7 +78,7 @@ export default function App() {
 
           <Route element={<Layout />}>
             <Route path="home" element={<HomePage />} />
-            <Route path="explore" element={<ExplorePage />} />
+            <Route path="explore" element={<Navigate to="/chats" replace />} />
             <Route path="pets/:id" element={<PetDetailPage />} />
             <Route path="add-pet" element={<AddPetPage />} />
             <Route path="matches" element={<MatchesPage />} />

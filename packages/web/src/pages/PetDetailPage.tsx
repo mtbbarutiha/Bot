@@ -74,7 +74,7 @@ export function PetDetailPage() {
       <div className="empty-state empty-state--top">
         <img src={EMPTY_STATE_PHOTO} alt="" className="empty-photo" />
         <h3>پت پیدا نشد</h3>
-        <button className="cta-btn cta-btn--inline" onClick={() => navigate('/explore')}>
+        <button className="cta-btn cta-btn--inline" onClick={() => navigate('/chats')}>
           ↩️ بازگشت
         </button>
       </div>

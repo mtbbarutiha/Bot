@@ -86,7 +86,7 @@ export function AdoptionDetailPage() {
           <Link to={loginPath('/home')} className="pepito-nav-login">
             ورود
           </Link>
-          <GatedLink to="/explore#requests" className="pepito-btn pepito-btn--nav">
+          <GatedLink to="/chats" className="pepito-btn pepito-btn--nav">
             <PawIcon size={14} />
             ارسال پیام
           </GatedLink>
@@ -149,7 +149,7 @@ export function AdoptionDetailPage() {
                 <PawIcon />
                 {CONTACT_PHONE_DISPLAY}
               </a>
-              <GatedLink to="/explore" className="pepito-btn button-3">
+              <GatedLink to="/chats" className="pepito-btn button-3">
                 <PawIcon />
                 درخواست پذیرش
               </GatedLink>

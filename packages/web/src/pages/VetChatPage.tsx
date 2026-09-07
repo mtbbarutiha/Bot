@@ -1019,7 +1019,7 @@ export function VetChatPage() {
             </Link>
             <div>
               <p className="tg-chat-list-kicker">پت‌دیت</p>
-              <h1>{inboxScope === 'vet' ? 'گفتگوهای پزشک' : 'گفتگوها'}</h1>
+              <h1>{inboxScope === 'vet' ? 'گفتگوهای پزشک' : 'هم بازی'}</h1>
             </div>
             <button
               type="button"
@@ -1051,7 +1051,7 @@ export function VetChatPage() {
                     : 'درخواست‌های همبازی و مشاوره‌های شما به‌عنوان صاحب پت اینجا می‌آیند.'}
                 </p>
                 <Link
-                  to={inboxScope === 'vet' ? '/vet-consult' : '/explore'}
+                  to={inboxScope === 'vet' ? '/vet-consult' : '/chats'}
                   className={
                     inboxScope === 'vet'
                       ? 'tg-chat-link-btn'
@@ -1065,7 +1065,7 @@ export function VetChatPage() {
                       <span className="pepito-btn-icon" aria-hidden>
                         <i className="flaticon-pawprint-4" />
                       </span>
-                      پیدا کردن همبازی
+                      هم بازی
                     </>
                   )}
                 </Link>
@@ -1152,9 +1152,9 @@ export function VetChatPage() {
           {!hasThread ? (
             <div className="tg-thread-empty">
               <SiteLogo className="tg-chat-empty-logo" height={48} />
-              <h2>{inboxScope === 'vet' ? 'مشاوره‌ای را شروع کن' : 'همبازی پیدا کن'}</h2>
+              <h2>{inboxScope === 'vet' ? 'مشاوره‌ای را شروع کن' : 'هم بازی'}</h2>
               <Link
-                to={inboxScope === 'vet' ? '/vet-consult' : '/explore'}
+                to={inboxScope === 'vet' ? '/vet-consult' : '/chats'}
                 className={
                   inboxScope === 'vet'
                     ? 'tg-chat-link-btn'
@@ -1168,7 +1168,7 @@ export function VetChatPage() {
                     <span className="pepito-btn-icon" aria-hidden>
                       <i className="flaticon-pawprint-4" />
                     </span>
-                    پیدا کردن همبازی
+                    هم بازی
                   </>
                 )}
               </Link>

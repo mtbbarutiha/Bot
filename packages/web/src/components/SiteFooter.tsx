@@ -14,7 +14,7 @@ const BOTTOM_LINKS: { to: string; label: string }[] = [
   { to: '/#services', label: 'خدمات' },
   { to: '/#pets', label: 'پذیرش' },
   { to: '/shop', label: 'پت شاپ' },
-  { to: '/explore', label: 'همبازی' },
+  { to: '/chats', label: 'هم بازی' },
   { to: '/#news', label: 'اخبار' },
   { to: '/faq', label: 'سؤالات' },
   { to: '/vet-consult', label: 'دامپزشک' },
@@ -22,11 +22,10 @@ const BOTTOM_LINKS: { to: string; label: string }[] = [
 ];
 
 const QUICK_LINKS: { to: string; label: string }[] = [
-  { to: '/explore', label: 'پیدا کردن همبازی' },
+  { to: '/chats', label: 'هم بازی' },
   { to: '/shop', label: 'پت دیت شاپ' },
   { to: '/shop/cart', label: 'سبد خرید' },
   { to: '/add-pet', label: 'پت‌های من' },
-  { to: '/chats', label: 'گفتگو / درخواست‌ها' },
   { to: '/vet-consult', label: 'مشاوره دامپزشک' },
   { to: '/auth/login', label: 'ورود / ثبت‌نام' },
 ];

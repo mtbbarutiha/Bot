@@ -21,7 +21,7 @@ Web and Telegram share the same account (OTP login by mobile number).
 - Home / landing: https://petdate.ir/
 - FAQ: https://petdate.ir/faq
 - Pet shop: https://petdate.ir/shop
-- Find playmate: https://petdate.ir/explore
+- هم بازی: https://petdate.ir/chats
 - Vet consult: https://petdate.ir/vet-consult
 - Login: https://petdate.ir/auth/login
 - Sitemap: https://petdate.ir/sitemap.xml

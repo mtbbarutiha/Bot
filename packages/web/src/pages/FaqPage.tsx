@@ -91,7 +91,7 @@ export function FaqPage() {
           </p>
           <h1>سؤالات متداول</h1>
           <p>ده پرسش پرتکرار درباره پت‌دیت، همبازی، شاپ، پذیرش و دامپزشک.</p>
-          <Link to="/explore" className="pepito-btn button-1">
+          <Link to="/chats" className="pepito-btn button-1">
             رفتن به پنل همبازی
           </Link>
         </header>

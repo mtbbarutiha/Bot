@@ -40,13 +40,6 @@ function metaForPath(pathname: string): PageMeta {
       canonicalPath: p.startsWith('/shop/c/') || p.startsWith('/shop/product/') ? p : '/shop',
     };
   }
-  if (p === '/explore') {
-    return {
-      title: SEO.titleTemplate('پیدا کردن همبازی'),
-      description: 'پیدا کردن همبازی برای پت و مدیریت درخواست‌ها در پت‌دیت.',
-      canonicalPath: '/explore',
-    };
-  }
   if (p === '/vet-consult') {
     return {
       title: SEO.titleTemplate('مشاوره دامپزشک'),
@@ -90,7 +83,7 @@ function metaForPath(pathname: string): PageMeta {
     return { title: SEO.titleTemplate('پروفایل پت'), robots: 'noindex,follow' };
   }
   if (p === '/chats' || p.startsWith('/chats/')) {
-    return { title: SEO.titleTemplate('گفتگو'), robots: 'noindex,nofollow' };
+    return { title: SEO.titleTemplate('هم بازی'), robots: 'noindex,nofollow' };
   }
   if (p.startsWith('/onboarding')) {
     return { title: SEO.titleTemplate('راه‌اندازی حساب'), robots: 'noindex,follow' };

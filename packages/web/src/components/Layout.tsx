@@ -20,8 +20,7 @@ import { RoleSwitchControl } from './RoleSwitchControl';
 const OWNER_NAV: { to: string; icon: LucideIcon; label: string }[] = [
   { to: '/', icon: Home, label: 'خانه' },
   { to: '/home', icon: LayoutDashboard, label: 'پنل' },
-  { to: '/explore', icon: HeartHandshake, label: 'پیدا کردن همبازی' },
-  { to: '/chats', icon: MessagesSquare, label: 'گفتگوها' },
+  { to: '/chats', icon: HeartHandshake, label: 'هم بازی' },
   { to: '/add-pet', icon: PawPrint, label: 'پت‌های من' },
   { to: '/vet-consult', icon: Stethoscope, label: 'ارتباط با پزشک' },
   { to: '/shop', icon: ShoppingBag, label: 'پت‌شاپ' },

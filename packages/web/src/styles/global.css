@@ -3229,6 +3229,10 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   line-height: 1.55;
   text-align: center;
 }
+
+.auth-telegram-wait {
+  margin-top: 4px;
+}
 .auth-or {
   display: flex;
   align-items: center;

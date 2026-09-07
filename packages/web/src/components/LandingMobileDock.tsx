@@ -5,9 +5,9 @@ import { SITE_NAV_GUEST, siteNavMobileForUser } from '../lib/siteNav';
 
 /**
  * Site-wide mobile bottom dock — items follow the active primary role.
- * Guest: شاپ / همبازی / سبد / ورود
- * Owner: شاپ / همبازی / گفتگو / کیف پول / پروفایل
- * Vet: شاپ / پنل پزشک / گفتگو / کیف پول / پروفایل (بدون همبازی)
+ * Guest: شاپ / هم بازی / سبد / ورود
+ * Owner: شاپ / هم بازی / کیف پول / پروفایل
+ * Vet: شاپ / پنل پزشک / گفتگو / کیف پول / پروفایل
  */
 export function LandingMobileDock() {
   const { pathname } = useLocation();
