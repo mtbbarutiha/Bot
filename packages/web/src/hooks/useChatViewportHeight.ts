@@ -1,21 +1,21 @@
 import { useEffect } from 'react';
 
 /**
- * Pin the mobile chat shell to the *visual* viewport.
+ * Mobile chat keyboard — bottom-inset model (kb-bottom-v4).
  *
- * Structure contract (see chat.css):
- *   .tg-chat        → fixed; top/height = visualViewport
- *   .tg-thread      → CSS grid: top | scroll | foot
- *   .tg-thread-foot → composer stays in the bottom row
+ * Failed approaches (do not revive):
+ * - `top: vv.offsetTop` + `height: vv.height` (vv-pin) — parks a short shell
+ *   under the status bar with a white void above the keyboard when CSS/JS
+ *   get out of sync or another deploy ships height without top.
+ * - `padding-bottom: kb-inset` on a full inset:0 shell while children do not
+ *   stretch — composer hugs the top of the shell.
  *
- * Why not padding-bottom / inset:0:
- *   Shrinking height without moving `top` parks a short shell under the status
- *   bar with a white void above the keyboard (live regression). Tracking both
- *   offsetTop and height keeps header + messages + composer inside the visible
- *   area above the soft keyboard.
- *
- * interactive-widget should be overlays-content so the layout viewport stays
- * stable and only visualViewport moves — avoids double-resize fights.
+ * This model:
+ * - Keep `.tg-chat` fixed with `top:0; left:0; right:0`
+ * - Set only `bottom: var(--tg-kb-inset)` so the shell shrinks from the bottom
+ * - Thread stays a 3-row grid (top | scroll | foot); composer stays in foot
+ * - Never set --tg-vv-top / --tg-vv-height
+ * - Prefer interactive-widget=overlays-content so layout viewport stays stable
  */
 export function useChatViewportHeight(active: boolean) {
   useEffect(() => {
@@ -43,33 +43,36 @@ export function useChatViewportHeight(active: boolean) {
     body.style.width = '100%';
     body.style.overflow = 'hidden';
     root.classList.add('tg-chat-open');
-    root.dataset.tgShell = 'vv-pin';
+    root.dataset.tgShell = 'kb-bottom-v4';
+
+    // Kill leftover pin vars from older deploys / competing agents.
+    root.style.removeProperty('--tg-vv-top');
+    root.style.removeProperty('--tg-vv-height');
 
     const apply = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(() => {
         const vv = window.visualViewport;
         const layoutH = Math.max(window.innerHeight || 0, root.clientHeight || 0, 1);
-        const rawH = vv?.height ?? layoutH;
-        // Floor avoids a one-frame height:0 collapse some iOS builds report mid-resize.
-        const height = Math.max(160, Math.round(rawH));
-        const offsetTop = Math.max(0, Math.round(vv?.offsetTop ?? 0));
-        const kbOpen = layoutH - rawH > 40 || offsetTop > 24;
+        const vvH = vv?.height ?? layoutH;
+        const offsetTop = vv?.offsetTop ?? 0;
+        // Overlap of the soft keyboard (and any chrome) below the visual viewport.
+        let inset = Math.max(0, Math.round(layoutH - vvH - offsetTop));
+        // Guard against one-frame glitches mid keyboard animation.
+        inset = Math.min(inset, Math.round(layoutH * 0.75));
 
-        root.style.setProperty('--tg-vv-height', `${height}px`);
-        root.style.setProperty('--tg-vv-top', `${offsetTop}px`);
-        // Keep kb-inset as 0 for any leftover consumers (sheets); shell no longer pads.
-        root.style.setProperty('--tg-kb-inset', '0px');
-        root.classList.toggle('tg-kb-open', kbOpen);
+        root.style.setProperty('--tg-kb-inset', `${inset}px`);
+        root.style.removeProperty('--tg-vv-top');
+        root.style.removeProperty('--tg-vv-height');
+        root.classList.toggle('tg-kb-open', inset > 40);
       });
     };
 
     const onFocusIn = (ev: FocusEvent) => {
       const t = ev.target;
       if (!(t instanceof HTMLElement) || !t.closest('.tg-chat')) return;
-      // Re-measure through keyboard animation — never window.scrollTo.
       apply();
-      for (const ms of [50, 100, 200, 350]) {
+      for (const ms of [50, 100, 200, 350, 500]) {
         timers.push(window.setTimeout(apply, ms));
       }
     };
@@ -99,9 +102,9 @@ export function useChatViewportHeight(active: boolean) {
       window.removeEventListener('orientationchange', apply);
       document.removeEventListener('focusin', onFocusIn, true);
       document.removeEventListener('focusout', onFocusOut, true);
-      root.style.removeProperty('--tg-vv-height');
-      root.style.removeProperty('--tg-vv-top');
       root.style.removeProperty('--tg-kb-inset');
+      root.style.removeProperty('--tg-vv-top');
+      root.style.removeProperty('--tg-vv-height');
       root.classList.remove('tg-kb-open');
       root.classList.remove('tg-chat-open');
       delete root.dataset.tgShell;

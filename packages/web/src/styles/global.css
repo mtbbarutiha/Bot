@@ -4269,7 +4269,7 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   --tg-list-w: min(360px, 38vw);
   position: relative;
   display: grid;
-  /* Desktop / fallback: layout viewport. Mobile shell overrides via --tg-vv-* */
+  /* Desktop / fallback: layout viewport. Mobile uses bottom: --tg-kb-inset only. */
   height: 100dvh;
   max-height: 100dvh;
   margin: 0;
