@@ -93,13 +93,13 @@ html.tg-chat-open body {
   }
 
   /*
-   * Mobile chat shell — composer-fixed-v5.
+   * Mobile chat shell — composer-fixed-v6.
    * Shell stays full-screen (inset:0). Only the foot/composer is fixed to
-   * bottom: --tg-kb-inset. Avoids shell-height collapse that parked the
-   * composer under the status bar when the keyboard opened.
+   * bottom: --tg-kb-inset. Foot is height-capped so long typing / stacked
+   * chrome cannot push the composer off the visible viewport.
    */
   .tg-chat {
-    --tg-shell: composer-fixed-v5;
+    --tg-shell: composer-fixed-v6;
     position: fixed !important;
     inset: 0 !important;
     top: 0 !important;
@@ -166,6 +166,12 @@ html.tg-chat-open body {
     z-index: 46 !important;
     transform: none !important;
     background: rgba(247, 248, 251, 0.98);
+    /* Never let a tall composer/stack climb off the top of the visible band */
+    max-height: min(42dvh, var(--tg-foot-max, 42dvh)) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
   .tg-chat .tg-composer,
@@ -183,6 +189,9 @@ html.tg-chat-open body {
     scroll-margin: 0 !important;
     scroll-padding: 0 !important;
     font-size: 16px !important; /* iOS won't auto-zoom if >= 16px */
+    max-height: 6.5rem !important; /* ~4–5 lines — stay visible while typing */
+    overflow-y: auto !important;
+    resize: none !important;
   }
 
   .pepito-app-layout:has(.tg-chat),

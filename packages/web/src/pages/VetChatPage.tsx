@@ -597,13 +597,13 @@ export function VetChatPage() {
   useEffect(() => {
     const ta = inputRef.current;
     if (!ta) return;
-    // Mobile: fixed composer height — growing on every keystroke fights the keyboard.
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 859.98px)').matches) {
-      ta.style.height = '44px';
-      return;
-    }
+    // Mobile: grow a few lines so long drafts stay visible, then scroll inside.
+    const mobile =
+      typeof window !== 'undefined' && window.matchMedia('(max-width: 859.98px)').matches;
+    const maxH = mobile ? 104 : 128;
     ta.style.height = 'auto';
-    ta.style.height = `${Math.min(128, Math.max(44, ta.scrollHeight))}px`;
+    ta.style.height = `${Math.min(maxH, Math.max(44, ta.scrollHeight))}px`;
+    ta.scrollTop = ta.scrollHeight;
   }, [draft, consult?.status, hasThread]);
 
   useEffect(() => {

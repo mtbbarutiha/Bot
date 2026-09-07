@@ -7,7 +7,7 @@
  * and clears obsolete Workbox caches.
  */
 
-const BUST_GENERATION = 'petdate-sw-20260907-composer-fixed-v5';
+const BUST_GENERATION = 'petdate-sw-20260907-composer-fixed-v6';
 const BUST_KEY = `pd_sw_bust_${BUST_GENERATION}`;
 const RELOAD_KEY = `pd_sw_reload_${BUST_GENERATION}`;
 
