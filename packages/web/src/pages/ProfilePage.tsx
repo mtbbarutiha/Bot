@@ -681,7 +681,7 @@ export function ProfilePage() {
           <header className="pepito-home-section-head">
             <p className="pepito-eyebrow">پزشک</p>
             <h2>مشاوره سریع با پزشک</h2>
-            <p>درخواست مشاوره فوری دامپزشک — همان مسیر اتصال سریع.</p>
+            <p>هزینه اتصال فوری از موجودی سکه کسر می‌شود.</p>
           </header>
           <Link
             to="/vet-consult"

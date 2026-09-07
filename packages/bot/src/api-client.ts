@@ -468,6 +468,86 @@ export async function createVetConsultation(data: {
   });
 }
 
+export type QuickVetConnectResult = {
+  ok: true;
+  sent: number;
+  notifiedTelegram?: number;
+  cost: number;
+  coins: number;
+  consultations: VetConsultation[];
+  message: string;
+};
+
+export type QuickVetConnectFailure = {
+  ok: false;
+  status: number;
+  error: string;
+  reason?: string;
+  code?: string;
+  requiresResendConfirm?: boolean;
+  balance?: number;
+  cost?: number;
+  refunded?: boolean;
+  coins?: number;
+};
+
+/**
+ * اتصال سریع دامپزشک — کسر سکه و ایجاد درخواست فقط سمت API
+ * (هم‌تراز وب؛ کلاینت ربات به debit جداگانه تکیه نکند).
+ */
+export async function quickVetConnect(
+  patientUserId: number,
+  opts?: { confirmResend?: boolean }
+): Promise<QuickVetConnectResult | QuickVetConnectFailure> {
+  const res = await fetch(`${config.apiUrl}/api/consultations/quick-connect`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      patientUserId,
+      confirmResend: Boolean(opts?.confirmResend),
+    }),
+  });
+  const body = await res.text();
+  let json: Record<string, unknown> = {};
+  try {
+    json = body ? (JSON.parse(body) as Record<string, unknown>) : {};
+  } catch {
+    json = {};
+  }
+  if (!res.ok) {
+    return {
+      ok: false,
+      status: res.status,
+      error:
+        (typeof json.error === 'string' && json.error) ||
+        (typeof json.message === 'string' && json.message) ||
+        body ||
+        `خطای ${res.status}`,
+      reason: typeof json.reason === 'string' ? json.reason : undefined,
+      code: typeof json.code === 'string' ? json.code : undefined,
+      requiresResendConfirm: Boolean(
+        json.requiresResendConfirm || json.code === 'RESEND_CONFIRM_REQUIRED'
+      ),
+      balance: typeof json.balance === 'number' ? json.balance : undefined,
+      cost: typeof json.cost === 'number' ? json.cost : undefined,
+      refunded: Boolean(json.refunded),
+      coins: typeof json.coins === 'number' ? json.coins : undefined,
+    };
+  }
+  return {
+    ok: true,
+    sent: Number(json.sent ?? 0),
+    notifiedTelegram:
+      typeof json.notifiedTelegram === 'number' ? json.notifiedTelegram : undefined,
+    cost: Number(json.cost ?? 0),
+    coins: Number(json.coins ?? 0),
+    consultations: Array.isArray(json.consultations)
+      ? (json.consultations as VetConsultation[])
+      : [],
+    message: typeof json.message === 'string' ? json.message : 'درخواست ارسال شد.',
+  };
+}
+
 export async function updateVetConsultationStatus(
   id: number,
   status: 'requested' | 'active' | 'completed' | 'cancelled' | 'expired'

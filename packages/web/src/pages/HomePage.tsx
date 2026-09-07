@@ -142,7 +142,7 @@ export function HomePage() {
               data-testid="owner-quick-vet-home-action"
             >
               <strong>مشاوره سریع با پزشک</strong>
-              <span>درخواست مشاوره فوری دامپزشک</span>
+              <span>درخواست فوری — کسر سکه از کیف پول</span>
             </Link>
           ) : null}
         </div>

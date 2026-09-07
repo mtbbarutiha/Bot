@@ -559,6 +559,17 @@ export function registerHandlers(bot: Bot): void {
 
   bot.callbackQuery(/^medical:/, (ctx) => handleComingSoon(ctx, 'پزشکی'));
   bot.callbackQuery('vet:connect', (ctx) => handleQuickVetConnect(ctx));
+  bot.callbackQuery('vet:connect:resend', (ctx) =>
+    handleQuickVetConnect(ctx, { confirmResend: true })
+  );
+  bot.callbackQuery('vet:connect:cancel', async (ctx) => {
+    await ctx.answerCallbackQuery({ text: 'لغو شد' }).catch(() => undefined);
+    try {
+      await ctx.editMessageReplyMarkup({ reply_markup: { inline_keyboard: [] } });
+    } catch {
+      /* ignore */
+    }
+  });
   bot.callbackQuery(/^vet:reconnect:(\d+)$/, (ctx) =>
     handleQuickVetReconnect(ctx, Number(ctx.match![1]))
   );

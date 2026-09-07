@@ -518,6 +518,17 @@ export function VetConsultPage() {
       return;
     }
 
+    const payOk = window.confirm(
+      [
+        `هزینه این درخواست: ${formatCoins(QUICK_VET_COST)} سکه`,
+        `موجودی فعلی: ${formatCoins(coins)} سکه`,
+        '',
+        'با تأیید، سکه از موجودی‌ات کسر می‌شود و درخواست برای پزشک‌های آنلاین ارسال می‌شود.',
+        'ادامه می‌دهی؟',
+      ].join('\n')
+    );
+    if (!payOk) return;
+
     setPhase('sending');
     setError(null);
     setStatusLines(null);
@@ -550,6 +561,7 @@ export function VetConsultPage() {
         'درخواستت برای پزشک‌های آنلاین ربات و وب ارسال شد.',
         `پزشک‌های هدف: ${formatCoins(result.sent)}`,
         `سکه کسر شده: ${formatCoins(result.cost)}`,
+        `موجودی باقی‌مانده: ${formatCoins(result.coins)}`,
         'به‌محض قبول پزشک، همین‌جا وارد چت وب می‌شوی.',
       ]);
       setPhase('waiting');
@@ -668,9 +680,14 @@ export function VetConsultPage() {
           </span>
           <div>
             <strong>هزینه اتصال فوری</strong>
-            <span>{formatCoins(QUICK_VET_COST)} سکه</span>
+            <span>{formatCoins(QUICK_VET_COST)} سکه — قبل از ارسال کسر می‌شود</span>
           </div>
-          {!needsLogin ? <small>موجودی: {formatCoins(coins)} سکه</small> : null}
+          {!needsLogin ? (
+            <small>
+              موجودی: {formatCoins(coins)} سکه
+              {lowCoins ? ' — برای ادامه سکه کم داری' : ''}
+            </small>
+          ) : null}
         </div>
 
         {needsLogin ? (
@@ -700,10 +717,10 @@ export function VetConsultPage() {
           >
             <PawIcon />
             {phase === 'sending'
-              ? 'در حال ارسال درخواست…'
+              ? 'در حال کسر سکه و ارسال…'
               : phase === 'waiting' || phase === 'connected'
                 ? 'ارسال دوباره درخواست'
-                : 'به یک پزشک آنلاین وصلم کن'}
+                : `تأیید پرداخت (${formatCoins(QUICK_VET_COST)} سکه) و اتصال`}
           </button>
         )}
 
