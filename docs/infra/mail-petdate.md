@@ -2,36 +2,58 @@
 
 Mailbox هدف: **`info@petdate.ir`** (آلیاس‌ها: `hello@` / `no-reply@` / `noreply@` / postmaster / abuse → همان inbox).
 
-ارسال OTP اپ از **`no-reply@petdate.ir`** (هویت From؛ mailbox جدا لازم نیست).
+ارسال OTP اپ از **`no-reply@petdate.ir`** (هویت From + Return-Path؛ mailbox جدا لازم نیست).
 
 VPS مبدأ: `185.110.189.218` — هاست میل: `mail.petdate.ir`
 
-## وضعیت فعلی DNS (بررسی ۲۰۲۶-۰۹-۰۶)
+---
 
-| رکورد | مقدار فعلی | مشکل |
-|--------|------------|------|
-| `MX petdate.ir` | `10 185.110.189.218.` | بهتر است `10 mail.petdate.ir.` باشد (نه IP خام) |
-| `A mail.petdate.ir` | `185.239.1.100` (WCDN) | **غلط** — میل نباید از CDN رد شود |
-| `A petdate.ir` | `185.110.189.218` | برای origin OK |
-| `TXT @` (SPF) | `v=spf1 ip4:185.110.189.218 a:mail.petdate.ir mx -all` | تا وقتی `A mail` غلط است، `a:mail.petdate.ir` را حذف کنید یا بعد از اصلاح نگه دارید |
-| `TXT mail._domainkey` | `"RSA"` و `"185.110.189.218"` | **غلط کامل** — باید کلید DKIM یک‌خطی باشد (پایین) |
-| `TXT _dmarc` | `"SPF"` | **غلط** — باید رکورد DMARC باشد |
+## چرا می‌رود اسپم؟ (وضعیت واقعی DNS — ۲۰۲۶-۰۹-۰۷)
 
-> احتمالاً مقادیر DKIM/DMARC/IP جابه‌جا در پنل DNS ثبت شده‌اند. رکوردهای TXT اشتباه را **حذف** و با مقادیر درست جایگزین کنید.
+| رکورد | مقدار فعلی | اثر روی اسپم |
+|--------|------------|----------------|
+| `MX petdate.ir` | `10 185.110.189.218.` | بهتر است نام هاست باشد؛ برای **ارسال** OTP حیاتی نیست |
+| `A mail.petdate.ir` | `185.239.1.100` (WCDN) | **غلط** — پروکسی CDN برای میل ممنوع |
+| `TXT @` (SPF) | `v=spf1 ip4:185.110.189.218 a:mail.petdate.ir mx -all` | `ip4` درست است → SPF معمولاً Pass؛ ولی `a:mail` تا اصلاح A بی‌معنی/گمراه‌کننده است |
+| `TXT mail._domainkey` | `"RSA"` و `"185.110.189.218"` | **غلط کامل** → DKIM Fail |
+| `TXT _dmarc` | `"SPF"` | **غلط کامل** → DMARC بی‌اثر |
+| PTR / rDNS | ندارد / `srv5498305369` | **عامل قوی اسپم** — باید `mail.petdate.ir` شود |
 
-## رکوردهای DNS که باید اضافه/اصلاح کنید
+> تا وقتی DKIM/DMARC/mail A/PTR در پنل درست نشوند، سرور می‌فرستد ولی Gmail/Yahoo اغلب می‌گذارند Spam. این را فقط با DNS (و PTR هاست) می‌شود درست کرد.
 
-در پنل DNS پارزپک (یا رجیسترار). برای ساب‌دامین میل: **فقط DNS / grey cloud — بدون پروکسی WCDN**.
+---
 
-| نوع | نام | مقدار | یادداشت |
-|------|-----|--------|---------|
-| **A** | `mail` | `185.110.189.218` | **اجباری** — نباید `185.239.1.100` باشد |
-| **MX** | `@` / `petdate.ir` | `10 mail.petdate.ir.` | به‌جای IP خام |
-| **TXT** | `@` | `v=spf1 ip4:185.110.189.218 mx -all` | SPF (ساده و امن تا mail A درست شود) |
-| **TXT** | `mail._domainkey` | ببینید بلوک DKIM پایین | OpenDKIM selector=`mail` — **یک رکورد TXT** |
-| **TXT** | `_dmarc` | `v=DMARC1; p=none; rua=mailto:info@petdate.ir; fo=1` | شروع با `p=none` |
+## کارهایی که روی VPS انجام شده
 
-### مقدار TXT برای `mail._domainkey` (یک خط — کپی کامل)
+- Postfix: `myhostname` / `smtp_helo_name` = `mail.petdate.ir` (نه hostname سیستم `srv…`)
+- OpenDKIM: امضای `d=petdate.ir` با selector=`mail` برای همه `*@petdate.ir`
+- Envelope-from اپ = همان From (`no-reply@petdate.ir`) برای هم‌ترازی SPF/DMARC
+- Message-ID روی دامنه `petdate.ir`؛ هدرهای transactional (`Auto-Submitted`)
+- کلید عمومی یک‌خطی: `/root/.petdate-mail/dkim-txt-oneline.txt`
+
+---
+
+## رکوردهایی که باید در پنل DNS بگذارید (ParsPack / Arvan)
+
+**برای ساب‌دامین `mail`:** فقط DNS / grey cloud — **Proxy / WCDN خاموش**.
+
+رکوردهای TXT اشتباه فعلی (`RSA`، IP خام، `SPF`) را **حذف** کنید، بعد این‌ها را بسازید:
+
+| # | نوع | نام (Host) | مقدار (Value) | اولویت |
+|---|-----|------------|---------------|--------|
+| 1 | **A** | `mail` | `185.110.189.218` | — |
+| 2 | **MX** | `@` | `mail.petdate.ir.` | **10** |
+| 3 | **TXT** | `@` | `v=spf1 ip4:185.110.189.218 -all` | — |
+| 4 | **TXT** | `mail._domainkey` | *(یک خط کامل پایین)* | — |
+| 5 | **TXT** | `_dmarc` | `v=DMARC1; p=none; rua=mailto:info@petdate.ir; fo=1; adkim=r; aspf=r` | — |
+
+بعد از اینکه `A mail` درست شد، اختیاری SPF را به این عوض کنید:
+
+```
+v=spf1 ip4:185.110.189.218 a:mail.petdate.ir mx -all
+```
+
+### مقدار TXT برای `mail._domainkey` (یک رکورد — کپی کامل یک خط)
 
 ```
 v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtFt173AGZkIYu6UPE2qbmAjlYtd7DzfelmmBAH/n7XBrlvZFh2beekfxMNw8OYCcAWobiZcPdcXNtzSK4sFbkSVoSFqJ6a/krm1R+aOAjnKsYgfn6Hhmu/mDQOXxFNVqEhCdByONCfWihrs12uwwTTlCCro4W41qHlf4sCm8xnT9yEq4j1glLyxk5WMLuz4jygs2uAbv1oj7WmhGCzPu1TQOFkxwpgJ97VZZRnwRgOeD9P465BdfgxkQyVfFX6ukijuqg/hpGZWlOIqTVj+jlbKsCfxD2ZkLNCotnSjRre0o8EuvYRtYX6SYHqUvFtwdlQ53kr/M+CuFPjujt7MivQIDAQAB
@@ -43,15 +65,35 @@ v=DKIM1; h=sha256; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAtFt173AG
 ssh root@185.110.189.218 'cat /root/.petdate-mail/dkim-txt-oneline.txt'
 ```
 
-اختیاری ولی مهم برای deliverability: از پشتیبانی هاست بخواهید **PTR** آی‌پی `185.110.189.218` را به `mail.petdate.ir` تنظیم کند (الان `srv5498305369` است).
+### PTR (rDNS) — تیکت به پشتیبانی هاست (BitCommand / ParsPack)
 
-پس از اینکه `A mail.petdate.ir` به origin اشاره کرد:
+متن پیشنهادی تیکت:
+
+> لطفاً PTR آی‌پی `185.110.189.218` را روی `mail.petdate.ir` تنظیم کنید. این سرور SMTP دامنه petdate.ir است.
+
+بدون PTR، حتی با SPF/DKIM درست، احتمال اسپم بالاست.
+
+### بعد از درست شدن `A mail`
 
 ```bash
 certbot certonly --nginx -d mail.petdate.ir
-# سپس دوباره:
 bash /opt/petdate/infra/mail/setup-mail.sh
 ```
+
+### تأیید بعد از انتشار DNS (۵–۳۰ دقیقه)
+
+```bash
+dig +short A mail.petdate.ir          # باید 185.110.189.218 باشد
+dig +short MX petdate.ir              # باید 10 mail.petdate.ir. باشد
+dig +short TXT petdate.ir             # باید با v=spf1 ip4:185.110.189.218 شروع شود
+dig +short TXT mail._domainkey.petdate.ir   # باید با v=DKIM1 شروع شود و p=MIIB… داشته باشد
+dig +short TXT _dmarc.petdate.ir      # باید با v=DMARC1 شروع شود
+dig +short -x 185.110.189.218         # باید mail.petdate.ir. باشد (بعد از PTR)
+```
+
+ابزار خارجی: [mxtoolbox.com/SuperTool.aspx](https://mxtoolbox.com/SuperTool.aspx) → SPF / DKIM / DMARC / Blacklist.
+
+---
 
 ## دسترسی به mailbox
 
@@ -96,32 +138,29 @@ SMTP_HOST=127.0.0.1
 SMTP_PORT=25
 SMTP_FROM=no-reply@petdate.ir
 SMTP_FROM_NAME=petdate
+SMTP_HELO_NAME=mail.petdate.ir
+SMTP_REPLY_TO=info@petdate.ir
 SMTP_TLS_REJECT_UNAUTHORIZED=0
 ```
 
-API کد OTP تب ایمیل را از طریق Postfix محلی می‌فرستد با From = `no-reply@petdate.ir` (OpenDKIM برای `*@petdate.ir` امضا می‌کند).
+API کد OTP را با From + Return-Path = `no-reply@petdate.ir` می‌فرستد؛ OpenDKIM برای `*@petdate.ir` امضا می‌کند.
 
 `SMTP_TLS_REJECT_UNAUTHORIZED=0` لازم است چون گواهی فعلی `mail.petdate.ir` هنوز self-signed است (تا بعد از certbot روی DNS درست).
-
-> **Deliverability:** تا وقتی `A mail` / DKIM TXT / DMARC در DNS درست نشوند، OTP ممکن است به spam برود یا توسط گیرنده رد شود — ارسال از سرور کار می‌کند ولی inbox تضمین نیست.
 
 ### پنل مشاهده ارسال (ادمین وب)
 
 - URL: `https://petdate.ir/admin/mail`
-- ورود: `https://petdate.ir/admin/login` با رمز `ADMIN_PASSWORD` (همان پنل ادمین؛ پیش‌فرض توسعه `petdate`)
-- نشان می‌دهد: host/port/from (بدون رمز)، وضعیت پورت، لاگ ارسال‌ها، OTPهای ایمیل فعال، و دکمهٔ تست ارسال
-- API: `GET /api/admin/mail` و `POST /api/admin/mail/test` (هدر `x-admin-password`)
+- ورود: `https://petdate.ir/admin/login` با رمز `ADMIN_PASSWORD`
+- نشان می‌دهد: host/port/from، وضعیت پورت، لاگ ارسال‌ها، OTPهای ایمیل فعال، و دکمهٔ تست ارسال
 
-## تست
+## تست روی سرور
 
 ```bash
 ss -tlnp | grep -E ':25|:465|:587|:993'
-echo 'test' | mail -s 'hello' info@petdate.ir
-curl -sS -X POST http://127.0.0.1:3001/api/auth/otp/request \
-  -H 'Content-Type: application/json' \
-  -d '{"channel":"email","target":"YOUR@gmail.com"}'
-tail -50 /var/log/mail.log
+# تست محلی با envelope درست:
+printf 'Subject: probe\nFrom: no-reply@petdate.ir\nTo: info@petdate.ir\n\nok\n' \
+  | sendmail -t -f no-reply@petdate.ir
+tail -50 /var/log/mail.log   # باید DKIM-Signature field added ببینید
 ```
 
-**دریافت از اینترنت (IMAP/کلاینت میل)** تا وقتی `A mail.petdate.ir` از CDN به `185.110.189.218` عوض نشود قابل اعتماد نیست.
-**ارسال OTP از اپ** از طریق `127.0.0.1:25` کار می‌کند؛ برای inbox/spam کمتر، DKIM + mail A + PTR را درست کنید.
+**ارسال OTP از اپ** از طریق `127.0.0.1:25` کار می‌کند؛ برای inbox، DNS بالا + PTR را درست کنید.
