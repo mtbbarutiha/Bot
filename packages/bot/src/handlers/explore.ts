@@ -65,6 +65,28 @@ export async function handleExplorePickPet(ctx: Context): Promise<void> {
       return;
     }
 
+    const profileOk = Boolean(
+      user.name &&
+        user.age &&
+        user.gender &&
+        user.country &&
+        user.city &&
+        (user.country !== 'ایران' || user.province)
+    );
+    if (!profileOk) {
+      await safeReply(
+        ctx,
+        [
+          '⚠️ پروفایلت هنوز کامل نیست.',
+          'برای پیدا کردن همبازی اول نام، سن، جنسیت و شهر رو تکمیل کن.',
+          '',
+          'از منو «👤 پروفایل خودم» رو بزن.',
+        ].join('\n'),
+        { reply_markup: menuKeyboardFor(ctx, user) }
+      );
+      return;
+    }
+
     const myPets = await listPets({ ownerId: user.id });
     if (myPets.length === 0) {
       await safeReply(ctx, 'اول باید حداقل یک پت ثبت کنی تا برات همبازی پیدا کنیم.', {

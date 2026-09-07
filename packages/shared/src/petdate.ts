@@ -894,6 +894,63 @@ export function toPersianDigits(value: number | string): string {
   return String(value).replace(/\d/g, (d) => FA_DIGITS[Number(d)] ?? d);
 }
 
+/** محدوده سن کاربر (سال) در ثبت‌نام / پروفایل */
+export const USER_AGE_MIN = 13;
+export const USER_AGE_MAX = 90;
+
+/** مقادیر دکمه‌ای سن کاربر — بدون ایموجی تا روی موبایل/دسکتاپ قابل لمس باشد */
+export const PROFILE_AGE_CHIP_VALUES = [
+  18, 20, 22, 24, 25, 26, 27, 28, 30, 32, 35, 40, 45, 50,
+] as const;
+
+export const USER_AGE_CUSTOM_LABEL = '✏️ سن دیگر';
+
+/** برچسب دکمه سن کاربر (رقم پارسی) */
+export function formatUserAgeChip(age: number): string {
+  return toPersianDigits(age);
+}
+
+/** لیست برچسب‌های کیبورد سن پروفایل (ربات) */
+export function profileAgeChipLabels(): string[] {
+  return [
+    ...PROFILE_AGE_CHIP_VALUES.map((n) => formatUserAgeChip(n)),
+    USER_AGE_CUSTOM_LABEL,
+  ];
+}
+
+/**
+ * پارس سن کاربر از دکمه / ورودی آزاد.
+ * پشتیبانی: رقم پارسی/عربی/لاتین، «۲۵ ساله»، «🎂 25»، برچسب دکمه
+ */
+export function parseUserAge(raw: string): number | null {
+  const trimmed = (raw ?? '')
+    .trim()
+    .replace(/ي/g, 'ی')
+    .replace(/ك/g, 'ک');
+  if (!trimmed || trimmed === USER_AGE_CUSTOM_LABEL) return null;
+
+  for (const n of PROFILE_AGE_CHIP_VALUES) {
+    const fa = formatUserAgeChip(n);
+    if (
+      trimmed === fa ||
+      trimmed === String(n) ||
+      trimmed === `🎂 ${n}` ||
+      trimmed === `🎂 ${fa}` ||
+      trimmed === `${n} ساله` ||
+      trimmed === `${fa} ساله`
+    ) {
+      return n;
+    }
+  }
+
+  const text = toEnglishDigits(trimmed);
+  const match = text.match(/(\d{1,2})/);
+  if (!match) return null;
+  const age = Number(match[1]);
+  if (!Number.isFinite(age) || age < USER_AGE_MIN || age > USER_AGE_MAX) return null;
+  return age;
+}
+
 /** نمایش امتیاز دامپزشک — مثلاً «⭐ ۴.۶ (۱۲ نظر)» یا پیام خالی */
 export function formatVetRatingLine(
   avgRating?: number | null,
@@ -963,8 +1020,16 @@ export function parsePetAgeInput(raw: string): number | null {
     return Number.isFinite(m) && m >= 1 && m <= 360 ? m : null;
   }
 
-  // عدد خام بدون واحد قبول نیست — باید ماهه/ساله باشد یا از دکمه انتخاب شود
-  if (/^\d+$/.test(text)) return null;
+  // عدد خام بعد از «سن دقیق»: ۱–۲۵ → سال، ۲۶–۳۶۰ → ماه
+  if (/^\d+$/.test(text)) {
+    const n = Number(text);
+    if (!Number.isFinite(n) || n < 1) return null;
+    if (n <= 25) {
+      const total = Math.round(n * 12);
+      return total >= 1 && total <= 360 ? total : null;
+    }
+    return n <= 360 ? n : null;
+  }
 
   return null;
 }

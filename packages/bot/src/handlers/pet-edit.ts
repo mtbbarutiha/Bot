@@ -568,9 +568,15 @@ export async function handlePetEditText(ctx: Context, text: string): Promise<boo
 
   if (session.step === 'pet_age') {
     if (text === PET_AGE_CUSTOM_LABEL) {
-      await ctx.reply('سن رو به ماه یا سال بنویس (مثلاً ۱۸ ماه یا ۲ سال):', {
-        reply_markup: textStepKeyboard({ noBack: true }),
-      });
+      await ctx.reply(
+        [
+          'سن رو بنویس، مثلاً:',
+          '• ۱۸ ماه / ۸ ماهه',
+          '• ۲ سال / ۲ ساله',
+          '• فقط عدد ۲ (= ۲ ساله)',
+        ].join('\n'),
+        { reply_markup: textStepKeyboard({ noBack: true }) }
+      );
       return true;
     }
     const ageMonths = parsePetAgeInput(text);

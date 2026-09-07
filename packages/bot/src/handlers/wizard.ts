@@ -476,7 +476,8 @@ export async function handleWizardText(ctx: Context, text: string): Promise<bool
           'سن دقیق رو بنویس، مثلاً:',
           '• ۸ ماهه',
           '• ۲ ساله',
-          '• ۱ سال و ۳ ماه',
+          '• فقط عدد ۲ (= ۲ ساله)',
+          '• فقط عدد ۸ با واحد ماه: ۸ ماه',
         ].join('\n'),
         { reply_markup: textStepKeyboard() }
       );

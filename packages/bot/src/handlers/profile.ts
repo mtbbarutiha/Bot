@@ -4,12 +4,18 @@ import {
   COUNTRY_IRAN,
   IRAN_PROVINCES,
   PROFILE_INTEREST_OPTIONS,
+  USER_AGE_CUSTOM_LABEL,
+  USER_AGE_MAX,
+  USER_AGE_MIN,
   USER_GENDER_LABELS,
   USER_ROLE_LABELS,
   VERIFIED_BADGE,
   VERIFICATION_STATUS_LABELS,
   VET_CREDENTIAL_STATUS_LABELS,
   normalizeRoles,
+  parseUserAge,
+  toEnglishDigits,
+  toPersianDigits,
   userHasRole,
 } from '@petdate/shared';
 import {
@@ -58,12 +64,6 @@ const PROFILE_BACK: Partial<Record<BotStep, BotStep>> = {
 
 function stepTitle(n: number): string {
   return `مرحله ${n} از ${PROFILE_TOTAL}`;
-}
-
-function toEnglishDigits(raw: string): string {
-  return raw
-    .replace(/[۰-۹]/g, (d) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(d)))
-    .replace(/[٠-٩]/g, (d) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
 }
 
 function isProfileComplete(user: User): boolean {
@@ -550,8 +550,18 @@ async function askProfileName(ctx: Context, currentName?: string, section = fals
 async function askProfileAge(ctx: Context, section = false): Promise<void> {
   await ctx.reply(
     section
-      ? '🎂 <b>ویرایش سن</b>\n\nسنت چند سالِ؟\nاز دکمه‌ها انتخاب کن یا عدد بنویس:'
-      : `🎂 <b>${stepTitle(2)}</b>\n\nسنت چند سالِ؟\nاز دکمه‌ها انتخاب کن یا عدد بنویس:`,
+      ? [
+          '🎂 <b>ویرایش سن</b>',
+          '',
+          'سنت چند سالِ؟',
+          'از دکمه‌ها یکی را بزن، یا «✏️ سن دیگر» و بعد عدد بنویس.',
+        ].join('\n')
+      : [
+          `🎂 <b>${stepTitle(2)}</b>`,
+          '',
+          'سنت چند سالِ؟',
+          'از دکمه‌ها یکی را بزن، یا «✏️ سن دیگر» و بعد عدد بنویس (مثلاً ۲۷).',
+        ].join('\n'),
     { parse_mode: 'HTML', reply_markup: ageChipKeyboard(PROFILE_AGE_CHIPS) }
   );
 }
@@ -791,11 +801,24 @@ export async function handleProfileWizardText(ctx: Context, text: string): Promi
   }
 
   if (session.step === 'profile_age') {
-    const age = Number(toEnglishDigits(text.trim()).replace(/[^\d]/g, ''));
-    if (!Number.isFinite(age) || age < 13 || age > 99) {
-      await ctx.reply('سن معتبر وارد کن (۱۳ تا ۹۹) یا از دکمه‌ها انتخاب کن.', {
-        reply_markup: ageChipKeyboard(PROFILE_AGE_CHIPS),
-      });
+    if (text.trim() === USER_AGE_CUSTOM_LABEL) {
+      await ctx.reply(
+        [
+          'سنت رو با عدد بنویس:',
+          `مثلاً ${toPersianDigits(27)} یا ۲۷ ساله`,
+          `(از ${toPersianDigits(USER_AGE_MIN)} تا ${toPersianDigits(USER_AGE_MAX)})`,
+        ].join('\n'),
+        { reply_markup: textStepKeyboard(profileNavOpts({ skipLater: !section })) }
+      );
+      return true;
+    }
+
+    const age = parseUserAge(text);
+    if (age == null) {
+      await ctx.reply(
+        `سن معتبر انتخاب کن (${toPersianDigits(USER_AGE_MIN)} تا ${toPersianDigits(USER_AGE_MAX)}) یا از دکمه‌ها بزن.`,
+        { reply_markup: ageChipKeyboard(PROFILE_AGE_CHIPS) }
+      );
       return true;
     }
     draft.age = age;

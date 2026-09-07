@@ -387,7 +387,7 @@ export function ChatPage() {
   const { matchId } = useParams();
   const navigate = useNavigate();
   const desktop = useIsDesktop();
-  const { user: authUser, token } = useAuthStore();
+  const { user: authUser, token, isProfileComplete } = useAuthStore();
   const myUserId = authUser?.id;
   const inboxScope = inboxScopeForUser(authUser);
   const selectedId = Number(matchId);
@@ -1243,6 +1243,28 @@ export function ChatPage() {
   ]
     .filter(Boolean)
     .join(' ');
+
+  // Incomplete registration: don't render broken empty chat chrome — clear CTA instead.
+  if (!isProfileComplete) {
+    return (
+      <div className="tg-chat tg-chat--gate" dir="rtl">
+        <div className="tg-profile-gate">
+          <SiteLogo className="tg-chat-empty-logo" height={52} />
+          <h1>پروفایلت هنوز کامل نیست</h1>
+          <p>
+            برای دیدن گفتگوها و پیدا کردن همبازی، اول ثبت‌نام را تمام کن
+            (نام، سن، جنسیت و شهر).
+          </p>
+          <Link to="/onboarding/profile" className="pepito-btn button-1 tg-profile-gate__cta">
+            تکمیل پروفایل
+          </Link>
+          <Link to="/home" className="tg-chat-link-btn">
+            بازگشت به پنل
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={shellClass} dir="rtl">

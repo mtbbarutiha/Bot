@@ -17,10 +17,12 @@ import {
   USER_ROLE_LABELS,
   citiesForProvince,
   normalizeRoles,
+  parseUserAge,
   primaryRole,
   userHasRole,
   type UserGender,
 } from '@petdate/shared';
+import { AgePicker } from '../components/AgePicker';
 import { PetAvatar } from '../components/PetAvatar';
 import { ProfileAvatarEditor } from '../components/ProfileAvatarEditor';
 import { RoleSwitchControl } from '../components/RoleSwitchControl';
@@ -119,8 +121,8 @@ export function ProfilePage() {
       setError('نام را درست وارد کن');
       return;
     }
-    const ageNum = Number(age);
-    if (!Number.isFinite(ageNum) || ageNum < 13 || ageNum > 90) {
+    const ageNum = parseUserAge(age);
+    if (ageNum == null) {
       setError('سن معتبر نیست');
       return;
     }
@@ -203,15 +205,10 @@ export function ProfilePage() {
                 />
               </label>
 
-              <label className="pepito-field">
+              <div className="pepito-field">
                 <span>سن</span>
-                <input
-                  value={age}
-                  onChange={(e) => setAge(e.target.value)}
-                  inputMode="numeric"
-                  required
-                />
-              </label>
+                <AgePicker value={age} onChange={setAge} />
+              </div>
 
               <div className="pepito-field pepito-field--full">
                 <span>جنسیت</span>

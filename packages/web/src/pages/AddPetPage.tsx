@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
+import { toEnglishDigits } from '@petdate/shared';
+import { PetAgePicker } from '../components/AgePicker';
 import { PetPhotoUpload } from '../components/PetPhotoUpload';
 import { DEFAULT_IMAGES, imageForType } from '../data/petImages';
 import { useAuthStore } from '../hooks/useAuthStore';
@@ -60,7 +62,7 @@ export function AddPetPage() {
     setSaving(true);
     setSubmitError('');
 
-    const ageNum = Number(form.age) || 1;
+    const ageNum = Number(toEnglishDigits(form.age).replace(/[^\d]/g, '')) || 1;
     const ageMonths = form.ageUnit === 'year' ? ageNum * 12 : ageNum;
     const resolvedImage = form.imageUrl || previewFallback;
 
@@ -174,24 +176,14 @@ export function AddPetPage() {
           />
         </div>
 
-        <div className="form-grid-2">
-          <div className="form-group">
-            <label className="form-label">سن</label>
-            <input
-              type="number"
-              min="1"
-              className="form-input"
-              value={form.age}
-              onChange={(e) => update('age', e.target.value)}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">واحد</label>
-            <select className="form-select" value={form.ageUnit} onChange={(e) => update('ageUnit', e.target.value)}>
-              <option value="year">سال</option>
-              <option value="month">ماه</option>
-            </select>
-          </div>
+        <div className="form-group">
+          <label className="form-label">سن پت</label>
+          <PetAgePicker
+            value={form.age}
+            unit={form.ageUnit}
+            onChangeValue={(v) => update('age', v)}
+            onChangeUnit={(u) => update('ageUnit', u)}
+          />
         </div>
 
         <div className="form-grid-2">

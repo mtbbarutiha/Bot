@@ -4,10 +4,14 @@ import {
   BRAND,
   IRAN_PROVINCES,
   PROFILE_INTEREST_OPTIONS,
+  USER_AGE_MAX,
+  USER_AGE_MIN,
   USER_GENDER_LABELS,
   citiesForProvince,
+  parseUserAge,
   type UserGender,
 } from '@petdate/shared';
+import { AgePicker } from '../../components/AgePicker';
 import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { useUserStore } from '../../hooks/useUserStore';
@@ -26,7 +30,7 @@ const STEPS = [
 
 const STEP_META: Record<(typeof STEPS)[number], { title: string; lead: string }> = {
   name: { title: 'نام نمایشی', lead: 'همان نامی که در پروفایل و گفتگوها دیده می‌شود.' },
-  age: { title: 'سن', lead: 'برای تجربه مناسب‌تر — فقط عدد.' },
+  age: { title: 'سن', lead: 'از دکمه‌ها انتخاب کن یا با − / + تنظیم کن.' },
   gender: { title: 'جنسیت', lead: 'یکی را انتخاب کن.' },
   country: { title: 'کشور', lead: 'ایران یا سایر.' },
   province: { title: 'استان', lead: 'استان محل زندگی‌ات.' },
@@ -37,6 +41,17 @@ const STEP_META: Record<(typeof STEPS)[number], { title: string; lead: string }>
 
 /** فیلدهایی که در ربات با «⏭ رد کردن» قابل عبورند */
 const FIELD_SKIPPABLE = new Set<(typeof STEPS)[number]>(['bio', 'interests']);
+
+const STEP_LABELS: Record<(typeof STEPS)[number], string> = {
+  name: 'نام',
+  age: 'سن',
+  gender: 'جنسیت',
+  country: 'کشور',
+  province: 'استان',
+  city: 'شهر',
+  bio: 'درباره',
+  interests: 'علایق',
+};
 
 export function ProfileWizardPage() {
   const navigate = useNavigate();
@@ -62,6 +77,13 @@ export function ProfileWizardPage() {
     () => (province ? citiesForProvince(province) : []),
     [province]
   );
+
+  const visibleSteps = useMemo(
+    () => STEPS.filter((s) => !(s === 'province' && country !== 'ایران')),
+    [country]
+  );
+  const visibleIdx = Math.max(0, visibleSteps.indexOf(step));
+  const progressPct = ((visibleIdx + 1) / visibleSteps.length) * 100;
 
   if (!isLoggedIn) {
     navigate(`/auth/login?next=${encodeURIComponent(returnTo)}`, { replace: true });
@@ -89,9 +111,15 @@ export function ProfileWizardPage() {
     setBusy(true);
     setError('');
     try {
+      const ageNum = parseUserAge(age);
+      if (ageNum == null) {
+        setError(`سن معتبر نیست (${USER_AGE_MIN} تا ${USER_AGE_MAX})`);
+        setBusy(false);
+        return;
+      }
       const saved = await saveProfile({
         name: name.trim(),
-        age: Number(age),
+        age: ageNum,
         gender,
         country,
         province: country === 'ایران' ? province : undefined,
@@ -140,8 +168,10 @@ export function ProfileWizardPage() {
     e?.preventDefault();
     if (step === 'name' && name.trim().length < 2) return setError('نام را درست وارد کن');
     if (step === 'age') {
-      const n = Number(age);
-      if (!Number.isFinite(n) || n < 13 || n > 90) return setError('سن معتبر نیست');
+      const n = parseUserAge(age);
+      if (n == null) {
+        return setError(`سن معتبر نیست — بین ${USER_AGE_MIN} تا ${USER_AGE_MAX} انتخاب کن`);
+      }
     }
     if (step === 'gender' && !gender) return setError('جنسیت را انتخاب کن');
     if (step === 'country' && !country.trim()) return setError('کشور را مشخص کن');
@@ -174,10 +204,24 @@ export function ProfileWizardPage() {
       <p className="pepito-auth-kicker">پروفایل</p>
       <h1>{meta.title}</h1>
       <p className="auth-lead">
-        {meta.lead} مرحله {stepIdx + 1} از {STEPS.length}.
+        {meta.lead} · مرحله {visibleIdx + 1} از {visibleSteps.length}
       </p>
+
+      <ol className="wizard-step-rail" aria-label="مراحل تکمیل پروفایل">
+        {visibleSteps.map((s, i) => (
+          <li
+            key={s}
+            className={
+              i < visibleIdx ? 'is-done' : i === visibleIdx ? 'is-current' : undefined
+            }
+          >
+            <span>{STEP_LABELS[s]}</span>
+          </li>
+        ))}
+      </ol>
+
       <div className="wizard-progress" aria-hidden>
-        <span style={{ width: `${((stepIdx + 1) / STEPS.length) * 100}%` }} />
+        <span style={{ width: `${progressPct}%` }} />
       </div>
 
       <form className="auth-form pepito-wizard-form" onSubmit={goNext}>
@@ -187,18 +231,7 @@ export function ProfileWizardPage() {
             <input value={name} onChange={(e) => setName(e.target.value)} required autoFocus />
           </label>
         )}
-        {step === 'age' && (
-          <label>
-            سن
-            <input
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              inputMode="numeric"
-              required
-              autoFocus
-            />
-          </label>
-        )}
+        {step === 'age' && <AgePicker value={age} onChange={setAge} />}
         {step === 'gender' && (
           <div className="pepito-choice-row" role="group" aria-label="جنسیت">
             {(['male', 'female'] as UserGender[]).map((g) => (
@@ -321,7 +354,7 @@ export function ProfileWizardPage() {
           onClick={() => void skipWizardLater()}
           disabled={busy}
         >
-          فعلاً رد کن
+          فعلاً رد کن — بعداً تکمیل می‌کنم
         </button>
       </form>
     </AuthShell>
