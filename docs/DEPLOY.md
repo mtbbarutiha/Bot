@@ -1,34 +1,67 @@
 # Deploy discipline (PetDate)
 
-> **Agents:** before any manual `rsync` of `dist`, run `./scripts/predeploy-check.sh` and only proceed if it passes. `deploy-vps.sh` runs the same check automatically (escape hatch: `SKIP_PREDEPLOY=1`).
+> **Agents:** do **not** `rsync` to the VPS from feature branches. The controlled path is **GitHub Actions → Deploy**. Before any break-glass manual deploy, run `./scripts/predeploy-check.sh` and only proceed if it passes. `deploy-vps.sh` runs the same check automatically (escape hatch: `SKIP_PREDEPLOY=1`).
 
-## Root cause (not CI/CD)
+## Controlled path: CI/CD
 
-**CI/CD does not fix this.** Pipelines still ship whatever tree you point at. The bug is **process**:
+Parallel Cloud Agent rsyncs used to overwrite incomplete trees and delete live features (wallet **transactions**, **roles** cleanup, **web-cta-once-v2**). CI/CD is now the **only supported** production deploy path.
 
-Several Cloud Agents each run something like:
+| Workflow | Trigger | What it does |
+|----------|---------|----------------|
+| `.github/workflows/ci.yml` | PR + push | `npm ci` → build shared→api→bot→web → selftests → predeploy-check |
+| `.github/workflows/deploy.yml` | push to `main`/`master`, or `workflow_dispatch` | same build, then SSH deploy of **full** tree (`DEPLOY_SCOPE=all`) |
+
+Deploy uses GitHub Environment **`production`** (enable required reviewers for manual approval).
+
+### Secrets Mohammad must set
+
+Repo → **Settings → Secrets and variables → Actions** (never commit these):
+
+| Secret | Required | Example / notes |
+|--------|----------|-----------------|
+| `VPS_HOST` | yes | `185.110.189.218` |
+| `VPS_USER` | yes | `root` |
+| `VPS_SSH_KEY` | yes | Full private key PEM for that user (deploy key or user key). **Do not** put the key in git. |
+| `VPS_PATH` | no | Default `/opt/petdate` |
+
+Also create Environment **production** (Settings → Environments) and optionally require reviewers.
+
+### How to trigger deploy
+
+1. Merge finished work into `main` (or `master`) — push runs Deploy after CI build (and Environment approval if configured).
+2. Manual: Actions → **Deploy** → Run workflow → set **confirm** to `deploy` → scope **all** (recommended).
+3. Agents still often cannot `git push` (no token) — workflow files live in the repo; a human pushes/merges, then Actions deploys.
+
+### Preserve on every deploy
+
+- **Single `DATABASE_PATH`** — `ecosystem.config.cjs` absolute SQLite SoT; rsync **excludes** `*.db*` (never wipe live DB).
+- **No sitter roles** — `pet_sitter` / `community_seeker` only in `REMOVED_USER_ROLES`.
+- **web-cta-once-v2** — CTA at most once per chat+user (api + bot markers checked in predeploy).
+- **Transactions / wallet** — api route markers must remain (predeploy greps).
+
+## Root cause (ad-hoc rsync)
+
+Several Cloud Agents each ran something like:
 
 ```bash
 rsync -az --delete packages/web/dist/ root@VPS:/opt/petdate/packages/web/dist/
 ```
 
-from **their own incomplete feature branch**. That wipes the live site and replaces it with an older bundle (old PWA logo, missing Telegram login, explore page back, …).
-
-So the site “reverts” after every random agent update.
+from **their own incomplete feature branch**. That replaced the live site with an older/partial bundle (and package-scoped `--delete` against the wrong destination could wipe siblings).
 
 ## What actually fixes it
 
 1. **Feature branches must not deploy to VPS.** They only commit.
-2. **One integration branch** may deploy (today: `cursor/stabilize-deploy-logos-6c89`).
-3. Merge / cherry-pick finished work onto that line, then deploy **once**.
-4. Run `scripts/predeploy-check.sh` before any rsync/`deploy-vps.sh` — it refuses incomplete trees and wrong logo hashes.
+2. **Merge to `main`/`master`**, then let **Deploy** workflow ship a **full consistent** tree (shared → api → bot → web + pm2).
+3. Run `scripts/predeploy-check.sh` before any break-glass `deploy-vps.sh`.
+4. Package-scoped sync (`DEPLOY_SCOPE=web|api|bot|shared`) **never** uses parent-level `--delete` and requires `ALLOW_PARTIAL_DEPLOY=1`. Prefer `DEPLOY_SCOPE=all`.
 5. Escape hatch only when you knowingly accept overwrite risk: `ALLOW_DEPLOY=1` or `SKIP_PREDEPLOY=1`.
 
 ```bash
 ./scripts/predeploy-check.sh
-./scripts/deploy-vps.sh root@185.110.189.218
-# or after local build:
-./scripts/predeploy-check.sh && rsync -az --delete packages/web/dist/ root@VPS:/opt/petdate/packages/web/dist/
+DEPLOY_SCOPE=all ./scripts/deploy-vps.sh root@185.110.189.218
+# partial (discouraged):
+# ALLOW_PARTIAL_DEPLOY=1 DEPLOY_SCOPE=web ./scripts/deploy-vps.sh root@185.110.189.218
 ```
 
 ## Canonical brand logos
@@ -50,5 +83,7 @@ Do **not** invent a new PWA mark or neon icon.
 
 ## Live paths on VPS
 
+- App root: `/opt/petdate` (`VPS_PATH`)
 - Web: `/opt/petdate/packages/web/dist` (nginx root)
 - API/Bot: `/opt/petdate/packages/{api,bot}/dist` + `pm2 restart petdate-api petdate-bot`
+- DB: `/opt/petdate/packages/api/data/petdate.db` via `DATABASE_PATH` in `ecosystem.config.cjs`

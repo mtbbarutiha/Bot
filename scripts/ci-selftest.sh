@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# Lightweight API selftests safe for GitHub Actions (no VPS, no live SMS).
+# Does not touch production DATABASE_PATH.
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT/packages/api"
+
+run() {
+  local file="$1"
+  echo "==> selftest: $file"
+  npx tsx "$file"
+}
+
+# Pure / memory-path tests first
+run src/services/web-chat-cta-once.selftest.ts
+run src/services/otp-sms-copy.selftest.ts
+run src/services/otp-email-html.selftest.ts
+run src/services/prescription-sms.selftest.ts
+run src/services/prescription-html.selftest.ts
+run src/services/prescription-chat.selftest.ts
+run src/services/candoo.selftest.ts
+run src/services/telegram-profile-sync.selftest.ts
+
+# SQLite cascade (uses temp/local DB via API helpers — not production path)
+run src/services/user-delete-cascade.selftest.ts
+
+echo "ci-selftest: all passed"
