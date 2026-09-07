@@ -4,8 +4,8 @@ import { Send } from 'lucide-react';
 import { normalizeRoles, userHasRole, dashboardPathForUser, primaryRole } from '@petdate/shared';
 import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
-import { telegramWebLoginDeepLink, prefersSameBrowserTelegramLogin, startTelegramPendingLogin, pollTelegramPendingLogin } from '../../lib/api';
-import { postAuthPath, sanitizeNext } from '../../lib/authRedirect';
+import { telegramWebLoginDeepLink } from '../../lib/api';
+import { sanitizeNext } from '../../lib/authRedirect';
 
 type OtpCredentialLike = { code?: string };
 
