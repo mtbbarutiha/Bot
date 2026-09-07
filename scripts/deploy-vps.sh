@@ -4,7 +4,12 @@
 #   ./scripts/deploy-vps.sh user@SERVER_IP
 # Optional env:
 #   REMOTE_DIR=/opt/petdate
-#   BRANCH=cursor/chat-media-end-wipe-6c89
+#   BRANCH=<git branch name to document in the log — does NOT auto-checkout>
+#
+# IMPORTANT: this syncs the CURRENT workspace tree. Deploying an incomplete
+# feature branch overwrites live web/api/bot and looks like a “revert”.
+# See docs/DEPLOY.md — only deploy from an integration branch that has all
+# needed fixes (logos, auth, chats, …).
 
 set -euo pipefail
 
@@ -15,8 +20,15 @@ if [[ -z "$TARGET" ]]; then
 fi
 
 REMOTE_DIR="${REMOTE_DIR:-/opt/petdate}"
-BRANCH="${BRANCH:-cursor/chat-media-end-wipe-6c89}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+CURRENT_BRANCH="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
+BRANCH="${BRANCH:-$CURRENT_BRANCH}"
+
+echo "==> Deploying workspace branch: ${CURRENT_BRANCH} (label=${BRANCH})"
+echo "==> Read docs/DEPLOY.md — incomplete branches overwrite live logos/features."
+if [[ "$CURRENT_BRANCH" == "main" || "$CURRENT_BRANCH" == "master" ]]; then
+  echo "WARNING: deploying from ${CURRENT_BRANCH} — confirm this tree has the latest fixes."
+fi
 
 echo "==> Syncing project to ${TARGET}:${REMOTE_DIR}"
 ssh "$TARGET" "sudo mkdir -p '$REMOTE_DIR' && sudo chown -R \$(whoami):\$(whoami) '$REMOTE_DIR'"
