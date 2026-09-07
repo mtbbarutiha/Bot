@@ -9670,7 +9670,7 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   }
 }
 
-/* restored earn + wallet transactions */
+/* restored wallet tx + earn */
 .pepito-wallet-tx {
   display: flex;
   flex-direction: column;
@@ -9791,10 +9791,11 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 @media (max-width: 640px) {
   .pepito-wallet-tx {
     padding: 0.95rem 0.9rem;
-}
+  }
 
-.pepito-wallet-tx-row {
+  .pepito-wallet-tx-row {
     align-items: flex-start;
+  }
 }
 
 .pepito-nav-wallet-page-link--ghost {
@@ -9808,7 +9809,6 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   background: rgba(92, 77, 145, 0.08);
 }
 
-/* —— کسب درآمد / برداشت —— */
 .pepito-earn-page {
   display: flex;
   flex-direction: column;
@@ -10143,4 +10143,5 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 @media (max-width: 640px) {
   .pepito-earn-balance {
     grid-template-columns: 1fr;
+  }
 }
