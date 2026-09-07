@@ -1019,8 +1019,8 @@ export function VetChatPage() {
             >
               <ArrowRight size={18} />
             </Link>
-            <div>
-              <p className="tg-chat-list-kicker">پت‌دیت</p>
+            <div className="tg-chat-list-brand">
+              <SiteLogo className="tg-chat-list-logo" height={34} />
               <h1>{inboxScope === 'vet' ? 'گفتگوهای پزشک' : 'هم بازی'}</h1>
             </div>
             <button
@@ -1045,7 +1045,9 @@ export function VetChatPage() {
               </div>
             ) : conversations.length === 0 ? (
               <div className="tg-chat-list-empty">
-                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <div className="tg-empty-mark" aria-hidden>
+                  <SiteLogo className="tg-chat-empty-logo" height={40} />
+                </div>
                 <h2>هنوز گفتگویی نیست</h2>
                 <p>
                   {inboxScope === 'vet'
@@ -1102,15 +1104,22 @@ export function VetChatPage() {
                         <span className="tg-chat-list-meta">
                           <strong>
                             {c.title}
-                            <em className="tg-chat-list-kind">
+                            <em className={`tg-chat-list-kind${c.kind === 'vet' ? ' is-vet' : ''}`}>
                               {c.kind === 'vet' ? 'مشاوره' : 'همبازی'}
                             </em>
                           </strong>
                           <small>{c.preview}</small>
                         </span>
-                        <time className="tg-chat-list-time">
-                          {formatTimeAgo(c.lastActivityAt || c.createdAt)}
-                        </time>
+                        <span className="tg-chat-list-side">
+                          <time className="tg-chat-list-time">
+                            {formatTimeAgo(c.lastActivityAt || c.createdAt)}
+                          </time>
+                          {c.pending ? (
+                            <span className="tg-chat-list-badge is-pending" aria-label="در انتظار">
+                              !
+                            </span>
+                          ) : null}
+                        </span>
                       </button>
                       {c.canDecide ? (
                         <div className="tg-chat-list-actions">
@@ -1157,7 +1166,9 @@ export function VetChatPage() {
           {!hasThread ? (
             <div className="tg-thread-scroll">
               <div className="tg-thread-empty">
-                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <div className="tg-empty-mark" aria-hidden>
+                  <SiteLogo className="tg-chat-empty-logo" height={40} />
+                </div>
                 <h2>{inboxScope === 'vet' ? 'مشاوره‌ای را شروع کن' : 'هم بازی'}</h2>
                 <Link
                   to={inboxScope === 'vet' ? '/vet-consult' : '/chats'}
@@ -1190,7 +1201,9 @@ export function VetChatPage() {
           ) : !consult ? (
             <div className="tg-thread-scroll">
               <div className="tg-thread-empty">
-                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <div className="tg-empty-mark" aria-hidden>
+                  <SiteLogo className="tg-chat-empty-logo" height={40} />
+                </div>
                 <h2>مشاوره پیدا نشد</h2>
                 <p role="alert">{error ?? 'این گفتگو در دسترس نیست.'}</p>
                 <Link to="/chats" className="tg-chat-link-btn">

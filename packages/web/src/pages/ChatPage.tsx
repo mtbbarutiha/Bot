@@ -256,7 +256,9 @@ function ConversationListPane({
           >
             {scope === 'vet' ? (
               <>
-                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <div className="tg-empty-mark" aria-hidden>
+                  <SiteLogo className="tg-chat-empty-logo" height={40} />
+                </div>
                 <h2>هنوز گفتگویی نیست</h2>
                 <p>درخواست‌ها و چت‌های مشاوره دامپزشکی این نقش اینجا می‌آیند.</p>
                 <Link to="/vet-consult" className="tg-chat-link-btn">
@@ -297,13 +299,22 @@ function ConversationListPane({
                     <span className="tg-chat-list-meta">
                       <strong>
                         {c.title}
-                        <em className="tg-chat-list-kind">
+                        <em className={`tg-chat-list-kind${c.kind === 'vet' ? ' is-vet' : ''}`}>
                           {c.kind === 'vet' ? 'مشاوره' : 'همبازی'}
                         </em>
                       </strong>
                       <small>{c.preview}</small>
                     </span>
-                    <time className="tg-chat-list-time">{formatTimeAgo(c.lastActivityAt || c.createdAt)}</time>
+                    <span className="tg-chat-list-side">
+                      <time className="tg-chat-list-time">
+                        {formatTimeAgo(c.lastActivityAt || c.createdAt)}
+                      </time>
+                      {c.pending ? (
+                        <span className="tg-chat-list-badge is-pending" aria-label="در انتظار">
+                          !
+                        </span>
+                      ) : null}
+                    </span>
                   </button>
                   {c.canDecide ? (
                     <div className="tg-chat-list-actions">
@@ -354,7 +365,9 @@ function ThreadEmptyState({
   if (isVet) {
     return (
       <div className="tg-thread-empty">
-        <SiteLogo className="tg-chat-empty-logo" height={48} />
+        <div className="tg-empty-mark" aria-hidden>
+          <SiteLogo className="tg-chat-empty-logo" height={40} />
+        </div>
         <h2>مشاوره‌ای را شروع کن</h2>
         <Link to="/vet-consult" className="tg-chat-link-btn">
           رفتن به پنل پزشک
@@ -366,7 +379,9 @@ function ThreadEmptyState({
   if (desktop) {
     return (
       <div className="tg-thread-empty">
-        <SiteLogo className="tg-chat-empty-logo" height={48} />
+        <div className="tg-empty-mark" aria-hidden>
+          <SiteLogo className="tg-chat-empty-logo" height={40} />
+        </div>
         <h2>یک گفتگو را انتخاب کن</h2>
         <p>از فهرست، درخواست یا چت همبازی را باز کن. پیدا کردن همبازی از دکمه بالای فهرست است.</p>
       </div>
@@ -1303,14 +1318,18 @@ export function ChatPage() {
           ) : threadLoading ? (
             <div className="tg-thread-scroll">
               <div className="tg-thread-empty">
-                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <div className="tg-empty-mark" aria-hidden>
+                  <SiteLogo className="tg-chat-empty-logo" height={40} />
+                </div>
                 <h2>در حال باز کردن چت…</h2>
               </div>
             </div>
           ) : !match || !peerPet ? (
             <div className="tg-thread-scroll">
               <div className="tg-thread-empty">
-                <SiteLogo className="tg-chat-empty-logo" height={48} />
+                <div className="tg-empty-mark" aria-hidden>
+                  <SiteLogo className="tg-chat-empty-logo" height={40} />
+                </div>
                 <h2>گفتگو پیدا نشد</h2>
                 <p>این درخواست در دسترس نیست یا مال تو نیست.</p>
                 <Link to="/chats" className="tg-chat-link-btn">
