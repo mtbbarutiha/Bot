@@ -34,8 +34,6 @@ import {
   primaryRole,
   profileGenderEmoji,
   profileLanguageCode,
-  profileLocationStatusLabel,
-  profilePhotoStatusLabel,
   profileVerifyStatusLabel,
   toPersianDigits,
   userCommandId,
@@ -540,11 +538,11 @@ export function ProfilePage() {
           <strong>{formatFaInt(views)}</strong>
           <span>بازدید</span>
         </button>
-        <div className="pepito-profile-stat" role="group" aria-label={cardLines.walletViews}>
+        <Link to="/wallet" className="pepito-profile-stat" aria-label={cardLines.walletViews}>
           <Wallet size={18} strokeWidth={2} aria-hidden />
           <strong>{formatFaInt(coins)}</strong>
           <span>سکه</span>
-        </div>
+        </Link>
         <button type="button" className="pepito-profile-stat" onClick={() => void openContacts()}>
           <Users size={18} strokeWidth={2} aria-hidden />
           <strong>{contactsCount > 0 ? formatFaInt(contactsCount) : '−'}</strong>
@@ -553,39 +551,21 @@ export function ProfilePage() {
       </section>
 
       {display.isActive === false ? (
-        <p className="pepito-profile-inactive-banner" role="status">⏸ حساب فعلاً غیرفعال است</p>
+        <p className="pepito-profile-inactive-banner" role="status">حساب فعلاً غیرفعال است</p>
       ) : null}
 
-      <section className="pepito-profile-block pepito-profile-overview" aria-label="کارت پروفایل">
+      <section className="pepito-profile-block" aria-label="درباره">
         <header className="pepito-home-section-head">
-          <p className="pepito-eyebrow">کارت پروفایل</p>
-          <h2>خلاصه وضعیت</h2>
-          <p>همان اطلاعات ربات، با نمایش خواناتر.</p>
+          <p className="pepito-eyebrow">درباره</p>
+          <h2>شناسنامه کوتاه</h2>
+          <p>سن، جنسیت، وضعیت و چند خط از تو.</p>
         </header>
-        <dl className="pepito-profile-overview-list">
+        <dl className="pepito-profile-facts">
+          {display.age ? <div><dt>سن</dt><dd>{toPersianDigits(display.age)}</dd></div> : null}
+          {genderLabel ? <div><dt>جنسیت</dt><dd>{genderLabel}</dd></div> : null}
           <div>
-            <dt>آیدی</dt>
-            <dd><code dir="ltr">{userCommandId(display)}</code></dd>
-          </div>
-          <div>
-            <dt>هویت</dt>
-            <dd>{cardLines.identity}</dd>
-          </div>
-          <div>
-            <dt>موقعیت</dt>
-            <dd>{cardLines.location}</dd>
-          </div>
-          <div>
-            <dt>هدف / نقش</dt>
-            <dd>{cardLines.purpose}</dd>
-          </div>
-          <div>
-            <dt>علاقه‌مندی‌ها</dt>
-            <dd>{interestsLabel}</dd>
-          </div>
-          <div>
-            <dt>عکس</dt>
-            <dd>{profilePhotoStatusLabel(display)}</dd>
+            <dt>وضعیت</dt>
+            <dd><span className={`pepito-profile-badge${needsWizard ? ' is-warn' : ' is-ok'}`}>{onboardingLabel}</span></dd>
           </div>
           <div>
             <dt>احراز</dt>
@@ -595,39 +575,27 @@ export function ProfilePage() {
               </span>
             </dd>
           </div>
+          {display.phone ? <div><dt>موبایل</dt><dd dir="ltr">{display.phone}</dd></div> : null}
           <div>
-            <dt>وضعیت موقعیت</dt>
-            <dd>{profileLocationStatusLabel(display)}</dd>
-          </div>
-          <div className="pepito-profile-overview-likes">
-            <dt>لایک‌ها</dt>
-            <dd>{cardLines.likes}</dd>
-          </div>
-          <div>
-            <dt>کیف پول و بازدید</dt>
-            <dd>{cardLines.walletViews}</dd>
-          </div>
-          <div>
-            <dt>مخاطبین</dt>
-            <dd>{cardLines.contacts}</dd>
-          </div>
-          <div>
-            <dt>تکمیل</dt>
-            <dd>
-              {cardLines.completion}
-              <span className="pepito-profile-completion-bar pepito-profile-completion-bar--soft" aria-hidden>
-                <span style={{ width: `${completion.percent}%` }} />
-              </span>
-            </dd>
+            <dt>آیدی</dt>
+            <dd><code dir="ltr">{userCommandId(display)}</code></dd>
           </div>
         </dl>
+        {display.bio ? <p className="pepito-profile-bio">{display.bio}</p> : (
+          <p className="pepito-profile-bio pepito-profile-bio--empty">هنوز بیویی ننوشتی — با ویرایش می‌تونی اضافه کنی.</p>
+        )}
+        {display.interests && display.interests.length > 0 ? (
+          <ul className="pepito-profile-tags">{display.interests.map((item) => <li key={item}>{item}</li>)}</ul>
+        ) : (
+          <p className="pepito-profile-bio pepito-profile-bio--empty">علایق: {interestsLabel}</p>
+        )}
       </section>
 
       <section className="pepito-profile-block" aria-label="اقدامات پروفایل">
         <header className="pepito-home-section-head">
           <p className="pepito-eyebrow">اقدامات</p>
           <h2>مدیریت پروفایل</h2>
-          <p>ویرایش، تعامل، احراز و تنظیمات حریم.</p>
+          <p>ویرایش، احراز و تنظیمات حریم.</p>
         </header>
 
         <div className="pepito-profile-action-groups">
@@ -640,14 +608,7 @@ export function ProfilePage() {
               <Link to="/onboarding/profile" className="pepito-profile-action pepito-profile-action--ok">
                 تکمیل پروفایل
               </Link>
-            ) : (
-              <button type="button" className="pepito-profile-action" onClick={openEdit}>
-                تکمیل پروفایل
-              </button>
-            )}
-            <button type="button" className="pepito-profile-action" onClick={openInteractions}>
-              تعاملات
-            </button>
+            ) : null}
             <button
               type="button"
               className={`pepito-profile-action${verifyStatus === 'none' || verifyStatus === 'rejected' ? ' pepito-profile-action--ok' : ''}`}
@@ -656,16 +617,9 @@ export function ProfilePage() {
               <ShieldCheck size={18} aria-hidden />
               {faceVerifyButtonLabel(verifyStatus)}
             </button>
-          </div>
-
-          <div className="pepito-profile-action-group pepito-profile-action-group--social" aria-label="اجتماعی">
-            <button type="button" className="pepito-profile-action pepito-profile-action--soft" onClick={openLikes}>
-              <Heart size={18} aria-hidden />
-              لایک‌ها ({formatFaInt(likes)})
-            </button>
-            <button type="button" className="pepito-profile-action pepito-profile-action--soft" onClick={() => void openContacts()}>
-              <Users size={18} aria-hidden />
-              مخاطبین ({contactsCount > 0 ? formatFaInt(contactsCount) : '−'})
+            <button type="button" className="pepito-profile-action pepito-profile-action--soft" onClick={openInteractions}>
+              <Eye size={18} aria-hidden />
+              تعاملات
             </button>
           </div>
 
@@ -700,11 +654,11 @@ export function ProfilePage() {
           {panel === 'account' ? (
             <div className="pepito-profile-account-actions">
               {display.isActive !== false ? (
-                <button type="button" className="pepito-btn pepito-btn--ghost" disabled={busy} onClick={() => void deactivateAccount()}>⏸ غیرفعال‌سازی</button>
+                <button type="button" className="pepito-btn pepito-btn--ghost" disabled={busy} onClick={() => void deactivateAccount()}>غیرفعال‌سازی</button>
               ) : (
-                <button type="button" className="pepito-btn button-1" disabled={busy} onClick={() => void activateAccount()}>▶️ فعال‌سازی</button>
+                <button type="button" className="pepito-btn button-1" disabled={busy} onClick={() => void activateAccount()}>فعال‌سازی</button>
               )}
-              <button type="button" className="pepito-btn pepito-profile-action--danger-solid" disabled={busy} onClick={() => void deleteAccount()}>🗑 حذف حساب</button>
+              <button type="button" className="pepito-btn pepito-profile-action--danger-solid" disabled={busy} onClick={() => void deleteAccount()}>حذف حساب</button>
             </div>
           ) : (
             <ul className="pepito-profile-panel-list">{panelLines.map((line) => <li key={line}>{line}</li>)}</ul>
@@ -719,29 +673,6 @@ export function ProfilePage() {
           <p>نقش فعال را ببین و با یک لمس عوض کن.</p>
         </header>
         <RoleSwitchControl variant="profile" />
-      </section>
-
-      <section className="pepito-profile-block" aria-label="درباره">
-        <header className="pepito-home-section-head">
-          <p className="pepito-eyebrow">درباره</p>
-          <h2>شناسنامه کوتاه</h2>
-          <p>سن، جنسیت، وضعیت و چند خط از تو.</p>
-        </header>
-        <dl className="pepito-profile-facts">
-          {display.age ? <div><dt>سن</dt><dd>{toPersianDigits(display.age)}</dd></div> : null}
-          {genderLabel ? <div><dt>جنسیت</dt><dd>{genderLabel}</dd></div> : null}
-          <div>
-            <dt>وضعیت</dt>
-            <dd><span className={`pepito-profile-badge${needsWizard ? ' is-warn' : ' is-ok'}`}>{onboardingLabel}</span></dd>
-          </div>
-          {display.phone ? <div><dt>موبایل</dt><dd dir="ltr">{display.phone}</dd></div> : null}
-        </dl>
-        {display.bio ? <p className="pepito-profile-bio">{display.bio}</p> : (
-          <p className="pepito-profile-bio pepito-profile-bio--empty">هنوز بیویی ننوشتی — با ویرایش می‌تونی اضافه کنی.</p>
-        )}
-        {display.interests && display.interests.length > 0 ? (
-          <ul className="pepito-profile-tags">{display.interests.map((item) => <li key={item}>{item}</li>)}</ul>
-        ) : null}
       </section>
 
       {isPetOwner ? (

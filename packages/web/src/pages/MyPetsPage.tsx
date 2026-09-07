@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { PawPrint, Pencil, Plus, Stethoscope } from 'lucide-react';
+import { ArrowRight, PawPrint, Pencil, Plus, Stethoscope } from 'lucide-react';
 import type { PetProfile } from '@petdate/shared';
-import { toPersianDigits } from '@petdate/shared';
+import { BRAND, toPersianDigits } from '@petdate/shared';
 import { PetAvatar } from '../components/PetAvatar';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { listPets } from '../lib/api';
@@ -52,8 +52,19 @@ export function MyPetsPage() {
   if (!isLoggedIn) {
     return (
       <div className="pepito-my-pets pepito-my-pets--gate">
-        <h1>پت‌های من</h1>
-        <p>برای دیدن و ویرایش پت‌ها وارد شو.</p>
+        <header className="pepito-my-pets-hero">
+          <div className="pepito-my-pets-hero-wash" aria-hidden />
+          <div className="pepito-my-pets-hero-inner">
+            <p className="pepito-kicker">
+              <span className="pepito-kicker-dot" aria-hidden>
+                <PawPrint size={16} />
+              </span>
+              {BRAND.displayName}
+            </p>
+            <h1>پت‌های من</h1>
+            <p className="pepito-my-pets-lead">برای دیدن و ویرایش پت‌ها وارد شو.</p>
+          </div>
+        </header>
         <Link to="/auth/login?next=/my-pets" className="pepito-btn button-1">
           ورود
         </Link>
@@ -63,18 +74,24 @@ export function MyPetsPage() {
 
   return (
     <div className="pepito-my-pets">
-      <header className="pepito-my-pets-head">
-        <div>
-          <p className="pepito-eyebrow">مدیریت پت</p>
+      <header className="pepito-my-pets-hero">
+        <div className="pepito-my-pets-hero-wash" aria-hidden />
+        <div className="pepito-my-pets-hero-inner">
+          <p className="pepito-kicker">
+            <span className="pepito-kicker-dot" aria-hidden>
+              <PawPrint size={16} />
+            </span>
+            {BRAND.displayName}
+          </p>
           <h1>پت‌های من</h1>
           <p className="pepito-my-pets-lead">
             پروفایل، ویرایش و پرونده پزشکی هر پت — جدا از پروفایل خودت.
           </p>
+          <Link to="/add-pet" className="pepito-btn button-1 pepito-my-pets-add">
+            <Plus size={18} aria-hidden />
+            ثبت پت جدید
+          </Link>
         </div>
-        <Link to="/add-pet" className="pepito-btn button-1 pepito-my-pets-add">
-          <Plus size={18} aria-hidden />
-          ثبت پت جدید
-        </Link>
       </header>
 
       {error ? <p className="auth-error">{error}</p> : null}
@@ -86,7 +103,9 @@ export function MyPetsPage() {
         </div>
       ) : pets.length === 0 ? (
         <div className="pepito-my-pets-empty">
-          <PawIcon size={28} />
+          <span className="pepito-my-pets-empty-mark" aria-hidden>
+            <PawIcon size={28} />
+          </span>
           <h2>هنوز پتی ثبت نشده</h2>
           <p>اولین پت را بساز تا همبازی و پرونده پزشکی فعال شود.</p>
           <Link to="/add-pet" className="pepito-btn button-1">
@@ -100,6 +119,9 @@ export function MyPetsPage() {
             const ui = petProfileToUiPet(pet);
             return (
               <li key={pet.id} className="pepito-my-pets-card">
+                {pet.lookingForPlaymate ? (
+                  <span className="pepito-my-pets-chip">دنبال همبازی</span>
+                ) : null}
                 <Link to={`/pets/${pet.id}`} className="pepito-my-pets-card-main">
                   <PetAvatar
                     type={ui.type}
@@ -142,9 +164,6 @@ export function MyPetsPage() {
                     پرونده
                   </Link>
                 </div>
-                {pet.lookingForPlaymate ? (
-                  <span className="pepito-my-pets-chip">دنبال همبازی</span>
-                ) : null}
               </li>
             );
           })}
@@ -152,9 +171,7 @@ export function MyPetsPage() {
       )}
 
       <p className="pepito-my-pets-count" aria-live="polite">
-        {pets.length
-          ? `${toPersianDigits(String(pets.length))} پت ثبت‌شده`
-          : null}
+        {pets.length ? `${toPersianDigits(String(pets.length))} پت ثبت‌شده` : null}
       </p>
 
       <button
@@ -162,6 +179,7 @@ export function MyPetsPage() {
         className="pepito-btn button-2 pepito-my-pets-back"
         onClick={() => navigate(-1)}
       >
+        <ArrowRight size={16} aria-hidden />
         بازگشت
       </button>
     </div>

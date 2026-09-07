@@ -190,14 +190,27 @@ export function PetEditPage() {
           <ArrowRight size={20} />
         </button>
         <div>
-          <p className="pepito-eyebrow">ویرایش پت</p>
+          <p className="pepito-kicker pepito-pet-edit-kicker">
+            <span className="pepito-kicker-dot" aria-hidden>
+              <PawPrint size={14} />
+            </span>
+            ویرایش پت
+          </p>
           <h1>{form.name || 'پروفایل پت'}</h1>
         </div>
       </header>
 
       <form className="pepito-pet-edit-form" onSubmit={(e) => void onSubmit(e)} noValidate>
         <section className="pepito-profile-edit-section pepito-profile-edit-section--photo">
-          <h2 className="pepito-profile-edit-section-title">عکس</h2>
+          <div className="pepito-profile-edit-section-head">
+            <span className="pepito-profile-edit-step" aria-hidden>
+              ۱
+            </span>
+            <div>
+              <h2 className="pepito-profile-edit-section-title">عکس</h2>
+              <p className="pepito-profile-edit-section-desc">چهره پت را واضح نشان بده.</p>
+            </div>
+          </div>
           {ownerId ? (
             <PetPhotoUpload
               ownerId={ownerId}
@@ -208,7 +221,15 @@ export function PetEditPage() {
         </section>
 
         <section className="pepito-profile-edit-section">
-          <h2 className="pepito-profile-edit-section-title">مشخصات</h2>
+          <div className="pepito-profile-edit-section-head">
+            <span className="pepito-profile-edit-step" aria-hidden>
+              ۲
+            </span>
+            <div>
+              <h2 className="pepito-profile-edit-section-title">مشخصات</h2>
+              <p className="pepito-profile-edit-section-desc">نام، نوع، سن و جزئیات.</p>
+            </div>
+          </div>
           <div className="pepito-profile-edit-grid">
             <label className="pepito-field">
               نام
@@ -361,19 +382,20 @@ export function PetEditPage() {
 
         {error ? <p className="auth-error">{error}</p> : null}
 
-        <div className="pepito-profile-edit-actions">
+        <p className="pepito-pet-edit-hint">
+          سن نمایشی: {toPersianDigits(form.age)} {form.ageUnit === 'year' ? 'سال' : 'ماه'}
+        </p>
+
+        <div className="pepito-profile-edit-actions pepito-pet-edit-actions">
           <button type="submit" className="pepito-btn button-1" disabled={saving}>
             <PawPrint size={16} aria-hidden />
             {saving ? 'در حال ذخیره…' : 'ذخیره تغییرات'}
           </button>
-          <Link to={`/pets/${id}`} className="pepito-btn button-2">
+          <Link to={`/pets/${id}`} className="pepito-btn pepito-btn--ghost">
             انصراف
           </Link>
         </div>
       </form>
-      <p className="pepito-pet-edit-hint">
-        سن نمایشی: {toPersianDigits(form.age)} {form.ageUnit === 'year' ? 'سال' : 'ماه'}
-      </p>
     </div>
   );
 }

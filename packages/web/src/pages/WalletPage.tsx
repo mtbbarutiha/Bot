@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Link2, RefreshCw, Wallet } from 'lucide-react';
+import { ArrowRight, Link2, RefreshCw, Sparkles, Wallet } from 'lucide-react';
 import {
+  BRAND,
   WALLET_CURRENCY_LABELS_FA,
   WALLET_CURRENCY_STATUS,
   WALLET_CURRENCY_SYMBOLS,
@@ -14,6 +15,7 @@ import { useAuthStore } from '../hooks/useAuthStore';
 import { fetchWallet, startTelegramAttach } from '../lib/api';
 
 const ORDER: WalletCurrency[] = ['coins', 'toman', 'stars', 'ton'];
+const FEATURED: WalletCurrency = 'coins';
 
 function formatBal(n: number): string {
   return toPersianDigits(new Intl.NumberFormat('en-US').format(Math.max(0, Math.floor(n))));
@@ -51,7 +53,6 @@ export function WalletPage() {
   tokenRef.current = token;
   refreshMeRef.current = refreshMe;
 
-  // Keep TG link flag in sync when auth hydrate/refresh adds telegramId — without remount.
   useEffect(() => {
     if (user?.telegramId) {
       setTelegramLinked(true);
@@ -78,7 +79,6 @@ export function WalletPage() {
         setTelegramLinked(Boolean(me?.telegramId));
         setTelegramId(me?.telegramId ?? null);
       }
-      // Soft sync skips refreshMe to avoid auth-store thrash / layout jump.
       if (!soft && res.telegram) {
         await refreshMeRef.current().catch(() => undefined);
       }
@@ -93,7 +93,6 @@ export function WalletPage() {
     }
   }, []);
 
-  // Mount / token only — loadWallet is referentially stable (refs for token/refreshMe).
   useEffect(() => {
     if (!token) return;
     void loadWallet({ soft: hasLocalRef.current });
@@ -135,29 +134,74 @@ export function WalletPage() {
     }
   }
 
+  const secondary = ORDER.filter((k) => k !== FEATURED);
+
   return (
     <div className="pepito-wallet-page">
       <header className="pepito-wallet-hero">
-        <p className="pepito-kicker">
-          <span className="pepito-kicker-dot" aria-hidden>
-            <Wallet size={16} />
-          </span>
-          حساب شما
-        </p>
-        <h1>کیف پول</h1>
-        <p className="pepito-wallet-lead">موجودی چندارزی شما در پت‌دیت — مشترک بین وب و ربات تلگرام</p>
+        <div className="pepito-wallet-hero-wash" aria-hidden />
+        <div className="pepito-wallet-hero-inner">
+          <p className="pepito-kicker pepito-wallet-kicker">
+            <span className="pepito-kicker-dot" aria-hidden>
+              <Wallet size={16} />
+            </span>
+            {BRAND.displayName}
+          </p>
+          <h1>کیف پول</h1>
+          <p className="pepito-wallet-lead">موجودی چندارزی — مشترک بین وب و ربات تلگرام</p>
+        </div>
       </header>
+
+      <section
+        className={`pepito-wallet-featured${loading && !wallet ? ' is-pending' : ''}`}
+        aria-label="موجودی اصلی"
+      >
+        <div className="pepito-wallet-featured-main">
+          <span className="pepito-wallet-featured-label">{WALLET_CURRENCY_LABELS_FA[FEATURED]}</span>
+          <p className="pepito-wallet-featured-val">
+            <span aria-hidden>{WALLET_CURRENCY_SYMBOLS[FEATURED]}</span>
+            {formatBal(balances[FEATURED])}
+          </p>
+          <p className="pepito-wallet-featured-note">{WALLET_CURRENCY_STATUS[FEATURED].noteFa}</p>
+        </div>
+        <ul className="pepito-wallet-featured-side" aria-label="سایر موجودی‌ها">
+          {secondary.map((key) => (
+            <li key={key} className={`pepito-wallet-mini pepito-wallet-mini--${key}`}>
+              <span className="pepito-wallet-mini-sym" aria-hidden>
+                {key === 'toman' ? '﷼' : WALLET_CURRENCY_SYMBOLS[key]}
+              </span>
+              <div>
+                <p className="pepito-wallet-mini-label">{WALLET_CURRENCY_LABELS_FA[key]}</p>
+                <p className="pepito-wallet-mini-val">
+                  {formatBal(balances[key])}
+                  {key === 'toman' ? <span className="pepito-wallet-row-unit"> ت</span> : null}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <p
+        className={`pepito-wallet-status${error ? ' pepito-wallet-status--warn' : ''}`}
+        aria-live="polite"
+      >
+        {statusText}
+      </p>
 
       <section className="pepito-wallet-tg" aria-labelledby="wallet-tg-title">
         <div className="pepito-wallet-tg-head">
-          <h2 id="wallet-tg-title">اتصال / همگام‌سازی تلگرام</h2>
-          <p className="pepito-wallet-tg-lead">
-            موجودی ستاره مشترک با ربات (wallet_stars) — موجودی بومی Stars حساب تلگرام از API تلگرام خوانده
-            نمی‌شود.
-          </p>
+          <span className="pepito-wallet-tg-mark" aria-hidden>
+            <Sparkles size={18} />
+          </span>
+          <div>
+            <h2 id="wallet-tg-title">ستاره‌های تلگرام</h2>
+            <p className="pepito-wallet-tg-lead">
+              موجودی مشترک با ربات (wallet_stars) — از API بومی تلگرام خوانده نمی‌شود.
+            </p>
+          </div>
         </div>
 
-        {/* Fixed 4-slot body: status → secondary → primary action → meta — same height linked/unlinked */}
         <div className="pepito-wallet-tg-body">
           {linked ? (
             <p className="pepito-wallet-tg-status">
@@ -176,9 +220,11 @@ export function WalletPage() {
           <div className="pepito-wallet-tg-slot pepito-wallet-tg-slot--secondary">
             {linked ? (
               <p className="pepito-wallet-tg-stars">
-                <span aria-hidden>⭐</span>
-                موجودی ستاره مشترک با ربات:{' '}
-                <strong>{formatBal(balances.stars)}</strong>
+                <span className="pepito-wallet-tg-stars-badge" aria-hidden>★</span>
+                <span>
+                  موجودی ستاره:{' '}
+                  <strong>{formatBal(balances.stars)}</strong>
+                </span>
               </p>
             ) : (
               <button
@@ -222,37 +268,6 @@ export function WalletPage() {
           </p>
         </div>
       </section>
-
-      <p
-        className={`pepito-wallet-status${error ? ' pepito-wallet-status--warn' : ''}`}
-        aria-live="polite"
-      >
-        {statusText}
-      </p>
-
-      <ul
-        className={`pepito-wallet-list${loading && !wallet ? ' pepito-wallet-list--pending' : ''}`}
-        aria-label="موجودی‌ها"
-        aria-busy={loading}
-      >
-        {ORDER.map((key) => (
-          <li key={key} className="pepito-wallet-row">
-            <div className="pepito-wallet-row-main">
-              <span className="pepito-wallet-row-sym" aria-hidden>
-                {key === 'toman' ? '﷼' : WALLET_CURRENCY_SYMBOLS[key]}
-              </span>
-              <div>
-                <p className="pepito-wallet-row-label">{WALLET_CURRENCY_LABELS_FA[key]}</p>
-                <p className="pepito-wallet-row-note">{WALLET_CURRENCY_STATUS[key].noteFa}</p>
-              </div>
-            </div>
-            <p className="pepito-wallet-row-val">
-              {formatBal(balances[key])}
-              {key === 'toman' ? <span className="pepito-wallet-row-unit"> تومان</span> : null}
-            </p>
-          </li>
-        ))}
-      </ul>
 
       <p className="pepito-wallet-soon">به‌زودی واریز مستقیم از وب</p>
 

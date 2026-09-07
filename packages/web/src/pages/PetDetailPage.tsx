@@ -226,11 +226,15 @@ export function PetDetailPage() {
     <div className={`pepito-pet-profile${tabMedical ? ' is-medical-focus' : ''}`}>
       <div className="pepito-pet-profile-hero">
         <img src={ui.imageUrl || EMPTY_STATE_PHOTO} alt={pet.name} />
+        <div className="pepito-pet-profile-hero-wash" aria-hidden />
         <div className="pepito-pet-profile-hero-bar">
           <button type="button" className="icon-btn icon-btn--glass" onClick={() => navigate(-1)} aria-label="بازگشت">
             <ArrowRight size={20} />
           </button>
-          <h1>{pet.name}</h1>
+          <div className="pepito-pet-profile-hero-title">
+            <p className="pepito-pet-profile-hero-brand">پت‌دیت</p>
+            <h1>{pet.name}</h1>
+          </div>
           <div className="pepito-pet-profile-hero-actions">
             {isMyPet ? (
               <Link to={`/pets/${pet.id}/edit`} className="icon-btn icon-btn--glass" aria-label="ویرایش">
@@ -255,17 +259,18 @@ export function PetDetailPage() {
             </button>
           </div>
         </div>
+        <div className="pepito-pet-profile-hero-meta">
+          <p className="pepito-pet-profile-sub">
+            {PET_TYPE_LABELS[ui.type] || pet.species} · {formatAge(ui)}
+            {pet.breed ? ` · ${pet.breed}` : ''}
+          </p>
+          <p className="pepito-pet-profile-loc">
+            {[pet.neighborhood, pet.city || pet.ownerCity].filter(Boolean).join('، ') || '—'}
+          </p>
+        </div>
       </div>
 
       <div className="pepito-pet-profile-body">
-        <p className="pepito-pet-profile-sub">
-          {PET_TYPE_LABELS[ui.type] || pet.species} · {formatAge(ui)}
-          {pet.breed ? ` · ${pet.breed}` : ''}
-        </p>
-        <p className="pepito-pet-profile-loc">
-          {[pet.neighborhood, pet.city || pet.ownerCity].filter(Boolean).join('، ') || '—'}
-        </p>
-
         {isMyPet ? (
           <div className="pepito-pet-profile-owner-actions">
             <Link to={`/pets/${pet.id}/edit`} className="pepito-btn button-2">

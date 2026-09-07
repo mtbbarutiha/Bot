@@ -3346,8 +3346,12 @@ button.chip.is-on {
   color: var(--pepito-dark);
   font: inherit;
   text-align: center;
+  text-decoration: none;
   cursor: pointer;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+a.pepito-profile-stat {
+  cursor: pointer;
 }
 div.pepito-profile-stat {
   cursor: default;
@@ -4155,14 +4159,15 @@ div.pepito-profile-stat:active {
   .pepito-profile-edit-actions {
     flex-direction: column;
     margin-inline: -0.25rem;
-    padding: 0.85rem 0.25rem calc(0.65rem + env(safe-area-inset-bottom, 0px));
+    padding: 0.85rem 0.25rem calc(0.65rem + 72px + env(safe-area-inset-bottom, 0px));
+    bottom: 0;
   }
   .pepito-profile-edit-actions .pepito-btn {
     width: 100%;
     min-height: 48px;
   }
   .pepito-profile--edit {
-    padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
   }
   .pepito-profile-edit-section {
     padding: 1rem 0.9rem 1.1rem;
@@ -5183,58 +5188,316 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   }
 }
 
-/* —— Quick vet consult (bot parity) —— */
+/* —— Quick vet consult (bot parity) — pd-panels-ui-v1 —— */
 .pepito-vet-consult {
-  padding: 1.75rem 1.35rem 2.5rem;
-  max-width: 720px;
+  padding: 0 0 2.5rem;
+  max-width: 780px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
 }
+.pepito-vet-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 24px 24px;
+  min-height: clamp(160px, 28vh, 220px);
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 80% 70% at 15% 0%, rgba(21, 204, 160, 0.22), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 90% 30%, rgba(11, 165, 242, 0.18), transparent 50%),
+    linear-gradient(165deg, #eef8f6 0%, #f4f4f7 55%, #ebe8f6 100%);
+  animation: pepito-flow-banner-in 0.7s ease both;
+}
+.pepito-vet-hero-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 20%, rgba(255, 255, 255, 0.35) 100%);
+  z-index: 0;
+}
+.pepito-vet-hero-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 1.35rem 1.25rem 1.25rem;
+  animation: pepito-flow-rise 0.55s ease 0.08s both;
+}
+.pepito-vet-kicker {
+  margin: 0 0 0.35rem !important;
+}
+.pepito-vet-hero-inner h1 {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.55rem, 3.2vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--pepito-dark);
+}
+.pepito-vet-lead {
+  margin: 0;
+  max-width: 38rem;
+  color: var(--pepito-muted);
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.pepito-vet-online-card {
+  margin-inline: var(--pepito-container-pad, 15px);
+  padding: 1.05rem 1.1rem 1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(31, 36, 48, 0.08);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(21, 204, 160, 0.1), transparent 55%),
+    #fff;
+  box-shadow: 0 10px 28px rgba(25, 6, 61, 0.05);
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.pepito-vet-online-card.is-online {
+  border-color: rgba(21, 204, 160, 0.35);
+  box-shadow: 0 12px 32px rgba(21, 204, 160, 0.12);
+}
+.pepito-vet-online-card-main {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+}
+.pepito-vet-online-mark {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(21, 204, 160, 0.14);
+  color: #0b7a5c;
+}
+.pepito-vet-online-card.is-offline .pepito-vet-online-mark {
+  background: rgba(117, 112, 134, 0.12);
+  color: var(--pepito-muted);
+}
+.pepito-vet-online-text {
+  min-width: 0;
+}
+.pepito-vet-online-kicker {
+  margin: 0 0 0.15rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--pepito-muted);
+  font-family: var(--font-display);
+}
+.pepito-vet-online-text strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--pepito-dark);
+}
+.pepito-vet-online-text span {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.84rem;
+  color: var(--pepito-muted);
+  line-height: 1.45;
+}
+.pepito-vet-online-switch {
+  position: relative;
+  width: 4.6rem;
+  height: 2.75rem;
+  min-width: 4.6rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(117, 112, 134, 0.22);
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.25s ease;
+}
+.pepito-vet-online-switch.is-on {
+  background: linear-gradient(135deg, #15cca0, #0ba5f2);
+}
+.pepito-vet-online-switch:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.pepito-vet-online-switch-knob {
+  position: absolute;
+  top: 0.28rem;
+  inset-inline-start: 0.28rem;
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(25, 6, 61, 0.18);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+[dir='rtl'] .pepito-vet-online-switch.is-on .pepito-vet-online-switch-knob {
+  transform: translateX(-1.75rem);
+}
+[dir='ltr'] .pepito-vet-online-switch.is-on .pepito-vet-online-switch-knob {
+  transform: translateX(1.75rem);
+}
+.pepito-vet-online-switch-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: transparent;
+  pointer-events: none;
+}
+.pepito-vet-panel-meta {
+  margin-top: 0.85rem;
+  display: grid;
+  gap: 0.45rem;
+}
+.pepito-vet-panel-caps-line {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: var(--pepito-dark);
+}
+.pepito-vet-cred-pill {
+  margin: 0;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  width: fit-content;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background: rgba(253, 150, 30, 0.12);
+  color: #9a5b12;
+}
+.pepito-vet-cred-pill.is-ok {
+  background: rgba(21, 204, 160, 0.14);
+  color: #0b7a5c;
+}
+.pepito-vet-cred-pill a {
+  color: var(--pepito-sky);
+  font-weight: 800;
+}
+
+.pepito-vet-inbox-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  margin-inline: var(--pepito-container-pad, 15px);
+}
+.pepito-vet-inbox-panel {
+  padding: 1rem 1.05rem 1.1rem;
+  border-radius: 20px;
+  border: 1px solid rgba(31, 36, 48, 0.08);
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(25, 6, 61, 0.04);
+}
+.pepito-vet-inbox-panel--incoming {
+  background:
+    radial-gradient(120% 80% at 0% 0%, rgba(11, 165, 242, 0.1), transparent 55%),
+    #fff;
+}
+.pepito-vet-inbox-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.pepito-vet-inbox-head h2 {
+  margin: 0.1rem 0 0;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  color: var(--pepito-dark);
+}
+.pepito-vet-inbox-count {
+  min-width: 1.75rem;
+  height: 1.75rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pepito-sky);
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.82rem;
+  font-variant-numeric: tabular-nums;
+  animation: pepito-vet-pulse 1.8s ease infinite;
+}
+@keyframes pepito-vet-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
 .pepito-vet-consult-head {
   margin-bottom: 1.25rem;
 }
 .pepito-vet-consult-head h1 {
-  font-family: var(--pepito-font-display, inherit);
+  font-family: var(--font-display);
   font-size: clamp(1.55rem, 3vw, 2rem);
   margin: 0.2rem 0 0.45rem;
-  color: var(--pepito-dark, #1f2430);
+  color: var(--pepito-dark);
 }
-.pepito-vet-consult-panel {
+.pepito-vet-consult-panel,
+.pepito-vet-connect-panel {
   display: grid;
   gap: 1rem;
+  margin-inline: var(--pepito-container-pad, 15px);
   padding: 1.2rem 1.1rem 1.35rem;
-  border-radius: 18px;
+  border-radius: 20px;
   background:
     radial-gradient(120% 80% at 100% 0%, rgba(21, 204, 160, 0.12), transparent 55%),
-    linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(244, 244, 247, 0.88));
+    #fff;
   border: 1px solid rgba(31, 36, 48, 0.08);
+  box-shadow: 0 8px 22px rgba(25, 6, 61, 0.04);
 }
 .pepito-vet-consult-cost {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.35rem 0.75rem;
   align-items: center;
-  color: var(--pepito-dark, #1f2430);
+  color: var(--pepito-dark);
+}
+.pepito-vet-cost-mark {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(21, 204, 160, 0.14);
+  color: #0b7a5c;
 }
 .pepito-vet-consult-cost svg {
-  color: var(--pepito-mint, #15cca0);
+  color: var(--pepito-mint);
 }
 .pepito-vet-consult-cost strong {
   display: block;
   font-size: 0.95rem;
+  font-family: var(--font-display);
 }
 .pepito-vet-consult-cost span {
   display: block;
-  color: var(--pepito-muted, #757086);
+  color: var(--pepito-muted);
   font-size: 0.9rem;
 }
 .pepito-vet-consult-cost small {
   grid-column: 2;
-  color: var(--pepito-muted, #757086);
+  color: var(--pepito-muted);
   font-size: 0.82rem;
 }
-.pepito-vet-consult-panel .pepito-btn {
+.pepito-vet-consult-panel .pepito-btn,
+.pepito-vet-connect-panel .pepito-btn {
   width: 100%;
   justify-content: center;
+  min-height: 48px;
 }
 .pepito-vet-consult-hint,
 .pepito-vet-consult-status,
@@ -5259,49 +5522,6 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   margin-top: -0.25rem;
 }
 
-.pepito-vet-inbox-title {
-  margin: 0 0 0.75rem;
-  font-size: 1.05rem;
-  color: var(--pepito-dark, #1f2430);
-}
-.pepito-vet-inbox {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.85rem;
-}
-.pepito-vet-inbox li {
-  display: grid;
-  gap: 0.65rem;
-  padding-top: 0.65rem;
-  border-top: 1px solid rgba(31, 36, 48, 0.08);
-}
-.pepito-vet-inbox li:first-child {
-  padding-top: 0;
-  border-top: 0;
-}
-.pepito-vet-inbox strong {
-  display: block;
-  color: var(--pepito-dark, #1f2430);
-}
-.pepito-vet-inbox span {
-  display: block;
-  color: var(--pepito-muted, #757086);
-  font-size: 0.86rem;
-  margin-top: 0.15rem;
-}
-.pepito-vet-inbox-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-.pepito-vet-inbox-actions .pepito-btn {
-  flex: 1 1 auto;
-  justify-content: center;
-  min-width: 8.5rem;
-}
-
 .pepito-vet-consult-incoming {
   margin: 0 auto 1.25rem;
   max-width: 720px;
@@ -5315,7 +5535,7 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 .pepito-vet-consult-incoming h2 {
   margin: 0 0 0.75rem;
   font-size: 1.05rem;
-  color: var(--pepito-dark, #1f2430);
+  color: var(--pepito-dark);
 }
 .pepito-vet-consult-incoming-list {
   list-style: none;
@@ -5327,21 +5547,23 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 .pepito-vet-consult-incoming-list li {
   display: grid;
   gap: 0.65rem;
-  padding-top: 0.65rem;
+  padding: 0.85rem 0 0;
   border-top: 1px solid rgba(31, 36, 48, 0.08);
 }
 .pepito-vet-consult-incoming-list li:first-child {
   padding-top: 0;
   border-top: 0;
 }
+.pepito-vet-row-info strong,
 .pepito-vet-consult-incoming-list strong {
   display: block;
-  color: var(--pepito-dark, #1f2430);
+  color: var(--pepito-dark);
+  font-family: var(--font-display);
 }
 .pepito-vet-consult-incoming-list span,
 .pepito-vet-consult-incoming-list small {
   display: block;
-  color: var(--pepito-muted, #757086);
+  color: var(--pepito-muted);
   font-size: 0.86rem;
   margin-top: 0.15rem;
 }
@@ -5353,7 +5575,13 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 .pepito-vet-consult-incoming-actions .pepito-btn {
   flex: 1 1 auto;
   justify-content: center;
-  min-width: 8.5rem;
+  min-width: 7.5rem;
+  min-height: 44px;
+  gap: 0.35rem;
+}
+.pepito-vet-reject {
+  color: #a12d2d !important;
+  border-color: rgba(196, 71, 71, 0.28) !important;
 }
 .pepito-vet-consult-incoming-list .pepito-vet-status {
   display: inline-flex;
@@ -5366,6 +5594,7 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   font-weight: 700;
   background: rgba(11, 165, 242, 0.12);
   color: #0b6fa8;
+  width: fit-content;
 }
 .pepito-vet-consult-incoming-list .pepito-vet-status.is-active {
   background: rgba(21, 204, 160, 0.14);
@@ -5380,11 +5609,20 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
     grid-template-columns: 1fr auto;
     align-items: center;
   }
+  .pepito-vet-hero {
+    border-radius: 24px;
+    margin-top: 0.35rem;
+  }
+  .pepito-vet-online-card,
+  .pepito-vet-inbox-stack,
+  .pepito-vet-connect-panel,
+  .pepito-vet-consult-panel {
+    margin-inline: 0;
+  }
 }
 
-/* Dedicated vet dashboard — keep inbox readable on wide desktop */
 .pepito-vet-dashboard {
-  max-width: 780px;
+  max-width: 820px;
 }
 .pepito-vet-panel-caps {
   margin-top: 0.85rem;
@@ -5397,15 +5635,15 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.55;
-  color: var(--pepito-dark, #19063d);
+  color: var(--pepito-dark);
 }
 .pepito-vet-cred-line {
   margin-top: 0.45rem !important;
-  color: var(--pepito-muted, #6b6280) !important;
+  color: var(--pepito-muted) !important;
   font-size: 0.82rem !important;
 }
 .pepito-vet-cred-line a {
-  color: var(--pepito-sky, #0ba5f2);
+  color: var(--pepito-sky);
   font-weight: 700;
 }
 .pepito-vet-dashboard .pepito-vet-consult-incoming {
@@ -5447,13 +5685,22 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 }
 .pepito-vet-chat-wait-hint {
   margin: 0;
-  color: var(--pepito-muted, #757086);
+  color: var(--pepito-muted);
   font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {
   .pepito-vet-consult {
-    padding: 1.25rem 1rem 6.5rem;
+    padding: 0 0 6.5rem;
+  }
+  .pepito-app-shell .pepito-vet-consult,
+  .pepito-vet-consult {
+    margin-top: 0;
+  }
+  .pepito-vet-hero {
+    border-radius: 0 0 22px 22px;
+    margin-inline: calc(-1 * var(--pepito-container-pad));
+    width: auto;
   }
   .pepito-vet-consult-incoming {
     margin-inline: 1rem;
@@ -7538,6 +7785,202 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   font-size: 0.95rem;
 }
 
+.pepito-wallet-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 22px 22px;
+  min-height: clamp(140px, 24vh, 190px);
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 70% 80% at 10% 0%, rgba(253, 150, 30, 0.18), transparent 55%),
+    radial-gradient(ellipse 55% 60% at 95% 40%, rgba(92, 77, 145, 0.16), transparent 50%),
+    linear-gradient(160deg, #fff7ee 0%, #f4f4f7 55%, #ebe8f6 100%);
+  animation: pepito-flow-banner-in 0.7s ease both;
+}
+.pepito-wallet-hero-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(180deg, transparent 30%, rgba(255,255,255,0.4));
+}
+.pepito-wallet-hero-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 1.25rem 0.15rem 1.1rem;
+  animation: pepito-flow-rise 0.55s ease 0.08s both;
+}
+.pepito-wallet-kicker {
+  margin: 0 0 0.3rem !important;
+}
+.pepito-wallet-featured {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 0.75rem;
+  padding: 0;
+  animation: pepito-flow-rise 0.55s ease 0.12s both;
+}
+.pepito-wallet-featured.is-pending {
+  opacity: 0.72;
+}
+.pepito-wallet-featured-main {
+  padding: 1.2rem 1.15rem 1.15rem;
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(253, 150, 30, 0.2), transparent 55%),
+    linear-gradient(155deg, #19063d 0%, #5c4d91 72%);
+  color: #fff;
+  box-shadow: 0 14px 36px rgba(25, 6, 61, 0.18);
+  min-height: 9.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.25rem;
+}
+.pepito-wallet-featured-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  opacity: 0.85;
+}
+.pepito-wallet-featured-val {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.85rem, 4vw, 2.35rem);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35rem;
+}
+.pepito-wallet-featured-val > span {
+  font-size: 1.15rem;
+  opacity: 0.9;
+}
+.pepito-wallet-featured-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  opacity: 0.78;
+}
+.pepito-wallet-featured-side {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.pepito-wallet-mini {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 3.35rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 16px;
+  background: #fff;
+  border: 1px solid rgba(92, 77, 145, 0.1);
+  box-shadow: 0 6px 16px rgba(25, 6, 61, 0.04);
+}
+.pepito-wallet-mini-sym {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pepito-lilac);
+  color: var(--pepito-base);
+  font-weight: 800;
+  font-size: 0.9rem;
+  flex: 0 0 auto;
+}
+.pepito-wallet-mini--stars .pepito-wallet-mini-sym {
+  background: rgba(253, 150, 30, 0.16);
+  color: #c46a00;
+}
+.pepito-wallet-mini--toman .pepito-wallet-mini-sym {
+  background: rgba(21, 204, 160, 0.14);
+  color: #0b7a5c;
+}
+.pepito-wallet-mini--ton .pepito-wallet-mini-sym {
+  background: rgba(11, 165, 242, 0.14);
+  color: #0b6fa8;
+}
+.pepito-wallet-mini-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--pepito-muted);
+}
+.pepito-wallet-mini-val {
+  margin: 0.1rem 0 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.98rem;
+  color: var(--pepito-dark);
+  font-variant-numeric: tabular-nums;
+}
+.pepito-wallet-tg-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+.pepito-wallet-tg-mark {
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(253, 150, 30, 0.16);
+  color: #c46a00;
+  flex: 0 0 auto;
+}
+.pepito-wallet-tg-stars-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.55rem;
+  height: 1.55rem;
+  margin-inline-end: 0.35rem;
+  border-radius: 8px;
+  background: rgba(253, 150, 30, 0.16);
+  color: #c46a00;
+  font-size: 0.85rem;
+}
+.pepito-wallet-tg-stars {
+  display: inline-flex;
+  align-items: center;
+}
+@media (max-width: 640px) {
+  .pepito-wallet-featured {
+    grid-template-columns: 1fr;
+  }
+  .pepito-wallet-featured-side {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .pepito-wallet-mini {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+    min-height: 0;
+    padding: 0.7rem 0.65rem;
+  }
+}
+@media (min-width: 860px) {
+  .pepito-wallet-hero {
+    border-radius: 24px;
+    margin-top: 0.25rem;
+  }
+  .pepito-wallet-hero-inner {
+    padding-inline: 0.35rem;
+  }
+}
+
+
 .pepito-wallet-status {
   margin: 0;
   min-height: 3.4rem;
@@ -8295,19 +8738,60 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
     margin-top: 0 !important;
   }
   .pepito-app-shell .pepito-wallet-hero,
-  .pepito-app-shell .pepito-my-pets-head {
+  .pepito-app-shell .pepito-my-pets-head,
+  .pepito-app-shell .pepito-my-pets-hero,
+  .pepito-app-shell .pepito-vet-hero {
     margin-top: 0.15rem;
   }
 }
 
-/* —— My pets / pet profile / medical (launch) —— */
+/* —— My pets / pet profile / medical — pd-panels-ui-v1 —— */
 .pepito-my-pets {
-  max-width: 880px;
+  max-width: 920px;
   margin-inline: auto;
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   padding-bottom: 1.5rem;
+}
+.pepito-my-pets-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 22px 22px;
+  min-height: clamp(150px, 26vh, 200px);
+  display: flex;
+  align-items: flex-end;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 75% 70% at 12% 0%, rgba(219, 137, 202, 0.22), transparent 55%),
+    radial-gradient(ellipse 55% 55% at 95% 35%, rgba(11, 165, 242, 0.14), transparent 50%),
+    linear-gradient(160deg, #f7f0f8 0%, #f4f4f7 55%, #ebe8f6 100%);
+  animation: pepito-flow-banner-in 0.7s ease both;
+}
+.pepito-my-pets-hero-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(180deg, transparent 25%, rgba(255,255,255,0.42));
+}
+.pepito-my-pets-hero-inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  padding: 1.25rem 0.1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  animation: pepito-flow-rise 0.55s ease 0.08s both;
+}
+.pepito-my-pets-hero-inner h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 3vw, 1.95rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--pepito-dark);
 }
 .pepito-my-pets-head {
   display: flex;
@@ -8325,38 +8809,54 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   margin: 0;
   color: var(--pepito-muted);
   max-width: 36rem;
-  line-height: 1.5;
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+.pepito-my-pets-add {
+  margin-top: 0.55rem;
+  align-self: flex-start;
+  min-height: 44px;
 }
 .pepito-my-pets-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 0.9rem;
 }
 .pepito-my-pets-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.85rem;
+  gap: 0.7rem;
+  padding: 0.95rem;
   border: 1px solid rgba(92, 77, 145, 0.1);
-  border-radius: 18px;
+  border-radius: 20px;
   background: #fff;
+  box-shadow: 0 10px 26px rgba(25, 6, 61, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  animation: pepito-flow-rise 0.5s ease both;
+}
+.pepito-my-pets-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(92, 77, 145, 0.22);
+  box-shadow: 0 14px 32px rgba(25, 6, 61, 0.08);
 }
 .pepito-my-pets-card.is-skeleton {
-  min-height: 140px;
+  min-height: 150px;
   background: linear-gradient(90deg, #f3f1f7, #faf9fc, #f3f1f7);
   background-size: 200% 100%;
   animation: pepito-flow-rise 1s ease infinite;
+  pointer-events: none;
 }
 .pepito-my-pets-card-main {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.8rem;
   align-items: center;
   text-decoration: none;
   color: inherit;
+  min-height: 44px;
 }
 .pepito-my-pets-card-text {
   display: grid;
@@ -8364,7 +8864,9 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   min-width: 0;
 }
 .pepito-my-pets-card-text strong {
-  font-size: 1.05rem;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  color: var(--pepito-dark);
 }
 .pepito-my-pets-card-text span,
 .pepito-my-pets-card-text small {
@@ -8374,46 +8876,88 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 .pepito-my-pets-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
+  gap: 0.4rem;
 }
 .pepito-my-pets-action {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.3rem;
-  padding: 0.35rem 0.65rem;
+  min-height: 40px;
+  padding: 0.4rem 0.75rem;
   border-radius: 999px;
   border: 1px solid rgba(92, 77, 145, 0.14);
   text-decoration: none;
   color: var(--pepito-dark);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
+  font-family: var(--font-display);
   background: transparent;
+  transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+}
+.pepito-my-pets-action:hover {
+  background: var(--pepito-lilac);
+  border-color: rgba(92, 77, 145, 0.28);
 }
 .pepito-my-pets-action--med {
-  color: var(--pepito-base);
-  border-color: rgba(92, 77, 145, 0.28);
+  color: #0b7a5c;
+  border-color: rgba(21, 204, 160, 0.35);
+  background: rgba(21, 204, 160, 0.08);
 }
 .pepito-my-pets-chip {
   position: absolute;
-  top: 0.65rem;
-  inset-inline-start: 0.65rem;
+  top: 0.7rem;
+  inset-inline-start: 0.7rem;
   font-size: 0.68rem;
   font-weight: 800;
-  padding: 0.2rem 0.45rem;
+  padding: 0.22rem 0.5rem;
   border-radius: 999px;
-  background: rgba(11, 165, 242, 0.12);
+  background: rgba(11, 165, 242, 0.14);
   color: #0b7bb5;
+  z-index: 1;
 }
 .pepito-my-pets-empty {
   text-align: center;
-  padding: 2.5rem 1rem;
+  padding: 2.75rem 1.1rem;
   display: grid;
   gap: 0.65rem;
   justify-items: center;
+  border-radius: 22px;
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgba(92, 77, 145, 0.08), transparent 55%),
+    #fff;
+  border: 1px solid rgba(92, 77, 145, 0.1);
 }
+.pepito-my-pets-empty-mark {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--pepito-lilac);
+  color: var(--pepito-base);
+}
+.pepito-my-pets-count {
+  margin: 0;
+  color: var(--pepito-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+.pepito-my-pets-back {
+  align-self: flex-start;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pepito-my-pets--gate {
+  gap: 1rem;
+}
+
 .pepito-pet-edit,
 .pepito-pet-profile {
-  max-width: 820px;
+  max-width: 860px;
   margin-inline: auto;
   padding-bottom: 2rem;
 }
@@ -8421,54 +8965,119 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
 }
 .pepito-pet-edit-head h1 {
-  margin: 0.1rem 0 0;
-  font-size: 1.35rem;
+  margin: 0.15rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 2.8vw, 1.55rem);
 }
+.pepito-pet-edit-kicker {
+  margin: 0 !important;
+}
+.pepito-pet-edit-form {
+  display: grid;
+  gap: 0.95rem;
+}
+.pepito-pet-edit-hint {
+  margin: 0;
+  color: var(--pepito-muted);
+  font-size: 0.86rem;
+}
+.pepito-pet-edit-actions {
+  margin-top: 0.35rem;
+}
+@media (max-width: 640px) {
+  .pepito-pet-edit {
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .pepito-pet-profile-hero {
   position: relative;
-  border-radius: 0 0 22px 22px;
+  border-radius: 0 0 24px 24px;
   overflow: hidden;
-  min-height: 240px;
+  min-height: clamp(260px, 48vh, 420px);
   background: #dfe7ef;
+  isolation: isolate;
+  animation: pepito-flow-banner-in 0.7s ease both;
 }
 .pepito-pet-profile-hero img {
   width: 100%;
-  height: 280px;
+  height: clamp(260px, 48vh, 420px);
   object-fit: cover;
   display: block;
+}
+.pepito-pet-profile-hero-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(25, 6, 61, 0.45) 0%, transparent 38%),
+    linear-gradient(0deg, rgba(25, 6, 61, 0.72) 0%, transparent 42%);
 }
 .pepito-pet-profile-hero-bar {
   position: absolute;
   inset-inline: 0;
   top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.65rem 0.75rem;
+  gap: 0.55rem;
+  padding: 0.75rem 0.85rem;
   color: #fff;
-  background: linear-gradient(180deg, rgba(0,0,0,.45), transparent);
+}
+.pepito-pet-profile-hero-title {
+  flex: 1;
+  min-width: 0;
+}
+.pepito-pet-profile-hero-brand {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  opacity: 0.85;
+  font-family: var(--font-display);
 }
 .pepito-pet-profile-hero-bar h1 {
-  flex: 1;
-  margin: 0;
-  font-size: 1.05rem;
+  margin: 0.05rem 0 0;
+  font-size: clamp(1.15rem, 3vw, 1.4rem);
+  font-family: var(--font-display);
+  font-weight: 800;
 }
 .pepito-pet-profile-hero-actions {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.3rem;
+}
+.pepito-pet-profile-hero-meta {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 2;
+  padding: 1rem 1rem 1.15rem;
+  color: #fff;
+}
+.pepito-pet-profile-hero-meta .pepito-pet-profile-sub {
+  color: #fff;
+  margin: 0 0 0.2rem;
+}
+.pepito-pet-profile-hero-meta .pepito-pet-profile-loc {
+  color: rgba(255, 255, 255, 0.82);
+  margin: 0;
 }
 .pepito-pet-profile-body {
-  padding: 1rem var(--pepito-container-pad) 2rem;
+  padding: 1.15rem var(--pepito-container-pad) 2rem;
   display: grid;
-  gap: 0.85rem;
+  gap: 0.95rem;
+  animation: pepito-flow-rise 0.5s ease 0.1s both;
 }
 .pepito-pet-profile-sub {
   margin: 0;
   font-weight: 800;
   font-size: 1.05rem;
+  font-family: var(--font-display);
+  color: var(--pepito-dark);
 }
 .pepito-pet-profile-loc,
 .pepito-pet-profile-bio {
@@ -8484,14 +9093,32 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   flex-wrap: wrap;
   gap: 0.5rem;
 }
+.pepito-pet-profile-owner-actions .pepito-btn,
+.pepito-pet-profile-cta .pepito-btn {
+  min-height: 44px;
+}
+.pepito-pet-profile-toast {
+  margin: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 12px;
+  background: rgba(21, 204, 160, 0.12);
+  color: #0b7a5c;
+  font-weight: 700;
+  font-size: 0.88rem;
+}
 .pepito-pet-medical {
-  margin-top: 0.5rem;
-  padding: 1rem;
-  border-radius: 18px;
+  margin-top: 0.35rem;
+  padding: 1.05rem;
+  border-radius: 20px;
   border: 1px solid rgba(92, 77, 145, 0.1);
-  background: #faf9fc;
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(21, 204, 160, 0.08), transparent 55%),
+    #faf9fc;
   display: grid;
   gap: 0.85rem;
+}
+.pepito-pet-profile.is-medical-focus .pepito-pet-medical {
+  box-shadow: 0 0 0 2px rgba(21, 204, 160, 0.25);
 }
 .pepito-pet-medical-head {
   display: flex;
@@ -8501,6 +9128,7 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 .pepito-pet-medical-head h2 {
   margin: 0;
   font-size: 1.05rem;
+  font-family: var(--font-display);
 }
 .pepito-pet-medical-head p {
   margin: 0.2rem 0 0;
@@ -8527,18 +9155,39 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   margin: 0;
   font-size: 0.88rem;
   line-height: 1.45;
-  white-space: pre-wrap;
+  color: var(--pepito-dark);
+}
+.pepito-pet-medical-meta {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--pepito-muted);
+}
+.pepito-pet-medical-entries h3,
+.pepito-pet-medical-rx h3 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.pepito-pet-medical-entries ul,
+.pepito-pet-medical-rx ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.55rem;
 }
 .pepito-pet-medical-entry,
 .pepito-pet-medical-rx-card {
-  padding: 0.75rem;
+  padding: 0.75rem 0.8rem;
   border-radius: 14px;
   background: #fff;
   border: 1px solid rgba(92, 77, 145, 0.08);
-  margin-bottom: 0.5rem;
 }
 .pepito-pet-medical-entry header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.5rem;
   margin-bottom: 0.35rem;
@@ -8554,6 +9203,23 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   gap: 0.75rem;
   margin-top: 0.35rem;
 }
+.pepito-pet-wishlist {
+  padding: 1rem;
+  border-radius: 18px;
+  border: 1px solid rgba(92, 77, 145, 0.1);
+  background: #fff;
+  display: grid;
+  gap: 0.65rem;
+}
+.pepito-pet-wishlist header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+.pepito-pet-wishlist header p {
+  margin: 0.2rem 0 0;
+  color: var(--pepito-muted);
+  font-size: 0.86rem;
+}
 .pepito-pet-wishlist-grid {
   list-style: none;
   margin: 0;
@@ -8567,9 +9233,37 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   gap: 0.5rem;
   padding: 0.55rem 0.7rem;
   border-radius: 12px;
-  background: #fff;
+  background: #faf9fc;
   border: 1px solid rgba(92, 77, 145, 0.08);
 }
+
+@media (min-width: 860px) {
+  .pepito-my-pets-hero,
+  .pepito-pet-profile-hero {
+    border-radius: 24px;
+    margin-top: 0.25rem;
+  }
+  .pepito-my-pets-hero-inner {
+    padding-inline: 0.35rem;
+  }
+}
+@media (max-width: 859px) {
+  .pepito-app-shell .pepito-my-pets-hero,
+  .pepito-my-pets-hero {
+    border-radius: 0 0 22px 22px;
+    margin-inline: calc(-1 * var(--pepito-container-pad));
+    width: auto;
+  }
+  .pepito-pet-profile-hero {
+    margin-inline: calc(-1 * var(--pepito-container-pad));
+    width: auto;
+    border-radius: 0 0 22px 22px;
+  }
+  .pepito-my-pets {
+    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 
 .find-playmate-header {
   display: flex;
