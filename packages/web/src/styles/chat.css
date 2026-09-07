@@ -145,6 +145,9 @@ html.tg-chat-open body {
 
   .tg-chat .tg-thread-top {
     grid-area: thread-top !important;
+    overflow: visible !important;
+    position: relative !important;
+    z-index: 60 !important;
   }
 
   .tg-chat .tg-thread-scroll {
@@ -154,6 +157,27 @@ html.tg-chat-open body {
     overscroll-behavior: contain;
     /* Extra room when keyboard is open so last bubbles clear the lifted foot */
     padding-bottom: var(--tg-kb-inset, 0px) !important;
+    z-index: 1 !important;
+  }
+
+  .tg-chat .tg-chat-header {
+    overflow: visible !important;
+    z-index: 61 !important;
+  }
+
+  .tg-chat .tg-chat-header-actions {
+    overflow: visible !important;
+    z-index: 62 !important;
+  }
+
+  .tg-chat .tg-chat-menu {
+    z-index: 70 !important;
+    /* Keep fully on-screen on narrow phones (menu sits on physical left in RTL) */
+    inset-inline-end: 0 !important;
+    inset-inline-start: auto !important;
+    right: auto !important;
+    left: 8px !important;
+    max-width: calc(100vw - 16px) !important;
   }
 
   .tg-chat .tg-thread-foot {

@@ -4505,7 +4505,10 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
 .tg-thread-top {
   grid-area: thread-top;
   flex: 0 0 auto;
-  z-index: 2;
+  /* Above the message scroller so the ⋮ dropdown is not painted underneath */
+  position: relative;
+  z-index: 50;
+  overflow: visible;
 }
 
 .tg-thread-scroll {
@@ -4682,8 +4685,13 @@ input, select, textarea { font-family: inherit; font-size: 1rem; }
   top: calc(100% + 6px);
   inset-inline-end: 0;
   left: auto;
-  z-index: 50;
+  z-index: 60;
   min-width: 220px;
+  max-width: min(280px, calc(100vw - 16px));
+  max-height: min(70vh, 420px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 6px;
   border-radius: 14px;
   background: #fff;

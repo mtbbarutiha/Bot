@@ -4089,7 +4089,7 @@ div.pepito-profile-stat:active {
   }
   .pepito-profile-hero {
     min-height: clamp(320px, 58vh, 440px);
-    border-radius: 22px;
+    border-radius: 0 0 22px 22px;
   }
   .pepito-profile-hero-inner {
     padding: 1.5rem 1.1rem 1.25rem;
