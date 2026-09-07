@@ -320,6 +320,16 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     padding-top: 0;
     min-height: auto;
   }
+  /*
+    Nav is in-flow on mobile — the default 1.25rem app-main top pad becomes a
+    dead white band under the header (profile, wallet, and other app pages).
+  */
+  .pepito-app-main {
+    padding-top: 0.35rem;
+  }
+  .pepito-wallet-page {
+    padding-top: 0;
+  }
   .pepito-app-rail {
     position: static;
     top: auto;
