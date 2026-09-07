@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Refuse incomplete-tree VPS deploys (logo/feature overwrites).
-# CI/CD does NOT fix the root cause — feature branches must not rsync dist.
-# See docs/DEPLOY.md
+# Controlled deploy path: GitHub Actions .github/workflows/deploy.yml
+# Feature branches must not ad-hoc rsync dist. See docs/DEPLOY.md
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -15,12 +15,16 @@ ok() { echo "predeploy-check OK: $*"; }
 
 BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 
-# Only integration lines may deploy (override: ALLOW_DEPLOY=1).
+# Only integration / release lines may deploy (override: ALLOW_DEPLOY=1).
+# CI sets ALLOW_DEPLOY=1 after build; humans should merge to main first.
 case "$BRANCH" in
-  cursor/stabilize-deploy-logos-6c89|cursor/predeploy-guard-6c89|cursor/mother-logo-everywhere-6c89|cursor/pwa-mark-no-type-6c89|production|main) ;;
+  main|master|production|\
+  cursor/stabilize-deploy-logos-6c89|cursor/predeploy-guard-6c89|\
+  cursor/mother-logo-everywhere-6c89|cursor/pwa-mark-no-type-6c89|\
+  cursor/setup-cicd-6c89) ;;
   *)
     if [[ "${ALLOW_DEPLOY:-}" != "1" ]]; then
-      fail "branch '$BRANCH' cannot deploy. Merge into cursor/stabilize-deploy-logos-6c89 first (or ALLOW_DEPLOY=1)."
+      fail "branch '$BRANCH' cannot deploy. Merge into main (or ALLOW_DEPLOY=1 for break-glass)."
     fi
     echo "predeploy-check WARN: ALLOW_DEPLOY=1 on non-integration branch $BRANCH"
     ;;
@@ -63,5 +67,32 @@ ok "newsletter news@"
 grep -q 'یک گفتگو را انتخاب کن' packages/web/src/pages/ChatPage.tsx \
   || fail "desktop chat empty-state missing"
 ok "desktop chat empty-state"
+
+# --- Features previously wiped by incomplete agent rsyncs ---
+
+grep -q "WEB_CTA_ONCE_MARKER = 'web-cta-once-v2'" packages/api/src/services/web-chat-cta-once.ts \
+  || fail "api web-cta-once-v2 marker missing"
+grep -q "WEB_CTA_ONCE_MARKER = 'web-cta-once-v2'" packages/bot/src/web-chat-cta-once.ts \
+  || fail "bot web-cta-once-v2 marker missing"
+ok "web-cta-once-v2"
+
+grep -q "REMOVED_USER_ROLES = \\['pet_sitter', 'community_seeker'\\]" packages/shared/src/petdate.ts \
+  || fail "REMOVED_USER_ROLES (no sitter) missing"
+# Ensure sitter is not offered as an active selectable role in shared enums of live roles
+if grep -n "pet_sitter" packages/shared/src/petdate.ts | grep -v REMOVED | grep -v removed | grep -qi 'role'; then
+  fail "pet_sitter still looks like an active role"
+fi
+ok "no sitter roles (removed only)"
+
+grep -q 'DATABASE_PATH' ecosystem.config.cjs \
+  || fail "ecosystem.config.cjs must define single DATABASE_PATH"
+ok "single DATABASE_PATH"
+
+# Wallet / transactions surface (api + web) — soft markers
+if [[ -d packages/api/src/routes ]]; then
+  grep -R -q -E 'transaction|withdraw|wallet' packages/api/src/routes \
+    || fail "wallet/transactions routes seem missing"
+  ok "wallet/transactions api markers"
+fi
 
 echo "predeploy-check passed — this tree may deploy."

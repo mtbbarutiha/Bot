@@ -1,0 +1,165 @@
+# PetDate controlled deploy — the ONLY supported VPS path.
+# Prevents parallel Cloud Agent rsyncs from shipping incomplete trees.
+#
+# Required GitHub secrets (Settings → Secrets and variables → Actions):
+#   VPS_HOST      e.g. 185.110.189.218
+#   VPS_USER      e.g. root
+#   VPS_SSH_KEY   private key (full PEM) for that user
+# Optional:
+#   VPS_PATH      remote app dir (default /opt/petdate)
+#
+# Recommended: create Environment "production" with required reviewers
+# so deploy needs manual approval after CI succeeds.
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type deploy to confirm a manual production deploy'
+        required: true
+        default: ''
+      scope:
+        description: 'Deploy scope (all recommended; package scopes never wipe siblings)'
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - shared
+          - api
+          - bot
+          - web
+
+concurrency:
+  group: petdate-vps-deploy
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: Deploy guard
+    runs-on: ubuntu-latest
+    outputs:
+      ok: ${{ steps.check.outputs.ok }}
+      scope: ${{ steps.check.outputs.scope }}
+    steps:
+      - id: check
+        env:
+          EVENT: ${{ github.event_name }}
+          CONFIRM: ${{ github.event.inputs.confirm || '' }}
+          SCOPE_IN: ${{ github.event.inputs.scope || 'all' }}
+          REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          SCOPE="${SCOPE_IN:-all}"
+          echo "scope=$SCOPE" >> "$GITHUB_OUTPUT"
+          if [[ "$EVENT" == "workflow_dispatch" ]]; then
+            if [[ "$CONFIRM" != "deploy" ]]; then
+              echo "Manual deploy refused: set confirm=deploy"
+              echo "ok=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          case "$REF" in
+            refs/heads/main|refs/heads/master) ;;
+            *)
+              if [[ "$EVENT" != "workflow_dispatch" ]]; then
+                echo "Refusing auto-deploy for $REF"
+                echo "ok=false" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              echo "Manual deploy from non-main ref $REF — allowed with confirm=deploy"
+              ;;
+          esac
+          echo "ok=true" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build before deploy
+    needs: guard
+    if: needs.guard.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run build:all
+      - run: bash ./scripts/ci-selftest.sh
+      - name: Predeploy check
+        env:
+          ALLOW_DEPLOY: '1'
+        run: bash ./scripts/predeploy-check.sh
+
+  deploy:
+    name: Deploy to VPS
+    needs: [guard, build]
+    if: needs.guard.outputs.ok == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require VPS secrets
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for v in VPS_HOST VPS_USER VPS_SSH_KEY; do
+            if [[ -z "${!v}" ]]; then
+              echo "Missing secret: $v"
+              missing=1
+            fi
+          done
+          if [[ "$missing" -ne 0 ]]; then
+            echo "::error::Set VPS_HOST, VPS_USER, VPS_SSH_KEY in repo Actions secrets (see docs/DEPLOY.md)."
+            exit 1
+          fi
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_deploy
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          cat > ~/.ssh/config <<EOF
+Host petdate-vps
+  HostName ${VPS_HOST}
+  User ${VPS_USER}
+  IdentityFile ~/.ssh/id_deploy
+  StrictHostKeyChecking accept-new
+  ServerAliveInterval 30
+EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Deploy consistent tree to VPS
+        env:
+          VPS_PATH_SECRET: ${{ secrets.VPS_PATH }}
+          DEPLOY_SCOPE: ${{ needs.guard.outputs.scope }}
+          ALLOW_DEPLOY: '1'
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          export REMOTE_DIR="${VPS_PATH_SECRET:-/opt/petdate}"
+          if [[ "$DEPLOY_SCOPE" != "all" ]]; then
+            export ALLOW_PARTIAL_DEPLOY=1
+          fi
+          # Full deploy is the controlled path. Package scopes never use
+          # parent-level --delete (see scripts/deploy-vps.sh).
+          ./scripts/deploy-vps.sh petdate-vps
