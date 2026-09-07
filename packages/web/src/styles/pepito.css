@@ -321,14 +321,28 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     min-height: auto;
   }
   /*
-    Nav is in-flow on mobile — the default 1.25rem app-main top pad becomes a
-    dead white band under the header (profile, wallet, and other app pages).
+    Nav is in-flow on mobile — any app-main top pad reads as a dead white
+    band under the header (profile, wallet, and other app pages).
   */
   .pepito-app-main {
-    padding-top: 0.35rem;
+    padding-top: 0;
   }
   .pepito-wallet-page {
     padding-top: 0;
+    padding-bottom: 1.5rem;
+  }
+  .pepito-wallet-hero {
+    margin-top: 0.35rem;
+  }
+  /* Profile hero: kill the white crescent from top radius + side pad */
+  .pepito-profile {
+    gap: 1.35rem;
+  }
+  .pepito-profile-hero {
+    border-radius: 0 0 22px 22px;
+    margin-inline: calc(-1 * var(--pepito-container-pad));
+    width: auto;
+    max-width: none;
   }
   .pepito-app-rail {
     position: static;
