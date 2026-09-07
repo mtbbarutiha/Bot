@@ -1,16 +1,35 @@
-# Deploy discipline (PetDate Cloud Agents)
+# Deploy discipline (PetDate)
 
-## Why features and logos keep “reverting”
+> **Agents:** before any manual `rsync` of `dist`, run `./scripts/predeploy-check.sh` and only proceed if it passes. `deploy-vps.sh` runs the same check automatically (escape hatch: `SKIP_PREDEPLOY=1`).
 
-Multiple Cloud Agents work on **separate git branches** and each one often runs:
+## Root cause (not CI/CD)
+
+**CI/CD does not fix this.** Pipelines still ship whatever tree you point at. The bug is **process**:
+
+Several Cloud Agents each run something like:
 
 ```bash
 rsync -az --delete packages/web/dist/ root@VPS:/opt/petdate/packages/web/dist/
 ```
 
-That **replaces the entire live web bundle** with whatever that agent built from **its** branch. An older branch does not contain later fixes (logo package, Telegram login, explore removal, newsletter, …), so the site looks like it “went back”.
+from **their own incomplete feature branch**. That wipes the live site and replaces it with an older bundle (old PWA logo, missing Telegram login, explore page back, …).
 
-Same risk for `packages/api/dist` and `packages/bot/dist` when an agent restarts pm2 from an incomplete tree.
+So the site “reverts” after every random agent update.
+
+## What actually fixes it
+
+1. **Feature branches must not deploy to VPS.** They only commit.
+2. **One integration branch** may deploy (today: `cursor/stabilize-deploy-logos-6c89`).
+3. Merge / cherry-pick finished work onto that line, then deploy **once**.
+4. Run `scripts/predeploy-check.sh` before any rsync/`deploy-vps.sh` — it refuses incomplete trees and wrong logo hashes.
+5. Escape hatch only when you knowingly accept overwrite risk: `ALLOW_DEPLOY=1` or `SKIP_PREDEPLOY=1`.
+
+```bash
+./scripts/predeploy-check.sh
+./scripts/deploy-vps.sh root@185.110.189.218
+# or after local build:
+./scripts/predeploy-check.sh && rsync -az --delete packages/web/dist/ root@VPS:/opt/petdate/packages/web/dist/
+```
 
 ## Canonical brand logos
 
@@ -18,16 +37,9 @@ Same risk for `packages/api/dist` and `packages/bot/dist` when an agent restarts
 |------|------|
 | **Source of truth** | `packages/web/public/pepito/img/logo.png` |
 | Footer light | `packages/web/public/pepito/img/logo-light.png` |
-| PWA / favicon / apple-touch / brand marks | regenerate with `packages/web/scripts/generate-brand-assets.py` from the pepito logo |
+| PWA / favicon / apple-touch / brand marks | `packages/web/scripts/generate-brand-assets.py` from pepito |
 
-Do **not** invent a new mark for PWA icons. Always derive from pepito.
-
-## Rule for agents
-
-1. **One integration line** for production: merge (or cherry-pick) onto the current stabilize/integration branch before deploy.
-2. **Never** deploy an old feature branch’s `web/dist` after newer work has already gone live unless that branch includes those commits.
-3. Prefer deploying **current workspace** after pulling all needed fixes, not a random historical branch.
-4. After icon changes: rebuild web, hard-refresh / clear PWA cache (service worker caches old icons).
+Do **not** invent a new PWA mark. Always derive from pepito.
 
 ## Live paths on VPS
 

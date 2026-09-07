@@ -10,12 +10,15 @@
 # feature branch overwrites live web/api/bot and looks like a “revert”.
 # See docs/DEPLOY.md — only deploy from an integration branch that has all
 # needed fixes (logos, auth, chats, …).
+#
+# Predeploy guard: scripts/predeploy-check.sh runs first unless SKIP_PREDEPLOY=1.
 
 set -euo pipefail
 
 TARGET="${1:-}"
 if [[ -z "$TARGET" ]]; then
   echo "Usage: $0 user@SERVER_IP"
+  echo "Optional: SKIP_PREDEPLOY=1 to bypass integrity check (not recommended)."
   exit 1
 fi
 
@@ -25,9 +28,16 @@ CURRENT_BRANCH="$(git -C "$ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo
 BRANCH="${BRANCH:-$CURRENT_BRANCH}"
 
 echo "==> Deploying workspace branch: ${CURRENT_BRANCH} (label=${BRANCH})"
-echo "==> Read docs/DEPLOY.md — incomplete branches overwrite live logos/features."
-if [[ "$CURRENT_BRANCH" == "main" || "$CURRENT_BRANCH" == "master" ]]; then
-  echo "WARNING: deploying from ${CURRENT_BRANCH} — confirm this tree has the latest fixes."
+echo "==> Root fix: feature branches must not deploy. CI/CD alone does not prevent overwrites."
+
+if [[ "${SKIP_PREDEPLOY:-}" == "1" ]]; then
+  echo "WARNING: SKIP_PREDEPLOY=1 — skipping scripts/predeploy-check.sh"
+else
+  if [[ ! -x "$ROOT/scripts/predeploy-check.sh" ]]; then
+    echo "ERROR: scripts/predeploy-check.sh missing or not executable" >&2
+    exit 1
+  fi
+  "$ROOT/scripts/predeploy-check.sh"
 fi
 
 echo "==> Syncing project to ${TARGET}:${REMOTE_DIR}"
