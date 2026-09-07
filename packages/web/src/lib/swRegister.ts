@@ -7,7 +7,7 @@
  * and clears obsolete Workbox caches.
  */
 
-const BUST_GENERATION = 'petdate-sw-20260907-pd-panels-ui-v1';
+const BUST_GENERATION = 'petdate-sw-20260907-pd-panels-ui-v3';
 const BUST_KEY = `pd_sw_bust_${BUST_GENERATION}`;
 const RELOAD_KEY = `pd_sw_reload_${BUST_GENERATION}`;
 

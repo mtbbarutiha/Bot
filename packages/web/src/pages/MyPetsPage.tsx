@@ -176,7 +176,7 @@ export function MyPetsPage() {
 
       <button
         type="button"
-        className="pepito-btn button-2 pepito-my-pets-back"
+        className="pepito-btn pepito-btn--ghost pepito-my-pets-back"
         onClick={() => navigate(-1)}
       >
         <ArrowRight size={16} aria-hidden />

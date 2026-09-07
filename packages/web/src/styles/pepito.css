@@ -2665,9 +2665,17 @@ button.chip.is-on {
   gap: 0;
   max-width: var(--pepito-container-max);
   margin-inline: auto;
-  padding-top: var(--pepito-nav-h);
-  min-height: calc(100dvh - var(--pepito-nav-h));
+  /* Mobile nav is in-flow (relative) — never reserve fixed-nav space here.
+     Desktop (≥860px) adds nav-h padding below where the bar is fixed. */
+  padding-top: 0;
+  min-height: 100dvh;
   box-sizing: border-box;
+}
+@media (min-width: 860px) {
+  .pepito-app-layout {
+    padding-top: var(--pepito-nav-h);
+    min-height: calc(100dvh - var(--pepito-nav-h));
+  }
 }
 .pepito-app-rail {
   position: sticky;
@@ -2934,7 +2942,7 @@ button.chip.is-on {
 .pepito-profile {
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
+  gap: 1.1rem;
   background: transparent !important;
   max-width: 780px;
   width: 100%;
@@ -2943,7 +2951,7 @@ button.chip.is-on {
 }
 .pepito-profile-hero {
   position: relative;
-  min-height: clamp(340px, 48vh, 480px);
+  min-height: clamp(280px, 40vh, 420px);
   border-radius: 28px;
   overflow: hidden;
   background-position: center top;
@@ -2984,11 +2992,11 @@ button.chip.is-on {
   position: relative;
   z-index: 1;
   width: 100%;
-  padding: 2rem 1.4rem 1.5rem;
+  padding: 1.35rem 1.15rem 1.15rem;
   color: #fff;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.7rem;
   animation: pepito-flow-rise 0.65s ease 0.1s both;
 }
 .pepito-profile-kicker {
@@ -3094,10 +3102,13 @@ button.chip.is-on {
   justify-content: flex-end;
 }
 .pepito-profile-hero-edit {
-  min-height: 44px !important;
-  padding: 0.55rem 1.15rem !important;
-  font-size: 0.95rem !important;
-  gap: 0.4rem !important;
+  min-height: 40px !important;
+  padding: 0.45rem 1rem !important;
+  font-size: 0.88rem !important;
+  gap: 0.35rem !important;
+  border-radius: 14px !important;
+  width: auto !important;
+  align-self: flex-start;
   background: var(--pepito-pink) !important;
 }
 .pepito-profile-hero-complete {
@@ -3337,17 +3348,18 @@ button.chip.is-on {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
-  min-height: 5.1rem;
-  padding: 0.75rem 0.4rem;
-  border: 1px solid rgba(92, 77, 145, 0.12);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.72);
+  gap: 0.15rem;
+  min-height: 4.2rem;
+  padding: 0.55rem 0.35rem;
+  border: 1px solid rgba(92, 77, 145, 0.1);
+  border-radius: 14px;
+  background: #fff;
   color: var(--pepito-dark);
   font: inherit;
   text-align: center;
   text-decoration: none;
   cursor: pointer;
+  box-shadow: none;
   transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
 }
 a.pepito-profile-stat {
@@ -3613,10 +3625,12 @@ div.pepito-profile-stat:active {
     grid-template-columns: 1fr;
   }
   .pepito-profile-hero-cta {
-    justify-content: stretch;
+    justify-content: flex-start;
   }
   .pepito-profile-hero-cta .pepito-btn {
-    flex: 1;
+    flex: 0 0 auto;
+    width: auto;
+    min-width: 0;
   }
   .pepito-profile-action {
     font-size: 0.86rem;
@@ -5195,15 +5209,15 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 0.85rem;
 }
 .pepito-vet-hero {
   position: relative;
   overflow: hidden;
   border-radius: 0 0 24px 24px;
-  min-height: clamp(160px, 28vh, 220px);
+  min-height: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   isolation: isolate;
   background:
     radial-gradient(ellipse 80% 70% at 15% 0%, rgba(21, 204, 160, 0.22), transparent 55%),
@@ -5223,7 +5237,7 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   position: relative;
   z-index: 1;
   width: 100%;
-  padding: 1.35rem 1.25rem 1.25rem;
+  padding: 0.95rem 1.05rem 0.95rem;
   animation: pepito-flow-rise 0.55s ease 0.08s both;
 }
 .pepito-vet-kicker {
@@ -5247,13 +5261,13 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 
 .pepito-vet-online-card {
   margin-inline: var(--pepito-container-pad, 15px);
-  padding: 1.05rem 1.1rem 1rem;
-  border-radius: 20px;
+  padding: 0.85rem 0.95rem 0.85rem;
+  border-radius: 16px;
   border: 1px solid rgba(31, 36, 48, 0.08);
   background:
     radial-gradient(120% 90% at 100% 0%, rgba(21, 204, 160, 0.1), transparent 55%),
     #fff;
-  box-shadow: 0 10px 28px rgba(25, 6, 61, 0.05);
+  box-shadow: 0 6px 18px rgba(25, 6, 61, 0.04);
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 .pepito-vet-online-card.is-online {
@@ -5495,9 +5509,13 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 }
 .pepito-vet-consult-panel .pepito-btn,
 .pepito-vet-connect-panel .pepito-btn {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   justify-content: center;
-  min-height: 48px;
+  min-height: 42px;
+  padding-inline: 1.15rem;
+  border-radius: 14px;
+  font-size: 0.9rem;
 }
 .pepito-vet-consult-hint,
 .pepito-vet-consult-status,
@@ -7761,8 +7779,8 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 .pepito-wallet-page {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 0.25rem 0 1.5rem;
+  gap: 0.9rem;
+  padding: 0 0 1.5rem;
   contain: layout;
   /* Avoid scroll anchoring jumps when soft-refresh updates text/balances */
   overflow-anchor: none;
@@ -7789,9 +7807,9 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   position: relative;
   overflow: hidden;
   border-radius: 0 0 22px 22px;
-  min-height: clamp(140px, 24vh, 190px);
+  min-height: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   isolation: isolate;
   background:
     radial-gradient(ellipse 70% 80% at 10% 0%, rgba(253, 150, 30, 0.18), transparent 55%),
@@ -7810,7 +7828,7 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   position: relative;
   z-index: 1;
   width: 100%;
-  padding: 1.25rem 0.15rem 1.1rem;
+  padding: 0.95rem 0.15rem 0.9rem;
   animation: pepito-flow-rise 0.55s ease 0.08s both;
 }
 .pepito-wallet-kicker {
@@ -8200,8 +8218,13 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  min-height: 2.6rem;
-  min-width: 12.5rem;
+  min-height: 2.4rem;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+  padding: 0.45rem 1.05rem !important;
+  border-radius: 14px !important;
+  font-size: 0.88rem !important;
 }
 
 .pepito-wallet-tg-hint,
@@ -8706,7 +8729,8 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 /* Final mobile flush — wins over any earlier padding/radius in this file */
 @media (max-width: 859px) {
   /* ROOT CAUSE of huge white band: base .pepito-app-layout { padding-top: nav-h }
-     was winning over an earlier mobile padding-top:0 (same specificity, later source). */
+     was winning over an earlier mobile padding-top:0 (same specificity, later source).
+     Base is now padding-top:0 with desktop-only nav-h; keep !important as belt+suspenders. */
   .pepito-app-shell .pepito-app-layout,
   .pepito-app-layout {
     padding-top: 0 !important;
@@ -8734,6 +8758,12 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
     margin-inline: calc(-1 * var(--pepito-container-pad)) !important;
     width: auto !important;
     max-width: none !important;
+    animation: none !important;
+    min-height: 0 !important;
+  }
+  .pepito-profile-hero-inner {
+    padding: 1.05rem var(--pepito-container-pad) 1rem !important;
+    gap: 0.55rem !important;
     animation: none !important;
   }
   .pepito-app-shell .pepito-wallet-page,
@@ -8763,11 +8793,33 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   .pepito-wallet-hero-inner,
   .pepito-my-pets-hero-inner,
   .pepito-vet-hero-inner {
-    padding: 0.85rem var(--pepito-container-pad) 1rem !important;
+    padding: 0.75rem var(--pepito-container-pad) 0.85rem !important;
     animation: none !important;
   }
   .pepito-app-shell .pepito-my-pets-head {
     margin-top: 0;
+  }
+  /* Panel actions: compact, not giant full-bleed pills; clear bottom dock */
+  .pepito-profile-hero-edit,
+  .pepito-my-pets-add,
+  .pepito-wallet-tg-sync,
+  .pepito-wallet-tg-link,
+  .pepito-my-pets-back,
+  .pepito-wallet-back,
+  .pepito-wallet-actions .pepito-btn {
+    width: auto !important;
+    max-width: 100%;
+    flex: 0 0 auto !important;
+    border-radius: 14px !important;
+  }
+  .pepito-profile,
+  .pepito-my-pets,
+  .pepito-wallet-page,
+  .pepito-vet-consult {
+    padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  .pepito-my-pets-back {
+    margin-bottom: 0.75rem !important;
   }
 }
 
@@ -8777,16 +8829,16 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 0.9rem;
   padding-bottom: 1.5rem;
 }
 .pepito-my-pets-hero {
   position: relative;
   overflow: hidden;
   border-radius: 0 0 22px 22px;
-  min-height: clamp(150px, 26vh, 200px);
+  min-height: 0;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   isolation: isolate;
   background:
     radial-gradient(ellipse 75% 70% at 12% 0%, rgba(219, 137, 202, 0.22), transparent 55%),
@@ -8805,10 +8857,10 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   position: relative;
   z-index: 1;
   width: 100%;
-  padding: 1.25rem 0.1rem 1.2rem;
+  padding: 0.95rem 0.1rem 0.95rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
   animation: pepito-flow-rise 0.55s ease 0.08s both;
 }
 .pepito-my-pets-hero-inner h1 {
@@ -8839,9 +8891,13 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   font-size: 0.95rem;
 }
 .pepito-my-pets-add {
-  margin-top: 0.55rem;
+  margin-top: 0.45rem;
   align-self: flex-start;
-  min-height: 44px;
+  min-height: 40px !important;
+  padding: 0.45rem 1rem !important;
+  border-radius: 14px !important;
+  font-size: 0.88rem !important;
+  width: auto !important;
 }
 .pepito-my-pets-grid {
   list-style: none;
@@ -8849,18 +8905,18 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
-  gap: 0.9rem;
+  gap: 0.7rem;
 }
 .pepito-my-pets-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 0.7rem;
-  padding: 0.95rem;
+  gap: 0.55rem;
+  padding: 0.8rem;
   border: 1px solid rgba(92, 77, 145, 0.1);
-  border-radius: 20px;
+  border-radius: 16px;
   background: #fff;
-  box-shadow: 0 10px 26px rgba(25, 6, 61, 0.05);
+  box-shadow: 0 4px 14px rgba(25, 6, 61, 0.04);
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   animation: pepito-flow-rise 0.5s ease both;
 }
@@ -8972,10 +9028,16 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 }
 .pepito-my-pets-back {
   align-self: flex-start;
-  min-height: 44px;
+  min-height: 40px !important;
+  padding: 0.4rem 0.9rem !important;
+  border-radius: 12px !important;
+  font-size: 0.86rem !important;
+  width: auto !important;
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+  margin-top: 0.15rem;
+  margin-bottom: 0.35rem;
 }
 .pepito-my-pets--gate {
   gap: 1rem;
@@ -9276,9 +9338,11 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 @media (max-width: 859px) {
   .pepito-app-shell .pepito-my-pets-hero,
   .pepito-my-pets-hero {
-    border-radius: 0 0 22px 22px;
+    border-radius: 0 !important;
     margin-inline: calc(-1 * var(--pepito-container-pad));
     width: auto;
+    min-height: 0 !important;
+    align-items: flex-start !important;
   }
   .pepito-pet-profile-hero {
     margin-inline: calc(-1 * var(--pepito-container-pad));
@@ -9286,7 +9350,7 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
     border-radius: 0 0 22px 22px;
   }
   .pepito-my-pets {
-    padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(108px + env(safe-area-inset-bottom, 0px));
   }
 }
 
