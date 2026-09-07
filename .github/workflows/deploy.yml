@@ -138,14 +138,14 @@ jobs:
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_deploy
           chmod 600 ~/.ssh/id_deploy
           ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          cat > ~/.ssh/config <<EOF
-Host petdate-vps
-  HostName ${VPS_HOST}
-  User ${VPS_USER}
-  IdentityFile ~/.ssh/id_deploy
-  StrictHostKeyChecking accept-new
-  ServerAliveInterval 30
-EOF
+          {
+            echo "Host petdate-vps"
+            echo "  HostName ${VPS_HOST}"
+            echo "  User ${VPS_USER}"
+            echo "  IdentityFile ~/.ssh/id_deploy"
+            echo "  StrictHostKeyChecking accept-new"
+            echo "  ServerAliveInterval 30"
+          } > ~/.ssh/config
           chmod 600 ~/.ssh/config
 
       - name: Deploy consistent tree to VPS
