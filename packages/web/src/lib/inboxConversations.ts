@@ -26,6 +26,11 @@ export type InboxConversation = {
   lastActivityAt: string;
   pending: boolean;
   ended: boolean;
+  /**
+   * گفتگوی جاری/باز: همبازی پذیرفته‌شده بدون قطع، یا مشاورهٔ دامپزشک فعال.
+   * درخواست‌های در انتظار و چت‌های پایان‌یافته ongoing نیستند.
+   */
+  ongoing: boolean;
   direction: 'incoming' | 'outgoing';
   /** طرف مقابل می‌تواند قبول/رد کند (مثل ربات) */
   canDecide: boolean;
@@ -53,14 +58,19 @@ function activityMs(value: string | undefined | null): number {
   return Number.isFinite(ms) ? ms : 0;
 }
 
-/** Newest activity first — آخرین گفتگو همیشه بالاترین ردیف است. */
+/**
+ * Inbox priority:
+ * 1) ongoing (accepted/open sessions) — always above idle/closed
+ * 2) pending requests
+ * 3) ended/closed
+ * Within each tier: newest lastActivityAt first.
+ */
 function sortInbox(items: InboxConversation[]): InboxConversation[] {
   return [...items].sort((a, b) => {
-    const diff = activityMs(b.lastActivityAt) - activityMs(a.lastActivityAt);
-    if (diff !== 0) return diff;
-    // Pending requests with same timestamp float slightly above ended ones
-    const rank = (m: InboxConversation) => (m.pending ? 0 : m.ended ? 2 : 1);
-    return rank(a) - rank(b);
+    const rank = (m: InboxConversation) => (m.ongoing ? 0 : m.pending ? 1 : 2);
+    const byTier = rank(a) - rank(b);
+    if (byTier !== 0) return byTier;
+    return activityMs(b.lastActivityAt) - activityMs(a.lastActivityAt);
   });
 }
 
@@ -69,6 +79,8 @@ export function playmateToInbox(match: MatchRequest): InboxConversation {
   const pending = match.status === 'pending';
   const expired = match.status === 'expired' || Boolean(match.expired);
   const ended = Boolean(match.chatEnded) || expired;
+  /** Accepted playmate session that has not been ended/expired. */
+  const ongoing = match.status === 'accepted' && !ended;
   const preview = expired
     ? 'درخواست منقضی شده'
     : ended
@@ -93,6 +105,7 @@ export function playmateToInbox(match: MatchRequest): InboxConversation {
     lastActivityAt,
     pending,
     ended,
+    ongoing,
     direction: match.direction === 'outgoing' ? 'outgoing' : 'incoming',
     canDecide: pending && match.direction === 'incoming',
     href: `/chats/${match.id}`,
@@ -114,7 +127,9 @@ export function vetToInbox(
   if (!asVet && !asPatient) return null;
 
   const pending = c.status === 'requested';
-  const ended = c.status === 'completed';
+  const ended = c.status === 'completed' || Boolean(c.chatEnded);
+  /** Active vet consult that has not been completed/ended. */
+  const ongoing = c.status === 'active' && !ended;
   const direction: 'incoming' | 'outgoing' = mode === 'as_vet' ? 'incoming' : 'outgoing';
 
   const peerTitle =
@@ -142,6 +157,7 @@ export function vetToInbox(
     lastActivityAt: c.lastActivityAt || c.createdAt,
     pending,
     ended,
+    ongoing,
     direction,
     canDecide: pending && mode === 'as_vet',
     href: `/vet-chats/${c.id}`,
@@ -168,6 +184,7 @@ export function inboxRowsEquivalent(
       row.preview !== other.preview ||
       row.pending !== other.pending ||
       row.ended !== other.ended ||
+      row.ongoing !== other.ongoing ||
       row.title !== other.title ||
       row.canDecide !== other.canDecide ||
       row.kind !== other.kind ||

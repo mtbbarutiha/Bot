@@ -277,12 +277,12 @@ function ConversationListPane({
               const busy = busyKey === c.key;
               const peer = c.peerPet;
               return (
-                <li key={c.key} className="tg-chat-list-row">
+                <li key={c.key} className={`tg-chat-list-row${c.ongoing ? ' is-ongoing-row' : ''}`}>
                   <button
                     type="button"
                     className={`tg-chat-list-item${active ? ' is-active' : ''}${
                       c.ended ? ' is-ended' : ''
-                    }${c.pending ? ' is-pending' : ''}`}
+                    }${c.pending ? ' is-pending' : ''}${c.ongoing ? ' is-ongoing' : ''}`}
                     onClick={() => onSelect(c)}
                   >
                     {peer ? (
@@ -310,7 +310,11 @@ function ConversationListPane({
                       <time className="tg-chat-list-time">
                         {formatTimeAgo(c.lastActivityAt || c.createdAt)}
                       </time>
-                      {c.pending ? (
+                      {c.ongoing ? (
+                        <span className="tg-chat-list-badge is-ongoing" aria-label="گفتگوی فعال">
+                          فعال
+                        </span>
+                      ) : c.pending ? (
                         <span className="tg-chat-list-badge is-pending" aria-label="در انتظار">
                           !
                         </span>
