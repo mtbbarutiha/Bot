@@ -102,8 +102,9 @@ dig +short -x 185.110.189.218         # باید mail.petdate.ir. باشد (بع
 | | |
 |--|--|
 | آدرس | `info@petdate.ir` |
-| آلیاس | `hello@`، `no-reply@`، `noreply@` → `info@` |
+| آلیاس | `hello@`، `no-reply@`، `noreply@`، `news@` → `info@` |
 | From اپ (OTP) | `no-reply@petdate.ir` |
+| From خبرنامه | `news@petdate.ir` (Reply-To → `info@`) |
 | IMAP | `mail.petdate.ir` پورت **993** (SSL) |
 | SMTP | `mail.petdate.ir` پورت **587** (STARTTLS) یا **465** (SSL) |
 | Username | `info@petdate.ir` (آدرس کامل) |

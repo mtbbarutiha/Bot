@@ -74,6 +74,7 @@ type MailStatus = {
   generatedAt: string;
   smtp: SmtpConfig;
   smtpReachable: { ok: boolean; detail: string };
+  newsletter?: { from: string; subscribers: number };
   stats: {
     total: number;
     ok24h: number;
@@ -101,6 +102,7 @@ export function AdminMailPage() {
   const [composeTo, setComposeTo] = useState('');
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
+  const [composeFrom, setComposeFrom] = useState<'default' | 'newsletter'>('default');
   const [composeMsg, setComposeMsg] = useState<string | null>(null);
   const [composeOk, setComposeOk] = useState(false);
   const [composeBusy, setComposeBusy] = useState(false);
@@ -213,6 +215,7 @@ export function AdminMailPage() {
           to: composeTo.trim(),
           subject: composeSubject.trim(),
           body: composeBody,
+          from: composeFrom,
         }),
       });
       setComposeOk(true);
@@ -464,6 +467,28 @@ export function AdminMailPage() {
             <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <PenLine size={18} /> نوشتن و ارسال ایمیل
             </h2>
+          </div>
+          <div className="form-group">
+            <label className="form-label">فرستنده</label>
+            <select
+              className="form-input"
+              value={composeFrom}
+              onChange={(e) =>
+                setComposeFrom(e.target.value === 'newsletter' ? 'newsletter' : 'default')
+              }
+            >
+              <option value="default">
+                پیش‌فرض SMTP ({smtp?.from || 'no-reply@petdate.ir'})
+              </option>
+              <option value="newsletter">
+                خبرنامه ({data?.newsletter?.from || 'news@petdate.ir'})
+              </option>
+            </select>
+            {data?.newsletter ? (
+              <p className="admin-muted" style={{ marginTop: 6 }}>
+                اعضای خبرنامه: {formatNumFa(data.newsletter.subscribers)} · Reply-To → info@
+              </p>
+            ) : null}
           </div>
           <div className="form-group">
             <label className="form-label">گیرنده</label>

@@ -137,9 +137,12 @@ export async function sendMail(opts: {
 
   const fromDomain = fromAddr.includes('@') ? fromAddr.split('@').pop()! : 'petdate.ir';
   const mailHost = String(process.env.SMTP_HELO_NAME ?? '').trim() || 'mail.petdate.ir';
+  const lowerFrom = fromAddr.toLowerCase();
   const replyTo =
     String(process.env.SMTP_REPLY_TO ?? '').trim() ||
-    (fromAddr.toLowerCase().startsWith('no-reply@') || fromAddr.toLowerCase().startsWith('noreply@')
+    (lowerFrom.startsWith('no-reply@') ||
+    lowerFrom.startsWith('noreply@') ||
+    lowerFrom.startsWith('news@')
       ? `info@${fromDomain}`
       : undefined);
 

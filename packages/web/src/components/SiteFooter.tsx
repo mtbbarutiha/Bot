@@ -2,10 +2,12 @@ import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, AtSign, Mail, Send } from 'lucide-react';
 import { BRAND, SITE } from '@petdate/shared';
+import { subscribeNewsletter } from '../lib/api';
 
 const CONTACT_PHONE_DISPLAY = '۰۲۱-۸۸۷۷۶۶۵۵';
 const CONTACT_PHONE_TEL = '+982188776655';
 const CONTACT_EMAIL = SITE.email;
+const NEWSLETTER_FROM = SITE.newsletterEmail;
 const TELEGRAM_BOT = SITE.telegramBot;
 
 const BOTTOM_LINKS: { to: string; label: string }[] = [
@@ -61,17 +63,27 @@ function FooterLink({
 export function SiteFooter() {
   const [email, setEmail] = useState('');
   const [note, setNote] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const year = new Date().getFullYear();
 
-  function onSubscribe(e: FormEvent) {
+  async function onSubscribe(e: FormEvent) {
     e.preventDefault();
     const value = email.trim();
     if (!value || !value.includes('@')) {
       setNote('یک ایمیل معتبر وارد کن.');
       return;
     }
-    setNote('ثبت شد — به‌زودی خبرها را می‌فرستیم.');
-    setEmail('');
+    setBusy(true);
+    setNote(null);
+    try {
+      const res = await subscribeNewsletter(value, 'footer');
+      setNote(res.message || `ثبت شد — خبرها از ${NEWSLETTER_FROM} می‌آید.`);
+      setEmail('');
+    } catch (err) {
+      setNote(err instanceof Error ? err.message : 'عضویت خبرنامه ناموفق بود.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -143,9 +155,10 @@ export function SiteFooter() {
             <div className="pepito-footer-col">
               <h3 className="pepito-footer-heading">خبرنامه</h3>
               <p className="pepito-footer-lead pepito-footer-lead--tight">
-                از آفرهای شاپ و خبرهای پت‌دیت باخبر شو — ایمیل بده تا اطلاع‌رسانی کنیم.
+                از آفرهای شاپ و خبرهای پت‌دیت باخبر شو — ایمیل‌ها از{' '}
+                <span dir="ltr">{NEWSLETTER_FROM}</span> می‌آید.
               </p>
-              <form className="pepito-footer-newsletter" onSubmit={onSubscribe}>
+              <form className="pepito-footer-newsletter" onSubmit={(e) => void onSubscribe(e)}>
                 <label className="pepito-footer-sr" htmlFor="pepito-footer-email">
                   ایمیل
                 </label>
@@ -156,12 +169,13 @@ export function SiteFooter() {
                   autoComplete="email"
                   placeholder="Email Address"
                   value={email}
+                  disabled={busy}
                   onChange={(e) => {
                     setNote(null);
                     setEmail(e.target.value);
                   }}
                 />
-                <button type="submit" aria-label="عضویت در خبرنامه">
+                <button type="submit" aria-label="عضویت در خبرنامه" disabled={busy}>
                   <ArrowLeft size={18} strokeWidth={2.25} />
                 </button>
               </form>

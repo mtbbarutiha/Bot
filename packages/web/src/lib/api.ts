@@ -15,6 +15,18 @@ import type {
 /** Empty = same-origin (Vite proxies /api → API). Override with VITE_API_URL if needed. */
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined)?.replace(/\/$/, '') ?? '';
 
+export async function subscribeNewsletter(email: string, source = 'footer') {
+  return request<{
+    ok: true;
+    created: boolean;
+    from: string;
+    message: string;
+  }>('/api/newsletter/subscribe', {
+    method: 'POST',
+    body: JSON.stringify({ email, source }),
+  });
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {

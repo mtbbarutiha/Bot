@@ -311,6 +311,7 @@ ensure_mailbox() {
   echo "abuse@${DOMAIN} ${email}" >>/etc/postfix/virtual
   echo "no-reply@${DOMAIN} ${email}" >>/etc/postfix/virtual
   echo "noreply@${DOMAIN} ${email}" >>/etc/postfix/virtual
+  echo "news@${DOMAIN} ${email}" >>/etc/postfix/virtual
   postmap /etc/postfix/virtual
 
   mkdir -p "${CRED_DIR}"

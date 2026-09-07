@@ -566,6 +566,22 @@ function migrateSchema() {
     `CREATE INDEX IF NOT EXISTS idx_email_send_logs_created
       ON email_send_logs (created_at DESC)`
   );
+
+  /** Footer / marketing newsletter subscribers (From: news@petdate.ir). */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS newsletter_subscribers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL COLLATE NOCASE,
+      source TEXT NOT NULL DEFAULT 'footer',
+      created_at TEXT NOT NULL DEFAULT (datetime('now')),
+      UNIQUE(email)
+    )
+  `);
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_newsletter_subscribers_created
+      ON newsletter_subscribers (created_at DESC)`
+  );
+
   db.exec(
     `CREATE INDEX IF NOT EXISTS idx_app_error_logs_created
       ON app_error_logs (created_at DESC)`
@@ -5118,6 +5134,56 @@ export const dbService = {
         data.error ? data.error.slice(0, 500) : null
       );
     return { id: Number(result.lastInsertRowid) };
+  },
+
+  /** Subscribe email to newsletter (idempotent). Returns whether newly inserted. */
+  upsertNewsletterSubscriber(
+    email: string,
+    source = 'footer'
+  ): { id: number; created: boolean } {
+    const addr = email.trim().toLowerCase().slice(0, 320);
+    const existing = db
+      .prepare(`SELECT id FROM newsletter_subscribers WHERE email = ? COLLATE NOCASE`)
+      .get(addr) as { id: number } | undefined;
+    if (existing) {
+      return { id: Number(existing.id), created: false };
+    }
+    const result = db
+      .prepare(
+        `INSERT INTO newsletter_subscribers (email, source) VALUES (?, ?)`
+      )
+      .run(addr, (source || 'footer').slice(0, 64));
+    return { id: Number(result.lastInsertRowid), created: true };
+  },
+
+  listNewsletterSubscribers(opts?: { limit?: number }): Array<{
+    id: number;
+    email: string;
+    source: string;
+    createdAt: string;
+  }> {
+    const lim = Math.min(Math.max(opts?.limit ?? 200, 1), 2000);
+    const rows = db
+      .prepare(
+        `SELECT id, email, source, created_at
+         FROM newsletter_subscribers
+         ORDER BY id DESC
+         LIMIT ?`
+      )
+      .all(lim) as Array<{ id: number; email: string; source: string; created_at: string }>;
+    return rows.map((r) => ({
+      id: Number(r.id),
+      email: String(r.email),
+      source: String(r.source || 'footer'),
+      createdAt: String(r.created_at),
+    }));
+  },
+
+  countNewsletterSubscribers(): number {
+    const row = db.prepare(`SELECT COUNT(*) as c FROM newsletter_subscribers`).get() as {
+      c: number;
+    };
+    return Number(row?.c ?? 0);
   },
 
   listEmailSendLogs(opts?: { limit?: number; ok?: boolean }): Array<{

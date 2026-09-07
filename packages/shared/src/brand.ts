@@ -6,6 +6,8 @@ export const SITE = {
   origin: 'https://petdate.ir',
   wwwOrigin: 'https://www.petdate.ir',
   email: 'hello@petdate.ir',
+  /** From identity for newsletter / marketing mail (alias → info@ inbox). */
+  newsletterEmail: 'news@petdate.ir',
   telegramBot: 'https://t.me/Petdatebot',
   telegramBotUsername: 'Petdatebot',
   /** Absolute OG / social share image (1200-class landscape). */
@@ -40,4 +42,5 @@ export const BRAND = {
   domain: SITE.domain,
   url: SITE.origin,
   email: SITE.email,
+  newsletterEmail: SITE.newsletterEmail,
 } as const;

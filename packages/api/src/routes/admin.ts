@@ -3,7 +3,7 @@ import fs from 'fs';
 import net from 'net';
 import os from 'os';
 import type { UserRole } from '@petdate/shared';
-import { USER_ROLES } from '@petdate/shared';
+import { SITE, USER_ROLES } from '@petdate/shared';
 import {
   hasElasticsearchConfig,
   hasPostgresConfig,
@@ -508,6 +508,10 @@ adminRouter.get('/mail', async (_req, res) => {
     generatedAt: new Date().toISOString(),
     smtp,
     smtpReachable,
+    newsletter: {
+      from: SITE.newsletterEmail,
+      subscribers: dbService.countNewsletterSubscribers(),
+    },
     stats,
     otpMailer: {
       linked: smtp.configured,
@@ -670,6 +674,8 @@ adminRouter.post('/mail/send', adminMailSendLimit, async (req, res) => {
   const to = typeof req.body?.to === 'string' ? req.body.to.trim().toLowerCase() : '';
   const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim() : '';
   const body = typeof req.body?.body === 'string' ? req.body.body : '';
+  const fromKind =
+    typeof req.body?.from === 'string' ? req.body.from.trim().toLowerCase() : 'default';
   if (!isPlausibleEmail(to)) {
     res.status(400).json({ error: 'آدرس ایمیل معتبر نیست' });
     return;
@@ -683,18 +689,39 @@ adminRouter.post('/mail/send', adminMailSendLimit, async (req, res) => {
     res.status(400).json({ error: 'متن ایمیل الزامی است (حداکثر ۲۰۰۰۰ کاراکتر)' });
     return;
   }
+  const newsletterFrom = SITE.newsletterEmail;
+  const useNewsletter =
+    fromKind === 'newsletter' ||
+    fromKind === 'news' ||
+    fromKind === newsletterFrom.toLowerCase();
   const sent = await sendMail({
     to,
     subject,
     text,
     html: buildBrandedMailHtml(text, { title: subject }),
-    purpose: 'admin_compose',
+    purpose: useNewsletter ? 'newsletter' : 'admin_compose',
+    fromAddr: useNewsletter ? newsletterFrom : undefined,
+    fromName: useNewsletter ? 'پت‌دیت' : undefined,
   });
   if (!sent.ok) {
     res.status(502).json({ error: adminMailSendError(sent) });
     return;
   }
-  res.json({ ok: true, to, subject });
+  res.json({
+    ok: true,
+    to,
+    subject,
+    from: useNewsletter ? newsletterFrom : getSmtpPublicConfig().from,
+  });
+});
+
+adminRouter.get('/newsletter/subscribers', (req, res) => {
+  const limit = Number(req.query.limit) || 200;
+  res.json({
+    from: SITE.newsletterEmail,
+    total: dbService.countNewsletterSubscribers(),
+    subscribers: dbService.listNewsletterSubscribers({ limit }),
+  });
 });
 
 type CheckStatus = 'up' | 'down' | 'not_configured';
