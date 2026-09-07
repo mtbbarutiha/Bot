@@ -17,9 +17,7 @@ const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
   vet: 'دامپزشک هستی و می‌خوای مشاوره بدی',
   no_pet: 'فعلاً پت نداری ولی علاقه‌مند به دنیای پت‌ها هستی',
   pet_seeker: 'دنبال پت مناسب برای خانه‌ات هستی',
-  community_seeker: 'می‌خوای با جامعه پت‌داران ارتباط بگیری',
   trainer: 'مربی یا آموزش‌دهنده حیوانات هستی',
-  pet_sitter: 'نگهبان پت هستی یا دنبال این خدمت هستی',
 };
 
 export function RoleSelectPage() {

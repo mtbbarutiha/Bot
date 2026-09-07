@@ -68,11 +68,9 @@ export function roleWelcomeHint(role: string): string {
   const hints: Record<string, string> = {
     pet_owner: 'می‌تونی پت ثبت کنی و همبازی پیدا کنی.',
     vet: 'می‌تونی لیست بیماران و مشاوره‌ها رو ببینی.',
-    no_pet: 'می‌تونی همبازی‌ها رو ببینی و با جامعه پت آشنا بشی.',
+    no_pet: 'می‌تونی همبازی‌ها رو ببینی و با بقیه پت‌دارها آشنا بشی.',
     pet_seeker: 'می‌تونی پت مناسب پیدا کنی.',
-    community_seeker: 'به جامعه petdate خوش اومدی!',
     trainer: 'می‌تونی خدمات آموزشی ارائه بدی (به‌زودی).',
-    pet_sitter: 'می‌تونی خدمات نگهداری بدی (به‌زودی).',
   };
   return hints[role] ?? '';
 }

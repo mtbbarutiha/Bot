@@ -4,7 +4,7 @@ import http from 'http';
 import express from 'express';
 import cors from 'cors';
 import type { GameType } from '@petdate/shared';
-import { dbService, getDb } from './db';
+import { dbService, getDb, getResolvedDatabasePath } from './db';
 import {
   hasElasticsearchConfig,
   hasPostgresConfig,
@@ -123,12 +123,16 @@ app.get('/api/health/candoo', async (_req, res) => {
 });
 
 app.get('/api/health/infra', (_req, res) => {
+  // Runtime store is always SQLite until a postgres adapter ships (DATABASE_URL is future-only).
+  const sqlitePath = getResolvedDatabasePath();
   res.json({
     ok: true,
     service: 'petdate-api',
-    storage: hasPostgresConfig() ? 'postgres' : 'sqlite',
+    storage: 'sqlite',
+    sqlitePath,
     infra: {
-      postgres: hasPostgresConfig(),
+      postgresConfigured: hasPostgresConfig(),
+      postgresActive: false,
       redis: hasRedisConfig(),
       s3: hasS3Config(),
       elasticsearch: hasElasticsearchConfig(),

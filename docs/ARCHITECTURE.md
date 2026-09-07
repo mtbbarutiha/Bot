@@ -9,12 +9,14 @@ Petdate is a pet playmate matching platform with **two equal client channels**: 
 | Web client | React + Vite PWA | Primary UI — profiles, explore, admin |
 | Telegram bot | grammY (`packages/bot`) | Onboarding, quick actions, deep links to web |
 | API | Express (`packages/api`) | Business logic, auth bridge, media URLs |
-| Main database | PostgreSQL + PostGIS | Users, pets, matches; geospatial queries |
-| Cache / sessions | Redis | Bot session state, presence, match queue |
-| Object storage | MinIO / S3 | Pet images and media |
-| Advanced search | Elasticsearch *(future)* | Full-text search |
+| Main database | SQLite (`packages/api/data/petdate.db`) | Users, pets, chats, wallet — **single source of truth for web + bot** |
+| Cache / sessions | Redis (bot UI sessions) / file fallback | Bot wizard state only — not profile/pet data |
+| Object storage | MinIO / S3 *(optional)* | Pet images and media |
+| Advanced search | Elasticsearch *(optional)* | Full-text search |
 
-The API currently runs on **SQLite** for Phase 1. PostgreSQL schema is bootstrapped via Docker; migration is Phase 2.
+> **Important:** The Telegram bot does **not** keep a separate user/pet database. Profile data always goes through the API SQLite. See `docs/UNIFY_BOT_WEB_DB.md`.
+
+The API currently runs on **SQLite**. `DATABASE_URL` (PostgreSQL) is reserved for a future adapter and must not be treated as the live store until that ships.
 
 ## Client Channels
 

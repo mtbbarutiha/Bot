@@ -6,9 +6,7 @@ CREATE TYPE user_role AS ENUM (
   'vet',
   'no_pet',
   'pet_seeker',
-  'community_seeker',
-  'trainer',
-  'pet_sitter'
+  'trainer'
 );
 
 CREATE TYPE onboarding_status AS ENUM (

@@ -49,13 +49,19 @@ import {
   SIGNUP_BONUS,
   USER_PRESENCE_ONLINE_MS,
   USER_ROLES,
+  sanitizeRoleList,
   VET_CONSULT_REQUEST_TTL_MS,
   walletFromUserFields,
   type PetMedicalField,
   type WalletCurrency,
 } from '@petdate/shared';
 
-/** Absolute DATABASE_PATH wins; relative paths ignored (cwd varies across worktrees). */
+/**
+ * Single source of truth for profile/pet data.
+ * Absolute DATABASE_PATH wins; otherwise always `packages/api/data/petdate.db`
+ * (relative env paths ignored — cwd varies across worktrees / pm2).
+ * Bot must not keep a divergent user/pet store; it talks to this API DB via HTTP.
+ */
 function resolveDbPath(): string {
   const raw = (process.env.DATABASE_PATH || '').trim();
   if (raw && path.isAbsolute(raw)) return raw;
@@ -63,6 +69,11 @@ function resolveDbPath(): string {
 }
 
 const dbPath = resolveDbPath();
+
+/** Absolute path of the live SQLite file (for health / ops proof). */
+export function getResolvedDatabasePath(): string {
+  return dbPath;
+}
 
 let db: Database.Database;
 
@@ -78,6 +89,7 @@ export function getDb(): Database.Database {
     seedIfEmpty();
     seedDemoPetsIfEmpty();
     seedFakeDogOwners();
+    console.log(`   SQLite (source of truth): ${dbPath}`);
   }
   return db;
 }
@@ -715,24 +727,33 @@ function migrateSchema() {
     db.exec('ALTER TABLE users ADD COLUMN last_seen_at TEXT');
   }
 
-  // Backfill roles JSON from legacy single role column
+  // Backfill roles JSON + migrate removed roles (pet_sitter / community_seeker → drop or pet_owner)
   const roleRows = db
-    .prepare(`SELECT id, role, roles FROM users WHERE role IS NOT NULL AND role != ''`)
+    .prepare(
+      `SELECT id, role, roles FROM users WHERE (role IS NOT NULL AND role != '') OR (roles IS NOT NULL AND roles != '[]' AND roles != '')`
+    )
     .all() as { id: number; role: string; roles: string }[];
-  const updateRoles = db.prepare('UPDATE users SET roles = ? WHERE id = ?');
+  const updateRoles = db.prepare('UPDATE users SET roles = ?, role = ? WHERE id = ?');
   for (const row of roleRows) {
     const parsed = parseRoles(row.roles, row.role);
     if (!parsed.length) continue;
     const current = (() => {
       try {
         const p = JSON.parse(row.roles || '[]');
-        return Array.isArray(p) ? p : [];
+        return Array.isArray(p) ? p.map(String) : [];
       } catch {
         return [];
       }
     })();
-    if (current.length === 0) {
-      updateRoles.run(JSON.stringify(parsed), row.id);
+    const primaryCandidate =
+      row.role && USER_ROLES.includes(row.role as UserRole)
+        ? (row.role as UserRole)
+        : parsed[0]!;
+    const nextPrimary = parsed.includes(primaryCandidate) ? primaryCandidate : parsed[0]!;
+    const sameRoles =
+      current.length === parsed.length && current.every((r, i) => r === parsed[i]);
+    if (!sameRoles || row.role !== nextPrimary) {
+      updateRoles.run(JSON.stringify(parsed), nextPrimary, row.id);
     }
   }
 
@@ -1379,12 +1400,10 @@ function parseRoles(value: unknown, fallbackRole?: unknown): UserRole[] {
     }
     return [];
   })();
-  const roles = fromJson.filter((r): r is UserRole => USER_ROLES.includes(r as UserRole));
-  if (roles.length) return [...new Set(roles)];
-  if (typeof fallbackRole === 'string' && USER_ROLES.includes(fallbackRole as UserRole)) {
-    return [fallbackRole as UserRole];
-  }
-  return [];
+  return sanitizeRoleList(
+    fromJson,
+    typeof fallbackRole === 'string' ? fallbackRole : null
+  );
 }
 
 function parseProfileRewards(value: unknown): string[] {
@@ -1984,40 +2003,155 @@ export const dbService = {
     return this.updateUserProfileByTelegramId(telegramId, { isActive });
   },
 
-  /** Soft-delete: anonymize + detach telegram so /start can create a fresh account */
+  /** Soft-delete shell + hard-purge pets/sessions/identity so re-register is clean. */
   deleteUserByTelegramId(telegramId: string): boolean {
     const user = this.getUserByTelegramId(telegramId);
     if (!user) return false;
     return this.deleteUserById(user.id);
   },
 
+  /**
+   * Account deletion:
+   * - Hard-deletes owned pets (and playdates tied to those pets)
+   * - Clears web sessions, contacts, blocks, OTPs, attach/login tokens
+   * - Ends/removes vet consults involving the user
+   * - Zeros wallet/coins and strips email/phone/telegram so merge cannot resurrect data
+   * - Leaves an inactive anonymized users row (FK-safe for historic payment rows)
+   */
   deleteUserById(userId: number): boolean {
     const user = this.getUserById(userId);
     if (!user) return false;
-    db.prepare(
-      `UPDATE users SET
-         telegram_id = NULL,
-         username = NULL,
-         name = ?,
-         phone = NULL,
-         phone_verified = 0,
-         phone_verified_at = NULL,
-         bio = NULL,
-         avatar_url = NULL,
-         avatar_custom = 0,
-         interests = '[]',
-         is_active = 0,
-         onboarding = 'role_selected',
-         role = NULL,
-         verification_status = 'none',
-         verification_photo_file_id = NULL,
-         verified_at = NULL,
-         verification_note = NULL,
-         vet_credential_file_id = NULL,
-         vet_credential_status = 'none'
-       WHERE id = ?`
-    ).run(`[حذف‌شده #${user.id}]`, user.id);
-    db.prepare('DELETE FROM phone_otps WHERE user_id = ?').run(user.id);
+
+    const run = db.transaction(() => {
+      // 1) Pets first — re-register must not inherit profile pets
+      const ownedPets = this.listPets({ ownerId: userId });
+      for (const pet of ownedPets) {
+        this.deletePet(pet.id, userId);
+      }
+
+      // 2) Playdates still pointing at this user (no owned pets)
+      try {
+        db.prepare(
+          'DELETE FROM playdate_requests WHERE from_user_id = ? OR to_user_id = ?'
+        ).run(userId, userId);
+      } catch {
+        /* older schemas */
+      }
+
+      // 3) Vet consults / ratings involving this user
+      try {
+        const consultIds = (
+          db
+            .prepare(
+              `SELECT id FROM vet_consultations
+               WHERE patient_user_id = ? OR vet_user_id = ?`
+            )
+            .all(userId, userId) as { id: number }[]
+        ).map((r) => r.id);
+        for (const cid of consultIds) {
+          try {
+            db.prepare('DELETE FROM vet_ratings WHERE consult_id = ?').run(cid);
+          } catch {
+            /* ignore */
+          }
+          try {
+            db.prepare('DELETE FROM prescriptions WHERE consult_id = ?').run(cid);
+          } catch {
+            /* ignore */
+          }
+          db.prepare('DELETE FROM vet_consultations WHERE id = ?').run(cid);
+        }
+      } catch {
+        /* older schemas */
+      }
+
+      // 4) Sessions + social graph + OTP / attach tokens
+      this.deleteWebSessionsForUser(userId);
+      db.prepare('DELETE FROM phone_otps WHERE user_id = ?').run(userId);
+      try {
+        db.prepare('DELETE FROM web_otps WHERE user_id = ?').run(userId);
+      } catch {
+        /* ignore */
+      }
+      try {
+        db.prepare(
+          'DELETE FROM user_contacts WHERE user_id = ? OR contact_user_id = ?'
+        ).run(userId, userId);
+      } catch {
+        /* ignore */
+      }
+      try {
+        db.prepare(
+          'DELETE FROM user_blocks WHERE user_id = ? OR blocked_user_id = ?'
+        ).run(userId, userId);
+      } catch {
+        /* ignore */
+      }
+      try {
+        db.prepare('DELETE FROM telegram_attach_tokens WHERE user_id = ?').run(userId);
+      } catch {
+        /* ignore */
+      }
+      try {
+        if (user.telegramId) {
+          db.prepare('DELETE FROM telegram_login_pending WHERE telegram_id = ?').run(
+            user.telegramId
+          );
+        }
+        db.prepare('DELETE FROM telegram_login_pending WHERE user_id = ?').run(userId);
+      } catch {
+        /* ignore */
+      }
+      try {
+        db.prepare('DELETE FROM game_players WHERE user_id = ?').run(userId);
+      } catch {
+        /* ignore */
+      }
+      try {
+        db.prepare(
+          `UPDATE coin_sell_requests SET status = 'rejected', reviewed_at = datetime('now'),
+             admin_note = COALESCE(admin_note, 'account_deleted')
+           WHERE user_id = ? AND status = 'open'`
+        ).run(userId);
+      } catch {
+        /* ignore */
+      }
+
+      // 5) Anonymize — clear EVERY mergeable identity field (email was previously left behind)
+      db.prepare(
+        `UPDATE users SET
+           telegram_id = NULL,
+           username = NULL,
+           name = ?,
+           phone = NULL,
+           phone_verified = 0,
+           phone_verified_at = NULL,
+           email = NULL,
+           email_verified = 0,
+           bio = NULL,
+           avatar_url = NULL,
+           avatar_custom = 0,
+           interests = '[]',
+           roles = '[]',
+           role = NULL,
+           coins = 0,
+           wallet_ton = 0,
+           wallet_stars = 0,
+           wallet_toman = 0,
+           is_active = 0,
+           onboarding = 'role_selected',
+           verification_status = 'none',
+           verification_photo_file_id = NULL,
+           verified_at = NULL,
+           verification_note = NULL,
+           vet_credential_file_id = NULL,
+           vet_credential_status = 'none',
+           vet_online = 0
+         WHERE id = ?`
+      ).run(`[حذف‌شده #${user.id}]`, user.id);
+    });
+
+    run();
     return true;
   },
 
@@ -3069,6 +3203,12 @@ export const dbService = {
     db.prepare(
       'DELETE FROM playdate_requests WHERE from_pet_id = ? OR to_pet_id = ?'
     ).run(id, id);
+    // vet_consultations.pet_id has NO ACTION — detach before pet row delete
+    try {
+      db.prepare('UPDATE vet_consultations SET pet_id = NULL WHERE pet_id = ?').run(id);
+    } catch {
+      /* older schemas */
+    }
     const result = db.prepare('DELETE FROM pets WHERE id = ?').run(id);
     return result.changes > 0;
   },

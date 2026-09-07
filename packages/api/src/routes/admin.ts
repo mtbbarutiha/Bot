@@ -867,8 +867,10 @@ adminRouter.get('/monitoring', async (_req, res) => {
   const checks: Record<string, ServiceCheck> = {
     api: checkUp('فعال'),
     telegramBot,
-    sqlite: checkUp(hasPostgresConfig() ? 'legacy/fallback' : 'اصلی'),
-    postgres,
+    sqlite: checkUp('اصلی — منبع حقیقت کاربران/پت‌ها'),
+    postgres: postgresUrl
+      ? postgres
+      : checkNotConfigured(),
     redis,
     s3,
     elasticsearch,

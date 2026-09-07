@@ -46,29 +46,12 @@ const WIZARD_STEPS: Partial<Record<UserRole, WizardStep[]>> = {
       ],
     },
   ],
-  community_seeker: [
-    {
-      title: 'جامعه پت',
-      fields: [
-        { key: 'topics', label: 'موضوعات مورد علاقه', placeholder: 'آموزش، سلامت، بازی' },
-      ],
-    },
-  ],
   trainer: [
     {
       title: 'پروفایل مربی',
       fields: [
         { key: 'specialty', label: 'تخصص آموزشی', placeholder: 'آموزش سگ، رفتارشناسی' },
         { key: 'experience', label: 'سابقه (سال)', placeholder: '۳' },
-      ],
-    },
-  ],
-  pet_sitter: [
-    {
-      title: 'نگهبانی پت',
-      fields: [
-        { key: 'area', label: 'منطقه فعالیت', placeholder: 'شمال تهران' },
-        { key: 'rate', label: 'نرخ روزانه (تومان)', placeholder: '۵۰۰۰۰۰' },
       ],
     },
   ],

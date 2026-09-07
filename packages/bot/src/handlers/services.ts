@@ -392,7 +392,6 @@ export async function handleServices(ctx: Context): Promise<void> {
       '🛠 **خدمات petdate**',
       '',
       '• 🎓 مربی‌گری و آموزش',
-      '• 🏡 نگهداری موقت (pet sitter)',
       '• ✂️ آرایش و grooming',
       '• 🚗 حمل‌ونقل پت',
       '• 📸 عکاسی پت',
@@ -403,8 +402,6 @@ export async function handleServices(ctx: Context): Promise<void> {
       parse_mode: 'Markdown',
       reply_markup: new InlineKeyboard()
         .text('🎓 مربی', 'svc:trainer')
-        .primary()
-        .text('🏡 نگهبان', 'svc:sitter')
         .primary()
         .row()
         .text('✂️ آرایش', 'svc:groom')
