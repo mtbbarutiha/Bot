@@ -3,9 +3,14 @@ import { normalizeIranMobile } from '@petdate/shared';
 import { dbService } from '../db';
 import { candooSendOtp, isCandooConfigured } from './candoo';
 import { isSmtpConfigured, sendMail } from './mail';
+import {
+  OTP_EMAIL_EXPIRES_MINUTES,
+  buildLoginOtpEmailHtml,
+  buildLoginOtpEmailText,
+} from './otp-email-html';
 import { formatLoginOtpSms } from './otp-sms-copy';
 
-const OTP_TTL_MS = 5 * 60 * 1000;
+const OTP_TTL_MS = OTP_EMAIL_EXPIRES_MINUTES * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 const OTP_DIGITS = 5;
 const RESEND_COOLDOWN_MS = 60 * 1000;
@@ -47,16 +52,6 @@ function isProduction(): boolean {
 function echoDevCode(): boolean {
   if (isProduction()) return false;
   return process.env.WEB_OTP_DEV_ECHO === '1' || process.env.WEB_OTP_DEV_ECHO !== '0';
-}
-
-function formatLoginOtpEmail(code: string): string {
-  return [
-    'کد ورود پت‌دیت:',
-    code,
-    '',
-    'این کد تا ۵ دقیقه معتبر است.',
-    'اگر این درخواست از طرف شما نبوده، نادیده بگیرید.',
-  ].join('\n');
 }
 
 export type WebOtpChannel = 'phone' | 'email';
@@ -131,8 +126,9 @@ export async function requestWebOtp(
   } else if (isSmtpConfigured()) {
     const sent = await sendMail({
       to: target,
-      subject: 'کد ورود پت‌دیت',
-      text: formatLoginOtpEmail(code),
+      subject: 'ورود به پت‌دیت — کد یک‌بارمصرف',
+      text: buildLoginOtpEmailText(code),
+      html: buildLoginOtpEmailHtml(code),
       purpose: 'login_otp',
     });
     if (!sent.ok) {

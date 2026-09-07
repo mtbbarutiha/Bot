@@ -91,11 +91,13 @@ export type SendMailResult =
   | { ok: true }
   | { ok: false; error: string; detail?: string };
 
-/** Send a plain-text (+ simple HTML) email via SMTP. Never logs message body. */
+/** Send a plain-text (+ HTML) email via SMTP. Never logs message body. */
 export async function sendMail(opts: {
   to: string;
   subject: string;
   text: string;
+  /** Full HTML body; when omitted, a simple RTL wrapper of `text` is used. */
+  html?: string;
   purpose?: string;
 }): Promise<SendMailResult> {
   const host = smtpHost();
@@ -117,6 +119,11 @@ export async function sendMail(opts: {
   const hasAuth = Boolean(user && pass);
   const local = isLocalSmtpHost(host);
   const { secure, ignoreTls, rejectUnauthorized } = smtpTlsFlags(host, port, hasAuth);
+  const html =
+    opts.html?.trim() ||
+    `<div dir="rtl" style="font-family:tahoma,arial,sans-serif;font-size:15px;line-height:1.7;white-space:pre-wrap">${escapeHtml(
+      opts.text
+    )}</div>`;
 
   try {
     const transporter = nodemailer.createTransport({
@@ -136,9 +143,7 @@ export async function sendMail(opts: {
       to: opts.to,
       subject: opts.subject,
       text: opts.text,
-      html: `<div dir="rtl" style="font-family:tahoma,arial,sans-serif;font-size:15px;line-height:1.7;white-space:pre-wrap">${escapeHtml(
-        opts.text
-      )}</div>`,
+      html,
     });
     dbService.createEmailSendLog({
       to: opts.to,

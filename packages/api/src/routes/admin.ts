@@ -21,6 +21,7 @@ import {
   isSmtpConfigured,
   sendMail,
 } from '../services/mail';
+import { buildBrandedMailHtml } from '../services/otp-email-html';
 import { rateLimit } from '../middleware/rate-limit';
 
 export const adminRouter = Router();
@@ -530,6 +531,10 @@ adminRouter.post('/mail/test', adminMailSendLimit, async (req, res) => {
     to,
     subject: 'تست ارسال PetDate',
     text: `این یک ایمیل تست از پنل ادمین پت‌دیت است.\nزمان: ${new Date().toISOString()}`,
+    html: buildBrandedMailHtml(
+      `این یک ایمیل تست از پنل ادمین پت‌دیت است.\nزمان: ${new Date().toISOString()}`,
+      { title: 'تست ارسال' }
+    ),
     purpose: 'admin_test',
   });
   if (!sent.ok) {
@@ -564,6 +569,7 @@ adminRouter.post('/mail/send', adminMailSendLimit, async (req, res) => {
     to,
     subject,
     text,
+    html: buildBrandedMailHtml(text, { title: subject }),
     purpose: 'admin_compose',
   });
   if (!sent.ok) {
