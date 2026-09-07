@@ -28,8 +28,10 @@ export default defineConfig({
         cleanupOutdatedCaches: true,
         // New cache namespace so stuck clients drop the old 1.5s-poll bundle.
         // Bump when chat keyboard shell or PWA icons change so Home Screen clients refresh.
-        cacheId: 'petdate-web-v12-pd-panels-ui-v3c',
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff2}'],
+        cacheId: 'petdate-web-v13-perf',
+        // Precache only shell assets — do not pull multi-MB media into SW install.
+        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
+        navigateFallbackDenylist: [/^\/api\//],
       },
       includeAssets: [
         'favicon.ico',
@@ -46,8 +48,6 @@ export default defineConfig({
         'sitemap.xml',
         'llms.txt',
         'llms-full.txt',
-        'brand/**/*',
-        'pets/**/*',
       ],
       manifest: {
         name: 'پت‌دیت | PetDate',
@@ -102,5 +102,25 @@ export default defineConfig({
     port: 4173,
     host: true,
     allowedHosts: true,
+  },
+  build: {
+    target: 'es2020',
+    cssCodeSplit: true,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react-dom') || id.includes('/react/') || id.includes('react-router')) {
+              return 'vendor-react';
+            }
+            if (id.includes('lucide-react')) {
+              return 'vendor-lucide';
+            }
+          }
+          // Do not force /src/admin into a shared chunk — that made Vite
+          // modulepreload ~400KB of admin on every landing-page visit.
+        },
+      },
+    },
   },
 });

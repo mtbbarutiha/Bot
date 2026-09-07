@@ -64,10 +64,10 @@ export function ShopChrome({
         <section className="pd-shop-hero pd-shop-hero--full" aria-label={bannerTitle}>
           <img
             className="pd-shop-hero-img"
-            src="/media/shop/petdate-shop-hero.png"
+            src="/media/shop/petdate-shop-hero.jpg"
             alt="پت دیت شاپ — فضای برند فروشگاه حیوانات خانگی"
-            width={1600}
-            height={900}
+            width={1536}
+            height={1024}
             decoding="async"
             fetchPriority="high"
           />
