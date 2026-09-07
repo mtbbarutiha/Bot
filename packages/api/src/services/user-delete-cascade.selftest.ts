@@ -13,6 +13,7 @@ function assert(cond: unknown, msg: string): asserts cond {
 async function main() {
   getDb();
   const tg = `selftest_del_${Date.now()}`;
+  const d = getDb();
 
   const { user, created } = dbService.findOrCreateUser({
     telegramId: tg,
@@ -29,12 +30,7 @@ async function main() {
   });
   assert(pet?.id, 'pet must be created');
 
-  // Leave a mergeable identity field that previously survived soft-delete
-  dbService.updateUserProfile(user.id, {
-    // @ts-expect-error email via raw path if updateUserProfile lacks email
-    email: undefined,
-  });
-  const d = getDb();
+  // Leave mergeable identity fields that previously survived soft-delete
   d.prepare(
     `UPDATE users SET email = ?, email_verified = 1, phone = ?, phone_verified = 1 WHERE id = ?`
   ).run(`del_${tg}@petdate.test`, '989120000001', user.id);
@@ -70,7 +66,6 @@ async function main() {
   const freshPets = dbService.listPets({ ownerId: again.user.id });
   assert(freshPets.length === 0, 'fresh account must have zero pets');
 
-  // Cleanup test rows (pets already gone)
   dbService.deleteUserById(again.user.id);
 
   console.log(
