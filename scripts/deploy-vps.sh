@@ -175,6 +175,17 @@ if [[ -f infra/nginx/petdate.conf ]]; then
   sudo cp infra/nginx/petdate.conf /etc/nginx/sites-available/petdate
   sudo ln -sfn /etc/nginx/sites-available/petdate /etc/nginx/sites-enabled/petdate
   sudo rm -f /etc/nginx/sites-enabled/default
+fi
+# Dedicated WS + PDF subdomains (cert files must already exist or HTTP-only until LE)
+if [[ -f infra/nginx/ws.petdate.ir.conf ]]; then
+  sudo cp infra/nginx/ws.petdate.ir.conf /etc/nginx/sites-available/ws.petdate.ir
+  sudo ln -sfn /etc/nginx/sites-available/ws.petdate.ir /etc/nginx/sites-enabled/ws.petdate.ir
+fi
+if [[ -f infra/nginx/pdf.petdate.ir.conf ]]; then
+  sudo cp infra/nginx/pdf.petdate.ir.conf /etc/nginx/sites-available/pdf.petdate.ir
+  sudo ln -sfn /etc/nginx/sites-available/pdf.petdate.ir /etc/nginx/sites-enabled/pdf.petdate.ir
+fi
+if [[ -f infra/nginx/petdate.conf ]]; then
   sudo nginx -t && sudo systemctl reload nginx
 else
 # Nginx: serve web + proxy API

@@ -1034,9 +1034,9 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
   const pdfLink =
     created.pdfPublicUrl ||
     (created.pdfPathPublic
-      ? `${process.env.PUBLIC_WEB_URL || process.env.WEB_URL || 'https://petdate.ir'}${created.pdfPathPublic}`
-      : webLink
-        ? `${webLink.replace(/\/$/, '')}/pdf`
+      ? `${process.env.PUBLIC_PDF_URL || process.env.PDF_PUBLIC_URL || 'https://pdf.petdate.ir'}${created.pdfPathPublic}`
+      : created.prescription?.id
+        ? `${process.env.PUBLIC_PDF_URL || process.env.PDF_PUBLIC_URL || 'https://pdf.petdate.ir'}/rx/${created.prescription.id}.pdf`
         : '');
   const captionPatient = [
     '💊 <b>نسخه دارویی Pet Date Dr</b>',

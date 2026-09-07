@@ -132,6 +132,18 @@ export function publicWebOrigin(reqHost?: string): string {
   return SITE.origin;
 }
 
+/**
+ * Origin for prescription PDF download links (SMS / chat captions).
+ * Prefers PUBLIC_PDF_URL (e.g. https://pdf.petdate.ir); never a bare VPS IP.
+ */
+export function publicPdfOrigin(): string {
+  return (
+    originFromCandidate(process.env.PUBLIC_PDF_URL) ||
+    originFromCandidate(process.env.PDF_PUBLIC_URL) ||
+    'https://pdf.petdate.ir'
+  );
+}
+
 /** @deprecated Prefer publicWebOrigin for user-facing rx links. */
 export function publicApiBaseUrl(reqHost?: string): string {
   return publicWebOrigin(reqHost);
@@ -141,18 +153,29 @@ export function prescriptionWebPath(id: number): string {
   return `/rx/${id}`;
 }
 
-/** Stable public path for direct PDF download (patient SMS / share). */
+/**
+ * Path on the main site (petdate.ir/rx/{id}/pdf) — HTML page / legacy.
+ * Prefer prescriptionPdfPublicPath for SMS download links.
+ */
 export function prescriptionPdfWebPath(id: number): string {
   return `/rx/${id}/pdf`;
+}
+
+/** Stable PDF download path on pdf.petdate.ir: /rx/{id}.pdf */
+export function prescriptionPdfPublicPath(id: number): string {
+  return `/rx/${id}.pdf`;
 }
 
 export function prescriptionPublicUrl(id: number, reqHost?: string): string {
   return `${publicWebOrigin(reqHost)}${prescriptionWebPath(id)}`;
 }
 
-/** Absolute HTTPS URL that serves the PDF file (never a raw VPS IP). */
-export function prescriptionPdfPublicUrl(id: number, reqHost?: string): string {
-  return `${publicWebOrigin(reqHost)}${prescriptionPdfWebPath(id)}`;
+/**
+ * Absolute HTTPS PDF download URL for SMS / share.
+ * Example: https://pdf.petdate.ir/rx/42.pdf
+ */
+export function prescriptionPdfPublicUrl(id: number, _reqHost?: string): string {
+  return `${publicPdfOrigin()}${prescriptionPdfPublicPath(id)}`;
 }
 
 export function renderPrescriptionHtml(input: PrescriptionHtmlInput): string {

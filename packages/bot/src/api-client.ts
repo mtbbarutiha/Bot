@@ -991,9 +991,9 @@ export type CreatePrescriptionResponse = {
   prescription: import('@petdate/shared').Prescription;
   pdfPath: string;
   pdfUrl: string;
-  /** Relative public PDF path e.g. /rx/12/pdf */
+  /** Relative public PDF path e.g. /rx/12.pdf (under PUBLIC_PDF_URL) */
   pdfPathPublic?: string;
-  /** Absolute HTTPS PDF download URL under petdate.ir */
+  /** Absolute HTTPS PDF download URL under pdf.petdate.ir */
   pdfPublicUrl?: string;
   webPath?: string;
   webUrl?: string;

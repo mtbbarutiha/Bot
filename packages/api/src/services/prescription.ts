@@ -35,7 +35,7 @@ export type CreatePrescriptionResult = {
   pdfPath: string;
   /** Public HTML page: https://petdate.ir/rx/{id} */
   webUrl: string;
-  /** Direct PDF download: https://petdate.ir/rx/{id}/pdf */
+  /** Direct PDF download: https://pdf.petdate.ir/rx/{id}.pdf */
   pdfPublicUrl: string;
   sms: SmsDeliveryStatus;
   patient: NonNullable<ReturnType<typeof dbService.getUserById>>;
@@ -45,7 +45,7 @@ export type CreatePrescriptionResult = {
 
 /**
  * Exported for selftest — Persian SMS with public HTTPS PDF download link.
- * Prefer the direct /rx/{id}/pdf URL so the patient can open the file immediately.
+ * Prefer the direct pdf.petdate.ir /rx/{id}.pdf URL so the patient can open the file immediately.
  */
 export function buildPrescriptionSmsBody(opts: {
   vetName: string;
@@ -178,7 +178,7 @@ export async function createPrescriptionWithDelivery(
     text: `💊 نسخه:\n${text}`,
   });
 
-  // SMS when patient has a usable mobile — HTTPS PDF download on petdate.ir
+  // SMS when patient has a usable mobile — HTTPS PDF download on pdf.petdate.ir
   let sms: SmsDeliveryStatus;
   const rawPhone = String(patient.phone || '').trim();
   if (!rawPhone) {
