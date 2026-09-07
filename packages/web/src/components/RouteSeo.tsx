@@ -76,6 +76,12 @@ function metaForPath(pathname: string): PageMeta {
   if (p === '/profile') {
     return { title: SEO.titleTemplate('پروفایل'), robots: 'noindex,follow' };
   }
+  if (p === '/wallet') {
+    return { title: SEO.titleTemplate('کیف پول'), robots: 'noindex,follow' };
+  }
+  if (p === '/wallet/earn' || p === '/earn') {
+    return { title: SEO.titleTemplate('کسب درآمد'), robots: 'noindex,follow' };
+  }
   if (p === '/add-pet') {
     return { title: SEO.titleTemplate('افزودن پت'), robots: 'noindex,follow' };
   }

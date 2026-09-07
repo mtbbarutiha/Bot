@@ -15,12 +15,18 @@ export type { CoinAward, ProfileRewardSection } from '@petdate/shared';
 import {
   COIN_PRICE_STARS as SHARED_COIN_PRICE_STARS,
   COIN_PRICE_TOMAN as SHARED_COIN_PRICE_TOMAN,
+  COIN_SELL_PRICE_TOMAN as SHARED_COIN_SELL_PRICE_TOMAN,
+  MIN_SELL_COINS as SHARED_MIN_SELL_COINS,
+  sellAmountToman as sharedSellAmountToman,
+  normalizeCardNumber as sharedNormalizeCardNumber,
+  validateIranCard as sharedValidateIranCard,
+  formatCardGrouped as sharedFormatCardGrouped,
 } from '@petdate/shared';
 
 export const COIN_PRICE_TOMAN = SHARED_COIN_PRICE_TOMAN;
 export const COIN_PRICE_STARS = SHARED_COIN_PRICE_STARS;
-export const COIN_SELL_PRICE_TOMAN = 1_000;
-export const MIN_SELL_COINS = 50;
+export const COIN_SELL_PRICE_TOMAN = SHARED_COIN_SELL_PRICE_TOMAN;
+export const MIN_SELL_COINS = SHARED_MIN_SELL_COINS;
 export const DAILY_COIN_REWARD = 10;
 export const REFERRAL_BONUS_COINS = 50;
 /** @deprecated استفاده از SIGNUP_BONUS */
@@ -65,7 +71,7 @@ export function formatToman(n: number): string {
 }
 
 export function sellAmountToman(coins: number, rate = COIN_SELL_PRICE_TOMAN): number {
-  return coins * rate;
+  return sharedSellAmountToman(coins, rate);
 }
 
 export function packagePickerLabel(p: CoinPackage): string {
@@ -143,54 +149,9 @@ export function canClaimDaily(lastDailyCoinAt?: string | null): boolean {
   );
 }
 
-/** نرمال‌سازی شماره کارت ایرانی — فقط رقم */
-export function normalizeCardNumber(raw: string): string {
-  const fa = '۰۱۲۳۴۵۶۷۸۹';
-  const ar = '٠١٢٣٤٥٦٧٨٩';
-  let s = (raw || '').trim().replace(/[\s\-]/g, '');
-  s = s
-    .split('')
-    .map((ch) => {
-      const fi = fa.indexOf(ch);
-      if (fi >= 0) return String(fi);
-      const ai = ar.indexOf(ch);
-      if (ai >= 0) return String(ai);
-      return ch;
-    })
-    .join('');
-  return s.replace(/\D/g, '');
-}
-
-function luhnOk(digits: string): boolean {
-  if (!/^\d{16}$/.test(digits)) return false;
-  let sum = 0;
-  let alt = false;
-  for (let i = digits.length - 1; i >= 0; i--) {
-    let n = Number(digits[i]);
-    if (alt) {
-      n *= 2;
-      if (n > 9) n -= 9;
-    }
-    sum += n;
-    alt = !alt;
-  }
-  return sum % 10 === 0;
-}
-
-export function validateIranCard(
-  raw: string
-): { ok: true; card: string } | { ok: false; reason: 'length' | 'luhn' } {
-  const card = normalizeCardNumber(raw);
-  if (card.length !== 16) return { ok: false, reason: 'length' };
-  if (!luhnOk(card)) return { ok: false, reason: 'luhn' };
-  return { ok: true, card };
-}
-
-export function formatCardGrouped(card: string): string {
-  const d = normalizeCardNumber(card);
-  if (d.length === 16) return d.replace(/(\d{4})(?=\d)/g, '$1-');
-  return d;
-}
+export const normalizeCardNumber = sharedNormalizeCardNumber;
+export const validateIranCard = sharedValidateIranCard;
+export const formatCardGrouped = sharedFormatCardGrouped;
 
 /** جزئیات کارت واریز خرید سکه (از env با fallback) */
 export function paymentCardInfo(): { number: string; holder: string; display: string } {

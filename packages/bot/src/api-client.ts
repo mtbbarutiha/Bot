@@ -602,6 +602,30 @@ export async function debitUserCoins(telegramId: string, amount: number): Promis
   });
 }
 
+
+export type WalletTransactionDto = {
+  id: number;
+  currency: 'ton' | 'stars' | 'coins' | 'toman';
+  amount: number;
+  direction: 'credit' | 'debit';
+  reason: string;
+  labelFa: string;
+  refType: string | null;
+  refId: string | null;
+  createdAt: string;
+  delta: number;
+};
+
+export async function fetchWalletTransactions(
+  telegramId: string,
+  limit = 8
+): Promise<WalletTransactionDto[]> {
+  const res = await request<{ ok: true; transactions: WalletTransactionDto[] }>(
+    `/api/users/telegram/${encodeURIComponent(telegramId)}/wallet/transactions?limit=${limit}`
+  );
+  return res.transactions ?? [];
+}
+
 export async function creditUserCoins(
   telegramId: string,
   amount: number,

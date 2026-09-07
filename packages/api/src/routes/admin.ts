@@ -921,7 +921,10 @@ adminRouter.post('/wallet/credit', (req, res) => {
   if (!Number.isFinite(userId) || userId <= 0) { res.status(400).json({ error: 'userId نامعتبر است' }); return; }
   if (!currency) { res.status(400).json({ error: 'currency باید ton | stars | coins | toman باشد' }); return; }
   if (!Number.isFinite(amount) || amount === 0) { res.status(400).json({ error: 'amount نامعتبر است' }); return; }
-  const result = dbService.creditWallet(userId, currency, amount);
+  const result = dbService.creditWallet(userId, currency, amount, {
+    reason: amount > 0 ? 'واریز ادمین' : 'برداشت ادمین',
+    refType: 'admin',
+  });
   if (!result.ok) {
     res.status(result.reason === 'missing_user' ? 404 : 400).json({
       error: result.reason === 'missing_user' ? 'کاربر پیدا نشد' : 'مبلغ یا موجودی کافی نیست',

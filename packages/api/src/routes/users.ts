@@ -389,7 +389,14 @@ usersRouter.post('/telegram/:telegramId/coins/debit', (req, res) => {
     res.status(400).json({ error: 'مقدار نامعتبر' });
     return;
   }
-  const updated = dbService.debitCoins(user.id, amount);
+  const reason =
+    typeof req.body?.reason === 'string' && req.body.reason.trim()
+      ? req.body.reason.trim()
+      : 'کسر سکه';
+  const updated = dbService.debitCoins(user.id, amount, {
+    reason,
+    refType: 'telegram_api',
+  });
   if (!updated) {
     res.status(400).json({ error: 'سکه کافی نیست', reason: 'insufficient' });
     return;
@@ -421,7 +428,10 @@ usersRouter.post('/telegram/:telegramId/coins/credit', (req, res) => {
     });
     return;
   }
-  const updated = dbService.creditCoins(user.id, amount);
+  const updated = dbService.creditCoins(user.id, amount, undefined, {
+    reason: 'واریز سکه',
+    refType: 'telegram_api',
+  });
   res.json(updated);
 });
 
@@ -568,6 +578,21 @@ usersRouter.post('/telegram/:telegramId/coins/daily', (req, res) => {
     return;
   }
   res.json({ ok: true, awarded: result.awarded, user: result.user });
+});
+
+/** تاریخچه کوتاه تراکنش‌های کیف برای ربات */
+usersRouter.get('/telegram/:telegramId/wallet/transactions', (req, res) => {
+  const user = dbService.getUserByTelegramId(req.params.telegramId);
+  if (!user) {
+    res.status(404).json({ error: 'کاربر پیدا نشد' });
+    return;
+  }
+  const limit = Number(req.query?.limit ?? 8);
+  const transactions = dbService.listUserWalletTransactions(user.id, {
+    limit: Number.isFinite(limit) ? limit : 8,
+    offset: 0,
+  });
+  res.json({ ok: true, transactions });
 });
 
 /** وضعیت درخواست فروش باز */

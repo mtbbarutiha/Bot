@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Ban,
+  Banknote,
   Bell,
   BellOff,
   ChevronLeft,
@@ -622,6 +623,10 @@ export function ProfilePage() {
               <Eye size={18} aria-hidden />
               تعاملات
             </button>
+            <Link to="/wallet/earn" className="pepito-profile-action pepito-profile-action--soft">
+              <Banknote size={18} aria-hidden />
+              کسب درآمد / برداشت
+            </Link>
           </div>
 
           <div className="pepito-profile-action-group pepito-profile-action-group--prefs" aria-label="حریم و حساب">

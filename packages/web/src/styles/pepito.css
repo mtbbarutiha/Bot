@@ -9669,3 +9669,478 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
     width: auto;
   }
 }
+
+/* restored earn + wallet transactions */
+.pepito-wallet-tx {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.05rem 1.15rem;
+  background: linear-gradient(160deg, rgba(29, 111, 102, 0.06), rgba(92, 77, 145, 0.05));
+  border: 1px solid rgba(29, 111, 102, 0.14);
+  border-radius: 18px;
+}
+
+.pepito-wallet-tx-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.pepito-wallet-tx-head h2 {
+  margin: 0 0 0.25rem;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--pepito-dark);
+}
+
+.pepito-wallet-tx-lead {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--pepito-muted);
+}
+
+.pepito-wallet-tx-mark {
+  flex: 0 0 auto;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(29, 111, 102, 0.12);
+  color: #1d6f66;
+}
+
+.pepito-wallet-tx-empty {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--pepito-muted);
+}
+
+.pepito-wallet-tx-empty--warn {
+  color: #9a5b12;
+}
+
+.pepito-wallet-tx-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pepito-wallet-tx-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  padding: 0.85rem 0.95rem;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(29, 111, 102, 0.1);
+  border-radius: 14px;
+}
+
+.pepito-wallet-tx-main {
+  min-width: 0;
+}
+
+.pepito-wallet-tx-label {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--pepito-dark);
+}
+
+.pepito-wallet-tx-meta {
+  margin: 0;
+  font-size: 0.74rem;
+  line-height: 1.4;
+  color: var(--pepito-muted);
+}
+
+.pepito-wallet-tx-delta {
+  margin: 0;
+  flex: 0 0 auto;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.02rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pepito-wallet-tx-delta--credit {
+  color: #1d6f66;
+}
+
+.pepito-wallet-tx-delta--debit {
+  color: #b42318;
+}
+
+.pepito-wallet-tx-unit {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--pepito-muted);
+}
+
+@media (max-width: 640px) {
+  .pepito-wallet-tx {
+    padding: 0.95rem 0.9rem;
+}
+
+.pepito-wallet-tx-row {
+    align-items: flex-start;
+}
+
+.pepito-nav-wallet-page-link--ghost {
+  margin-top: 0.35rem;
+  background: transparent;
+  color: var(--pepito-dark);
+  border: 1px solid rgba(92, 77, 145, 0.22);
+}
+
+.pepito-nav-wallet-page-link--ghost:hover {
+  background: rgba(92, 77, 145, 0.08);
+}
+
+/* —— کسب درآمد / برداشت —— */
+.pepito-earn-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.95rem;
+  padding: 0 0 1.5rem;
+}
+
+.pepito-earn-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0 0 22px 22px;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 70% 80% at 12% 0%, rgba(253, 150, 30, 0.2), transparent 55%),
+    radial-gradient(ellipse 50% 55% at 100% 30%, rgba(46, 125, 90, 0.14), transparent 50%),
+    linear-gradient(165deg, #fff8f0 0%, #f3f6f2 55%, #eef2f0 100%);
+  animation: pepito-flow-banner-in 0.7s ease both;
+}
+
+.pepito-earn-hero-wash {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: linear-gradient(180deg, transparent 35%, rgba(255, 255, 255, 0.45));
+}
+
+.pepito-earn-hero-inner {
+  position: relative;
+  z-index: 1;
+  padding: 0.95rem 0.15rem 0.95rem;
+  animation: pepito-flow-rise 0.55s ease 0.08s both;
+}
+
+.pepito-earn-hero h1 {
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.45rem, 3vw, 1.85rem);
+  color: var(--pepito-dark);
+  letter-spacing: -0.02em;
+}
+
+.pepito-earn-lead {
+  margin: 0;
+  max-width: 36rem;
+  color: var(--pepito-muted);
+  line-height: 1.55;
+  font-size: 0.95rem;
+}
+
+.pepito-earn-kicker {
+  margin: 0 0 0.3rem !important;
+}
+
+.pepito-earn-status {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--pepito-muted);
+  font-size: 0.88rem;
+}
+
+.pepito-earn-status--warn {
+  color: #9a3412;
+}
+
+.pepito-earn-balance {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 0.75rem;
+}
+
+.pepito-earn-balance-main {
+  padding: 1rem 1.05rem;
+  border-radius: 18px;
+  background: linear-gradient(145deg, #fff 0%, #fff7ee 100%);
+  border: 1px solid rgba(253, 150, 30, 0.18);
+}
+
+.pepito-earn-balance-label {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--pepito-muted);
+  margin-bottom: 0.25rem;
+}
+
+.pepito-earn-balance-val {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.6rem, 4vw, 2rem);
+  color: var(--pepito-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.pepito-earn-balance-note {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: var(--pepito-muted);
+}
+
+.pepito-earn-meta {
+  list-style: none;
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(92, 77, 145, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pepito-earn-meta li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.pepito-earn-meta strong {
+  font-size: 0.72rem;
+  color: var(--pepito-muted);
+  font-weight: 600;
+}
+
+.pepito-earn-meta span {
+  font-size: 0.9rem;
+  color: var(--pepito-dark);
+}
+
+.pepito-earn-how,
+.pepito-earn-form-wrap,
+.pepito-earn-history {
+  padding: 1rem 1.05rem;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.pepito-earn-how h2,
+.pepito-earn-form-wrap h2,
+.pepito-earn-history h2,
+.pepito-earn-pending h2 {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--pepito-dark);
+}
+
+.pepito-earn-how ol {
+  margin: 0;
+  padding: 0 1.1rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  color: var(--pepito-muted);
+  line-height: 1.55;
+  font-size: 0.9rem;
+}
+
+.pepito-earn-pending {
+  display: flex;
+  gap: 0.65rem;
+  padding: 0.95rem 1rem;
+  border-radius: 16px;
+  background: #fff7ed;
+  border: 1px solid rgba(234, 88, 12, 0.28);
+  color: #9a3412;
+}
+
+.pepito-earn-pending p {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.pepito-earn-pending-hint {
+  opacity: 0.9;
+  font-size: 0.8rem !important;
+}
+
+.pepito-earn-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.pepito-earn-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.pepito-earn-field span {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--pepito-dark);
+}
+
+.pepito-earn-field input {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(92, 77, 145, 0.2);
+  background: #fff;
+  font-size: 1rem;
+  font-family: inherit;
+  direction: ltr;
+  text-align: left;
+  color: var(--pepito-dark);
+}
+
+.pepito-earn-field input:focus {
+  outline: 2px solid rgba(253, 150, 30, 0.45);
+  outline-offset: 1px;
+}
+
+.pepito-earn-field input:disabled {
+  opacity: 0.65;
+  background: #f5f5f5;
+}
+
+.pepito-earn-preview {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--pepito-muted);
+}
+
+.pepito-earn-preview-warn {
+  color: #b45309;
+}
+
+.pepito-earn-field-hint {
+  margin: -0.25rem 0 0;
+  font-size: 0.75rem;
+  color: var(--pepito-muted);
+}
+
+.pepito-earn-form-error {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 0.85rem;
+}
+
+.pepito-earn-form-ok {
+  margin: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.85rem;
+}
+
+.pepito-earn-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.pepito-earn-history ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.pepito-earn-history-item {
+  padding: 0.7rem 0.8rem;
+  border-radius: 12px;
+  background: #fafafa;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+}
+
+.pepito-earn-history-item--open {
+  background: #fff7ed;
+  border-color: rgba(234, 88, 12, 0.2);
+}
+
+.pepito-earn-history-item--paid {
+  background: #ecfdf5;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.pepito-earn-history-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.2rem;
+}
+
+.pepito-earn-history-status {
+  font-size: 0.78rem;
+  color: var(--pepito-muted);
+}
+
+.pepito-earn-history-item p {
+  margin: 0.15rem 0 0;
+  font-size: 0.86rem;
+  color: var(--pepito-dark);
+}
+
+.pepito-earn-history-meta {
+  font-size: 0.75rem !important;
+  color: var(--pepito-muted) !important;
+}
+
+.pepito-earn-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.25rem;
+}
+
+.pepito-earn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+@media (max-width: 640px) {
+  .pepito-earn-balance {
+    grid-template-columns: 1fr;
+}

@@ -215,7 +215,7 @@ export function checkoutShopWithCoins(
   const d = getDb();
   try {
     const result = d.transaction(() => {
-      const debited = dbService.debitCoins(input.userId, coinsNeeded);
+      const debited = dbService.debitCoins(input.userId, coinsNeeded, { skipLedger: true });
       if (!debited) {
         throw Object.assign(new Error('INSUFFICIENT'), {
           balance: dbService.getUserById(input.userId)?.coins ?? 0,
@@ -319,7 +319,7 @@ export function checkoutShopWithStars(
   const d = getDb();
   try {
     const result = d.transaction(() => {
-      const debited = dbService.debitStars(input.userId, starsNeeded);
+      const debited = dbService.debitStars(input.userId, starsNeeded, { skipLedger: true });
       if (!debited) {
         const w = dbService.getWallet(input.userId);
         throw Object.assign(new Error('INSUFFICIENT'), {

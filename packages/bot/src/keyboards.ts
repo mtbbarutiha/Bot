@@ -1045,6 +1045,7 @@ export function coinsShopKeyboard(lastDailyCoinAt?: string | null): InlineKeyboa
     else kb.primary();
     kb.row();
   }
+  kb.text('📜 تراکنش‌ها', 'coins:tx').primary().row();
   return kb;
 }
 

@@ -139,6 +139,7 @@ import {
   handleCoinsBack,
   handleCoinsDaily,
   handleCoinsDailyDone,
+  handleCoinsTransactions,
   handleCoinsPackage,
   handleCoinsPay,
   handleCoinsPayCancel,
@@ -642,6 +643,7 @@ export function registerHandlers(bot: Bot): void {
 
   bot.callbackQuery('coins:daily', (ctx) => handleCoinsDaily(ctx));
   bot.callbackQuery('coins:daily:done', (ctx) => handleCoinsDailyDone(ctx));
+  bot.callbackQuery('coins:tx', (ctx) => handleCoinsTransactions(ctx));
   bot.callbackQuery(/^coins:pkg:(.+)$/, (ctx) => handleCoinsPackage(ctx, ctx.match![1]!));
   bot.callbackQuery(/^coins:pay:(stars|card):(.+)$/, (ctx) =>
     handleCoinsPay(ctx, ctx.match![1] as 'stars' | 'card', ctx.match![2]!)

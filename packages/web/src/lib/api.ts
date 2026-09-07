@@ -546,6 +546,86 @@ export async function fetchWallet(token: string) {
   }>('/api/auth/wallet', token);
 }
 
+export type WalletTransactionDto = {
+  id: number;
+  currency: 'ton' | 'stars' | 'coins' | 'toman';
+  amount: number;
+  direction: 'credit' | 'debit';
+  reason: string;
+  labelFa: string;
+  refType: string | null;
+  refId: string | null;
+  createdAt: string;
+  delta: number;
+};
+
+export async function fetchWalletTransactions(
+  token: string,
+  opts?: { limit?: number; offset?: number }
+) {
+  const q = new URLSearchParams();
+  if (opts?.limit != null) q.set('limit', String(opts.limit));
+  if (opts?.offset != null) q.set('offset', String(opts.offset));
+  const suffix = q.toString() ? `?${q}` : '';
+  return request<{ ok: true; transactions: WalletTransactionDto[] }>(
+    `/api/auth/wallet/transactions${suffix}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+}
+
+export type EarnRequestSummary = {
+  id: number;
+  coins: number;
+  rateToman: number;
+  amountToman: number;
+  cardMasked: string;
+  status: 'open' | 'paid' | 'rejected' | 'cancelled';
+  createdAt: string;
+  reviewedAt?: string | null;
+  adminNote?: string | null;
+};
+
+export type EarnStatusResponse = {
+  ok: true;
+  coins: number;
+  wallet: { ton: number; stars: number; coins: number; toman: number };
+  rateToman: number;
+  minCoins: number;
+  estimatedToman: number;
+  hasOpenRequest: boolean;
+  openRequest: EarnRequestSummary | null;
+  canSell: boolean;
+  method: 'card';
+  methodLabelFa: string;
+  requests: EarnRequestSummary[];
+};
+
+export async function fetchEarnStatus(token: string) {
+  return request<EarnStatusResponse>('/api/auth/earn', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+export async function submitEarnWithdraw(
+  token: string,
+  data: { coins: number; cardNumber: string }
+) {
+  return request<{
+    ok: true;
+    requestId: number;
+    amountToman: number;
+    rateToman: number;
+    coins: number;
+    user: User;
+    wallet?: { ton: number; stars: number; coins: number; toman: number };
+    openRequest: EarnRequestSummary | null;
+  }>('/api/auth/earn/withdraw', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+}
+
 /** Bot-signed deep link → web session (same users row). */
 export async function exchangeTelegramWebLink(input: {
   telegramId: string;

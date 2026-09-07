@@ -40,6 +40,7 @@ import {
   COIN_REASON,
   FACE_VERIFY_REWARD,
   isPendingRequestExpired,
+  maskCardNumber,
   PET_BREEDS_SEED,
   PET_MEDICAL_FIELD_LABELS,
   PET_SPECIES,
@@ -52,9 +53,22 @@ import {
   sanitizeRoleList,
   VET_CONSULT_REQUEST_TTL_MS,
   walletFromUserFields,
+  walletLedgerLabelFa,
+  type CoinSellRequestStatus,
+  type CoinSellRequestSummary,
   type PetMedicalField,
   type WalletCurrency,
+  type WalletLedgerDirection,
+  type WalletTransaction,
 } from '@petdate/shared';
+
+/** متادیتای اختیاری برای ثبت در wallet_ledger هنگام کسر/واریز */
+export type WalletLedgerMeta = {
+  reason?: string;
+  refType?: string | null;
+  refId?: string | number | null;
+  skipLedger?: boolean;
+};
 
 /**
  * Single source of truth for profile/pet data.
@@ -1750,6 +1764,25 @@ function mapGame(row: Record<string, unknown>): Game {
   };
 }
 
+function mapCoinSellRequestSummary(row: Record<string, unknown>): CoinSellRequestSummary {
+  const statusRaw = String(row.status ?? 'open');
+  const status: CoinSellRequestStatus =
+    statusRaw === 'paid' || statusRaw === 'rejected' || statusRaw === 'cancelled'
+      ? statusRaw
+      : 'open';
+  return {
+    id: Number(row.id),
+    coins: Number(row.coins),
+    rateToman: Number(row.rate_toman),
+    amountToman: Number(row.amount_toman),
+    cardMasked: maskCardNumber(String(row.card_number ?? '')),
+    status,
+    createdAt: String(row.created_at),
+    reviewedAt: (row.reviewed_at as string | null | undefined) ?? null,
+    adminNote: (row.admin_note as string | null | undefined) ?? null,
+  };
+}
+
 export const dbService = {
   findOrCreateUser(data: {
     telegramId?: string;
@@ -2575,7 +2608,7 @@ export const dbService = {
     return { ok: true, rating: mapVetRating(row), created: true };
   },
   /** کم کردن سکه اتمیک؛ اگر موجودی کافی نباشد null */
-  debitCoins(userId: number, amount: number): User | null {
+  debitCoins(userId: number, amount: number, meta?: WalletLedgerMeta): User | null {
     if (amount <= 0) return this.getUserById(userId);
     const result = db
       .prepare(
@@ -2584,11 +2617,106 @@ export const dbService = {
       )
       .run(amount, userId, amount);
     if (result.changes === 0) return null;
+    if (!meta?.skipLedger) {
+      this.appendWalletLedger({
+        userId,
+        currency: 'coins',
+        amount,
+        direction: 'debit',
+        reason: meta?.reason ?? 'کسر سکه',
+        refType: meta?.refType,
+        refId: meta?.refId,
+      });
+    }
     return this.getUserById(userId);
   },
 
+  appendWalletLedger(input: {
+    userId: number | null;
+    currency: WalletCurrency;
+    amount: number;
+    direction: WalletLedgerDirection;
+    reason: string;
+    refType?: string | null;
+    refId?: string | number | null;
+  }): void {
+    const amount = Math.floor(Math.abs(Number(input.amount)));
+    if (!Number.isFinite(amount) || amount <= 0) return;
+    const direction = input.direction === 'debit' ? 'debit' : 'credit';
+    const reason = walletLedgerLabelFa(input.reason);
+    const refId =
+      input.refId == null || input.refId === ''
+        ? null
+        : String(input.refId);
+    db.prepare(
+      `INSERT INTO wallet_ledger (user_id, currency, amount, direction, reason, ref_type, ref_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    ).run(
+      input.userId,
+      input.currency,
+      amount,
+      direction,
+      reason,
+      input.refType ?? null,
+      refId
+    );
+  },
+
+  listUserWalletTransactions(
+    userId: number,
+    opts?: { limit?: number; offset?: number }
+  ): WalletTransaction[] {
+    const limit = Math.min(100, Math.max(1, Math.floor(Number(opts?.limit) || 50)));
+    const offset = Math.max(0, Math.floor(Number(opts?.offset) || 0));
+    const rows = db
+      .prepare(
+        `SELECT id, currency, amount, direction, reason, ref_type, ref_id, created_at
+         FROM wallet_ledger
+         WHERE user_id = ?
+         ORDER BY datetime(created_at) DESC, id DESC
+         LIMIT ? OFFSET ?`
+      )
+      .all(userId, limit, offset) as Array<{
+      id: number;
+      currency: string;
+      amount: number;
+      direction: string;
+      reason: string;
+      ref_type: string | null;
+      ref_id: string | null;
+      created_at: string;
+    }>;
+
+    return rows.map((row) => {
+      const currency = (
+        row.currency === 'ton' ||
+        row.currency === 'stars' ||
+        row.currency === 'coins' ||
+        row.currency === 'toman'
+          ? row.currency
+          : 'coins'
+      ) as WalletCurrency;
+      const direction: WalletLedgerDirection =
+        row.direction === 'debit' ? 'debit' : 'credit';
+      const amount = Math.abs(Number(row.amount) || 0);
+      const reason = String(row.reason || '');
+      return {
+        id: Number(row.id),
+        currency,
+        amount,
+        direction,
+        reason,
+        labelFa: walletLedgerLabelFa(reason),
+        refType: row.ref_type != null ? String(row.ref_type) : null,
+        refId: row.ref_id != null ? String(row.ref_id) : null,
+        createdAt: String(row.created_at),
+        delta: direction === 'debit' ? -amount : amount,
+      };
+    });
+  },
+
   /** کم کردن ستاره کیف پول (wallet_stars) اتمیک؛ اگر موجودی کافی نباشد null */
-  debitStars(userId: number, amount: number): User | null {
+  debitStars(userId: number, amount: number, meta?: WalletLedgerMeta): User | null {
     if (amount <= 0) return this.getUserById(userId);
     const result = db
       .prepare(
@@ -2597,16 +2725,43 @@ export const dbService = {
       )
       .run(amount, userId, amount);
     if (result.changes === 0) return null;
+    if (!meta?.skipLedger) {
+      this.appendWalletLedger({
+        userId,
+        currency: 'stars',
+        amount,
+        direction: 'debit',
+        reason: meta?.reason ?? 'کسر ستاره',
+        refType: meta?.refType,
+        refId: meta?.refId,
+      });
+    }
     return this.getUserById(userId);
   },
 
-  creditCoins(userId: number, amount: number, reason?: string): User | null {
+  creditCoins(
+    userId: number,
+    amount: number,
+    reason?: string,
+    meta?: WalletLedgerMeta
+  ): User | null {
     if (amount <= 0) return this.getUserById(userId);
     if (reason) {
       const once = this.creditCoinsOnce(userId, amount, reason);
       return once.user;
     }
     db.prepare(`UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?`).run(amount, userId);
+    if (!meta?.skipLedger) {
+      this.appendWalletLedger({
+        userId,
+        currency: 'coins',
+        amount,
+        direction: 'credit',
+        reason: meta?.reason ?? 'واریز سکه',
+        refType: meta?.refType,
+        refId: meta?.refId,
+      });
+    }
     return this.getUserById(userId);
   },
 
@@ -2624,7 +2779,8 @@ export const dbService = {
   creditWallet(
     userId: number,
     currency: WalletCurrency,
-    amount: number
+    amount: number,
+    meta?: WalletLedgerMeta
   ): { ok: true; user: User } | { ok: false; reason: 'missing_user' | 'bad_amount' } {
     const safe = Math.floor(Number(amount));
     if (!Number.isFinite(safe) || safe === 0) {
@@ -2632,11 +2788,31 @@ export const dbService = {
     }
     if (!this.getUserById(userId)) return { ok: false, reason: 'missing_user' };
 
+    const defaultReason =
+      safe > 0 ? 'واریز ادمین' : 'برداشت ادمین';
+    const ledgerMeta: WalletLedgerMeta = {
+      reason: meta?.reason ?? defaultReason,
+      refType: meta?.refType ?? 'admin',
+      refId: meta?.refId,
+      skipLedger: meta?.skipLedger,
+    };
+
     if (currency === 'coins') {
       if (safe > 0) {
         db.prepare(`UPDATE users SET coins = COALESCE(coins, 0) + ? WHERE id = ?`).run(safe, userId);
+        if (!ledgerMeta.skipLedger) {
+          this.appendWalletLedger({
+            userId,
+            currency: 'coins',
+            amount: safe,
+            direction: 'credit',
+            reason: ledgerMeta.reason!,
+            refType: ledgerMeta.refType,
+            refId: ledgerMeta.refId,
+          });
+        }
       } else {
-        const debited = this.debitCoins(userId, Math.abs(safe));
+        const debited = this.debitCoins(userId, Math.abs(safe), ledgerMeta);
         if (!debited) return { ok: false, reason: 'bad_amount' };
       }
       return { ok: true, user: this.getUserById(userId)! };
@@ -2648,8 +2824,19 @@ export const dbService = {
           safe,
           userId
         );
+        if (!ledgerMeta.skipLedger) {
+          this.appendWalletLedger({
+            userId,
+            currency: 'stars',
+            amount: safe,
+            direction: 'credit',
+            reason: ledgerMeta.reason!,
+            refType: ledgerMeta.refType,
+            refId: ledgerMeta.refId,
+          });
+        }
       } else {
-        const debited = this.debitStars(userId, Math.abs(safe));
+        const debited = this.debitStars(userId, Math.abs(safe), ledgerMeta);
         if (!debited) return { ok: false, reason: 'bad_amount' };
       }
       return { ok: true, user: this.getUserById(userId)! };
@@ -2658,6 +2845,17 @@ export const dbService = {
     const col = currency === 'ton' ? 'wallet_ton' : 'wallet_toman';
     if (safe > 0) {
       db.prepare(`UPDATE users SET ${col} = COALESCE(${col}, 0) + ? WHERE id = ?`).run(safe, userId);
+      if (!ledgerMeta.skipLedger) {
+        this.appendWalletLedger({
+          userId,
+          currency,
+          amount: safe,
+          direction: 'credit',
+          reason: ledgerMeta.reason!,
+          refType: ledgerMeta.refType,
+          refId: ledgerMeta.refId,
+        });
+      }
     } else {
       const abs = Math.abs(safe);
       const result = db
@@ -2667,6 +2865,17 @@ export const dbService = {
         )
         .run(abs, userId, abs);
       if (result.changes === 0) return { ok: false, reason: 'bad_amount' };
+      if (!ledgerMeta.skipLedger) {
+        this.appendWalletLedger({
+          userId,
+          currency,
+          amount: abs,
+          direction: 'debit',
+          reason: ledgerMeta.reason!,
+          refType: ledgerMeta.refType,
+          refId: ledgerMeta.refId,
+        });
+      }
     }
     return { ok: true, user: this.getUserById(userId)! };
   },
@@ -2698,6 +2907,15 @@ export const dbService = {
       safeAmount,
       userId
     );
+    this.appendWalletLedger({
+      userId,
+      currency: 'coins',
+      amount: safeAmount,
+      direction: 'credit',
+      reason: reason.trim(),
+      refType: 'coin_ledger',
+      refId: reason.trim(),
+    });
     if (reason.trim() === COIN_REASON.signup) {
       db.prepare('UPDATE users SET signup_bonus_claimed = 1 WHERE id = ?').run(userId);
     }
@@ -3668,6 +3886,32 @@ export const dbService = {
     return Number(row?.c ?? 0) > 0;
   },
 
+  getOpenCoinSellRequest(userId: number): CoinSellRequestSummary | null {
+    const row = db
+      .prepare(
+        `SELECT * FROM coin_sell_requests
+         WHERE user_id = ? AND status = 'open'
+         ORDER BY created_at DESC, id DESC
+         LIMIT 1`
+      )
+      .get(userId) as Record<string, unknown> | undefined;
+    return row ? mapCoinSellRequestSummary(row) : null;
+  },
+
+  listCoinSellRequests(userId: number, limit = 20): CoinSellRequestSummary[] {
+    const lim = Math.min(50, Math.max(1, Math.floor(limit) || 20));
+    return (
+      db
+        .prepare(
+          `SELECT * FROM coin_sell_requests
+           WHERE user_id = ?
+           ORDER BY created_at DESC, id DESC
+           LIMIT ?`
+        )
+        .all(userId, lim) as Record<string, unknown>[]
+    ).map(mapCoinSellRequestSummary);
+  },
+
   listVetConsultations(filters: {
     vetUserId?: number;
     patientUserId?: number;
@@ -4017,7 +4261,17 @@ export const dbService = {
           ) VALUES (?, ?, ?, ?, ?, 'open')`
         )
         .run(input.userId, coins, input.rateToman, amountToman, input.cardNumber);
-      return Number(result.lastInsertRowid);
+      const requestId = Number(result.lastInsertRowid);
+      this.appendWalletLedger({
+        userId: input.userId,
+        currency: 'coins',
+        amount: coins,
+        direction: 'debit',
+        reason: 'فروش سکه',
+        refType: 'coin_sell',
+        refId: requestId,
+      });
+      return requestId;
     });
 
     try {
@@ -4146,6 +4400,15 @@ export const dbService = {
         existing.coins,
         existing.userId
       );
+      this.appendWalletLedger({
+        userId: existing.userId,
+        currency: 'coins',
+        amount: existing.coins,
+        direction: 'credit',
+        reason: 'خرید سکه (کارت به کارت)',
+        refType: 'payment_order',
+        refId: orderId,
+      });
     });
 
     try {
@@ -4225,6 +4488,15 @@ export const dbService = {
         existing.coins,
         existing.userId
       );
+      this.appendWalletLedger({
+        userId: existing.userId,
+        currency: 'coins',
+        amount: existing.coins,
+        direction: 'credit',
+        reason: 'خرید سکه (ستاره‌های تلگرام)',
+        refType: 'payment_order',
+        refId: input.orderId,
+      });
     });
 
     try {
@@ -4915,6 +5187,51 @@ export const dbService = {
       db.prepare(
         `UPDATE users SET coins = 0, wallet_ton = 0, wallet_stars = 0, wallet_toman = 0 WHERE id = ?`
       ).run(absorbedId);
+      const syncRef = `merge:${absorbedId}->${survivorId}`;
+      if (absCoins) {
+        this.appendWalletLedger({
+          userId: survivorId,
+          currency: 'coins',
+          amount: absCoins,
+          direction: 'credit',
+          reason: 'همگام‌سازی حساب',
+          refType: 'account_merge',
+          refId: syncRef,
+        });
+      }
+      if (absStars) {
+        this.appendWalletLedger({
+          userId: survivorId,
+          currency: 'stars',
+          amount: absStars,
+          direction: 'credit',
+          reason: 'همگام‌سازی حساب',
+          refType: 'account_merge',
+          refId: syncRef,
+        });
+      }
+      if (absTon) {
+        this.appendWalletLedger({
+          userId: survivorId,
+          currency: 'ton',
+          amount: absTon,
+          direction: 'credit',
+          reason: 'همگام‌سازی حساب',
+          refType: 'account_merge',
+          refId: syncRef,
+        });
+      }
+      if (absToman) {
+        this.appendWalletLedger({
+          userId: survivorId,
+          currency: 'toman',
+          amount: absToman,
+          direction: 'credit',
+          reason: 'همگام‌سازی حساب',
+          refType: 'account_merge',
+          refId: syncRef,
+        });
+      }
     }
 
     // Reassign owned data so web + bot share the same pets / requests / sessions.

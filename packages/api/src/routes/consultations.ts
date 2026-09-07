@@ -197,7 +197,10 @@ consultationsRouter.post('/quick-connect', async (req, res) => {
     return;
   }
 
-  const debited = dbService.debitCoins(patient.id, QUICK_VET_COST);
+  const debited = dbService.debitCoins(patient.id, QUICK_VET_COST, {
+    reason: 'مشاوره سریع دامپزشک',
+    refType: 'vet_consult',
+  });
   if (!debited) {
     res.status(400).json({
       error: 'سکه کافی نیست',
@@ -233,7 +236,10 @@ consultationsRouter.post('/quick-connect', async (req, res) => {
 
   // اگر هیچ مشاوره‌ای ساخته نشد، سکه برگردد (چت وب بدون رکورد بی‌معنی است)
   if (consultations.length === 0) {
-    dbService.creditCoins(patient.id, QUICK_VET_COST);
+    dbService.creditCoins(patient.id, QUICK_VET_COST, undefined, {
+      reason: 'بازگشت سکه مشاوره (ناموفق)',
+      refType: 'vet_consult_refund',
+    });
     const refunded = dbService.getUserById(patient.id);
     res.status(502).json({
       error: 'ارسال به پزشک‌ها ناموفق بود؛ سکه‌ات برگشت داده شد.',

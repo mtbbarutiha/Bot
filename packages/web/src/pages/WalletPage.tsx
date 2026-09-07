@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Link2, RefreshCw, Sparkles, Wallet } from 'lucide-react';
+import { ArrowRight, Link2, Receipt, RefreshCw, Sparkles, Wallet } from 'lucide-react';
 import {
   BRAND,
   WALLET_CURRENCY_LABELS_FA,
@@ -12,13 +12,43 @@ import {
   type WalletCurrency,
 } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
-import { fetchWallet, startTelegramAttach } from '../lib/api';
+import {
+  fetchWallet,
+  fetchWalletTransactions,
+  startTelegramAttach,
+  type WalletTransactionDto,
+} from '../lib/api';
 
 const ORDER: WalletCurrency[] = ['coins', 'toman', 'stars', 'ton'];
 const FEATURED: WalletCurrency = 'coins';
 
 function formatBal(n: number): string {
   return toPersianDigits(new Intl.NumberFormat('en-US').format(Math.max(0, Math.floor(n))));
+}
+
+function formatDelta(tx: WalletTransactionDto): string {
+  const abs = Math.abs(Math.floor(tx.delta || tx.amount || 0));
+  const num = toPersianDigits(new Intl.NumberFormat('en-US').format(abs));
+  const sign = tx.direction === 'debit' || tx.delta < 0 ? '−' : '+';
+  return `${sign}${num}`;
+}
+
+function formatTxDate(iso: string): string {
+  const raw = String(iso || '').trim();
+  if (!raw) return '—';
+  const normalized = raw.includes('T') ? raw : raw.replace(' ', 'T');
+  const d = new Date(normalized.endsWith('Z') ? normalized : `${normalized}Z`);
+  if (Number.isNaN(d.getTime())) return toPersianDigits(raw.slice(0, 16));
+  try {
+    return toPersianDigits(
+      new Intl.DateTimeFormat('fa-IR', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+      }).format(d)
+    );
+  } catch {
+    return toPersianDigits(raw.slice(0, 16));
+  }
 }
 
 function sameWallet(a: WalletBalances | null, b: WalletBalances): boolean {
@@ -46,6 +76,9 @@ export function WalletPage() {
   const [linkBusy, setLinkBusy] = useState(false);
   const [linkHint, setLinkHint] = useState('');
   const [syncedAt, setSyncedAt] = useState<string | null>(null);
+  const [transactions, setTransactions] = useState<WalletTransactionDto[]>([]);
+  const [txLoading, setTxLoading] = useState(false);
+  const [txError, setTxError] = useState('');
   const inFlightRef = useRef(false);
   const hasLocalRef = useRef(Boolean(user));
   const tokenRef = useRef(token);
@@ -59,6 +92,21 @@ export function WalletPage() {
       setTelegramId(user.telegramId);
     }
   }, [user?.telegramId]);
+
+  const loadTransactions = useCallback(async () => {
+    const tok = tokenRef.current;
+    if (!tok) return;
+    setTxLoading(true);
+    try {
+      const res = await fetchWalletTransactions(tok, { limit: 40 });
+      setTransactions(res.transactions ?? []);
+      setTxError('');
+    } catch {
+      setTxError('نتوانستیم تراکنش‌ها را بارگذاری کنیم.');
+    } finally {
+      setTxLoading(false);
+    }
+  }, []);
 
   const loadWallet = useCallback(async (opts?: { soft?: boolean }) => {
     const tok = tokenRef.current;
@@ -84,6 +132,7 @@ export function WalletPage() {
       }
       setSyncedAt(new Date().toISOString());
       setError('');
+      void loadTransactions();
     } catch {
       setError('نتوانستیم موجودی را از سرور تازه کنیم؛ آخرین موجودی محلی نمایش داده شد.');
     } finally {
@@ -91,7 +140,7 @@ export function WalletPage() {
       setSyncing(false);
       inFlightRef.current = false;
     }
-  }, []);
+  }, [loadTransactions]);
 
   useEffect(() => {
     if (!token) return;
@@ -269,10 +318,69 @@ export function WalletPage() {
         </div>
       </section>
 
+      <section className="pepito-wallet-tx" aria-labelledby="wallet-tx-title">
+        <div className="pepito-wallet-tx-head">
+          <span className="pepito-wallet-tx-mark" aria-hidden>
+            <Receipt size={18} />
+          </span>
+          <div>
+            <h2 id="wallet-tx-title">تراکنش‌ها</h2>
+            <p className="pepito-wallet-tx-lead">کسر و واریز سکه و سایر ارزها</p>
+          </div>
+        </div>
+
+        {txError ? (
+          <p className="pepito-wallet-tx-empty pepito-wallet-tx-empty--warn" role="status">
+            {txError}
+          </p>
+        ) : null}
+
+        {txLoading && !transactions.length ? (
+          <p className="pepito-wallet-tx-empty" aria-live="polite">
+            در حال بارگذاری تراکنش‌ها…
+          </p>
+        ) : null}
+
+        {!txLoading && !txError && !transactions.length ? (
+          <p className="pepito-wallet-tx-empty" role="status">
+            هنوز تراکنشی ثبت نشده. از این به بعد کسر و واریزها اینجا دیده می‌شوند.
+          </p>
+        ) : null}
+
+        {transactions.length > 0 ? (
+          <ul className="pepito-wallet-tx-list">
+            {transactions.map((tx) => (
+              <li key={tx.id} className={`pepito-wallet-tx-row pepito-wallet-tx-row--${tx.direction}`}>
+                <div className="pepito-wallet-tx-main">
+                  <p className="pepito-wallet-tx-label">{tx.labelFa || tx.reason}</p>
+                  <p className="pepito-wallet-tx-meta">
+                    {WALLET_CURRENCY_LABELS_FA[tx.currency]}
+                    <span aria-hidden> · </span>
+                    {formatTxDate(tx.createdAt)}
+                  </p>
+                </div>
+                <p
+                  className={`pepito-wallet-tx-delta pepito-wallet-tx-delta--${tx.direction}`}
+                  aria-label={`${tx.direction === 'debit' ? 'کسر' : 'واریز'} ${formatDelta(tx)}`}
+                >
+                  {formatDelta(tx)}
+                  <span className="pepito-wallet-tx-unit" aria-hidden>
+                    {tx.currency === 'toman' ? ' ت' : ` ${WALLET_CURRENCY_SYMBOLS[tx.currency]}`}
+                  </span>
+                </p>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
       <p className="pepito-wallet-soon">به‌زودی واریز مستقیم از وب</p>
 
       <div className="pepito-wallet-actions">
-        <Link to="/shop" className="pepito-btn button-1">
+        <Link to="/wallet/earn" className="pepito-btn button-1">
+          کسب درآمد / برداشت
+        </Link>
+        <Link to="/shop" className="pepito-btn button-2">
           رفتن به شاپ
         </Link>
         <Link to="/profile" className="pepito-btn button-2 pepito-wallet-back">

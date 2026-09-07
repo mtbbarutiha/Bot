@@ -21,6 +21,99 @@ export const COIN_PRICE_STARS = 1;
  */
 export const STAR_PRICE_TOMAN = Math.floor(COIN_PRICE_TOMAN / COIN_PRICE_STARS);
 
+/**
+ * نرخ فروش سکه به تومان (کسب درآمد / درخواست برداشت) — هم‌تراز ربات.
+ * خرید: ۲٬۰۰۰ تومان؛ فروش: ۱٬۰۰۰ تومان.
+ */
+export const COIN_SELL_PRICE_TOMAN = 1_000;
+
+/** حداقل سکه برای ثبت درخواست فروش / برداشت */
+export const MIN_SELL_COINS = 50;
+
+export type CoinSellRequestStatus = 'open' | 'paid' | 'rejected' | 'cancelled';
+
+export type CoinSellRequestSummary = {
+  id: number;
+  coins: number;
+  rateToman: number;
+  amountToman: number;
+  /** کارت ماسک‌شده برای نمایش امن */
+  cardMasked: string;
+  status: CoinSellRequestStatus;
+  createdAt: string;
+  reviewedAt?: string | null;
+  adminNote?: string | null;
+};
+
+export function sellAmountToman(coins: number, rate = COIN_SELL_PRICE_TOMAN): number {
+  const c = Math.floor(Number(coins) || 0);
+  const r = Math.floor(Number(rate) || COIN_SELL_PRICE_TOMAN);
+  return Math.max(0, c) * Math.max(0, r);
+}
+
+/** نرمال‌سازی شماره کارت ایرانی — فقط رقم */
+export function normalizeCardNumber(raw: string): string {
+  const fa = '۰۱۲۳۴۵۶۷۸۹';
+  const ar = '٠١٢٣٤٥٦٧٨٩';
+  let s = (raw || '').trim().replace(/[\s\-]/g, '');
+  s = s
+    .split('')
+    .map((ch) => {
+      const fi = fa.indexOf(ch);
+      if (fi >= 0) return String(fi);
+      const ai = ar.indexOf(ch);
+      if (ai >= 0) return String(ai);
+      return ch;
+    })
+    .join('');
+  return s.replace(/\D/g, '');
+}
+
+function luhnOk(digits: string): boolean {
+  if (!/^\d{16}$/.test(digits)) return false;
+  let sum = 0;
+  let alt = false;
+  for (let i = digits.length - 1; i >= 0; i--) {
+    let n = Number(digits[i]);
+    if (alt) {
+      n *= 2;
+      if (n > 9) n -= 9;
+    }
+    sum += n;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
+export function validateIranCard(
+  raw: string
+): { ok: true; card: string } | { ok: false; reason: 'length' | 'luhn' } {
+  const card = normalizeCardNumber(raw);
+  if (card.length !== 16) return { ok: false, reason: 'length' };
+  if (!luhnOk(card)) return { ok: false, reason: 'luhn' };
+  return { ok: true, card };
+}
+
+export function formatCardGrouped(card: string): string {
+  const d = normalizeCardNumber(card);
+  if (d.length === 16) return d.replace(/(\d{4})(?=\d)/g, '$1-');
+  return d;
+}
+
+/** ماسک کارت برای UI: ۱۲۳۴-****-****-۵۶۷۸ */
+export function maskCardNumber(card: string): string {
+  const d = normalizeCardNumber(card);
+  if (d.length !== 16) return '****';
+  return `${d.slice(0, 4)}-****-****-${d.slice(12)}`;
+}
+
+export const COIN_SELL_STATUS_LABELS_FA: Record<CoinSellRequestStatus, string> = {
+  open: 'در انتظار بررسی',
+  paid: 'پرداخت شد',
+  rejected: 'رد شد',
+  cancelled: 'لغو شد',
+};
+
 /** تبدیل مبلغ تومان به سکه موردنیاز برای پرداخت فروشگاه (حداقل ۱ برای مبلغ مثبت) */
 export function tomanToShopCoins(toman: number): number {
   const t = Math.floor(Number(toman) || 0);
@@ -203,4 +296,39 @@ export function formatCoinAwardMessage(awards: CoinAward[]): string {
     return `🎁 ${fa} سکه بابت تکمیل بخش‌های پروفایل (${sections.join('، ')}) دریافت کردید`;
   }
   return `🎁 ${fa} سکه دریافت کردید`;
+}
+
+/** جهت ردیف لجر کیف پول */
+export type WalletLedgerDirection = 'credit' | 'debit';
+
+/** تراکنش قابل‌نمایش در وب/ربات */
+export type WalletTransaction = {
+  id: number;
+  currency: WalletCurrency;
+  amount: number;
+  direction: WalletLedgerDirection;
+  /** متن ذخیره‌شده در لجر (معمولاً فارسی) */
+  reason: string;
+  /** برچسب نمایش — همیشه فارسی */
+  labelFa: string;
+  refType: string | null;
+  refId: string | null;
+  createdAt: string;
+  /** اختلاف موجودی: credit مثبت، debit منفی */
+  delta: number;
+};
+
+/** تبدیل کلیدهای idempotent / انگلیسی به برچسب فارسی برای لیست تراکنش‌ها */
+export function walletLedgerLabelFa(reason: string): string {
+  const r = String(reason || '').trim();
+  if (!r) return 'تراکنش کیف پول';
+  if (r === COIN_REASON.signup || r === 'signup') return 'جایزه ثبت‌نام';
+  if (r === COIN_REASON.faceVerify || r === 'face_verify') return 'جایزه احراز هویت';
+  if (r === COIN_REASON.daily || r === 'daily') return 'سکه روزانه';
+  if (r.startsWith('profile:')) {
+    const section = r.slice('profile:'.length) as ProfileRewardSection;
+    const label = PROFILE_SECTION_LABELS_FA[section];
+    return label ? `جایزه پروفایل (${label})` : 'جایزه پروفایل';
+  }
+  return r;
 }

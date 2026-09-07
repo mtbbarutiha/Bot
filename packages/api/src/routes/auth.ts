@@ -2,7 +2,15 @@ import fs from 'fs';
 import { Router } from 'express';
 import multer from 'multer';
 import type { OnboardingStatus, UserGender, UserRole } from '@petdate/shared';
-import { USER_ROLES, normalizeRoles, userHasRole } from '@petdate/shared';
+import {
+  COIN_SELL_PRICE_TOMAN,
+  MIN_SELL_COINS,
+  USER_ROLES,
+  normalizeRoles,
+  sellAmountToman,
+  userHasRole,
+  validateIranCard,
+} from '@petdate/shared';
 import { dbService } from '../db';
 import {
   completeTelegramAttach,
@@ -269,6 +277,111 @@ authRouter.get('/wallet', (req, res) => {
       telegramId: user.telegramId ?? null,
       username: user.username ?? null,
     },
+  });
+});
+
+/** تاریخچه تراکنش‌های کیف پول کاربر (wallet_ledger) */
+authRouter.get('/wallet/transactions', (req, res) => {
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  if (!session) {
+    res.status(401).json({ error: 'وارد نشده‌اید' });
+    return;
+  }
+  const limit = Number(req.query?.limit ?? 50);
+  const offset = Number(req.query?.offset ?? 0);
+  const transactions = dbService.listUserWalletTransactions(session.user.id, {
+    limit: Number.isFinite(limit) ? limit : 50,
+    offset: Number.isFinite(offset) ? offset : 0,
+  });
+  res.json({ ok: true, transactions });
+});
+
+/**
+ * کسب درآمد / درخواست برداشت (فروش سکه) — همان قوانین ربات.
+ * GET: موجودی، نرخ، حداقل، درخواست باز، تاریخچه.
+ */
+authRouter.get('/earn', (req, res) => {
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  if (!session) {
+    res.status(401).json({ error: 'وارد نشده‌اید' });
+    return;
+  }
+  const user = dbService.getUserById(session.user.id) ?? session.user;
+  const wallet = dbService.getWallet(user.id);
+  const coins = wallet?.coins ?? user.coins ?? 0;
+  const openRequest = dbService.getOpenCoinSellRequest(user.id);
+  const requests = dbService.listCoinSellRequests(user.id, 20);
+  const canSell = coins >= MIN_SELL_COINS && !openRequest;
+  res.json({
+    ok: true,
+    coins,
+    wallet: wallet ?? { ton: 0, stars: 0, coins, toman: 0 },
+    rateToman: COIN_SELL_PRICE_TOMAN,
+    minCoins: MIN_SELL_COINS,
+    estimatedToman: sellAmountToman(coins, COIN_SELL_PRICE_TOMAN),
+    hasOpenRequest: Boolean(openRequest),
+    openRequest,
+    canSell,
+    method: 'card' as const,
+    methodLabelFa: 'کارت به‌کارت بانکی ایران',
+    requests,
+  });
+});
+
+/** ثبت درخواست برداشت / فروش سکه (وب — session auth) */
+authRouter.post('/earn/withdraw', (req, res) => {
+  const session = getUserFromBearer(req.header('authorization') ?? undefined);
+  if (!session) {
+    res.status(401).json({ error: 'وارد نشده‌اید' });
+    return;
+  }
+
+  const coins = Number(req.body?.coins);
+  const cardCheck = validateIranCard(String(req.body?.cardNumber ?? ''));
+  if (!cardCheck.ok) {
+    res.status(400).json({
+      ok: false,
+      reason: 'card',
+      error:
+        cardCheck.reason === 'luhn'
+          ? 'شماره کارت معتبر نیست (چک رقم).'
+          : 'شماره کارت ۱۶ رقمی بانکی ایران را درست وارد کنید.',
+    });
+    return;
+  }
+
+  const result = dbService.submitCoinSell({
+    userId: session.user.id,
+    coins,
+    rateToman: COIN_SELL_PRICE_TOMAN,
+    cardNumber: cardCheck.card,
+    minCoins: MIN_SELL_COINS,
+  });
+
+  if (!result.ok) {
+    const status =
+      result.reason === 'missing' ? 404 : result.reason === 'pending' ? 409 : 400;
+    const error =
+      result.reason === 'min'
+        ? `حداقل ${MIN_SELL_COINS} سکه لازم است.`
+        : result.reason === 'balance'
+          ? 'سکه کافی نیست.'
+          : result.reason === 'pending'
+            ? 'یک درخواست تسویه باز داری — تا بررسی ادمین صبر کن.'
+            : 'ثبت درخواست ممکن نشد.';
+    res.status(status).json({ ok: false, reason: result.reason, error });
+    return;
+  }
+
+  res.status(201).json({
+    ok: true,
+    requestId: result.requestId,
+    amountToman: result.amountToman,
+    rateToman: result.rateToman,
+    coins: Math.floor(coins),
+    user: result.user,
+    wallet: result.user.wallet ?? dbService.getWallet(session.user.id),
+    openRequest: dbService.getOpenCoinSellRequest(session.user.id),
   });
 });
 

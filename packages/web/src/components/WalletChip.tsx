@@ -121,7 +121,10 @@ export function WalletChip() {
               </li>
             ))}
           </ul>
-          <Link to="/wallet" className="pepito-nav-wallet-page-link" onClick={() => setOpen(false)}>
+          <Link to="/wallet/earn" className="pepito-nav-wallet-page-link" onClick={() => setOpen(false)}>
+            کسب درآمد / برداشت
+          </Link>
+          <Link to="/wallet" className="pepito-nav-wallet-page-link pepito-nav-wallet-page-link--ghost" onClick={() => setOpen(false)}>
             مشاهده کیف پول
           </Link>
         </div>

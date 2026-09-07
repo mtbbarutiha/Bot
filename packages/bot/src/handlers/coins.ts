@@ -1,8 +1,11 @@
 import type { Context } from 'grammy';
+import { InlineKeyboard } from 'grammy';
+import { WALLET_CURRENCY_LABELS_FA, WALLET_CURRENCY_SYMBOLS } from '@petdate/shared';
 import {
   approveCardPayment,
   attachPaymentReceipt,
   claimDailyCoins,
+  fetchWalletTransactions,
   completeStarsPayment,
   createPaymentOrder,
   getPaymentOrder,
@@ -42,6 +45,7 @@ import {
   paymentReceiptReplyKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
+import { telegramWebLoginUrl } from '../telegram-web-link';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 
 export const SEND_RECEIPT_BTN = '📤 ارسال فیش';
@@ -106,6 +110,56 @@ export async function handleCoinsDaily(ctx: Context): Promise<void> {
 export async function handleCoinsDailyDone(ctx: Context): Promise<void> {
   await ctx.answerCallbackQuery({ text: 'امروز گرفتی — فردا برگرد 🎁', show_alert: true });
 }
+
+
+export async function handleCoinsTransactions(ctx: Context): Promise<void> {
+  const user = await getCtxUser(ctx);
+  if (!user?.telegramId) {
+    await ctx.answerCallbackQuery({ text: 'اول /start بزن', show_alert: true });
+    return;
+  }
+  await ctx.answerCallbackQuery();
+  const telegramId = user.telegramId;
+  const walletUrl = telegramWebLoginUrl(telegramId, '/wallet');
+  const webKb = walletUrl
+    ? new InlineKeyboard().url('🌐 کیف پول وب', walletUrl)
+    : undefined;
+  try {
+    const txs = await fetchWalletTransactions(telegramId, 8);
+    if (!txs.length) {
+      await ctx.reply(
+        [
+          '📜 <b>تراکنش‌ها</b>',
+          '',
+          'هنوز تراکنشی ثبت نشده.',
+          'از این به بعد کسر و واریزها اینجا و در صفحه کیف پول وب دیده می‌شوند.',
+        ].join('\n'),
+        { parse_mode: 'HTML', ...(webKb ? { reply_markup: webKb } : {}) }
+      );
+      return;
+    }
+    const lines = txs.map((tx) => {
+      const sign = tx.direction === 'debit' ? '−' : '+';
+      const amount = formatNum(Math.abs(tx.amount));
+      const cur =
+        tx.currency === 'toman'
+          ? 'تومان'
+          : WALLET_CURRENCY_SYMBOLS[tx.currency] || WALLET_CURRENCY_LABELS_FA[tx.currency];
+      const when = String(tx.createdAt || '').slice(0, 16).replace('T', ' ');
+      return `• <b>${escapeHtml(tx.labelFa || tx.reason)}</b>\n  ${sign}${amount} ${cur} — ${when}`;
+    });
+    const allKb = walletUrl
+      ? new InlineKeyboard().url('🌐 همه در کیف پول وب', walletUrl)
+      : undefined;
+    await ctx.reply(['📜 <b>آخرین تراکنش‌ها</b>', '', ...lines].join('\n'), {
+      parse_mode: 'HTML',
+      ...(allKb ? { reply_markup: allKb } : {}),
+    });
+  } catch {
+    await ctx.reply('نتوانستیم تراکنش‌ها را بخوانیم. کمی بعد دوباره امتحان کن.');
+  }
+}
+
 
 export async function handleCoinsPackage(ctx: Context, pkgId: string): Promise<void> {
   const pkg = COIN_PACKAGES.find((p) => p.id === pkgId);
