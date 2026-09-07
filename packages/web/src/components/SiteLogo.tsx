@@ -1,6 +1,6 @@
 import { BRAND } from '@petdate/shared';
 
-/** Same asset as the site header nav logo in LandingChrome. */
+/** لوگو مادر — canonical header / chrome logo (pepito/img/logo.png). */
 export const SITE_LOGO_SRC = '/pepito/img/logo.png';
 
 type SiteLogoProps = {
