@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Mail, PenLine, RefreshCw, Send } from 'lucide-react';
+import { Inbox, Mail, PenLine, RefreshCw, Reply, Send } from 'lucide-react';
 import { adminFetch, formatNumFa } from '../api';
 
 type SmtpConfig = {
@@ -43,6 +43,33 @@ type OtpMailer = {
   detail: string;
 };
 
+type InboxMeta = {
+  configured: boolean;
+  path: string;
+  address: string;
+  total: number;
+  unread: number;
+};
+
+type InboxListItem = {
+  id: string;
+  uid: string;
+  from: string;
+  fromName: string | null;
+  to: string;
+  subject: string;
+  date: string | null;
+  preview: string;
+  unread: boolean;
+  size: number;
+};
+
+type InboxMessage = InboxListItem & {
+  text: string;
+  html: string | null;
+  messageId: string | null;
+};
+
 type MailStatus = {
   generatedAt: string;
   smtp: SmtpConfig;
@@ -56,6 +83,7 @@ type MailStatus = {
     otpFail24h?: number;
   };
   otpMailer?: OtpMailer;
+  inbox?: InboxMeta;
   recentSends: SendRow[];
   pendingEmailOtps: OtpRow[];
 };
@@ -77,6 +105,30 @@ export function AdminMailPage() {
   const [composeOk, setComposeOk] = useState(false);
   const [composeBusy, setComposeBusy] = useState(false);
 
+  const [inboxItems, setInboxItems] = useState<InboxListItem[]>([]);
+  const [inboxError, setInboxError] = useState<string | null>(null);
+  const [inboxLoading, setInboxLoading] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selected, setSelected] = useState<InboxMessage | null>(null);
+  const [replyBody, setReplyBody] = useState('');
+  const [replyMsg, setReplyMsg] = useState<string | null>(null);
+  const [replyOk, setReplyOk] = useState(false);
+  const [replyBusy, setReplyBusy] = useState(false);
+
+  const loadInbox = useCallback(async () => {
+    setInboxLoading(true);
+    setInboxError(null);
+    try {
+      const res = await adminFetch<{ messages: InboxListItem[] }>('/api/admin/mail/inbox?limit=80');
+      setInboxItems(res.messages || []);
+    } catch (err) {
+      setInboxError(err instanceof Error ? err.message : 'خواندن صندوق ورودی ناموفق بود');
+      setInboxItems([]);
+    } finally {
+      setInboxLoading(false);
+    }
+  }, []);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -91,7 +143,44 @@ export function AdminMailPage() {
 
   useEffect(() => {
     void load();
-  }, [load]);
+    void loadInbox();
+  }, [load, loadInbox]);
+
+  async function openMessage(id: string) {
+    setSelectedId(id);
+    setSelected(null);
+    setReplyBody('');
+    setReplyMsg(null);
+    try {
+      const res = await adminFetch<{ message: InboxMessage }>(`/api/admin/mail/inbox/${encodeURIComponent(id)}`);
+      setSelected(res.message);
+      setInboxItems((prev) => prev.map((m) => (m.id === id ? { ...m, unread: false } : m)));
+    } catch (err) {
+      setInboxError(err instanceof Error ? err.message : 'باز کردن پیام ناموفق بود');
+    }
+  }
+
+  async function sendReply() {
+    if (!selectedId || !replyBody.trim()) return;
+    setReplyBusy(true);
+    setReplyMsg(null);
+    setReplyOk(false);
+    try {
+      await adminFetch(`/api/admin/mail/inbox/${encodeURIComponent(selectedId)}/reply`, {
+        method: 'POST',
+        body: JSON.stringify({ body: replyBody }),
+      });
+      setReplyOk(true);
+      setReplyMsg('پاسخ ارسال شد.');
+      setReplyBody('');
+      void load();
+    } catch (err) {
+      setReplyOk(false);
+      setReplyMsg(err instanceof Error ? err.message : 'ارسال پاسخ ناموفق بود');
+    } finally {
+      setReplyBusy(false);
+    }
+  }
 
   async function sendTest() {
     setTestBusy(true);
@@ -140,6 +229,7 @@ export function AdminMailPage() {
 
   const smtp = data?.smtp;
   const otpMailer = data?.otpMailer;
+  const inbox = data?.inbox;
   const composeReady =
     Boolean(composeTo.trim()) &&
     Boolean(composeSubject.trim()) &&
@@ -154,10 +244,18 @@ export function AdminMailPage() {
             <Mail size={20} /> ایمیل / SMTP
           </h2>
           <p className="admin-muted" style={{ margin: '6px 0 0' }}>
-            پیکربندی ارسال (بدون رمز)، نوشتن ایمیل، وضعیت OTP و لاگ تلاش‌ها
+            صندوق ورودی، نوشتن/پاسخ، پیکربندی SMTP و وضعیت OTP
           </p>
         </div>
-        <button type="button" className="admin-btn admin-btn--ghost" onClick={() => void load()} disabled={loading}>
+        <button
+          type="button"
+          className="admin-btn admin-btn--ghost"
+          onClick={() => {
+            void load();
+            void loadInbox();
+          }}
+          disabled={loading || inboxLoading}
+        >
           <RefreshCw size={16} /> بروزرسانی
         </button>
       </header>
@@ -169,9 +267,9 @@ export function AdminMailPage() {
           <div className="admin-stat-value">{smtp?.configured ? 'فعال' : 'خاموش'}</div>
           <div className="admin-stat-label">SMTP</div>
         </div>
-        <div className={`admin-stat admin-stat--${data?.smtpReachable.ok ? 'sky' : 'slate'}`}>
-          <div className="admin-stat-value">{data?.smtpReachable.ok ? 'باز' : '—'}</div>
-          <div className="admin-stat-label">پورت SMTP</div>
+        <div className={`admin-stat admin-stat--${inbox?.configured ? 'sky' : 'slate'}`}>
+          <div className="admin-stat-value">{formatNumFa(inbox?.unread ?? 0)}</div>
+          <div className="admin-stat-label">خوانده‌نشده</div>
         </div>
         <div className={`admin-stat admin-stat--${otpMailer?.linked ? 'mint' : 'orange'}`}>
           <div className="admin-stat-value">{otpMailer?.linked ? 'وصل' : 'قطع'}</div>
@@ -187,7 +285,131 @@ export function AdminMailPage() {
         </div>
       </div>
 
-      <div className="admin-dash-grid">
+      <section className="admin-card" style={{ marginTop: 16 }}>
+        <div className="admin-card-head">
+          <h2 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Inbox size={18} /> صندوق ورودی
+            <span className="admin-muted" style={{ fontWeight: 400, fontSize: 13 }}>
+              {inbox?.address || 'info@petdate.ir'} — {formatNumFa(inboxItems.length)} پیام
+            </span>
+          </h2>
+        </div>
+        {inboxError ? <p className="admin-error">{inboxError}</p> : null}
+        <div className="admin-dash-grid" style={{ alignItems: 'stretch' }}>
+          <div className="admin-table-wrap" style={{ maxHeight: 420, overflow: 'auto' }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th></th>
+                  <th>از</th>
+                  <th>موضوع</th>
+                  <th>زمان</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inboxItems.map((row) => (
+                  <tr
+                    key={row.id}
+                    onClick={() => void openMessage(row.id)}
+                    style={{
+                      cursor: 'pointer',
+                      background: selectedId === row.id ? 'rgba(56, 189, 248, 0.12)' : undefined,
+                      fontWeight: row.unread ? 700 : 400,
+                    }}
+                  >
+                    <td>{row.unread ? '●' : ''}</td>
+                    <td className="admin-mono" dir="ltr">
+                      {row.fromName ? `${row.fromName} <${row.from}>` : row.from || '—'}
+                    </td>
+                    <td>
+                      <div>{row.subject}</div>
+                      <div className="admin-muted" style={{ fontSize: 12, fontWeight: 400 }}>
+                        {row.preview || '—'}
+                      </div>
+                    </td>
+                    <td className="admin-mono">{row.date ? row.date.replace('T', ' ').slice(0, 19) : '—'}</td>
+                  </tr>
+                ))}
+                {!inboxItems.length ? (
+                  <tr>
+                    <td colSpan={4} className="admin-muted">
+                      {inboxLoading ? 'در حال بارگذاری…' : 'پیامی در صندوق نیست'}
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            {selected ? (
+              <>
+                <ul className="admin-kv">
+                  <li>
+                    <span>از</span>
+                    <strong className="admin-mono" dir="ltr">
+                      {selected.fromName ? `${selected.fromName} <${selected.from}>` : selected.from}
+                    </strong>
+                  </li>
+                  <li>
+                    <span>موضوع</span>
+                    <strong>{selected.subject}</strong>
+                  </li>
+                  <li>
+                    <span>زمان</span>
+                    <strong className="admin-mono">{selected.date || '—'}</strong>
+                  </li>
+                </ul>
+                <pre
+                  style={{
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
+                    background: 'rgba(0,0,0,0.04)',
+                    padding: 12,
+                    borderRadius: 8,
+                    maxHeight: 220,
+                    overflow: 'auto',
+                    fontFamily: 'Tahoma, sans-serif',
+                    fontSize: 14,
+                    lineHeight: 1.7,
+                  }}
+                >
+                  {selected.text || '(بدون متن ساده — ممکن است فقط HTML باشد)'}
+                </pre>
+                <div className="form-group" style={{ marginTop: 12 }}>
+                  <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Reply size={14} /> پاسخ به {selected.from}
+                  </label>
+                  <textarea
+                    className="form-textarea"
+                    rows={5}
+                    value={replyBody}
+                    onChange={(e) => setReplyBody(e.target.value)}
+                    placeholder="متن پاسخ را بنویسید…"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn--primary"
+                  disabled={replyBusy || !replyBody.trim() || !smtp?.configured}
+                  onClick={() => void sendReply()}
+                >
+                  <Send size={16} /> {replyBusy ? 'در حال ارسال…' : 'ارسال پاسخ'}
+                </button>
+                {replyMsg ? (
+                  <p className={replyOk ? 'admin-muted' : 'admin-error'} style={{ marginTop: 12 }}>
+                    {replyMsg}
+                  </p>
+                ) : null}
+              </>
+            ) : (
+              <p className="admin-muted">یک پیام از لیست سمت چپ انتخاب کنید تا بخوانید و پاسخ دهید.</p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <div className="admin-dash-grid" style={{ marginTop: 16 }}>
         <section className="admin-card">
           <div className="admin-card-head"><h2>پیکربندی SMTP</h2></div>
           {smtp ? (
@@ -195,11 +417,9 @@ export function AdminMailPage() {
               <li><span>Host</span><strong className="admin-mono">{smtp.host || '—'}</strong></li>
               <li><span>Port</span><strong className="admin-mono">{smtp.port}</strong></li>
               <li><span>From</span><strong className="admin-mono">{smtp.fromName} &lt;{smtp.from}&gt;</strong></li>
+              <li><span>Inbox</span><strong className="admin-mono">{inbox?.address || 'info@petdate.ir'}</strong></li>
               <li><span>User</span><strong className="admin-mono">{smtp.user || 'بدون auth'}</strong></li>
               <li><span>Auth</span><strong>{smtp.authConfigured ? 'بله (رمز مخفی)' : 'خیر'}</strong></li>
-              <li><span>Secure / ignoreTLS</span><strong>{String(smtp.secure)} / {String(smtp.ignoreTls)}</strong></li>
-              <li><span>TLS rejectUnauthorized</span><strong>{String(smtp.tlsRejectUnauthorized)}</strong></li>
-              <li><span>Local host</span><strong>{smtp.localHost ? 'بله' : 'خیر'}</strong></li>
               <li><span>Reachability</span><strong>{data?.smtpReachable.detail}</strong></li>
             </ul>
           ) : (
@@ -320,7 +540,6 @@ export function AdminMailPage() {
           ) : null}
           <p className="admin-muted" style={{ marginTop: 12 }}>
             تست فقط وضعیت SMTP را چک می‌کند. برای پیام دلخواه از «نوشتن و ارسال ایمیل» استفاده کنید.
-            رمز SMTP در این پنل نشان داده نمی‌شود.
           </p>
         </section>
       </div>

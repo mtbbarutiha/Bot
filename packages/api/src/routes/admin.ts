@@ -22,6 +22,14 @@ import {
   sendMail,
 } from '../services/mail';
 import { buildBrandedMailHtml } from '../services/otp-email-html';
+import {
+  buildReplySubject,
+  getInboxMailboxAddress,
+  getInboxMessage,
+  getInboxPublicStatus,
+  isInboxConfigured,
+  listInboxMessages,
+} from '../services/mail-inbox';
 import { rateLimit } from '../middleware/rate-limit';
 
 export const adminRouter = Router();
@@ -484,6 +492,18 @@ adminRouter.get('/mail', async (_req, res) => {
   }
   const pendingEmailOtps = dbService.listPendingWebOtps('email', 40);
   const stats = dbService.getEmailSendLogStats();
+  const inbox = getInboxPublicStatus();
+  let inboxUnread = 0;
+  let inboxTotal = 0;
+  if (inbox.configured) {
+    try {
+      const listed = await listInboxMessages(200);
+      inboxTotal = listed.length;
+      inboxUnread = listed.filter((m) => m.unread).length;
+    } catch (err) {
+      console.error('inbox list for status failed', err instanceof Error ? err.message : err);
+    }
+  }
   res.json({
     generatedAt: new Date().toISOString(),
     smtp,
@@ -498,6 +518,11 @@ adminRouter.get('/mail', async (_req, res) => {
       detail: smtp.configured
         ? 'ورود وب با ایمیل از همین SMTP ارسال می‌شود (purpose=login_otp)'
         : 'SMTP خاموش است — OTP ایمیل کار نمی‌کند',
+    },
+    inbox: {
+      ...inbox,
+      total: inboxTotal,
+      unread: inboxUnread,
     },
     recentSends: dbService.listEmailSendLogs({ limit: 80 }),
     pendingEmailOtps,
@@ -516,6 +541,99 @@ function adminMailSendError(sent: { error: string; detail?: string }): string {
   }
   return sent.error || 'ارسال ناموفق بود';
 }
+
+adminRouter.get('/mail/inbox', async (req, res) => {
+  if (!isInboxConfigured()) {
+    res.status(503).json({ error: 'صندوق ورودی روی سرور پیکربندی نشده' });
+    return;
+  }
+  const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 200);
+  try {
+    const messages = await listInboxMessages(limit);
+    res.json({
+      address: getInboxMailboxAddress(),
+      count: messages.length,
+      unread: messages.filter((m) => m.unread).length,
+      messages,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: 'خواندن صندوق ورودی ناموفق بود', detail: message.slice(0, 300) });
+  }
+});
+
+adminRouter.get('/mail/inbox/:id', async (req, res) => {
+  if (!isInboxConfigured()) {
+    res.status(503).json({ error: 'صندوق ورودی روی سرور پیکربندی نشده' });
+    return;
+  }
+  try {
+    const message = await getInboxMessage(String(req.params.id || ''), { markSeen: true });
+    if (!message) {
+      res.status(404).json({ error: 'پیام پیدا نشد' });
+      return;
+    }
+    res.json({ message });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    res.status(500).json({ error: 'خواندن پیام ناموفق بود', detail: message.slice(0, 300) });
+  }
+});
+
+adminRouter.post('/mail/inbox/:id/reply', adminMailSendLimit, async (req, res) => {
+  if (!isSmtpConfigured()) {
+    res.status(503).json({ error: 'SMTP پیکربندی نشده' });
+    return;
+  }
+  if (!isInboxConfigured()) {
+    res.status(503).json({ error: 'صندوق ورودی روی سرور پیکربندی نشده' });
+    return;
+  }
+  const original = await getInboxMessage(String(req.params.id || ''), { markSeen: true });
+  if (!original) {
+    res.status(404).json({ error: 'پیام پیدا نشد' });
+    return;
+  }
+  if (!isPlausibleEmail(original.from)) {
+    res.status(400).json({ error: 'فرستنده پیام برای ریپلای معتبر نیست' });
+    return;
+  }
+  const body = typeof req.body?.body === 'string' ? req.body.body : '';
+  const text = body.trim();
+  if (!text || text.length > 20_000) {
+    res.status(400).json({ error: 'متن پاسخ الزامی است (حداکثر ۲۰۰۰۰ کاراکتر)' });
+    return;
+  }
+  const subject =
+    typeof req.body?.subject === 'string' && req.body.subject.trim()
+      ? req.body.subject.trim().slice(0, 200)
+      : buildReplySubject(original.subject);
+  const quote = original.text
+    ? `\n\n----------\n${original.from} نوشت:\n${original.text.slice(0, 4000)}`
+    : '';
+  const fullText = `${text}${quote}`;
+  const mailbox = getInboxMailboxAddress();
+  const refs = [
+    ...original.references,
+    ...(original.messageId ? [original.messageId] : []),
+  ];
+  const sent = await sendMail({
+    to: original.from,
+    subject,
+    text: fullText,
+    html: buildBrandedMailHtml(fullText, { title: subject }),
+    purpose: 'admin_reply',
+    fromAddr: mailbox,
+    fromName: 'پت‌دیت',
+    inReplyTo: original.messageId || undefined,
+    references: refs,
+  });
+  if (!sent.ok) {
+    res.status(502).json({ error: adminMailSendError(sent) });
+    return;
+  }
+  res.json({ ok: true, to: original.from, subject });
+});
 
 adminRouter.post('/mail/test', adminMailSendLimit, async (req, res) => {
   if (!isSmtpConfigured()) {

@@ -101,6 +101,12 @@ export async function sendMail(opts: {
   /** Full HTML body; when omitted, a simple RTL wrapper of `text` is used. */
   html?: string;
   purpose?: string;
+  /** Override From address (e.g. info@ for human replies). */
+  fromAddr?: string;
+  fromName?: string;
+  /** Threading headers for replies. */
+  inReplyTo?: string;
+  references?: string[];
 }): Promise<SendMailResult> {
   const host = smtpHost();
   const purpose = (opts.purpose || 'mail').slice(0, 64);
@@ -117,7 +123,9 @@ export async function sendMail(opts: {
 
   const port = Number(process.env.SMTP_PORT) || 587;
   const { user, pass } = smtpAuth();
-  const { addr: fromAddr, name: fromName } = smtpFrom();
+  const defaults = smtpFrom();
+  const fromAddr = String(opts.fromAddr ?? defaults.addr).trim() || defaults.addr;
+  const fromName = String(opts.fromName ?? defaults.name).trim() || defaults.name;
   const hasAuth = Boolean(user && pass);
   const local = isLocalSmtpHost(host);
   const { secure, ignoreTls, rejectUnauthorized } = smtpTlsFlags(host, port, hasAuth);
@@ -166,6 +174,14 @@ export async function sendMail(opts: {
         ]
       : undefined;
 
+    const refList = [
+      ...(opts.references ?? []),
+      ...(opts.inReplyTo ? [opts.inReplyTo] : []),
+    ]
+      .map((r) => String(r).trim())
+      .filter(Boolean);
+    const uniqueRefs = [...new Set(refList)];
+
     await transporter.sendMail({
       from: `"${fromName.replace(/"/g, '')}" <${fromAddr}>`,
       // Envelope-from (Return-Path) must align with From for SPF/DMARC
@@ -177,6 +193,8 @@ export async function sendMail(opts: {
       html,
       encoding: 'utf-8',
       messageId,
+      inReplyTo: opts.inReplyTo || undefined,
+      references: uniqueRefs.length ? uniqueRefs : undefined,
       attachments,
       headers: {
         'MIME-Version': '1.0',
