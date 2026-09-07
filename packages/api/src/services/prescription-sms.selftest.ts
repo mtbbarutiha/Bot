@@ -1,6 +1,6 @@
 /**
  * Offline checks: prescription SMS must include public HTTPS PDF download link
- * on pdf.petdate.ir (PUBLIC_PDF_URL).
+ * on pdf.petdate.ir (PUBLIC_PDF_URL) and must NOT include medication details.
  * Run: npx tsx packages/api/src/services/prescription-sms.selftest.ts
  */
 import { buildPrescriptionSmsBody } from './prescription';
@@ -47,10 +47,10 @@ assert(
 );
 
 const pdfUrl = prescriptionPdfPublicUrl(42);
+const medSample = 'آموکسی سیلین 50mg دو بار در روز';
 const body = buildPrescriptionSmsBody({
   vetName: 'آزمایشی',
   petName: 'لوکی',
-  text: 'آموکسی سیلین 50mg',
   pdfUrl,
 });
 
@@ -59,6 +59,12 @@ assert(!body.includes('https://petdate.ir/rx/42'), 'SMS must not include HTML pa
 assert(!body.includes('مشاهده نسخه'), 'SMS must not mention page view link');
 assert(body.includes('PDF'), 'SMS must mention PDF');
 assert(body.includes('دانلود'), 'SMS must say download');
+assert(body.includes('لوکی'), 'SMS may include pet name');
+assert(body.includes('آزمایشی'), 'SMS may include doctor name');
+assert(!body.includes('دارو:'), 'SMS must not list medications');
+assert(!body.includes(medSample), 'SMS must not include medication text');
+assert(!body.includes('آموکسی'), 'SMS must not include drug names');
+assert(!body.includes('50mg'), 'SMS must not include dosages');
 assert(!body.includes('تلگرام'), 'SMS must not tell user to use Telegram for PDF');
 assert(!body.includes('185.110'), 'SMS must not leak VPS IP');
 assert(!/[🐾💊]/.test(body), 'SMS should avoid emoji for carrier encoding');

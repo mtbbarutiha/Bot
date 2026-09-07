@@ -45,24 +45,20 @@ export type CreatePrescriptionResult = {
 
 /**
  * Exported for selftest — Persian SMS with a single HTTPS PDF download link.
- * Only pdf.petdate.ir /rx/{id}.pdf (PUBLIC_PDF_URL) — no HTML page URL.
+ * Only pdf.petdate.ir /rx/{id}.pdf (PUBLIC_PDF_URL) — no HTML page URL,
+ * and no drug/dosage/medication lines (details stay in the PDF).
  */
 export function buildPrescriptionSmsBody(opts: {
   vetName: string;
   petName: string;
-  text: string;
   pdfUrl: string;
 }): string {
-  const abbrev = opts.text.replace(/\s+/g, ' ').trim().slice(0, 200);
   const parts = [
     'پت دیت دکتر',
     `نسخه دارویی برای «${opts.petName}» توسط دکتر ${opts.vetName} صادر شد.`,
     'دانلود فایل PDF:',
     opts.pdfUrl,
   ];
-  if (abbrev.length <= 80) {
-    parts.push(`دارو: ${abbrev}`);
-  }
   let body = parts.join('\n');
   if (body.length > 880) {
     body = body.slice(0, 877) + '...';
@@ -217,7 +213,6 @@ export async function createPrescriptionWithDelivery(
       const body = buildPrescriptionSmsBody({
         vetName: vet.name,
         petName: pet.name,
-        text,
         pdfUrl: pdfPublicUrl,
       });
       let sent = await candooSendWithSrcFallback({
