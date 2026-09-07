@@ -27,6 +27,7 @@ import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 import { MENU_LABELS } from '../keyboards';
 import { effectiveWebUrl, isTelegramInlineUrl } from '../urls';
+import { claimWebChatCtaOnce } from '../web-chat-cta-once';
 
 /** Reply-keyboard labels for vet chat (short so buttons stay compact). */
 export const VET_CHAT_BTNS = {
@@ -207,6 +208,7 @@ function clearVetChatPatch() {
     vetChatConsultId: undefined as number | undefined,
     vetChatPeerTelegramId: undefined as string | undefined,
     vetChatRole: undefined as 'vet' | 'patient' | undefined,
+    vetChatWebHintSent: undefined as boolean | undefined,
     medicalNotePetId: undefined as number | undefined,
     prescriptionPetId: undefined as number | undefined,
     prescriptionDraft: undefined as string | undefined,
@@ -253,11 +255,7 @@ export async function startVetChat(
 
   const webBase = effectiveWebUrl().replace(/\/$/, '');
   const webChatUrl = `${webBase}/vet-chats/${consultId}`;
-  const webChatLine = [
-    '',
-    '🌐 می‌توانید در وب هم چت کنید:',
-    webChatUrl,
-  ].join('\n');
+  const canWebButton = isTelegramInlineUrl(webChatUrl);
 
   if (!vet.telegramId) {
     await ctx.reply('برای شروع چت تلگرام، دامپزشک باید ربات را استارت کرده باشد.');
@@ -269,6 +267,7 @@ export async function startVetChat(
     vetChatConsultId: consultId,
     vetChatPeerTelegramId: patient.telegramId ? String(patient.telegramId) : undefined,
     vetChatRole: 'vet',
+    vetChatWebHintSent: true,
     medicalNotePetId: undefined,
     prescriptionPetId: undefined,
     prescriptionDraft: undefined,
@@ -280,6 +279,7 @@ export async function startVetChat(
       vetChatConsultId: consultId,
       vetChatPeerTelegramId: String(vet.telegramId),
       vetChatRole: 'patient',
+      vetChatWebHintSent: true,
       medicalNotePetId: undefined,
       prescriptionPetId: undefined,
       prescriptionDraft: undefined,
@@ -291,7 +291,6 @@ export async function startVetChat(
     '',
     `صاحب پت: <b>${escapeHtml(patient.name)}</b>`,
     'هر پیامی بفرستی مستقیم به صاحب پت می‌رسد.',
-    webChatLine,
     '',
     `• ${VET_CHAT_BTNS.petProfile}`,
     `• ${VET_CHAT_BTNS.medical}`,
@@ -305,12 +304,19 @@ export async function startVetChat(
     '',
     `پزشک: <b>${escapeHtml(vet.name)}</b>`,
     'هر پیامی بفرستی مستقیم به پزشک می‌رسد.',
-    webChatLine,
     '',
     `پایان چت: ${VET_CHAT_BTNS.end}`,
   ].join('\n');
 
-  const webButton = isTelegramInlineUrl(webChatUrl)
+  /** web-cta-once-v2 — one-time web option (Redis SETNX); never on later relay messages. */
+  const webHintText = canWebButton
+    ? '🌐 می‌توانید در وب هم چت کنید — اگر همین‌جا ادامه دهید، پیام‌ها در ربات رد و بدل می‌شوند.'
+    : [
+        '🌐 می‌توانید در وب هم چت کنید:',
+        webChatUrl,
+        'اگر همین‌جا ادامه دهید، پیام‌ها در ربات رد و بدل می‌شوند.',
+      ].join('\n');
+  const webHintOpts = canWebButton
     ? { reply_markup: new InlineKeyboard().url('ورود به چت وب', webChatUrl) }
     : {};
 
@@ -318,11 +324,9 @@ export async function startVetChat(
     parse_mode: 'HTML',
     reply_markup: vetChatReplyKeyboard(true),
   });
-  if (isTelegramInlineUrl(webChatUrl)) {
+  if (await claimWebChatCtaOnce('vet', consultId, String(vet.telegramId))) {
     try {
-      await ctx.reply('🌐 لینک چت وب:', {
-        ...webButton,
-      });
+      await ctx.reply(webHintText, webHintOpts);
     } catch {
       /* ignore */
     }
@@ -340,8 +344,8 @@ export async function startVetChat(
       parse_mode: 'HTML',
       reply_markup: vetChatReplyKeyboard(false),
     });
-    if (isTelegramInlineUrl(webChatUrl)) {
-      await ctx.api.sendMessage(patient.telegramId, '🌐 لینک چت وب:', webButton);
+    if (await claimWebChatCtaOnce('vet', consultId, String(patient.telegramId))) {
+      await ctx.api.sendMessage(patient.telegramId, webHintText, webHintOpts);
     }
   } catch (err) {
     console.warn('notify patient chat start failed:', err);

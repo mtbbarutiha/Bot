@@ -487,6 +487,8 @@ export interface BotSession {
   vetChatPeerTelegramId?: string;
   /** نقش در چت: دامپزشک یا بیمار */
   vetChatRole?: 'vet' | 'patient';
+  /** یک‌بار پیشنهاد لینک چت وب در جلسه مشاوره (جلوگیری از تکرار) */
+  vetChatWebHintSent?: boolean;
   /** چت مالک↔مالک بعد از قبول همبازی — شناسه درخواست */
   ownerChatPlaydateId?: number;
   /** تلگرام طرف مقابل در چت همبازی */
@@ -499,6 +501,8 @@ export interface BotSession {
   ownerChatPeerPetId?: number;
   /** چت امن — پیام‌ها با protect_content و غیرقابل ذخیره */
   ownerChatSecure?: boolean;
+  /** یک‌بار پیشنهاد لینک چت وب در جلسه همبازی (جلوگیری از تکرار) */
+  ownerChatWebHintSent?: boolean;
   /** ثبت مورد در پرونده پزشکی (پت انتخاب‌شده) */
   medicalNotePetId?: number;
   /** نوشتن نسخه — پت انتخاب‌شده */

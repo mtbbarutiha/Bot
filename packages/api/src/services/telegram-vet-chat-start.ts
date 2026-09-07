@@ -5,6 +5,7 @@
 import type { User } from '@petdate/shared';
 import { infra } from '../config/infra';
 import { activateBotVetChatSessions } from './bot-vet-chat-session';
+import { claimWebChatCtaOnce } from './web-chat-cta-once';
 
 function escapeHtml(value: string): string {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -65,10 +66,35 @@ function patientKeyboard() {
   };
 }
 
+/** web-cta-once-v2 — send web hint at most once per consult+telegramId (never from relays). */
+async function sendWebCtaOnce(opts: {
+  consultId: number;
+  telegramId: string;
+  webChatUrl: string;
+  canInline: boolean;
+  webButton?: { inline_keyboard: Array<Array<{ text: string; url: string }>> };
+}): Promise<void> {
+  const allowed = await claimWebChatCtaOnce('vet', opts.consultId, opts.telegramId);
+  if (!allowed) return;
+  const text = opts.canInline
+    ? '🌐 می‌توانید در وب هم چت کنید — اگر همین‌جا ادامه دهید، پیام‌ها در ربات رد و بدل می‌شوند.'
+    : [
+        '🌐 می‌توانید در وب هم چت کنید:',
+        opts.webChatUrl,
+        'اگر همین‌جا ادامه دهید، پیام‌ها در ربات رد و بدل می‌شوند.',
+      ].join('\n');
+  await telegramCall('sendMessage', {
+    chat_id: opts.telegramId,
+    text,
+    ...(opts.webButton ? { reply_markup: opts.webButton } : {}),
+  });
+}
+
 /**
- * Open bot vet_chat for both sides + send intros with web link.
+ * Open bot vet_chat for both sides + send intros with a one-time web link.
  * Safe to call from web accept and from PATCH status→active (bot accept path
- * also calls startVetChat locally — duplicate intros are acceptable / rare).
+ * also calls startVetChat locally — Redis SETNX prevents duplicate CTAs).
+ * Web CTA is mentioned once here; later web→Telegram relays stay silent.
  */
 export async function startVetChatFromApi(opts: {
   consultId: number;
@@ -108,9 +134,6 @@ export async function startVetChatFromApi(opts: {
       '',
       `صاحب پت: <b>${escapeHtml(opts.patient.name)}</b>`,
       'هر پیامی بفرستی مستقیم به صاحب پت می‌رسد.',
-      '',
-      '🌐 می‌توانید در وب هم چت کنید:',
-      webChatUrl,
     ].join('\n');
     const ok = await telegramCall('sendMessage', {
       chat_id: vetTg,
@@ -119,13 +142,13 @@ export async function startVetChatFromApi(opts: {
       reply_markup: vetKeyboard(),
     });
     anyOk = ok || anyOk;
-    if (webButton) {
-      await telegramCall('sendMessage', {
-        chat_id: vetTg,
-        text: '🌐 لینک چت وب:',
-        reply_markup: webButton,
-      });
-    }
+    await sendWebCtaOnce({
+      consultId: opts.consultId,
+      telegramId: vetTg,
+      webChatUrl,
+      canInline,
+      webButton,
+    });
   }
 
   if (patientTg) {
@@ -134,9 +157,6 @@ export async function startVetChatFromApi(opts: {
       '',
       `پزشک: <b>${escapeHtml(opts.vet.name)}</b>`,
       'هر پیامی بفرستی مستقیم به پزشک می‌رسد.',
-      '',
-      '🌐 می‌توانید در وب هم چت کنید:',
-      webChatUrl,
       '',
       `پایان چت: ${VET_CHAT_END}`,
     ].join('\n');
@@ -147,13 +167,13 @@ export async function startVetChatFromApi(opts: {
       reply_markup: patientKeyboard(),
     });
     anyOk = ok || anyOk;
-    if (webButton) {
-      await telegramCall('sendMessage', {
-        chat_id: patientTg,
-        text: '🌐 لینک چت وب:',
-        reply_markup: webButton,
-      });
-    }
+    await sendWebCtaOnce({
+      consultId: opts.consultId,
+      telegramId: patientTg,
+      webChatUrl,
+      canInline,
+      webButton,
+    });
   }
 
   return anyOk;

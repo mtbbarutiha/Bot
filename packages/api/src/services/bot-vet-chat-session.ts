@@ -16,6 +16,8 @@ type SessionLike = {
   vetChatConsultId?: number;
   vetChatPeerTelegramId?: string;
   vetChatRole?: 'vet' | 'patient';
+  /** One-time web chat CTA already sent for this session */
+  vetChatWebHintSent?: boolean;
   medicalNotePetId?: number;
   prescriptionPetId?: number;
   prescriptionDraft?: unknown;
@@ -86,6 +88,8 @@ async function upsertVetChatSession(opts: {
       ? String(opts.peerTelegramId)
       : undefined,
     vetChatRole: opts.role,
+    // Mark once — startVetChatFromApi / startVetChat sends the CTA; relays must not.
+    vetChatWebHintSent: true,
     medicalNotePetId: undefined,
     prescriptionPetId: undefined,
     prescriptionDraft: undefined,

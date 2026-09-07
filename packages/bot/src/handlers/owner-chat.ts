@@ -1,4 +1,4 @@
-import { Keyboard } from 'grammy';
+import { InlineKeyboard, Keyboard } from 'grammy';
 import type { Context } from 'grammy';
 import type { BotSession, User } from '@petdate/shared';
 import {
@@ -23,6 +23,8 @@ import { getSession, upsertSession } from '../session';
 import { getCtxUser, menuKeyboardFor } from './helpers';
 import { formatPet } from '../format';
 import { MAIN_MENU_ALIASES, MAIN_MENU_BTN, MENU_LABELS, mainMenuKeyboard } from '../keyboards';
+import { effectiveWebUrl, isTelegramInlineUrl } from '../urls';
+import { claimWebChatCtaOnce } from '../web-chat-cta-once';
 
 export const OWNER_CHAT_BTNS = {
   secureOn: '🔒 چت امن',
@@ -70,7 +72,41 @@ function clearOwnerChatPatch() {
     ownerChatMyPetId: undefined as number | undefined,
     ownerChatPeerPetId: undefined as number | undefined,
     ownerChatSecure: undefined as boolean | undefined,
+    ownerChatWebHintSent: undefined as boolean | undefined,
   };
+}
+
+/** web-cta-once-v2 — one-time web chat option for playmate sessions (never on relay/resume). */
+async function sendOwnerChatWebHintOnce(
+  ctx: Context,
+  telegramId: string,
+  playdateId: number | undefined
+): Promise<void> {
+  if (!playdateId) return;
+  const allowed = await claimWebChatCtaOnce('playmate', playdateId, telegramId);
+  if (!allowed) return;
+  const webBase = effectiveWebUrl().replace(/\/$/, '');
+  const webChatUrl = `${webBase}/chats/${playdateId}`;
+  const canButton = isTelegramInlineUrl(webChatUrl);
+  const text = canButton
+    ? '🌐 می‌توانید در وب هم چت کنید — اگر همین‌جا ادامه دهید، پیام‌ها در ربات رد و بدل می‌شوند.'
+    : [
+        '🌐 می‌توانید در وب هم چت کنید:',
+        webChatUrl,
+        'اگر همین‌جا ادامه دهید، پیام‌ها در ربات رد و بدل می‌شوند.',
+      ].join('\n');
+  try {
+    if (canButton) {
+      await ctx.api.sendMessage(telegramId, text, {
+        reply_markup: new InlineKeyboard().url('ورود به چت وب', webChatUrl),
+      });
+    } else {
+      await ctx.api.sendMessage(telegramId, text);
+    }
+    await upsertSession(telegramId, { ownerChatWebHintSent: true });
+  } catch {
+    /* ignore */
+  }
 }
 
 const CHAT_WIPE_HINT =
@@ -134,6 +170,7 @@ export async function startOwnerChat(
     ownerChatMyPetId: opts?.toPetId,
     ownerChatPeerPetId: opts?.fromPetId,
     ownerChatSecure: false,
+    ownerChatWebHintSent: false,
   });
 
   const petLine =
@@ -177,6 +214,7 @@ export async function startOwnerChat(
     parse_mode: 'HTML',
     reply_markup: ownerChatReplyKeyboard(false),
   });
+  await sendOwnerChatWebHintOnce(ctx, String(accepter.telegramId), playdateId);
 
   try {
     await ctx.api.sendMessage(requester.telegramId, requesterIntro, {
@@ -567,6 +605,7 @@ export async function enterOwnerChatFromCallback(
     ].join('\n'),
     { parse_mode: 'HTML', reply_markup: ownerChatReplyKeyboard(false) }
   );
+  await sendOwnerChatWebHintOnce(ctx, String(from.id), playdateId);
 }
 
 export async function handleOwnerChatRelay(ctx: Context): Promise<boolean> {

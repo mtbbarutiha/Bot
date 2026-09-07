@@ -585,13 +585,13 @@ consultationsRouter.post('/:id/messages', async (req, res) => {
     if (peer?.telegramId) {
       const token = infra.telegram.botToken;
       if (token) {
-        const chatUrl = `${infra.web.url.replace(/\/$/, '')}/vet-chats/${id}`;
+        // web-cta-once-v2: silent relay — CTA only at chat START via Redis SET NX, never here.
         void fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             chat_id: peer.telegramId,
-            text: `💬 ${sender?.name ?? 'طرف مقابل'}:\n${message.text}\n\n↩️ پاسخ در چت وب:\n${chatUrl}`,
+            text: `💬 ${sender?.name ?? 'طرف مقابل'}:\n${message.text}`,
             ...(gate.consult.chatSecure ? { protect_content: true } : {}),
           }),
         }).catch(() => undefined);
@@ -707,13 +707,13 @@ consultationsRouter.post('/:id/messages/upload', (req, res) => {
       if (peer?.telegramId) {
         const token = infra.telegram.botToken;
         if (token) {
-          const chatUrl = `${infra.web.url.replace(/\/$/, '')}/vet-chats/${id}`;
+          // web-cta-once-v2: silent relay — CTA only at chat START via Redis SET NX, never here.
           void fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               chat_id: peer.telegramId,
-              text: `💬 ${sender?.name ?? 'طرف مقابل'}:\n${message.text}\n\n↩️ پاسخ در چت وب:\n${chatUrl}`,
+              text: `💬 ${sender?.name ?? 'طرف مقابل'}:\n${message.text || '📎 فایل'}`,
               ...(gate.consult.chatSecure ? { protect_content: true } : {}),
             }),
           }).catch(() => undefined);
