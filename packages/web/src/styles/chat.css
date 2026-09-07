@@ -11,8 +11,8 @@
 }
 
 .tg-chat-header {
-  background: linear-gradient(135deg, #1f2430 0%, #2a3550 55%, #1a5f78 100%) !important;
-  box-shadow: 0 8px 24px rgba(25, 6, 61, 0.18);
+  background: linear-gradient(180deg, #1a2030 0%, #243044 100%) !important;
+  box-shadow: 0 4px 16px rgba(25, 6, 61, 0.12);
 }
 
 .tg-chat-back {
@@ -93,12 +93,12 @@ html.tg-chat-open body {
   }
 
   /*
-   * Mobile chat shell — composer-fixed-v7.
-   * Shell stays full-screen (inset:0). Only the foot/composer is fixed to
-   * bottom: --tg-kb-inset (capped). Bad VV peaks must not park the foot at top.
+   * Mobile chat shell — composer-fixed-v8.
+   * Foot stays bottom:0 and lifts with translateY(-inset). Inset is hard-capped
+   * so a bad visualViewport reading can never park the composer at the TOP.
    */
   .tg-chat {
-    --tg-shell: composer-fixed-v7;
+    --tg-shell: composer-fixed-v8;
     position: fixed !important;
     inset: 0 !important;
     top: 0 !important;
@@ -184,17 +184,18 @@ html.tg-chat-open body {
     position: fixed !important;
     left: 0 !important;
     right: 0 !important;
-    bottom: var(--tg-kb-inset, 0px) !important;
+    bottom: 0 !important;
     width: 100% !important;
     z-index: 46 !important;
-    transform: none !important;
+    /* Lift with transform so a huge inset cannot invert layout via bottom: */
+    transform: translate3d(0, calc(-1 * var(--tg-kb-inset, 0px)), 0) !important;
     background: rgba(247, 248, 251, 0.98);
-    /* Never let a tall composer/stack climb off the top of the visible band */
     max-height: min(42dvh, var(--tg-foot-max, 42dvh)) !important;
     overflow-x: hidden !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior: contain;
+    will-change: transform;
   }
 
   .tg-chat .tg-composer,

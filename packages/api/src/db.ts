@@ -4293,29 +4293,34 @@ export const dbService = {
     );
   },
 
-  /** آیا کاربر (دامپزشک با مشاوره فعال یا صاحب پت) به پرونده دسترسی دارد */
+  /** آیا کاربر (دامپزشک با سابقه مشاوره یا صاحب پت) به پرونده دسترسی دارد */
   canAccessPetMedical(
     petId: number,
-    viewerUserId: number
+    viewerUserId: number,
+    opts?: { write?: boolean }
   ): { ok: true; asOwner: boolean; asVet: boolean } | { ok: false } {
     const pet = this.getPet(petId);
     if (!pet) return { ok: false };
     if (pet.ownerId === viewerUserId) {
       return { ok: true, asOwner: true, asVet: false };
     }
+    const write = Boolean(opts?.write);
+    // Write: only during an active consult. Read: any prior consult so history stays with the pet file.
+    const statusClause = write
+      ? `status = 'active'`
+      : `status IN ('active', 'requested', 'completed', 'cancelled', 'expired') OR chat_ended = 1`;
     const active = db
       .prepare(
         `SELECT id FROM vet_consultations
-         WHERE pet_id = ? AND vet_user_id = ? AND status = 'active'
+         WHERE pet_id = ? AND vet_user_id = ? AND (${statusClause})
          LIMIT 1`
       )
       .get(petId, viewerUserId);
     if (active) return { ok: true, asOwner: false, asVet: true };
-    // دامپزشک با مشاوره فعال روی بیمار (حتی بدون pet_id)
     const byPatient = db
       .prepare(
         `SELECT id FROM vet_consultations
-         WHERE patient_user_id = ? AND vet_user_id = ? AND status = 'active'
+         WHERE patient_user_id = ? AND vet_user_id = ? AND (${statusClause})
          LIMIT 1`
       )
       .get(pet.ownerId, viewerUserId);

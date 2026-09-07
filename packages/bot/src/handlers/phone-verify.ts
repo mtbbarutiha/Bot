@@ -36,11 +36,20 @@ const MENU_LABELS = new Set<string>([
   '🛡 احراز هویت',
 ]);
 
-function phoneOtpKeyboard(): Keyboard {
-  return withWizardNav(new Keyboard().text('🔄 ارسال مجدد کد').primary(), {
+function phoneOtpKeyboard(resendAtMs?: number): Keyboard {
+  const left = resendAtMs ? Math.max(0, Math.ceil((resendAtMs - Date.now()) / 1000)) : 0;
+  const label =
+    left > 0
+      ? `⏳ ارسال مجدد (${left.toLocaleString('fa-IR')}ث)`
+      : '🔄 ارسال مجدد کد';
+  return withWizardNav(new Keyboard().text(label).primary(), {
     noBack: true,
     skip: false,
   });
+}
+
+function isResendLabel(text: string): boolean {
+  return text === '🔄 ارسال مجدد کد' || /^⏳ ارسال مجدد/.test(text);
 }
 
 function phoneAskKeyboard(): Keyboard {
@@ -221,13 +230,22 @@ export async function handlePhoneVerifyText(ctx: Context, text: string): Promise
   }
 
   // phone_verify_otp
-  if (text === '🔄 ارسال مجدد کد') {
+  if (isResendLabel(text)) {
     const phone = session.pendingPhone;
     if (!phone) {
-      await upsertSession(telegramId, { step: 'phone_verify_ask', pendingPhone: undefined });
+      await upsertSession(telegramId, { step: 'phone_verify_ask', pendingPhone: undefined, phoneOtpResendAt: undefined });
       await ctx.reply('شماره پیدا نشد. دوباره شماره رو بفرست.', {
         reply_markup: phoneAskKeyboard(),
       });
+      return true;
+    }
+    const resendAt = session.phoneOtpResendAt ?? 0;
+    const left = Math.max(0, Math.ceil((resendAt - Date.now()) / 1000));
+    if (left > 0) {
+      await ctx.reply(
+        `برای ارسال مجدد ${left.toLocaleString('fa-IR')} ثانیه صبر کن.`,
+        { reply_markup: phoneOtpKeyboard(resendAt) }
+      );
       return true;
     }
     await dispatchSendOtp(ctx, telegramId, phone);
@@ -246,7 +264,7 @@ export async function handlePhoneVerifyText(ctx: Context, text: string): Promise
   const code = toEnglishDigits(text).replace(/[^\d]/g, '');
   if (!/^\d{4,8}$/.test(code)) {
     await ctx.reply('کد تأیید رو به‌صورت عدد بفرست (۵ رقم).', {
-      reply_markup: phoneOtpKeyboard(),
+      reply_markup: phoneOtpKeyboard(session.phoneOtpResendAt),
     });
     return true;
   }
@@ -259,11 +277,15 @@ export async function handlePhoneVerifyText(ctx: Context, text: string): Promise
       if (reason === 'mismatch') {
         await ctx.reply(
           `کد نادرست است${attemptsLeft != null ? ` — ${attemptsLeft} تلاش باقی‌مانده` : ''}.`,
-          { reply_markup: phoneOtpKeyboard() }
+          { reply_markup: phoneOtpKeyboard(session.phoneOtpResendAt) }
         );
         return true;
       }
-      await upsertSession(telegramId, { step: 'phone_verify_ask', pendingPhone: undefined });
+      await upsertSession(telegramId, {
+        step: 'phone_verify_ask',
+        pendingPhone: undefined,
+        phoneOtpResendAt: undefined,
+      });
       await ctx.reply(
         reason === 'expired'
           ? 'کد منقضی شد. دوباره شماره رو بفرست تا کد جدید بیاد.'
@@ -276,7 +298,11 @@ export async function handlePhoneVerifyText(ctx: Context, text: string): Promise
     }
 
     const user = result.user;
-    await upsertSession(telegramId, { step: 'ready', pendingPhone: undefined });
+    await upsertSession(telegramId, {
+      step: 'ready',
+      pendingPhone: undefined,
+      phoneOtpResendAt: undefined,
+    });
     await ctx.reply(
       [
         '✅ <b>موبایل تأیید شد</b>',
@@ -294,8 +320,9 @@ export async function handlePhoneVerifyText(ctx: Context, text: string): Promise
     );
   } catch (err) {
     console.error('verifyPhoneOtp failed:', err);
+    const latest = await getSession(telegramId);
     await ctx.reply('خطا در تأیید کد. کمی بعد دوباره تلاش کن.', {
-      reply_markup: phoneOtpKeyboard(),
+      reply_markup: phoneOtpKeyboard(latest?.phoneOtpResendAt),
     });
   }
   return true;
@@ -320,9 +347,12 @@ async function dispatchSendOtp(
     if (!result.ok) {
       const reason = result.reason;
       if (reason === 'cooldown') {
+        const retry = result.retryAfterSec ?? 60;
+        const resendAt = Date.now() + retry * 1000;
+        await upsertSession(telegramId, { phoneOtpResendAt: resendAt });
         await ctx.reply(
-          `کمی صبر کن${result.retryAfterSec ? ` (حدود ${result.retryAfterSec} ثانیه)` : ''} و دوباره درخواست کد بده.`,
-          { reply_markup: phoneOtpKeyboard() }
+          `کمی صبر کن (حدود ${retry.toLocaleString('fa-IR')} ثانیه) و دوباره درخواست کد بده.`,
+          { reply_markup: phoneOtpKeyboard(resendAt) }
         );
         return;
       }
@@ -336,9 +366,11 @@ async function dispatchSendOtp(
       return;
     }
 
+    const resendAt = Date.now() + 60_000;
     await upsertSession(telegramId, {
       step: 'phone_verify_otp',
       pendingPhone: result.phone,
+      phoneOtpResendAt: resendAt,
     });
 
     await ctx.reply(
@@ -348,10 +380,11 @@ async function dispatchSendOtp(
         `شماره: <code>${formatIranMobileDisplay(result.phone)}</code>`,
         'کد ۵ رقمی رو اینجا بفرست.',
         'اعتبار کد حدود ۵ دقیقه است.',
+        'ارسال مجدد تا ۶۰ ثانیه دیگر فعال می‌شود.',
       ].join('\n'),
       {
         parse_mode: 'HTML',
-        reply_markup: phoneOtpKeyboard(),
+        reply_markup: phoneOtpKeyboard(resendAt),
       }
     );
   } catch (err) {

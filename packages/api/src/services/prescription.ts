@@ -80,7 +80,7 @@ export async function createPrescriptionWithDelivery(
     return { ok: false, status: 400, error: 'این پت متعلق به بیمار مشاوره نیست' };
   }
 
-  const access = dbService.canAccessPetMedical(pet.id, vet.id);
+  const access = dbService.canAccessPetMedical(pet.id, vet.id, { write: true });
   if (!access.ok) {
     return { ok: false, status: 403, error: 'دسترسی به پرونده این پت ندارید' };
   }

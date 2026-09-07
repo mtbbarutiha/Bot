@@ -479,6 +479,8 @@ export interface BotSession {
   petSectionEdit?: boolean;
   /** شماره در انتظار OTP احراز موبایل (نرمال‌شده 98…) */
   pendingPhone?: string;
+  /** زمان مجاز بعدی برای ارسال مجدد OTP (epoch ms) */
+  phoneOtpResendAt?: number;
   /** چت مشاوره دامپزشک — شناسه مشاوره */
   vetChatConsultId?: number;
   /** تلگرام طرف مقابل در چت مشاوره */

@@ -279,12 +279,14 @@ petsRouter.get('/:id/medical-record', (req, res) => {
     res.status(404).json({ error: 'پت پیدا نشد' });
     return;
   }
-  if (viewerId != null) {
-    const access = dbService.canAccessPetMedical(petId, viewerId);
-    if (!access.ok) {
-      res.status(403).json({ error: 'دسترسی به پرونده نداری' });
-      return;
-    }
+  if (viewerId == null || !Number.isFinite(viewerId)) {
+    res.status(401).json({ error: 'viewerId الزامی است' });
+    return;
+  }
+  const access = dbService.canAccessPetMedical(petId, viewerId);
+  if (!access.ok) {
+    res.status(403).json({ error: 'دسترسی به پرونده نداری' });
+    return;
   }
   const record = dbService.getPetMedicalRecord(petId);
   const entries = dbService.listPetMedicalEntries(petId);
@@ -304,12 +306,14 @@ petsRouter.get('/:id/prescriptions', (req, res) => {
     res.status(404).json({ error: 'پت پیدا نشد' });
     return;
   }
-  if (viewerId != null) {
-    const access = dbService.canAccessPetMedical(petId, viewerId);
-    if (!access.ok) {
-      res.status(403).json({ error: 'دسترسی به نسخه‌ها نداری' });
-      return;
-    }
+  if (viewerId == null || !Number.isFinite(viewerId)) {
+    res.status(401).json({ error: 'viewerId الزامی است' });
+    return;
+  }
+  const access = dbService.canAccessPetMedical(petId, viewerId);
+  if (!access.ok) {
+    res.status(403).json({ error: 'دسترسی به نسخه‌ها نداری' });
+    return;
   }
   res.json(dbService.listPrescriptionsForPet(petId, 40));
 });
@@ -390,7 +394,7 @@ petsRouter.put('/:id/medical-record', (req, res) => {
     res.status(400).json({ error: 'viewerId الزامی است' });
     return;
   }
-  const access = dbService.canAccessPetMedical(petId, viewerId);
+  const access = dbService.canAccessPetMedical(petId, viewerId, { write: true });
   if (!access.ok) {
     res.status(403).json({ error: 'دسترسی به پرونده نداری' });
     return;
@@ -438,7 +442,7 @@ petsRouter.post('/:id/medical-entries', (req, res) => {
     res.status(404).json({ error: 'پت پیدا نشد' });
     return;
   }
-  const access = dbService.canAccessPetMedical(petId, authorUserId);
+  const access = dbService.canAccessPetMedical(petId, authorUserId, { write: true });
   if (!access.ok) {
     res.status(403).json({ error: 'اجازه ثبت در پرونده را نداری' });
     return;

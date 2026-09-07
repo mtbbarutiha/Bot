@@ -284,13 +284,18 @@ export function OtpPage() {
     submittingRef.current = false;
     try {
       const res = await requestOtp(pendingChannel, pendingTarget);
-      setResendIn(60);
+      const retryRaw = (res as unknown as { retryAfterSec?: number }).retryAfterSec;
+      const retry = typeof retryRaw === 'number' ? Math.max(1, retryRaw) : 60;
+      setResendIn(retry);
       if (res.devCode) {
         setDevHint(`کد توسعه (فقط لوکال): ${res.devCode}`);
         setCode(digitsOnly(res.devCode));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'ارسال مجدد ناموفق بود');
+      const msg = err instanceof Error ? err.message : 'ارسال مجدد ناموفق بود';
+      const m = msg.match(/(\d+)\s*ثانیه/);
+      if (m) setResendIn(Math.max(1, Number(m[1])));
+      setError(msg);
     } finally {
       setBusy(false);
       window.setTimeout(() => inputRef.current?.focus({ preventScroll: true }), 50);
