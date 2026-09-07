@@ -320,30 +320,6 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     padding-top: 0;
     min-height: auto;
   }
-  /*
-    Nav is in-flow on mobile — any app-main top pad reads as a dead white
-    band under the header (profile, wallet, and other app pages).
-  */
-  .pepito-app-main {
-    padding-top: 0;
-  }
-  .pepito-wallet-page {
-    padding-top: 0;
-    padding-bottom: 1.5rem;
-  }
-  .pepito-wallet-hero {
-    margin-top: 0.35rem;
-  }
-  /* Profile hero: kill the white crescent from top radius + side pad */
-  .pepito-profile {
-    gap: 1.35rem;
-  }
-  .pepito-profile-hero {
-    border-radius: 0 0 22px 22px;
-    margin-inline: calc(-1 * var(--pepito-container-pad));
-    width: auto;
-    max-width: none;
-  }
   .pepito-app-rail {
     position: static;
     top: auto;
@@ -2731,6 +2707,37 @@ button.chip.is-on {
     #fff;
   animation: pepito-flow-rise 0.5s ease both;
 }
+
+/*
+  MUST stay below .pepito-app-main / .pepito-profile-hero base rules.
+  An earlier mobile block was overwritten by the padding shorthand above,
+  which left the white band under the in-flow nav.
+*/
+@media (max-width: 859px) {
+  .pepito-app-shell .pepito-app-main,
+  .pepito-app-main {
+    padding-top: 0 !important;
+  }
+  .pepito-wallet-page {
+    padding-top: 0 !important;
+    margin-top: 0;
+  }
+  .pepito-wallet-hero {
+    margin-top: 0.25rem;
+  }
+  .pepito-profile {
+    gap: 1.25rem;
+  }
+  .pepito-app-shell .pepito-profile-hero,
+  .pepito-profile-hero {
+    border-radius: 0 0 22px 22px !important;
+    margin-top: 0 !important;
+    margin-inline: calc(-1 * var(--pepito-container-pad)) !important;
+    width: auto !important;
+    max-width: none !important;
+  }
+}
+
 .pepito-app-mobile-nav {
   display: none;
 }
@@ -8182,5 +8189,20 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 
   .pepito-site-desktop-nav-link {
     padding: 0.4rem;
+  }
+}
+
+/* Final mobile flush — wins over any earlier padding/radius in this file */
+@media (max-width: 859px) {
+  .pepito-app-shell .pepito-app-main {
+    padding-top: 0 !important;
+  }
+  .pepito-app-shell .pepito-profile-hero {
+    border-radius: 0 0 22px 22px !important;
+    margin-inline: calc(-1 * var(--pepito-container-pad)) !important;
+  }
+  .pepito-app-shell .pepito-nav {
+    margin-bottom: 0 !important;
+    border-bottom-color: rgba(92, 77, 145, 0.06);
   }
 }
