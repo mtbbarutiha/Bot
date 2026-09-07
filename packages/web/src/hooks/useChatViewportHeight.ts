@@ -1,21 +1,19 @@
 import { useEffect } from 'react';
 
 /**
- * Mobile chat keyboard — bottom-inset model (kb-bottom-v4).
+ * Mobile chat keyboard — composer-fixed-v5.
  *
- * Failed approaches (do not revive):
- * - `top: vv.offsetTop` + `height: vv.height` (vv-pin) — parks a short shell
- *   under the status bar with a white void above the keyboard when CSS/JS
- *   get out of sync or another deploy ships height without top.
- * - `padding-bottom: kb-inset` on a full inset:0 shell while children do not
- *   stretch — composer hugs the top of the shell.
+ * Resting layout (keyboard closed) is OK with the 3-zone thread. The failure
+ * mode is on *focus*: shrinking the whole shell via `bottom: kb-inset` can
+ * collapse to a short strip under the status bar when visualViewport reports
+ * a transient tiny height (composer jumps to TOP + white void).
  *
- * This model:
- * - Keep `.tg-chat` fixed with `top:0; left:0; right:0`
- * - Set only `bottom: var(--tg-kb-inset)` so the shell shrinks from the bottom
- * - Thread stays a 3-row grid (top | scroll | foot); composer stays in foot
- * - Never set --tg-vv-top / --tg-vv-height
- * - Prefer interactive-widget=overlays-content so layout viewport stays stable
+ * v5:
+ * - `.tg-chat` stays `position:fixed; inset:0` — never resized by the keyboard
+ * - `.tg-thread-foot` is `position:fixed; bottom: var(--tg-kb-inset)` so only
+ *   the composer lifts above the soft keyboard
+ * - scroll pane gets padding for foot height + inset
+ * - never set --tg-vv-top / --tg-vv-height
  */
 export function useChatViewportHeight(active: boolean) {
   useEffect(() => {
@@ -24,6 +22,7 @@ export function useChatViewportHeight(active: boolean) {
     const root = document.documentElement;
     const body = document.body;
     let raf = 0;
+    let ro: ResizeObserver | null = null;
     const timers: number[] = [];
 
     const prevBody = {
@@ -43,11 +42,19 @@ export function useChatViewportHeight(active: boolean) {
     body.style.width = '100%';
     body.style.overflow = 'hidden';
     root.classList.add('tg-chat-open');
-    root.dataset.tgShell = 'kb-bottom-v4';
-
-    // Kill leftover pin vars from older deploys / competing agents.
+    root.dataset.tgShell = 'composer-fixed-v5';
     root.style.removeProperty('--tg-vv-top');
     root.style.removeProperty('--tg-vv-height');
+
+    const measureFoot = () => {
+      const foot = document.querySelector('.tg-chat .tg-thread-foot') as HTMLElement | null;
+      if (!foot) {
+        root.style.setProperty('--tg-foot-h', '64px');
+        return;
+      }
+      const h = Math.max(48, Math.round(foot.getBoundingClientRect().height));
+      root.style.setProperty('--tg-foot-h', `${h}px`);
+    };
 
     const apply = () => {
       cancelAnimationFrame(raf);
@@ -56,23 +63,25 @@ export function useChatViewportHeight(active: boolean) {
         const layoutH = Math.max(window.innerHeight || 0, root.clientHeight || 0, 1);
         const vvH = vv?.height ?? layoutH;
         const offsetTop = vv?.offsetTop ?? 0;
-        // Overlap of the soft keyboard (and any chrome) below the visual viewport.
         let inset = Math.max(0, Math.round(layoutH - vvH - offsetTop));
-        // Guard against one-frame glitches mid keyboard animation.
-        inset = Math.min(inset, Math.round(layoutH * 0.75));
+        // Ignore one-frame collapse / URL-bar jitter; real keyboards are taller.
+        if (inset > 0 && inset < 60) inset = 0;
+        inset = Math.min(inset, Math.round(layoutH * 0.7));
 
         root.style.setProperty('--tg-kb-inset', `${inset}px`);
         root.style.removeProperty('--tg-vv-top');
         root.style.removeProperty('--tg-vv-height');
-        root.classList.toggle('tg-kb-open', inset > 40);
+        root.classList.toggle('tg-kb-open', inset > 60);
+        measureFoot();
       });
     };
 
     const onFocusIn = (ev: FocusEvent) => {
       const t = ev.target;
       if (!(t instanceof HTMLElement) || !t.closest('.tg-chat')) return;
+      // Dense samples through iOS keyboard animation — never window.scrollTo.
       apply();
-      for (const ms of [50, 100, 200, 350, 500]) {
+      for (const ms of [16, 50, 100, 160, 240, 360, 500, 700]) {
         timers.push(window.setTimeout(apply, ms));
       }
     };
@@ -81,10 +90,18 @@ export function useChatViewportHeight(active: boolean) {
       const t = ev.target;
       if (!(t instanceof HTMLElement) || !t.closest('.tg-chat')) return;
       timers.push(window.setTimeout(apply, 120));
-      timers.push(window.setTimeout(apply, 320));
+      timers.push(window.setTimeout(apply, 360));
     };
 
     apply();
+    measureFoot();
+
+    const foot = document.querySelector('.tg-chat .tg-thread-foot');
+    if (foot && typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => measureFoot());
+      ro.observe(foot);
+    }
+
     const vv = window.visualViewport;
     vv?.addEventListener('resize', apply);
     vv?.addEventListener('scroll', apply);
@@ -96,6 +113,7 @@ export function useChatViewportHeight(active: boolean) {
     return () => {
       cancelAnimationFrame(raf);
       for (const id of timers) window.clearTimeout(id);
+      ro?.disconnect();
       vv?.removeEventListener('resize', apply);
       vv?.removeEventListener('scroll', apply);
       window.removeEventListener('resize', apply);
@@ -103,6 +121,7 @@ export function useChatViewportHeight(active: boolean) {
       document.removeEventListener('focusin', onFocusIn, true);
       document.removeEventListener('focusout', onFocusOut, true);
       root.style.removeProperty('--tg-kb-inset');
+      root.style.removeProperty('--tg-foot-h');
       root.style.removeProperty('--tg-vv-top');
       root.style.removeProperty('--tg-vv-height');
       root.classList.remove('tg-kb-open');
