@@ -5174,8 +5174,11 @@ a.tg-chat-playmate-cta.pepito-btn {
 
 @media (min-width: 860px) {
   .tg-chat {
-    --tg-list-w: clamp(280px, 32vw, 380px);
+    --tg-list-w: clamp(300px, 34vw, 400px);
     border-radius: 0;
+  }
+  .tg-chat--split {
+    grid-template-columns: var(--tg-list-w) minmax(0, 1fr);
   }
   .tg-chat-messages { max-width: min(760px, 100%); }
   .tg-composer {

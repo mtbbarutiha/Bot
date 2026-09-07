@@ -363,7 +363,13 @@ function ConversationListPane({
   );
 }
 
-function ThreadEmptyState({ scope }: { scope: InboxScope }) {
+function ThreadEmptyState({
+  scope,
+  desktop,
+}: {
+  scope: InboxScope;
+  desktop?: boolean;
+}) {
   const isVet = scope === 'vet';
   if (isVet) {
     return (
@@ -373,6 +379,16 @@ function ThreadEmptyState({ scope }: { scope: InboxScope }) {
         <Link to="/vet-consult" className="tg-chat-link-btn">
           رفتن به پنل پزشک
         </Link>
+      </div>
+    );
+  }
+  // Desktop already shows FindPlaymatePanel in the list pane — don't duplicate it here.
+  if (desktop) {
+    return (
+      <div className="tg-thread-empty">
+        <SiteLogo className="tg-chat-empty-logo" height={48} />
+        <h2>یک گفتگو را انتخاب کن</h2>
+        <p>از فهرست، درخواست یا چت همبازی را باز کن. پیدا کردن همبازی از دکمه بالای فهرست است.</p>
       </div>
     );
   }
@@ -1286,7 +1302,7 @@ export function ChatPage() {
       {showThread ? (
         <section className="tg-thread" aria-label="پنجره گفتگو">
           {!hasThread ? (
-            <ThreadEmptyState scope={inboxScope} />
+            <ThreadEmptyState scope={inboxScope} desktop={desktop} />
           ) : threadLoading ? (
             <div className="tg-thread-empty">
               <SiteLogo className="tg-chat-empty-logo" height={48} />
