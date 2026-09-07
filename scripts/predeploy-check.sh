@@ -37,8 +37,8 @@ check_md5() {
 
 # لوگو مادر full wordmark for header; PWA = mark-only crop (no type) — see generate-brand-assets.py
 check_md5 packages/web/public/pepito/img/logo.png beda5e5ccdd11c32dd06a4f1bce2c6bf
-check_md5 packages/web/public/pwa-192.png 12f75d348138751bae341a0cf13e29b5
-check_md5 packages/web/public/favicon.png a21a79a99ef146ad4236794b5d80ef6d
+check_md5 packages/web/public/pwa-192.png 16a1f783d32a55f7a2c948b6951da303
+check_md5 packages/web/public/favicon.png ab82dcfaeed55aad89b4ba8ec16726cb
 
 if [[ -f packages/web/src/pages/ExplorePage.tsx ]]; then
   fail "ExplorePage.tsx must stay deleted"
