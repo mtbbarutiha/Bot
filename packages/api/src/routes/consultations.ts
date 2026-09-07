@@ -1054,7 +1054,9 @@ consultationsRouter.post('/:id/prescription', async (req, res) => {
         buffer: pdfBuf,
       });
       const smsLine =
-        result.sms.sent === true ? 'پیامک نسخه برای بیمار ارسال شد.' : null;
+        result.sms.sent === true
+          ? `📱 پیامک نسخه برای بیمار (${result.sms.phone}) ارسال شد.`
+          : `⚠️ پیامک ارسال نشد: ${'reason' in result.sms ? result.sms.reason : 'نامشخص'}`;
       const caption = [
         `💊 نسخه شماره ${id} صادر شد.`,
         result.pet.name ? `پت: ${result.pet.name}` : null,

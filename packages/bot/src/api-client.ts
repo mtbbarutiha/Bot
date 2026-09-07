@@ -1000,7 +1000,14 @@ export type CreatePrescriptionResponse = {
   chatMessage?: import('@petdate/shared').VetConsultChatMessage | null;
   sms:
     | { sent: true; phone: string; pdfUrl?: string; webUrl?: string }
-    | { sent: false; skipped: true; reason: string; pdfUrl?: string; webUrl?: string };
+    | {
+        sent: false;
+        skipped: true;
+        reason: string;
+        pdfUrl?: string;
+        webUrl?: string;
+        failed?: boolean;
+      };
   patient: {
     id: number;
     name: string;

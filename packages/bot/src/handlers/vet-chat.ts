@@ -1080,7 +1080,7 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
   const smsLine =
     created.sms.sent === true
       ? `📱 پیامک به ${created.sms.phone} ارسال شد.`
-      : `📱 پیامک ارسال نشد: ${'reason' in created.sms ? created.sms.reason : '—'}`;
+      : `⚠️ پیامک ارسال نشد: ${'reason' in created.sms ? created.sms.reason : '—'}`;
 
   await ctx.reply(
     [

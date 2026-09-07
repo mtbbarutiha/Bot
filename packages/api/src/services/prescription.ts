@@ -20,7 +20,15 @@ export type CreatePrescriptionInput = {
 
 export type SmsDeliveryStatus =
   | { sent: true; phone: string; pdfUrl: string; webUrl: string }
-  | { sent: false; skipped: true; reason: string; pdfUrl?: string; webUrl?: string };
+  | {
+      sent: false;
+      skipped: true;
+      reason: string;
+      pdfUrl?: string;
+      webUrl?: string;
+      /** soft skip (no phone / not configured) vs hard provider failure */
+      failed?: boolean;
+    };
 
 export type CreatePrescriptionResult = {
   prescription: NonNullable<ReturnType<typeof dbService.getPrescription>>;
@@ -170,16 +178,17 @@ export async function createPrescriptionWithDelivery(
     text: `💊 نسخه:\n${text}`,
   });
 
-  // SMS if verified phone — include HTTPS PDF download link under petdate.ir
+  // SMS when patient has a usable mobile — HTTPS PDF download on petdate.ir
   let sms: SmsDeliveryStatus;
-  if (!patient.phoneVerified || !patient.phone) {
+  const rawPhone = String(patient.phone || '').trim();
+  if (!rawPhone) {
     console.warn(
-      `[prescription] SMS skipped: no verified phone (patientId=${patient.id} rx=${prescription.id} pdf=${pdfPublicUrl})`
+      `[prescription] SMS skipped: no phone (patientId=${patient.id} rx=${prescription.id} pdf=${pdfPublicUrl} verified=${Boolean(patient.phoneVerified)})`
     );
     sms = {
       sent: false,
       skipped: true,
-      reason: 'بیمار موبایل تأییدشده ندارد',
+      reason: 'بیمار شماره موبایل ثبت‌شده ندارد — پیامک ارسال نشد',
       pdfUrl: pdfPublicUrl,
       webUrl,
     };
@@ -193,9 +202,10 @@ export async function createPrescriptionWithDelivery(
       reason: 'سرویس پیامک پیکربندی نشده',
       pdfUrl: pdfPublicUrl,
       webUrl,
+      failed: true,
     };
   } else {
-    const recipient = normalizeIranMobile(patient.phone);
+    const recipient = normalizeIranMobile(rawPhone);
     if (!recipient) {
       console.warn(
         `[prescription] SMS skipped: invalid phone (patientId=${patient.id} rx=${prescription.id})`
@@ -215,12 +225,25 @@ export async function createPrescriptionWithDelivery(
         pdfUrl: pdfPublicUrl,
         webUrl,
       });
-      const sent = await candooSendWithSrcFallback({
+      let sent = await candooSendWithSrcFallback({
         recipient,
         body,
         customerId: patient.id,
         type: 0,
       });
+      // One retry on transient / provider failure (src fallback already tried inside)
+      if (!sent.ok) {
+        console.warn(
+          `[prescription] SMS retry rx=${prescription.id} to=${maskPhone(recipient)} err=${sent.error || '?'}`
+        );
+        await new Promise((r) => setTimeout(r, 600));
+        sent = await candooSendWithSrcFallback({
+          recipient,
+          body,
+          customerId: patient.id,
+          type: 0,
+        });
+      }
       if (sent.ok) {
         console.info(
           `[prescription] SMS sent rx=${prescription.id} to=${maskPhone(recipient)} pdf=${pdfPublicUrl}`
@@ -246,6 +269,7 @@ export async function createPrescriptionWithDelivery(
         sms = {
           sent: false,
           skipped: true,
+          failed: true,
           reason: sent.error || 'ارسال پیامک ناموفق بود',
           pdfUrl: pdfPublicUrl,
           webUrl,

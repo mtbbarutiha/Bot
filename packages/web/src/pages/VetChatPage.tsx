@@ -1717,12 +1717,20 @@ export function VetChatPage() {
           token={token}
           onIssued={(result) => {
             const web = result.webUrl || result.webPath || '';
+            const pdf =
+              result.pdfPublicUrl ||
+              (result.pdfPathPublic
+                ? `https://petdate.ir${result.pdfPathPublic}`
+                : '');
             const smsLine =
               result.sms && 'sent' in result.sms && result.sms.sent
-                ? 'پیامک نسخه برای بیمار ارسال شد.'
+                ? `📱 پیامک نسخه برای بیمار (${result.sms.phone}) ارسال شد.`
                 : result.sms && 'skipped' in result.sms && result.sms.skipped
-                  ? `پیامک ارسال نشد: ${result.sms.reason}`
+                  ? `⚠️ پیامک ارسال نشد: ${result.sms.reason}`
                   : null;
+            if (smsLine && result.sms && 'sent' in result.sms && !result.sms.sent) {
+              window.alert(smsLine);
+            }
             if (result.chatMessage && user) {
               const row = result.chatMessage;
               setMessages((msgs) => {
@@ -1738,6 +1746,7 @@ export function VetChatPage() {
                 [
                   `💊 نسخه شماره ${result.prescription.id} صادر شد.`,
                   result.pet?.name ? `پت: ${result.pet.name}` : null,
+                  pdf ? `دانلود PDF: ${pdf}` : null,
                   web ? `مشاهده: ${web}` : null,
                   smsLine,
                 ]
