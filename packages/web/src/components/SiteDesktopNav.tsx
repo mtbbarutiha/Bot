@@ -13,7 +13,14 @@ export function SiteDesktopNav() {
   const { pathname } = useLocation();
   const { isLoggedIn, user } = useAuthStore();
 
-  if (pathname.startsWith('/admin') || pathname === '/chats' || pathname.startsWith('/chats/')) {
+  if (
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/onboarding') ||
+    pathname === '/chats' ||
+    pathname.startsWith('/chats/') ||
+    pathname.startsWith('/vet-chats')
+  ) {
     return null;
   }
 

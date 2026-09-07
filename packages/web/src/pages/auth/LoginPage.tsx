@@ -247,6 +247,7 @@ export function LoginPage() {
             placeholder={channel === 'phone' ? '0912…' : 'you@email.com'}
             inputMode={channel === 'phone' ? 'tel' : 'email'}
             autoComplete={channel === 'phone' ? 'tel' : 'email'}
+            dir={channel === 'phone' ? 'ltr' : undefined}
             required
           />
         </label>
@@ -265,7 +266,7 @@ export function LoginPage() {
         هنوز حساب نداری؟ با تلگرام یا همان شماره/ایمیل وارد شو — حساب خودکار ساخته می‌شود و با ربات
         همگام است.
         <br />
-        <Link to="/">بازگشت به صفحه اصلی</Link>
+        <Link to="/">خانه</Link>
       </p>
     </AuthShell>
   );

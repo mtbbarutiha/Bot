@@ -86,8 +86,8 @@ export function HomePage() {
                 هم بازی
               </Link>
             ) : null}
-            {primaryTo !== '/add-pet' && isPetOwner ? (
-              <Link to="/add-pet" className="pepito-btn pepito-btn--ghost pepito-home-cta-ghost">
+            {isPetOwner ? (
+              <Link to="/my-pets" className="pepito-btn pepito-btn--ghost pepito-home-cta-ghost">
                 پت‌های من
               </Link>
             ) : null}
@@ -109,7 +109,7 @@ export function HomePage() {
             </Link>
           ) : null}
           {isPetOwner ? (
-            <Link to="/add-pet" className="pepito-home-action">
+            <Link to="/my-pets" className="pepito-home-action">
               <strong>پت‌های من</strong>
               <span>ثبت یا ویرایش پت‌ها</span>
             </Link>

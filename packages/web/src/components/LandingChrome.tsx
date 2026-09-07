@@ -67,7 +67,7 @@ export function LandingChrome({
       ? actionLabelProp
       : appNav
         ? ''
-        : 'بازگشت به صفحه اصلی';
+        : 'خانه';
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20);

@@ -5,7 +5,7 @@ interface AuthShellProps {
   children: ReactNode;
   /** Wider panel for multi-step wizards */
   wide?: boolean;
-  /** Optional back link label (default: بازگشت به صفحه اصلی) */
+  /** Optional back link label (default: short «خانه» — fits mobile header) */
   backLabel?: string;
   backTo?: string;
   /** Continuity banner copy — defaults keep brand first */
@@ -18,7 +18,7 @@ interface AuthShellProps {
 export function AuthShell({
   children,
   wide = false,
-  backLabel = 'بازگشت به صفحه اصلی',
+  backLabel = 'خانه',
   backTo = '/',
   bannerTitle = 'همراه پت‌های خاص شما',
   bannerLead = 'همان حساب وب و تلگرام — ورود و تکمیل پروفایل در همین محیط',

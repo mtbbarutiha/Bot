@@ -420,13 +420,32 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   opacity: 1;
   z-index: 1;
 }
-/* Pepito data-overlay-dark="2" → #05010c @ 0.2 */
+/* Pepito data-overlay-dark="2" → base + directional wash for copy contrast */
 .pepito-hero-wash {
   position: absolute;
   inset: 0;
   z-index: 2;
-  background: rgba(5, 1, 12, 0.2);
+  background:
+    linear-gradient(
+      105deg,
+      rgba(5, 1, 12, 0.58) 0%,
+      rgba(5, 1, 12, 0.34) 42%,
+      rgba(5, 1, 12, 0.12) 72%,
+      rgba(5, 1, 12, 0.04) 100%
+    ),
+    rgba(5, 1, 12, 0.18);
   pointer-events: none;
+}
+[dir='rtl'] .pepito-hero-wash {
+  background:
+    linear-gradient(
+      255deg,
+      rgba(5, 1, 12, 0.58) 0%,
+      rgba(5, 1, 12, 0.34) 42%,
+      rgba(5, 1, 12, 0.12) 72%,
+      rgba(5, 1, 12, 0.04) 100%
+    ),
+    rgba(5, 1, 12, 0.18);
 }
 .pepito-hero-media {
   display: block;
@@ -476,6 +495,13 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   padding: 0;
   cursor: pointer;
   transition: background 0.25s ease, border-color 0.25s ease;
+  /* Expand tap target without changing visual size */
+  position: relative;
+}
+.pepito-hero-dot::before {
+  content: '';
+  position: absolute;
+  inset: -10px;
 }
 .pepito-hero-dot.is-active {
   background: #fff;
@@ -527,7 +553,27 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     display: none;
   }
 }
-/* Pepito `.header .caption h6` — 18px / weight 400 / icon 40 */
+/* Pepito `.header .caption h1` — 70px / weight 600 / lh 1.1 / mb 20 */
+.pepito-hero h1 {
+  margin: 0 0 20px;
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 70px;
+  line-height: 1.1em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  text-shadow: 0 2px 18px rgba(5, 1, 12, 0.35);
+}
+/* Pepito `.header .caption p` — 18px */
+.pepito-hero-lead {
+  margin: 0 0 15px;
+  max-width: none;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1.75;
+  text-shadow: 0 1px 12px rgba(5, 1, 12, 0.4);
+}
 .pepito-kicker {
   display: inline-flex;
   align-items: center;
@@ -538,6 +584,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   font-weight: 400;
   font-size: 18px;
   line-height: 1.4;
+  text-shadow: 0 1px 10px rgba(5, 1, 12, 0.35);
 }
 .pepito-kicker-dot {
   width: 40px;
@@ -549,25 +596,6 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   color: #fff;
   flex-shrink: 0;
   transform: rotate(30deg);
-}
-/* Pepito `.header .caption h1` — 70px / weight 600 / lh 1.1 / mb 20 */
-.pepito-hero h1 {
-  margin: 0 0 20px;
-  color: #fff;
-  font-family: var(--font-display);
-  font-size: 70px;
-  line-height: 1.1em;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-/* Pepito `.header .caption p` — 18px */
-.pepito-hero-lead {
-  margin: 0 0 15px;
-  max-width: none;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 18px;
-  font-weight: 400;
-  line-height: 1.75;
 }
 .pepito-hero-cta {
   display: flex;
@@ -7753,6 +7781,20 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 }
 
 @media (max-width: 859px) {
+  /* Auth / onboarding: shorter header chrome — dock already has شاپ/هم‌بازی */
+  .pepito-auth-flow .pepito-nav-login {
+    max-width: 4.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-inline: 0.65rem;
+    font-size: 0.82rem;
+  }
+  .pepito-auth-flow .auth-form input[dir='ltr'] {
+    text-align: left;
+    letter-spacing: 0.02em;
+  }
+
   .pepito-landing-mobile-dock {
     display: flex;
     align-items: stretch;
@@ -8007,7 +8049,21 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   .pd-shop-journey {
     display: grid !important;
     grid-template-columns: 1fr !important;
-    gap: 0.65rem !important;
+    gap: 0.4rem !important;
+    margin-bottom: 0.85rem !important;
+  }
+  .pd-shop-journey-step {
+    padding: 0.55rem 0.75rem !important;
+    gap: 0.45rem !important;
+    min-height: 0 !important;
+  }
+  .pd-shop-journey-copy span {
+    display: none !important; /* keep title only on narrow screens — categories come sooner */
+  }
+  .pd-shop-journey-num {
+    width: 1.7rem !important;
+    height: 1.7rem !important;
+    font-size: 0.78rem !important;
   }
   .pd-shop-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;

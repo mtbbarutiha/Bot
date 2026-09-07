@@ -4,7 +4,6 @@ import {
   MessagesSquare,
   HeartHandshake,
   ShoppingBag,
-  ShoppingCart,
   Stethoscope,
   UserRound,
   Wallet,
@@ -76,14 +75,6 @@ const VET_PANEL: SiteNavItem = {
   match: (p) => p === '/vet-consult' || p.startsWith('/vet-consult'),
 };
 
-const CART: SiteNavItem = {
-  key: 'cart',
-  label: 'سبد خرید',
-  to: '/shop/cart',
-  icon: ShoppingCart,
-  match: (p) => p === '/shop/cart',
-};
-
 const LOGIN: SiteNavItem = {
   key: 'login',
   label: 'ورود',
@@ -92,11 +83,13 @@ const LOGIN: SiteNavItem = {
   match: (p) => p.startsWith('/auth'),
 };
 
-/** Guest primary destinations (mobile dock + desktop header). */
+/**
+ * Guest mobile dock — cart stays in the top-left cluster only (avoid duplicate
+ * سبد in header + dock). Desktop guest nav uses the same set.
+ */
 export const SITE_NAV_GUEST: SiteNavItem[] = [
   SHOP,
   { ...PLAYMATE_CHATS, gate: true },
-  CART,
   LOGIN,
 ];
 
@@ -110,9 +103,7 @@ export const SITE_NAV_AUTH: SiteNavItem[] = [SHOP_AUTH, PLAYMATE_CHATS, WALLET, 
  * Desktop header shortcuts — avoid duplicating left-cluster tools.
  * Guest: cart lives in NavUserCluster; Auth: wallet chip + circular avatar cover wallet/profile.
  */
-export const SITE_NAV_DESKTOP_GUEST: SiteNavItem[] = SITE_NAV_GUEST.filter(
-  (item) => item.key !== 'cart',
-);
+export const SITE_NAV_DESKTOP_GUEST: SiteNavItem[] = SITE_NAV_GUEST;
 
 export const SITE_NAV_DESKTOP_AUTH: SiteNavItem[] = SITE_NAV_AUTH.filter(
   (item) => item.key !== 'wallet' && item.key !== 'profile',
