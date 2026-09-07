@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Star } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Star, Stethoscope } from 'lucide-react';
 import { BRAND } from '@petdate/shared';
 import { SiteFooter } from '../components/SiteFooter';
 import { NavUserCluster } from '../components/NavUserCluster';
@@ -56,7 +56,7 @@ const HERO_SLIDES: {
     kicker: 'مشاوره سریع با پزشک',
     title: 'همین حالا به دامپزشک وصل شو',
     lead: 'درخواست اتصال فوری به پزشک آنلاین — پس از تأیید پرداخت سکه، چت مشاوره شروع می‌شود.',
-    cta: { kind: 'gated', to: '/vet-consult', label: 'درخواست اتصال به پزشک' },
+    cta: { kind: 'gated', to: '/vet-consult', label: 'مشاوره سریع' },
   },
   {
     img: `${P}/2.jpg`,
@@ -243,6 +243,15 @@ function PawIcon() {
   );
 }
 
+/** Minimal white stethoscope for first-hero glass CTA (RTL: icon before label → right). */
+function HeroStethoscopeIcon() {
+  return (
+    <span className="pepito-hero-cta-icon" aria-hidden>
+      <Stethoscope size={20} strokeWidth={1.75} />
+    </span>
+  );
+}
+
 export function WelcomePage() {
   const { isLoggedIn } = useAuthStore();
   const [openFaq, setOpenFaq] = useState<number | null>(0);
@@ -370,10 +379,10 @@ export function WelcomePage() {
               {current.cta.kind === 'gated' ? (
                 <GatedLink
                   to={current.cta.to}
-                  className="pepito-btn button-1"
+                  className="pepito-btn pepito-hero-cta-btn--glass"
                   data-testid="hero-vet-consult-cta"
                 >
-                  <PawIcon />
+                  <HeroStethoscopeIcon />
                   {current.cta.label}
                 </GatedLink>
               ) : (

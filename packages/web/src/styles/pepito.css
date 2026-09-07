@@ -610,6 +610,43 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   font-size: 18px;
 }
 
+/* First-banner quick-vet CTA — glass pill over dark hero (screenshot match) */
+.pepito-hero-cta .pepito-hero-cta-btn--glass {
+  margin: 0;
+  padding: 12px 28px;
+  gap: 0.55rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.92) !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #fff !important;
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0;
+  box-shadow: none;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transform: none;
+}
+.pepito-hero-cta .pepito-hero-cta-btn--glass:hover,
+.pepito-hero-cta .pepito-hero-cta-btn--glass:focus-visible {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: #fff !important;
+  color: #fff !important;
+  transform: translate3d(0, -2px, 0.01px);
+  box-shadow: none;
+}
+.pepito-hero-cta-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 0;
+  color: #fff;
+}
+.pepito-hero-cta-icon svg {
+  display: block;
+}
+
 @media screen and (max-width: 991px) {
   .pepito-hero-copy {
     max-width: 100%;
@@ -629,6 +666,14 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
   .pepito-hero-cta .pepito-btn,
   .pepito-hero-cta .button-1 {
     padding: 12px 18px;
+  }
+  .pepito-hero-cta .pepito-hero-cta-btn--glass {
+    padding: 11px 22px;
+    font-size: 16px;
+  }
+  .pepito-hero-cta-icon svg {
+    width: 18px;
+    height: 18px;
   }
 }
 
