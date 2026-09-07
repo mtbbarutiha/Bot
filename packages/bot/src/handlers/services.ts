@@ -144,7 +144,7 @@ export async function handleQuickVet(ctx: Context): Promise<void> {
 
   await ctx.reply(
     [
-      '⚡ <b>ارتباط سریع با پزشک</b>',
+      '⚡ <b>مشاوره سریع با پزشک</b>',
       '',
       'دامپزشک آنلاین در دسترسه.',
       `هزینه اتصال فوری: <b>${formatNum(QUICK_VET_COST)}</b> سکه`,

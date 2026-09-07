@@ -887,6 +887,7 @@ async function handleTextMessage(ctx: Context): Promise<void> {
     case v.myRoles:
       return handleMyRoles(ctx);
     case m.quickVet:
+    case '⚡ ارتباط سریع با پزشک':
       return handleQuickVet(ctx);
     case m.shop:
       return handlePetShop(ctx);

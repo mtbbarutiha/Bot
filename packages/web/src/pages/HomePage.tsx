@@ -1,5 +1,5 @@
 import { Link, Navigate } from 'react-router-dom';
-import { PawPrint } from 'lucide-react';
+import { PawPrint, Stethoscope } from 'lucide-react';
 import { BRAND, dashboardPathForRole, primaryRole } from '@petdate/shared';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { usePetStore } from '../hooks/usePetStore';
@@ -11,6 +11,14 @@ function PawIcon({ size = 16 }: { size?: number }) {
   return (
     <span className="pepito-btn-icon" aria-hidden>
       <PawPrint size={size} />
+    </span>
+  );
+}
+
+function VetIcon({ size = 16 }: { size?: number }) {
+  return (
+    <span className="pepito-btn-icon" aria-hidden>
+      <Stethoscope size={size} />
     </span>
   );
 }
@@ -87,8 +95,13 @@ export function HomePage() {
               </Link>
             ) : null}
             {isPetOwner ? (
-              <Link to="/my-pets" className="pepito-btn pepito-btn--ghost pepito-home-cta-ghost">
-                پت‌های من
+              <Link
+                to="/vet-consult"
+                className="pepito-btn pepito-btn--ghost pepito-home-cta-ghost"
+                data-testid="owner-quick-vet-cta"
+              >
+                <VetIcon />
+                مشاوره سریع
               </Link>
             ) : null}
           </div>
@@ -122,6 +135,16 @@ export function HomePage() {
                 : 'پت شاپ و مشاوره'}
             </span>
           </Link>
+          {isPetOwner ? (
+            <Link
+              to="/vet-consult"
+              className="pepito-home-action"
+              data-testid="owner-quick-vet-home-action"
+            >
+              <strong>مشاوره سریع با پزشک</strong>
+              <span>درخواست مشاوره فوری دامپزشک</span>
+            </Link>
+          ) : null}
         </div>
       </section>
 

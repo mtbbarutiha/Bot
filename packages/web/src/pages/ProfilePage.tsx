@@ -12,6 +12,7 @@ import {
   PawPrint,
   Pencil,
   ShieldCheck,
+  Stethoscope,
   Users,
   Wallet,
   X,
@@ -674,6 +675,24 @@ export function ProfilePage() {
         </header>
         <RoleSwitchControl variant="profile" />
       </section>
+
+      {mainRole === 'pet_owner' ? (
+        <section className="pepito-profile-block" aria-label="مشاوره سریع با پزشک">
+          <header className="pepito-home-section-head">
+            <p className="pepito-eyebrow">پزشک</p>
+            <h2>مشاوره سریع با پزشک</h2>
+            <p>درخواست مشاوره فوری دامپزشک — همان مسیر اتصال سریع.</p>
+          </header>
+          <Link
+            to="/vet-consult"
+            className="pepito-profile-action pepito-profile-action--primary pepito-profile-action--wide"
+            data-testid="owner-quick-vet-profile-cta"
+          >
+            <Stethoscope size={18} aria-hidden />
+            درخواست مشاوره سریع
+          </Link>
+        </section>
+      ) : null}
 
       {isPetOwner ? (
         <section className="pepito-profile-block" aria-label="پت‌های من">

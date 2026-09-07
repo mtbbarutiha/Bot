@@ -62,7 +62,7 @@ export const PET_OWNER_MENU = {
   invite: '🎁 معرفی به دوستان',
   help: '❓ راهنما',
   menu: MAIN_MENU_BTN,
-  quickVet: '⚡ ارتباط سریع با پزشک',
+  quickVet: '⚡ مشاوره سریع با پزشک',
   shop: '🛒 پت شاپ',
   services: '🛠 خدمات',
   myRoles: MY_ROLES_LABEL,
