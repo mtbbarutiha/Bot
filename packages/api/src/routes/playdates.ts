@@ -669,12 +669,27 @@ playdatesRouter.post('/', async (req, res) => {
 
   dbService.expireStalePlaydateRequests();
 
+  const fromUid = Number(fromUserId);
+  const toUid = toUserId ? Number(toUserId) : toPet.ownerId;
+
   if (dbService.hasPendingPlaydate(Number(fromPetId), Number(toPetId))) {
     const existing = dbService
-      .listPlaydateRequests({ userId: Number(fromUserId), status: 'pending' })
+      .listPlaydateRequests({ userId: fromUid, status: 'pending' })
       .find((r) => r.fromPetId === Number(fromPetId) && r.toPetId === Number(toPetId));
     res.status(200).json({
       ...enrichPlaydate(existing ?? null),
+      telegramNotified: false,
+      alreadyPending: true,
+    });
+    return;
+  }
+
+  // Same owner already has a pending request from this sender (other pet) —
+  // do not spam a second simultaneous request.
+  if (toUid && dbService.hasPendingPlaydateBetweenUsers(fromUid, toUid)) {
+    const existing = dbService.findPendingPlaydateBetweenUsers(fromUid, toUid);
+    res.status(200).json({
+      ...enrichPlaydate(existing),
       telegramNotified: false,
       alreadyPending: true,
     });
@@ -695,8 +710,8 @@ playdatesRouter.post('/', async (req, res) => {
   const request = dbService.createPlaydateRequest({
     fromPetId: Number(fromPetId),
     toPetId: Number(toPetId),
-    fromUserId: Number(fromUserId),
-    toUserId: toUserId ? Number(toUserId) : toPet.ownerId,
+    fromUserId: fromUid,
+    toUserId: toUid,
     message,
     scheduledAt,
     location,

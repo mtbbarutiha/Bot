@@ -1124,5 +1124,17 @@ export function rankPlaymateMatches(
   }
 
   scored.sort((a, b) => b.score - a.score || a.pet.name.localeCompare(b.pet.name, 'fa'));
-  return scored.slice(0, max);
+
+  // One request per owner — otherwise multi-pet owners get N simultaneous
+  // requests from the same sender (one per looking-for-playmate pet).
+  const seenOwners = new Set<number>();
+  const unique: PlaymateMatchScore[] = [];
+  for (const match of scored) {
+    const ownerId = match.pet.ownerId;
+    if (seenOwners.has(ownerId)) continue;
+    seenOwners.add(ownerId);
+    unique.push(match);
+    if (unique.length >= max) break;
+  }
+  return unique;
 }

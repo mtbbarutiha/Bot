@@ -2815,6 +2815,35 @@ export const dbService = {
     return Boolean(row);
   },
 
+  /** Any pending request from this sender to this recipient (any of their pets). */
+  hasPendingPlaydateBetweenUsers(fromUserId: number, toUserId: number): boolean {
+    this.expireStalePlaydateRequests();
+    const row = db
+      .prepare(
+        `SELECT id FROM playdate_requests
+         WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'
+         LIMIT 1`
+      )
+      .get(fromUserId, toUserId) as Record<string, unknown> | undefined;
+    return Boolean(row);
+  },
+
+  findPendingPlaydateBetweenUsers(
+    fromUserId: number,
+    toUserId: number
+  ): PlaydateRequest | null {
+    this.expireStalePlaydateRequests();
+    const row = db
+      .prepare(
+        `SELECT * FROM playdate_requests
+         WHERE from_user_id = ? AND to_user_id = ? AND status = 'pending'
+         ORDER BY id DESC
+         LIMIT 1`
+      )
+      .get(fromUserId, toUserId) as Record<string, unknown> | undefined;
+    return row ? mapPlaydate(row) : null;
+  },
+
   /** True when a prior expired request exists between the same pets (for resend confirm). */
   hasExpiredPlaydate(fromPetId: number, toPetId: number): boolean {
     const row = db
