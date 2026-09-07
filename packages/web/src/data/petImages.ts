@@ -42,11 +42,10 @@ export const DEFAULT_IMAGES: Record<PetType, string> = {
   other: petLocal(OTHER_PHOTOS[0]),
 };
 
-/**
- * Welcome hero — neon PET DATE brand logo
- */
+/** Welcome hero photo (not the logo). */
 export const WELCOME_HERO = petLocal('welcome-hero');
 
+/** Square asset from لوگو مادر (full wordmark on soft canvas). */
 export const BRAND_MARK = '/brand/petdate-mark.png';
 export const BRAND_CHANNEL = '/brand/petdate-channel.png';
 export const BRAND_BANNER = '/brand/petdate-banner.jpg';

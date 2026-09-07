@@ -17,7 +17,7 @@ BRANCH="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
 
 # Only integration lines may deploy (override: ALLOW_DEPLOY=1).
 case "$BRANCH" in
-  cursor/stabilize-deploy-logos-6c89|cursor/predeploy-guard-6c89|production|main) ;;
+  cursor/stabilize-deploy-logos-6c89|cursor/predeploy-guard-6c89|cursor/mother-logo-everywhere-6c89|production|main) ;;
   *)
     if [[ "${ALLOW_DEPLOY:-}" != "1" ]]; then
       fail "branch '$BRANCH' cannot deploy. Merge into cursor/stabilize-deploy-logos-6c89 first (or ALLOW_DEPLOY=1)."
@@ -35,8 +35,9 @@ check_md5() {
   ok "$file"
 }
 
+# لوگو مادر + PWA derived from full mother wordmark (see generate-brand-assets.py)
 check_md5 packages/web/public/pepito/img/logo.png beda5e5ccdd11c32dd06a4f1bce2c6bf
-check_md5 packages/web/public/pwa-192.png 39d8cfa7a7ef8b057fa427f5644da3a8
+check_md5 packages/web/public/pwa-192.png 48a4b05fe977694e6195c5a80cdbd4a1
 check_md5 packages/web/public/favicon.png a21a79a99ef146ad4236794b5d80ef6d
 
 if [[ -f packages/web/src/pages/ExplorePage.tsx ]]; then

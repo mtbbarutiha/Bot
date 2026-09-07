@@ -27,7 +27,8 @@ export default defineConfig({
         clientsClaim: true,
         cleanupOutdatedCaches: true,
         // New cache namespace so stuck clients drop the old 1.5s-poll bundle.
-        cacheId: 'petdate-web-v3',
+        // Bump when PWA icons change so Home Screen clients drop stale marks.
+        cacheId: 'petdate-web-v4-mother-logo',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,woff2}'],
       },
       includeAssets: [

@@ -35,11 +35,17 @@ So the site “reverts” after every random agent update.
 
 | Role | Path |
 |------|------|
-| **Source of truth** | `packages/web/public/pepito/img/logo.png` |
+| **لوگو مادر (source of truth)** | `packages/web/public/pepito/img/logo.png` (md5 `beda5e5ccdd11c32dd06a4f1bce2c6bf`) |
 | Footer light | `packages/web/public/pepito/img/logo-light.png` |
-| PWA / favicon / apple-touch / brand marks | `packages/web/scripts/generate-brand-assets.py` from pepito |
+| PWA / favicon / apple-touch / brand / email | `packages/web/scripts/generate-brand-assets.py` from لوگو مادر |
 
-Do **not** invent a new PWA mark. Always derive from pepito.
+**Rule:** Everywhere uses لوگو مادر. PWA Home Screen icons are the **full wordmark** fitted on a soft square canvas (not a mark-only crop). Favicon 16–32px is the pink dog+cat mark crop (wordmark illegible at that size) — still extracted from mother. Regenerate with:
+
+```bash
+python3 packages/web/scripts/generate-brand-assets.py
+```
+
+Do **not** invent a new PWA mark or neon icon.
 
 ## Live paths on VPS
 

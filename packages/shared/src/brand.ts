@@ -12,7 +12,7 @@ export const SITE = {
   telegramBotUsername: 'Petdatebot',
   /** Absolute OG / social share image (1200-class landscape). */
   ogImage: 'https://petdate.ir/brand/petdate-banner.jpg',
-  /** Square brand mark for icons / fallbacks. */
+  /** Square asset from لوگو مادر (full wordmark on soft canvas) for icons / schema. */
   markImage: 'https://petdate.ir/brand/petdate-mark.png',
 } as const;
 
