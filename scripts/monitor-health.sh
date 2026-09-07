@@ -7,7 +7,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-API_URL="${PETDATE_HEALTH_API:-http://127.0.0.1:4000/api/health}"
+API_URL="${PETDATE_HEALTH_API:-http://127.0.0.1:3001/api/health}"
 WEB_URL="${PETDATE_HEALTH_WEB:-http://127.0.0.1/}"
 STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 FAIL=0
