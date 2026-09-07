@@ -1716,20 +1716,38 @@ export function VetChatPage() {
           vetName={user.name}
           token={token}
           onIssued={(result) => {
-            const web = result.webUrl || result.webPath || '';
+            const pdfOrigin =
+              (import.meta.env.VITE_PUBLIC_PDF_URL as string | undefined)?.replace(/\/$/, '') ||
+              'https://pdf.petdate.ir';
             const pdf =
               result.pdfPublicUrl ||
-              (result.pdfPathPublic
-                ? `https://petdate.ir${result.pdfPathPublic}`
-                : '');
+              (result.pdfPathPublic ? `${pdfOrigin}${result.pdfPathPublic}` : '');
+            const noPhone =
+              result.sms &&
+              'skipped' in result.sms &&
+              result.sms.skipped &&
+              /موبایل|شماره/.test(result.sms.reason || '');
             const smsLine =
               result.sms && 'sent' in result.sms && result.sms.sent
                 ? `📱 پیامک نسخه برای بیمار (${result.sms.phone}) ارسال شد.`
-                : result.sms && 'skipped' in result.sms && result.sms.skipped
-                  ? `⚠️ پیامک ارسال نشد: ${result.sms.reason}`
-                  : null;
-            if (smsLine && result.sms && 'sent' in result.sms && !result.sms.sent) {
+                : noPhone
+                  ? `💬 ${result.sms && 'reason' in result.sms ? result.sms.reason : 'نسخه در چت ارسال شد'}`
+                  : result.sms && 'skipped' in result.sms && result.sms.skipped
+                    ? `⚠️ پیامک ارسال نشد: ${result.sms.reason}`
+                    : null;
+            // Soft notice only when SMS failed for a reason other than missing phone
+            // (missing phone is expected — chat is the delivery path).
+            if (
+              smsLine &&
+              result.sms &&
+              'sent' in result.sms &&
+              !result.sms.sent &&
+              !noPhone
+            ) {
               window.alert(smsLine);
+            } else if (noPhone && result.chatDeliveryNote) {
+              // Non-blocking: chat already carries the PDF
+              console.info('[rx]', result.chatDeliveryNote);
             }
             if (result.chatMessage && user) {
               const row = result.chatMessage;
@@ -1744,11 +1762,12 @@ export function VetChatPage() {
               ...msgs,
               systemMessage(
                 [
-                  `💊 نسخه شماره ${result.prescription.id} صادر شد.`,
+                  pdf
+                    ? `نسخه صادر شد — دانلود PDF: ${pdf}`
+                    : `💊 نسخه شماره ${result.prescription.id} صادر شد.`,
                   result.pet?.name ? `پت: ${result.pet.name}` : null,
-                  pdf ? `دانلود PDF: ${pdf}` : null,
-                  web ? `مشاهده: ${web}` : null,
                   smsLine,
+                  result.chatDeliveryNote || null,
                 ]
                   .filter(Boolean)
                   .join('\n'),

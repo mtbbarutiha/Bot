@@ -998,6 +998,9 @@ export type CreatePrescriptionResponse = {
   webPath?: string;
   webUrl?: string;
   chatMessage?: import('@petdate/shared').VetConsultChatMessage | null;
+  /** True when API already relayed PDF/link to patient Telegram */
+  telegramDelivered?: boolean;
+  chatDeliveryNote?: string;
   sms:
     | { sent: true; phone: string; pdfUrl?: string; webUrl?: string }
     | {

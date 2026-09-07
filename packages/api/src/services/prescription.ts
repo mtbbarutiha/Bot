@@ -175,12 +175,13 @@ export async function createPrescriptionWithDelivery(
   const rawPhone = String(patient.phone || '').trim();
   if (!rawPhone) {
     console.warn(
-      `[prescription] SMS skipped: no phone (patientId=${patient.id} rx=${prescription.id} pdf=${pdfPublicUrl} verified=${Boolean(patient.phoneVerified)})`
+      `[prescription] SMS skipped: no phone (patientId=${patient.id} rx=${prescription.id} pdf=${pdfPublicUrl} verified=${Boolean(patient.phoneVerified)}) — chat delivery is primary`
     );
     sms = {
       sent: false,
       skipped: true,
-      reason: 'بیمار شماره موبایل ثبت‌شده ندارد — پیامک ارسال نشد',
+      reason:
+        'بیمار شماره موبایل ثبت‌شده ندارد — نسخه در چت مشاوره ارسال می‌شود',
       pdfUrl: pdfPublicUrl,
       webUrl,
     };
@@ -205,7 +206,8 @@ export async function createPrescriptionWithDelivery(
       sms = {
         sent: false,
         skipped: true,
-        reason: 'شماره موبایل بیمار نامعتبر است',
+        reason:
+          'شماره موبایل بیمار نامعتبر است — نسخه در چت مشاوره ارسال می‌شود',
         pdfUrl: pdfPublicUrl,
         webUrl,
       };

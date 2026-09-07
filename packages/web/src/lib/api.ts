@@ -872,6 +872,9 @@ export type CreatePrescriptionResponse = {
   webUrl?: string;
   /** Persisted consult chat message that carries the PDF (web thread). */
   chatMessage?: VetConsultChatMessage | null;
+  /** True when API already relayed PDF/link to patient Telegram */
+  telegramDelivered?: boolean;
+  chatDeliveryNote?: string;
   sms:
     | { sent: true; phone: string; pdfUrl?: string; webUrl?: string }
     | {

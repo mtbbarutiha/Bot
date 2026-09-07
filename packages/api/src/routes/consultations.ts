@@ -5,6 +5,7 @@ import { QUICK_VET_COST, type VetConsultStatus } from '@petdate/shared';
 import { infra } from '../config/infra';
 import { dbService } from '../db';
 import { createPrescriptionWithDelivery } from '../services/prescription';
+import { deliverPrescriptionToConsultChat } from '../services/prescription-chat';
 import {
   publicWebOrigin,
   prescriptionWebPath,
@@ -1043,44 +1044,30 @@ consultationsRouter.post('/:id/prescription', async (req, res) => {
     prescriptionPdfPublicUrl(id) ||
     `https://pdf.petdate.ir${prescriptionPdfPublicPath(id)}`;
 
-  /** Persist PDF as a consult chat document so web (vet + patient) see it in-thread. */
-  let chatMessage: ReturnType<typeof dbService.createVetConsultChatMessage> | null = null;
+  /**
+   * Always deliver PDF + notice into the consult chat (web + Telegram relay).
+   * When the patient has no phone, chat is the primary delivery path — SMS is optional.
+   */
+  let chatMessage: Awaited<
+    ReturnType<typeof deliverPrescriptionToConsultChat>
+  >['chatMessage'] = null;
+  let telegramDelivered = false;
+  let chatDeliveryNote = '';
   try {
-    if (result.pdfPath && fs.existsSync(result.pdfPath)) {
-      const pdfBuf = fs.readFileSync(result.pdfPath);
-      const fileName = `petdate-dr-rx-${id}.pdf`;
-      const saved = saveChatUpload({
-        folderId: vetUploadFolder(consultId),
-        originalName: fileName,
-        buffer: pdfBuf,
-      });
-      const smsLine =
-        result.sms.sent === true
-          ? `📱 پیامک نسخه برای بیمار (${result.sms.phone}) ارسال شد.`
-          : `⚠️ پیامک ارسال نشد: ${'reason' in result.sms ? result.sms.reason : 'نامشخص'}`;
-      const caption = [
-        `💊 نسخه شماره ${id} صادر شد.`,
-        result.pet.name ? `پت: ${result.pet.name}` : null,
-        `دانلود PDF: ${pdfPublicUrl}`,
-        `مشاهده: ${webUrl}`,
-        smsLine,
-      ]
-        .filter(Boolean)
-        .join('\n');
-      chatMessage = dbService.createVetConsultChatMessage({
-        consultId,
-        senderUserId: result.vet.id,
-        text: caption,
-        mediaKind: 'document',
-        storageKey: saved.storageKey,
-        mimeType: 'application/pdf',
-        fileName,
-      });
-      notifyVetMessage(consultId, chatMessage, [
-        result.vet.id,
-        result.patient.id,
-      ]);
-    }
+    const delivered = await deliverPrescriptionToConsultChat({
+      consultId,
+      prescriptionId: id,
+      pdfPath: result.pdfPath,
+      pdfPublicUrl,
+      webUrl,
+      vetUserId: result.vet.id,
+      patientUserId: result.patient.id,
+      petName: result.pet.name,
+      sms: result.sms,
+    });
+    chatMessage = delivered.chatMessage;
+    telegramDelivered = delivered.telegramDelivered;
+    chatDeliveryNote = delivered.note;
   } catch (err) {
     console.error('prescription chat PDF message failed:', err);
   }
@@ -1097,6 +1084,8 @@ consultationsRouter.post('/:id/prescription', async (req, res) => {
     webPath: prescriptionWebPath(id),
     webUrl,
     chatMessage,
+    telegramDelivered,
+    chatDeliveryNote,
     sms: result.sms,
     patient: {
       id: result.patient.id,

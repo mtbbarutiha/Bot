@@ -1026,11 +1026,6 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
   }
 
   const fileName = `petdate-dr-rx-${created.prescription.id}.pdf`;
-  const webLink =
-    created.webUrl ||
-    (created.webPath
-      ? `${process.env.PUBLIC_WEB_URL || process.env.WEB_URL || 'https://petdate.ir'}${created.webPath}`
-      : '');
   const pdfLink =
     created.pdfPublicUrl ||
     (created.pdfPathPublic
@@ -1038,29 +1033,35 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
       : created.prescription?.id
         ? `${process.env.PUBLIC_PDF_URL || process.env.PDF_PUBLIC_URL || 'https://pdf.petdate.ir'}/rx/${created.prescription.id}.pdf`
         : '');
-  const captionPatient = [
-    '💊 <b>نسخه دارویی Pet Date Dr</b>',
-    `پت: <b>${escapeHtml(created.pet.name)}</b>`,
-    `پزشک: ${escapeHtml(created.vet.name)}`,
-    pdfLink ? `\n📄 دانلود PDF:\n${pdfLink}` : '',
-    webLink ? `🌐 مشاهده وب:\n${webLink}` : '',
-    '',
-    escapeHtml(text.slice(0, 500)),
-  ]
-    .filter((line) => line !== '')
-    .join('\n');
 
+  // API already posts PDF into consult chat and relays to patient Telegram when linked.
+  // Only send Telegram document from bot if API did not already deliver.
   const peerId = session.vetChatPeerTelegramId || created.patient.telegramId;
-  let telegramOk = false;
-  if (peerId) {
+  let telegramOk = Boolean(created.telegramDelivered);
+  if (!telegramOk && peerId) {
+    const captionPatient = [
+      'نسخه صادر شد — دانلود PDF:',
+      pdfLink || '',
+      `پت: ${created.pet.name}`,
+      `پزشک: ${created.vet.name}`,
+    ]
+      .filter((line) => line !== '')
+      .join('\n');
     try {
       await ctx.api.sendDocument(peerId, new InputFile(pdfBuf, fileName), {
-        caption: captionPatient,
-        parse_mode: 'HTML',
+        caption: captionPatient.slice(0, 1024),
       });
       telegramOk = true;
     } catch (err) {
       console.warn('send prescription to patient failed:', err);
+      if (pdfLink) {
+        try {
+          await ctx.api.sendMessage(peerId, captionPatient);
+          telegramOk = true;
+        } catch (err2) {
+          console.warn('send prescription link to patient failed:', err2);
+        }
+      }
     }
   }
 
@@ -1077,20 +1078,32 @@ export async function handleVetChatRxConfirm(ctx: Context): Promise<void> {
     ...clearPrescriptionSessionPatch(),
   });
 
+  const noPhone =
+    created.sms.sent === false &&
+    created.sms.skipped &&
+    /موبایل|شماره/.test(created.sms.reason || '');
+
   const smsLine =
     created.sms.sent === true
       ? `📱 پیامک به ${created.sms.phone} ارسال شد.`
-      : `⚠️ پیامک ارسال نشد: ${'reason' in created.sms ? created.sms.reason : '—'}`;
+      : noPhone
+        ? `💬 ${'reason' in created.sms ? created.sms.reason : 'شماره موبایل نیست — نسخه در چت ارسال شد'}`
+        : `⚠️ پیامک ارسال نشد: ${'reason' in created.sms ? created.sms.reason : '—'}`;
 
   await ctx.reply(
     [
       '✅ نسخه صادر شد.',
-      telegramOk ? '✉️ PDF در تلگرام برای بیمار ارسال شد.' : '⚠️ ارسال تلگرام به بیمار ناموفق بود.',
+      telegramOk
+        ? '✉️ PDF/لینک برای بیمار در تلگرام ارسال شد.'
+        : '💬 نسخه در چت وب ثبت شد' +
+          (peerId ? ' (ارسال تلگرام به بیمار ناموفق بود).' : ' (بیمار تلگرام ندارد).'),
       smsLine,
+      created.chatDeliveryNote ? `ℹ️ ${created.chatDeliveryNote}` : '',
       pdfLink ? `📄 ${pdfLink}` : '',
-      webLink ? `🌐 ${webLink}` : '',
       'می‌تونی ادامه چت بدی.',
-    ].join('\n'),
+    ]
+      .filter(Boolean)
+      .join('\n'),
     { reply_markup: vetChatReplyKeyboard(true) }
   );
 }
