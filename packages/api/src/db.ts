@@ -4807,6 +4807,8 @@ export const dbService = {
     ok24h: number;
     fail24h: number;
     lastAt: string | null;
+    otpOk24h: number;
+    otpFail24h: number;
   } {
     const total = (
       db.prepare('SELECT COUNT(*) as c FROM email_send_logs').get() as { c: number }
@@ -4827,6 +4829,24 @@ export const dbService = {
         )
         .get() as { c: number }
     ).c;
+    const otpOk24h = (
+      db
+        .prepare(
+          `SELECT COUNT(*) as c FROM email_send_logs
+           WHERE purpose = 'login_otp' AND ok = 1
+             AND created_at >= datetime('now', '-1 day')`
+        )
+        .get() as { c: number }
+    ).c;
+    const otpFail24h = (
+      db
+        .prepare(
+          `SELECT COUNT(*) as c FROM email_send_logs
+           WHERE purpose = 'login_otp' AND ok = 0
+             AND created_at >= datetime('now', '-1 day')`
+        )
+        .get() as { c: number }
+    ).c;
     const last = db
       .prepare(`SELECT created_at FROM email_send_logs ORDER BY id DESC LIMIT 1`)
       .get() as { created_at: string } | undefined;
@@ -4835,6 +4855,8 @@ export const dbService = {
       ok24h: Number(ok24h ?? 0),
       fail24h: Number(fail24h ?? 0),
       lastAt: last?.created_at ?? null,
+      otpOk24h: Number(otpOk24h ?? 0),
+      otpFail24h: Number(otpFail24h ?? 0),
     };
   },
 

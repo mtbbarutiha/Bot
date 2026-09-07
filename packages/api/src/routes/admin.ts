@@ -15,7 +15,12 @@ import { dbService } from '../db';
 import { adminPlatform } from '../admin-platform';
 import { adminFinance } from '../admin-finance';
 import { logAppEvent } from '../services/app-logger';
-import { getSmtpPublicConfig, isSmtpConfigured, sendMail } from '../services/mail';
+import {
+  getSmtpPublicConfig,
+  isPlausibleEmail,
+  isSmtpConfigured,
+  sendMail,
+} from '../services/mail';
 import { rateLimit } from '../middleware/rate-limit';
 
 export const adminRouter = Router();
@@ -476,29 +481,48 @@ adminRouter.get('/mail', async (_req, res) => {
       ? { ok: true, detail: `TCP ${smtp.host}:${smtp.port} باز است` }
       : { ok: false, detail: `TCP ${smtp.host}:${smtp.port} در دسترس نیست` };
   }
+  const pendingEmailOtps = dbService.listPendingWebOtps('email', 40);
+  const stats = dbService.getEmailSendLogStats();
   res.json({
     generatedAt: new Date().toISOString(),
     smtp,
     smtpReachable,
-    stats: dbService.getEmailSendLogStats(),
+    stats,
+    otpMailer: {
+      linked: smtp.configured,
+      purpose: 'login_otp',
+      pendingCount: pendingEmailOtps.length,
+      ok24h: stats.otpOk24h,
+      fail24h: stats.otpFail24h,
+      detail: smtp.configured
+        ? 'ورود وب با ایمیل از همین SMTP ارسال می‌شود (purpose=login_otp)'
+        : 'SMTP خاموش است — OTP ایمیل کار نمی‌کند',
+    },
     recentSends: dbService.listEmailSendLogs({ limit: 80 }),
-    pendingEmailOtps: dbService.listPendingWebOtps('email', 40),
+    pendingEmailOtps,
   });
 });
 
-const adminMailTestLimit = rateLimit({
+const adminMailSendLimit = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 10,
-  message: 'تلاش تست ایمیل زیاد است. کمی بعد دوباره تلاش کن.',
+  max: 20,
+  message: 'تلاش ارسال ایمیل زیاد است. کمی بعد دوباره تلاش کن.',
 });
 
-adminRouter.post('/mail/test', adminMailTestLimit, async (req, res) => {
+function adminMailSendError(sent: { error: string; detail?: string }): string {
+  if (sent.detail && sent.detail !== sent.error) {
+    return `${sent.error}: ${sent.detail}`;
+  }
+  return sent.error || 'ارسال ناموفق بود';
+}
+
+adminRouter.post('/mail/test', adminMailSendLimit, async (req, res) => {
   if (!isSmtpConfigured()) {
     res.status(503).json({ error: 'SMTP پیکربندی نشده' });
     return;
   }
-  const to = typeof req.body?.to === 'string' ? req.body.to.trim() : '';
-  if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || to.length > 200) {
+  const to = typeof req.body?.to === 'string' ? req.body.to.trim().toLowerCase() : '';
+  if (!isPlausibleEmail(to)) {
     res.status(400).json({ error: 'آدرس ایمیل معتبر نیست' });
     return;
   }
@@ -509,10 +533,44 @@ adminRouter.post('/mail/test', adminMailTestLimit, async (req, res) => {
     purpose: 'admin_test',
   });
   if (!sent.ok) {
-    res.status(502).json({ error: sent.error || 'ارسال ناموفق بود' });
+    res.status(502).json({ error: adminMailSendError(sent) });
     return;
   }
   res.json({ ok: true, to });
+});
+
+adminRouter.post('/mail/send', adminMailSendLimit, async (req, res) => {
+  if (!isSmtpConfigured()) {
+    res.status(503).json({ error: 'SMTP پیکربندی نشده' });
+    return;
+  }
+  const to = typeof req.body?.to === 'string' ? req.body.to.trim().toLowerCase() : '';
+  const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim() : '';
+  const body = typeof req.body?.body === 'string' ? req.body.body : '';
+  if (!isPlausibleEmail(to)) {
+    res.status(400).json({ error: 'آدرس ایمیل معتبر نیست' });
+    return;
+  }
+  if (!subject || subject.length > 200) {
+    res.status(400).json({ error: 'موضوع الزامی است (حداکثر ۲۰۰ کاراکتر)' });
+    return;
+  }
+  const text = body.trim();
+  if (!text || text.length > 20_000) {
+    res.status(400).json({ error: 'متن ایمیل الزامی است (حداکثر ۲۰۰۰۰ کاراکتر)' });
+    return;
+  }
+  const sent = await sendMail({
+    to,
+    subject,
+    text,
+    purpose: 'admin_compose',
+  });
+  if (!sent.ok) {
+    res.status(502).json({ error: adminMailSendError(sent) });
+    return;
+  }
+  res.json({ ok: true, to, subject });
 });
 
 type CheckStatus = 'up' | 'down' | 'not_configured';

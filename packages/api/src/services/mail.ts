@@ -87,13 +87,17 @@ export function getSmtpPublicConfig(): {
   };
 }
 
+export type SendMailResult =
+  | { ok: true }
+  | { ok: false; error: string; detail?: string };
+
 /** Send a plain-text (+ simple HTML) email via SMTP. Never logs message body. */
 export async function sendMail(opts: {
   to: string;
   subject: string;
   text: string;
   purpose?: string;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
+}): Promise<SendMailResult> {
   const host = smtpHost();
   const purpose = (opts.purpose || 'mail').slice(0, 64);
   if (!host) {
@@ -161,8 +165,22 @@ export async function sendMail(opts: {
       ok: false,
       error: message.slice(0, 500),
     });
-    return { ok: false, error: 'ارسال ایمیل ناموفق بود' };
+    return {
+      ok: false,
+      error: 'ارسال ایمیل ناموفق بود',
+      detail: message.slice(0, 500),
+    };
   }
+}
+
+/** Basic admin/public email shape check (not full RFC). */
+export function isPlausibleEmail(raw: string): boolean {
+  const email = String(raw ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/[\u200b-\u200d\ufeff]/g, '');
+  if (!email || email.length > 200 || email.includes('..')) return false;
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
 function escapeHtml(s: string): string {
