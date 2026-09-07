@@ -75,42 +75,79 @@ function VetOnlineCard({
 }) {
   const cred = credentialLabel(credentialStatus);
   const verified = credentialStatus === 'verified';
+  const locked = onlineBusy || needsLogin;
   return (
     <section
       className={`pepito-vet-online-card${vetOnline ? ' is-online' : ' is-offline'}`}
       aria-label="وضعیت آنلاین"
     >
       <div className="pepito-vet-online-card-main">
-        <span className="pepito-vet-online-mark" aria-hidden>
-          <Stethoscope size={22} strokeWidth={2} />
-        </span>
-        <div className="pepito-vet-online-text">
-          <p className="pepito-vet-online-kicker">{dualRole ? 'نقش دامپزشک' : 'وضعیت پذیرش'}</p>
-          <strong>{vetOnline ? 'آنلاین — آماده پذیرش' : 'آفلاین'}</strong>
-          <span>
-            {vetOnline
-              ? dualRole
-                ? 'درخواست‌های بیمار همین‌جا می‌آیند'
-                : 'در لیست پزشک‌های آماده هستی'
-              : dualRole
-                ? 'آنلاین شو تا درخواست جدید بگیری'
-                : 'درخواست جدید نمی‌آید؛ موارد در انتظار همچنان اینجاست'}
+        <div className="pepito-vet-online-status">
+          <span className="pepito-vet-online-pulse" aria-hidden>
+            <span className="pepito-vet-online-pulse-core" />
           </span>
+          <div className="pepito-vet-online-text">
+            <p className="pepito-vet-online-kicker">{dualRole ? 'نقش دامپزشک' : 'وضعیت پذیرش'}</p>
+            <strong>
+              <span className="pepito-vet-online-state">{vetOnline ? 'آنلاین' : 'آفلاین'}</span>
+              {vetOnline ? <span className="pepito-vet-online-sep"> · </span> : null}
+              {vetOnline ? 'آماده پذیرش' : 'خارج از پذیرش'}
+            </strong>
+            <span className="pepito-vet-online-hint">
+              {vetOnline
+                ? dualRole
+                  ? 'درخواست‌های بیمار همین‌جا می‌آیند'
+                  : 'در لیست پزشک‌های آماده هستی'
+                : dualRole
+                  ? 'آنلاین شو تا درخواست جدید بگیری'
+                  : 'درخواست جدید نمی‌آید؛ موارد در انتظار همچنان اینجاست'}
+            </span>
+          </div>
         </div>
-        <button
-          type="button"
-          className={`pepito-vet-online-switch${vetOnline ? ' is-on' : ''}`}
-          disabled={onlineBusy || needsLogin}
-          onClick={onToggle}
-          data-testid={dualRole ? 'vet-online-toggle-dual' : 'vet-online-toggle'}
-          aria-pressed={vetOnline}
-          aria-label={vetOnline ? 'آفلاین شو' : 'آنلاین شو'}
+        <div
+          className="pepito-vet-online-seg"
+          role="group"
+          aria-label="تغییر وضعیت پذیرش"
         >
-          <span className="pepito-vet-online-switch-knob" aria-hidden />
-          <span className="pepito-vet-online-switch-label">
-            {onlineBusy ? '…' : vetOnline ? 'آنلاین' : 'آفلاین'}
-          </span>
-        </button>
+          <button
+            type="button"
+            className={`pepito-vet-online-seg-btn${vetOnline ? ' is-active is-online' : ''}`}
+            disabled={locked}
+            onClick={() => {
+              if (!vetOnline) onToggle();
+            }}
+            data-testid={
+              !vetOnline
+                ? dualRole
+                  ? 'vet-online-toggle-dual'
+                  : 'vet-online-toggle'
+                : undefined
+            }
+            aria-pressed={vetOnline}
+            aria-label="آنلاین شو"
+          >
+            {onlineBusy && !vetOnline ? '…' : 'آنلاین'}
+          </button>
+          <button
+            type="button"
+            className={`pepito-vet-online-seg-btn${!vetOnline ? ' is-active is-offline' : ''}`}
+            disabled={locked}
+            onClick={() => {
+              if (vetOnline) onToggle();
+            }}
+            data-testid={
+              vetOnline
+                ? dualRole
+                  ? 'vet-online-toggle-dual'
+                  : 'vet-online-toggle'
+                : undefined
+            }
+            aria-pressed={!vetOnline}
+            aria-label="آفلاین شو"
+          >
+            {onlineBusy && vetOnline ? '…' : 'آفلاین'}
+          </button>
+        </div>
       </div>
       <div className="pepito-vet-panel-meta">
         <p className="pepito-vet-panel-caps-line">

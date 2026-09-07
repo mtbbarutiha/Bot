@@ -5202,7 +5202,7 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   }
 }
 
-/* —— Quick vet consult (bot parity) — pd-panels-ui-v1 —— */
+/* —— Quick vet consult (bot parity) — pd-panels-ui-v3c —— */
 .pepito-vet-consult {
   padding: 0 0 2.5rem;
   max-width: 780px;
@@ -5261,109 +5261,196 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 
 .pepito-vet-online-card {
   margin-inline: var(--pepito-container-pad, 15px);
-  padding: 0.85rem 0.95rem 0.85rem;
-  border-radius: 16px;
+  padding: 0.9rem 1rem;
+  border-radius: 18px;
   border: 1px solid rgba(31, 36, 48, 0.08);
   background:
-    radial-gradient(120% 90% at 100% 0%, rgba(21, 204, 160, 0.1), transparent 55%),
+    radial-gradient(120% 90% at 100% 0%, rgba(92, 77, 145, 0.08), transparent 55%),
     #fff;
   box-shadow: 0 6px 18px rgba(25, 6, 61, 0.04);
-  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    border-color 0.28s ease,
+    box-shadow 0.28s ease,
+    background 0.28s ease;
 }
 .pepito-vet-online-card.is-online {
-  border-color: rgba(21, 204, 160, 0.35);
-  box-shadow: 0 12px 32px rgba(21, 204, 160, 0.12);
+  border-color: rgba(21, 204, 160, 0.38);
+  background:
+    radial-gradient(130% 100% at 100% 0%, rgba(21, 204, 160, 0.16), transparent 58%),
+    radial-gradient(90% 80% at 0% 100%, rgba(11, 165, 242, 0.08), transparent 50%),
+    #fff;
+  box-shadow: 0 10px 28px rgba(21, 204, 160, 0.12);
+}
+.pepito-vet-online-card.is-offline {
+  border-color: rgba(117, 112, 134, 0.18);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(117, 112, 134, 0.08), transparent 55%),
+    #fff;
 }
 .pepito-vet-online-card-main {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 0.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem 1rem;
   align-items: center;
+  justify-content: space-between;
 }
-.pepito-vet-online-mark {
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 16px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(21, 204, 160, 0.14);
-  color: #0b7a5c;
+.pepito-vet-online-status {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  min-width: 0;
+  flex: 1 1 12rem;
 }
-.pepito-vet-online-card.is-offline .pepito-vet-online-mark {
-  background: rgba(117, 112, 134, 0.12);
-  color: var(--pepito-muted);
+.pepito-vet-online-pulse {
+  position: relative;
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-top: 0.45rem;
+  flex-shrink: 0;
+}
+.pepito-vet-online-pulse-core {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: #9a94ab;
+  box-shadow: 0 0 0 3px rgba(154, 148, 171, 0.18);
+  transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+.pepito-vet-online-card.is-online .pepito-vet-online-pulse-core {
+  background: var(--pepito-mint);
+  box-shadow: 0 0 0 3px rgba(21, 204, 160, 0.22);
+  animation: pepito-vet-online-pulse 1.8s ease-out infinite;
+}
+.pepito-vet-online-card.is-online .pepito-vet-online-pulse::before {
+  content: '';
+  position: absolute;
+  inset: -0.35rem;
+  border-radius: 50%;
+  border: 1.5px solid rgba(21, 204, 160, 0.45);
+  animation: pepito-vet-online-ring 1.8s ease-out infinite;
+}
+@keyframes pepito-vet-online-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+@keyframes pepito-vet-online-ring {
+  0% {
+    transform: scale(0.72);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1.35);
+    opacity: 0;
+  }
 }
 .pepito-vet-online-text {
   min-width: 0;
 }
 .pepito-vet-online-kicker {
-  margin: 0 0 0.15rem;
-  font-size: 0.72rem;
+  margin: 0 0 0.12rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.03em;
   color: var(--pepito-muted);
   font-family: var(--font-display);
 }
 .pepito-vet-online-text strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 1.05rem;
+  font-size: 1.02rem;
+  line-height: 1.35;
   color: var(--pepito-dark);
+  font-weight: 800;
 }
-.pepito-vet-online-text span {
+.pepito-vet-online-state {
+  color: var(--pepito-muted);
+  font-weight: 800;
+}
+.pepito-vet-online-card.is-online .pepito-vet-online-state {
+  color: #0b7a5c;
+}
+.pepito-vet-online-sep {
+  color: var(--pepito-muted);
+  font-weight: 700;
+}
+.pepito-vet-online-text .pepito-vet-online-hint {
   display: block;
-  margin-top: 0.15rem;
-  font-size: 0.84rem;
+  margin-top: 0.18rem;
+  font-size: 0.82rem;
   color: var(--pepito-muted);
   line-height: 1.45;
 }
-.pepito-vet-online-switch {
-  position: relative;
-  width: 4.6rem;
-  height: 2.75rem;
-  min-width: 4.6rem;
+.pepito-vet-online-seg {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border-radius: 12px;
+  background: rgba(117, 112, 134, 0.1);
+  border: 1px solid rgba(31, 36, 48, 0.06);
+  flex: 0 0 auto;
+  min-width: 9.5rem;
+}
+.pepito-vet-online-seg-btn {
+  appearance: none;
   border: 0;
-  border-radius: 999px;
-  background: rgba(117, 112, 134, 0.22);
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--pepito-muted);
+  font-family: var(--font-display);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.2;
   cursor: pointer;
-  padding: 0;
-  transition: background 0.25s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
 }
-.pepito-vet-online-switch.is-on {
-  background: linear-gradient(135deg, #15cca0, #0ba5f2);
+.pepito-vet-online-seg-btn:hover:not(:disabled):not(.is-active) {
+  color: var(--pepito-dark);
+  background: rgba(255, 255, 255, 0.55);
 }
-.pepito-vet-online-switch:disabled {
+.pepito-vet-online-seg-btn:active:not(:disabled):not(.is-active) {
+  transform: scale(0.97);
+}
+.pepito-vet-online-seg-btn.is-active.is-online {
+  background: linear-gradient(135deg, var(--pepito-mint), #0bb88f);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(21, 204, 160, 0.28);
+}
+.pepito-vet-online-seg-btn.is-active.is-offline {
+  background: linear-gradient(135deg, #6b647c, #524c62);
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(25, 6, 61, 0.14);
+}
+.pepito-vet-online-seg-btn:disabled {
   opacity: 0.55;
   cursor: wait;
 }
-.pepito-vet-online-switch-knob {
-  position: absolute;
-  top: 0.28rem;
-  inset-inline-start: 0.28rem;
-  width: 2.15rem;
-  height: 2.15rem;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 4px 12px rgba(25, 6, 61, 0.18);
-  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+.pepito-vet-online-seg-btn.is-active:disabled {
+  opacity: 0.85;
+  cursor: default;
 }
-[dir='rtl'] .pepito-vet-online-switch.is-on .pepito-vet-online-switch-knob {
-  transform: translateX(-1.75rem);
+@media (max-width: 420px) {
+  .pepito-vet-online-seg {
+    width: 100%;
+    min-width: 0;
+  }
 }
-[dir='ltr'] .pepito-vet-online-switch.is-on .pepito-vet-online-switch-knob {
-  transform: translateX(1.75rem);
-}
-.pepito-vet-online-switch-label {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: transparent;
-  pointer-events: none;
+@media (prefers-reduced-motion: reduce) {
+  .pepito-vet-online-card.is-online .pepito-vet-online-pulse-core,
+  .pepito-vet-online-card.is-online .pepito-vet-online-pulse::before {
+    animation: none;
+  }
 }
 .pepito-vet-panel-meta {
   margin-top: 0.85rem;
