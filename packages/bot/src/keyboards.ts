@@ -802,6 +802,20 @@ export function webAutoLoginKeyboard(
     .primary();
 }
 
+/**
+ * Mobile pending login: confirm in Telegram (callback) — do NOT open a website URL
+ * so the original Safari/Chrome tab can poll and keep the session.
+ */
+export function webPendingLoginConfirmKeyboard(pendingId: string): InlineKeyboard {
+  const id = String(pendingId).trim().toLowerCase();
+  return new InlineKeyboard()
+    .text('✅ تأیید ورود', `wpend:ok:${id}`)
+    .success()
+    .row()
+    .text('❌ انصراف', `wpend:no:${id}`)
+    .danger();
+}
+
 export function genderKeyboard(): InlineKeyboard {
   return new InlineKeyboard()
     .text(USER_GENDER_LABELS.male, 'profile:gender:male')

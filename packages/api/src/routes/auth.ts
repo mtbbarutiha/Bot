@@ -6,8 +6,11 @@ import { USER_ROLES, normalizeRoles, userHasRole } from '@petdate/shared';
 import { dbService } from '../db';
 import {
   completeTelegramAttach,
+  completeTelegramLoginPending,
   createTelegramAttachLink,
+  createTelegramLoginPending,
   exchangeTelegramWebLink,
+  pollTelegramLoginPending,
 } from '../services/telegram-web-link';
 import {
   MAX_USER_AVATAR_BYTES,
@@ -39,6 +42,19 @@ const otpVerifyLimit = rateLimit({
   message: 'تلاش‌های ورود زیاد است. کمی بعد دوباره تلاش کن.',
 });
 
+const telegramLoginStartLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: 'درخواست ورود تلگرام زیاد شده. کمی بعد دوباره تلاش کن.',
+});
+
+const telegramLoginStatusLimit = rateLimit({
+  windowMs: 60 * 1000,
+  max: 90,
+  keyFn: (req) => String(req.params?.id ?? ''),
+  message: 'درخواست وضعیت زیاد است. کمی صبر کن.',
+});
+
 const avatarUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: MAX_USER_AVATAR_BYTES, files: 1 },
@@ -60,6 +76,76 @@ authRouter.post('/telegram/exchange', async (req, res) => {
     return;
   }
   res.json({ ok: true, token: result.token, user: result.user });
+});
+
+/**
+ * Mobile same-browser Telegram login: create pending session + bot deep link.
+ * Browser stays on waiting page and polls `/telegram/login-status/:id`.
+ */
+authRouter.post('/telegram/login-start', telegramLoginStartLimit, (req, res) => {
+  const result = createTelegramLoginPending(
+    req.body?.next != null ? String(req.body.next) : undefined
+  );
+  if (!result.ok) {
+    const status = result.reason === 'not_configured' ? 503 : 400;
+    res.status(status).json(result);
+    return;
+  }
+  res.json(result);
+});
+
+/**
+ * Poll pending Telegram login. When ready, returns token once (consumed).
+ */
+authRouter.get('/telegram/login-status/:id', telegramLoginStatusLimit, (req, res) => {
+  const result = pollTelegramLoginPending(String(req.params.id ?? ''));
+  if (!result.ok) {
+    res.status(400).json(result);
+    return;
+  }
+  if (result.status === 'ready') {
+    res.json({
+      ok: true,
+      status: 'ready',
+      token: result.token,
+      user: result.user,
+      next: result.next,
+    });
+    return;
+  }
+  if (result.status === 'pending') {
+    res.json({
+      ok: true,
+      status: 'pending',
+      expiresAt: result.expiresAt,
+      next: result.next,
+    });
+    return;
+  }
+  res.json(result);
+});
+
+/**
+ * Bot confirms pending login (callback button — no website URL opened).
+ */
+authRouter.post('/telegram/login-complete', async (req, res) => {
+  const result = await completeTelegramLoginPending({
+    id: String(req.body?.id ?? req.body?.token ?? ''),
+    telegramId: String(req.body?.telegramId ?? req.body?.tg ?? ''),
+    username: req.body?.username != null ? String(req.body.username) : undefined,
+    name: req.body?.name != null ? String(req.body.name) : undefined,
+  });
+  if (!result.ok) {
+    const status =
+      result.reason === 'expired' || result.reason === 'missing' || result.reason === 'consumed'
+        ? 410
+        : result.reason === 'already_ready'
+          ? 409
+          : 400;
+    res.status(status).json(result);
+    return;
+  }
+  res.json({ ok: true, user: result.user, next: result.next });
 });
 
 /**

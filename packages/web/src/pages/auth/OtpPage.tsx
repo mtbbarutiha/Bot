@@ -1,11 +1,16 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { FormEvent, MouseEvent, useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Send } from 'lucide-react';
 import { normalizeRoles, userHasRole, dashboardPathForUser, primaryRole } from '@petdate/shared';
 import { AuthShell } from '../../components/AuthShell';
 import { useAuthStore } from '../../hooks/useAuthStore';
-import { telegramWebLoginDeepLink } from '../../lib/api';
-import { sanitizeNext } from '../../lib/authRedirect';
+import {
+  pollTelegramPendingLogin,
+  prefersSameBrowserTelegramLogin,
+  startTelegramPendingLogin,
+  telegramWebLoginDeepLink,
+} from '../../lib/api';
+import { postAuthPath, sanitizeNext } from '../../lib/authRedirect';
 
 type OtpCredentialLike = { code?: string };
 
@@ -39,6 +44,7 @@ export function OtpPage() {
     pendingDevCode,
     verifyOtp,
     requestOtp,
+    acceptSession,
   } = useAuthStore();
   const navDevCode = (location.state as { devCode?: string } | null)?.devCode;
   const initialDev = navDevCode || pendingDevCode || '';
@@ -52,6 +58,10 @@ export function OtpPage() {
   const submittingRef = useRef(false);
   const codeRef = useRef(code);
   const telegramLoginUrl = telegramWebLoginDeepLink(next);
+  const usePendingFlow = prefersSameBrowserTelegramLogin();
+  const [tgWaiting, setTgWaiting] = useState<{ id: string; deepLink: string } | null>(null);
+  const [tgBusy, setTgBusy] = useState(false);
+  const tgFinishingRef = useRef(false);
 
   useEffect(() => {
     codeRef.current = code;
@@ -62,6 +72,75 @@ export function OtpPage() {
       navigate(`/auth/login?next=${encodeURIComponent(next)}`, { replace: true });
     }
   }, [pendingChannel, pendingTarget, navigate, next]);
+
+  useEffect(() => {
+    if (!tgWaiting) return;
+    let cancelled = false;
+    tgFinishingRef.current = false;
+    const tick = async () => {
+      if (cancelled || tgFinishingRef.current) return;
+      try {
+        const res = await pollTelegramPendingLogin(tgWaiting.id);
+        if (cancelled || tgFinishingRef.current) return;
+        if (res.status === 'pending') return;
+        if (res.status === 'ready' && res.token && res.user) {
+          tgFinishingRef.current = true;
+          acceptSession(res.token, res.user);
+          const roles = normalizeRoles(res.user.roles, res.user.role);
+          const complete =
+            res.user.onboarding === 'profile_complete' ||
+            Boolean(
+              res.user.name?.trim() &&
+                res.user.age &&
+                res.user.gender &&
+                res.user.country &&
+                res.user.city
+            );
+          navigate(
+            postAuthPath({
+              hasRole: roles.length > 0,
+              isProfileComplete: complete,
+              next: sanitizeNext(res.next ?? next, next),
+              roleHome: dashboardPathForUser(res.user),
+            }),
+            { replace: true }
+          );
+          return;
+        }
+        setError(res.error || 'ورود از تلگرام ناموفق بود');
+        setTgWaiting(null);
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : '';
+        if (/منقضی|استفاده|پیدا نشد/i.test(msg)) {
+          setError(msg || 'درخواست ورود منقضی شد');
+          setTgWaiting(null);
+        }
+      }
+    };
+    void tick();
+    const timer = window.setInterval(() => void tick(), 1600);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [tgWaiting, acceptSession, navigate, next]);
+
+  async function onTelegramLogin(e: MouseEvent) {
+    if (!usePendingFlow) return;
+    e.preventDefault();
+    setError('');
+    setTgBusy(true);
+    try {
+      const res = await startTelegramPendingLogin(next);
+      setTgWaiting({ id: res.id, deepLink: res.deepLink });
+      window.open(res.deepLink, '_blank', 'noopener,noreferrer');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'شروع ورود تلگرام ناموفق بود');
+    } finally {
+      setTgBusy(false);
+    }
+  }
 
   async function submitCode(raw: string) {
     const value = digitsOnly(raw);
@@ -282,15 +361,36 @@ export function OtpPage() {
       <div className="auth-or" role="separator">
         <span>یا</span>
       </div>
-      <a
-        className="pepito-btn button-2 auth-telegram-cta"
-        href={telegramLoginUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        <Send size={16} strokeWidth={2} aria-hidden />
-        ورود با اکانت تلگرام
-      </a>
+      {tgWaiting ? (
+        <>
+          <p className="auth-lead">
+            در تلگرام <strong>تأیید ورود</strong> را بزن؛ همین صفحه خودکار ادامه می‌دهد.
+          </p>
+          <a
+            className="pepito-btn button-2 auth-telegram-cta"
+            href={tgWaiting.deepLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Send size={16} strokeWidth={2} aria-hidden />
+            باز کردن دوباره تلگرام
+          </a>
+          <button type="button" className="auth-link-btn" onClick={() => setTgWaiting(null)}>
+            انصراف
+          </button>
+        </>
+      ) : (
+        <a
+          className="pepito-btn button-2 auth-telegram-cta"
+          href={usePendingFlow ? '#' : telegramLoginUrl}
+          target={usePendingFlow ? undefined : '_blank'}
+          rel="noopener noreferrer"
+          onClick={onTelegramLogin}
+        >
+          <Send size={16} strokeWidth={2} aria-hidden />
+          {tgBusy ? 'در حال آماده‌سازی…' : 'ورود با اکانت تلگرام'}
+        </a>
+      )}
     </AuthShell>
   );
 }

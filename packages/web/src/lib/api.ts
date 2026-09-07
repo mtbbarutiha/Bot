@@ -501,6 +501,48 @@ export async function exchangeTelegramWebLink(input: {
   });
 }
 
+/** Mobile same-browser Telegram login: create pending + bot deep link. */
+export async function startTelegramPendingLogin(next?: string | null) {
+  return request<{
+    ok: true;
+    id: string;
+    deepLink: string;
+    botUsername: string;
+    expiresAt: string;
+    next: string;
+  }>('/api/auth/telegram/login-start', {
+    method: 'POST',
+    body: JSON.stringify(next ? { next } : {}),
+  });
+}
+
+/** Poll pending Telegram login until ready (token consumed once). */
+export async function pollTelegramPendingLogin(id: string) {
+  return request<{
+    ok: true;
+    status: 'pending' | 'ready' | 'expired' | 'consumed' | 'missing';
+    token?: string;
+    user?: User;
+    next?: string;
+    expiresAt?: string;
+    error?: string;
+  }>(`/api/auth/telegram/login-status/${encodeURIComponent(id)}`);
+}
+
+/** True when we should keep the browser tab and poll (mobile / touch). */
+export function prefersSameBrowserTelegramLogin(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const narrow = window.matchMedia('(max-width: 900px)').matches;
+    const ua = navigator.userAgent || '';
+    const mobileUa = /Android|iPhone|iPad|iPod|Mobile/i.test(ua);
+    return coarse || narrow || mobileUa;
+  } catch {
+    return true;
+  }
+}
+
 /** Logged-in web user: one-time bot deep link to attach Telegram. */
 export async function startTelegramAttach(token: string) {
   return request<{

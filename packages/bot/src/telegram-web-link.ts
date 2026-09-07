@@ -8,6 +8,9 @@ const LINK_TTL_SEC = 15 * 60;
 /** Web→bot deep-link prefix for «ورود با تلگرام» (must stay in sync with web). */
 export const WEB_LOGIN_START_PREFIX = 'weblogin';
 
+/** Mobile pending login deep-link prefix: `wpend_<32hex>`. */
+export const WEB_PENDING_LOGIN_PREFIX = 'wpend';
+
 const SAFE_NEXT = /^\/(?!\/)[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]*$/;
 
 function sanitizeWebLoginNext(raw: string | null | undefined, fallback = '/home'): string {
@@ -33,6 +36,13 @@ export function parseWebLoginStartPayload(payload: string): string | null {
   } catch {
     return '/home';
   }
+}
+
+/** Parse /start wpend_<32hex> → pending login id. */
+export function parseWebPendingLoginPayload(payload: string): string | null {
+  const raw = String(payload ?? '').trim();
+  const m = /^wpend_([a-f0-9]{32})$/i.exec(raw);
+  return m?.[1]?.toLowerCase() ?? null;
 }
 
 /**

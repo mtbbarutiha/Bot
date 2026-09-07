@@ -13,6 +13,7 @@ import {
   setUserPrimaryRole,
   setUserRoles,
   completeWebTelegramLink,
+  completeTelegramPendingLogin,
 } from '../api-client';
 import { formatCoinAwardMessage } from '../economy';
 import { sendWelcomeLogo } from '../branding';
@@ -24,9 +25,10 @@ import {
   roleReplyKeyboard,
   webAutoLoginKeyboard,
   webLinksKeyboard,
+  webPendingLoginConfirmKeyboard,
 } from '../keyboards';
 import { getSession, upsertSession } from '../session';
-import { parseWebLoginStartPayload } from '../telegram-web-link';
+import { parseWebLoginStartPayload, parseWebPendingLoginPayload } from '../telegram-web-link';
 import { webLinkHint } from '../urls';
 import { displayName, getCtxUser, menuKeyboardFor } from './helpers';
 import { resumeOwnerChatOnStart } from './owner-chat';
@@ -89,12 +91,119 @@ async function tryHandleWebLinkAttach(ctx: Context, payload: string): Promise<bo
   return true;
 }
 
+/** Mobile pending login: show confirm callback (no website URL → Telegram WebView). */
+async function tryHandleWebPendingLogin(ctx: Context, payload: string): Promise<boolean> {
+  const pendingId = parseWebPendingLoginPayload(payload);
+  if (!pendingId) return false;
+  const from = ctx.from;
+  if (!from) return true;
+
+  const telegramId = String(from.id);
+  const name = displayName(from);
+
+  try {
+    const user = await registerTelegramUser({
+      telegramId,
+      name,
+      username: from.username,
+    });
+    const roles = normalizeRoles(user.roles, user.role);
+    await upsertSession(telegramId, {
+      userId: user.id,
+      role: user.role,
+      draftRoles: roles,
+      step: roles.length ? 'ready' : 'role_select',
+      locale: 'fa',
+      pendingPhone: undefined,
+    });
+  } catch (err) {
+    console.error('pending login register failed:', err);
+  }
+
+  await ctx.reply(
+    [
+      '🔐 تأیید ورود به وبسایت Pet Date',
+      '',
+      'اگر همین الان از مرورگر خودت «ورود با تلگرام» زدی،',
+      'دکمهٔ «تأیید ورود» را بزن.',
+      '',
+      'بعد از تأیید، همان مرورگر (نه تلگرام) به‌صورت خودکار وارد می‌شود.',
+      'این درخواست چند دقیقه اعتبار دارد.',
+    ].join('\n'),
+    { reply_markup: webPendingLoginConfirmKeyboard(pendingId) }
+  );
+  return true;
+}
+
+export async function handleWebPendingLoginConfirm(
+  ctx: Context,
+  pendingId: string,
+  accept: boolean
+): Promise<void> {
+  const from = ctx.from;
+  if (!from) return;
+  const id = String(pendingId ?? '')
+    .trim()
+    .toLowerCase();
+  if (!/^[a-f0-9]{32}$/.test(id)) {
+    await ctx.answerCallbackQuery({ text: 'شناسه نامعتبر', show_alert: true });
+    return;
+  }
+
+  if (!accept) {
+    await ctx.answerCallbackQuery({ text: 'لغو شد' });
+    try {
+      await ctx.editMessageText('ورود لغو شد. اگر لازم بود از سایت دوباره «ورود با تلگرام» را بزن.');
+    } catch {
+      await ctx.reply('ورود لغو شد. اگر لازم بود از سایت دوباره «ورود با تلگرام» را بزن.');
+    }
+    return;
+  }
+
+  try {
+    await completeTelegramPendingLogin({
+      id,
+      telegramId: String(from.id),
+      username: from.username,
+      name: displayName(from),
+    });
+    await ctx.answerCallbackQuery({ text: 'تأیید شد ✅' });
+    try {
+      await ctx.editMessageText(
+        [
+          '✅ ورود تأیید شد.',
+          '',
+          'به همان مرورگری که ورود را شروع کردی برگرد؛',
+          'صفحه به‌صورت خودکار ادامه می‌دهد.',
+          '',
+          'نیازی به باز کردن لینک وب از داخل تلگرام نیست.',
+        ].join('\n')
+      );
+    } catch {
+      await ctx.reply(
+        '✅ ورود تأیید شد. به همان مرورگر برگرد — صفحه به‌صورت خودکار ادامه می‌دهد.'
+      );
+    }
+  } catch (err) {
+    console.error('pending login confirm failed:', err);
+    const msg = err instanceof Error ? err.message : '';
+    const fa =
+      /410|expired|منقضی|missing/i.test(msg)
+        ? 'درخواست منقضی شده — از سایت دوباره «ورود با تلگرام» را بزن.'
+        : /409|already/i.test(msg)
+          ? 'این درخواست قبلاً تأیید شده. به مرورگر برگرد.'
+          : 'تأیید ناموفق بود. از سایت دوباره تلاش کن.';
+    await ctx.answerCallbackQuery({ text: fa, show_alert: true });
+  }
+}
+
 export async function handleStart(ctx: Context): Promise<void> {
   const from = ctx.from;
   if (!from) return;
 
   const payload = startPayload(ctx);
   if (payload) {
+    if (await tryHandleWebPendingLogin(ctx, payload)) return;
     await tryHandleWebLinkAttach(ctx, payload);
   }
 

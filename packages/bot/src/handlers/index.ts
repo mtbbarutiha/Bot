@@ -85,6 +85,7 @@ import {
   handleRoleConfirm,
   handleRoleSelect,
   handleStart,
+  handleWebPendingLoginConfirm,
   getCtxUser,
 } from './start';
 import { menuKeyboardFor } from './helpers';
@@ -241,6 +242,13 @@ export function registerHandlers(bot: Bot): void {
   bot.command('start', handleStart);
   bot.command('menu', handleMenu);
   bot.command('help', handleHelp);
+
+  bot.callbackQuery(/^wpend:(ok|no):([a-f0-9]{32})$/i, async (ctx) => {
+    const accept = String(ctx.match![1]).toLowerCase() === 'ok';
+    const pendingId = String(ctx.match![2]).toLowerCase();
+    await handleWebPendingLoginConfirm(ctx, pendingId, accept);
+  });
+
   bot.command('cancel', handleCancel);
   bot.command('explore', (ctx) => handleFindPlaymate(ctx));
   bot.command('pets', handleMyPets);

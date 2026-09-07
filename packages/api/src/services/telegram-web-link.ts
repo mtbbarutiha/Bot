@@ -9,6 +9,20 @@ const LINK_TTL_SEC = 15 * 60;
 const MAX_SKEW_SEC = 60;
 /** Web→bot attach tokens (stored in DB; deep-link payload must stay ≤64 chars). */
 const ATTACH_TTL_SEC = 15 * 60;
+/** Browser pending Telegram login (mobile same-tab poll). */
+const PENDING_LOGIN_TTL_SEC = 8 * 60;
+
+const SAFE_NEXT = /^\/(?!\/)[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]*$/;
+
+function sanitizeLoginNext(raw: string | null | undefined, fallback = '/home'): string {
+  if (!raw) return fallback;
+  const value = raw.trim();
+  if (!value.startsWith('/') || value.startsWith('//')) return fallback;
+  if (value.startsWith('/auth') || value.startsWith('/welcome')) return fallback;
+  if (value === '/') return '/home';
+  if (!SAFE_NEXT.test(value)) return fallback;
+  return value;
+}
 
 function botToken(): string | null {
   const token = infra.telegram.botToken?.trim();
@@ -102,6 +116,216 @@ export async function exchangeTelegramWebLink(input: {
   dbService.createWebSession(user.id, sessionToken, expiresAt);
 
   return { ok: true, token: sessionToken, user };
+}
+
+/**
+ * Mobile same-browser login: create a pending id + bot deep link.
+ * Payload: `wpend_<32hex>` (fits Telegram's 64-char start limit).
+ */
+export function createTelegramLoginPending(next?: string | null):
+  | {
+      ok: true;
+      id: string;
+      deepLink: string;
+      botUsername: string;
+      expiresAt: string;
+      next: string;
+    }
+  | { ok: false; reason: string; error: string } {
+  const username = botUsername();
+  if (!username || !botToken()) {
+    return { ok: false, reason: 'not_configured', error: 'ربات تلگرام پیکربندی نشده است' };
+  }
+
+  const safeNext = sanitizeLoginNext(next, '/home');
+  const id = randomBytes(16).toString('hex');
+  const expiresAt = new Date(Date.now() + PENDING_LOGIN_TTL_SEC * 1000).toISOString();
+  dbService.createTelegramLoginPending(id, safeNext, expiresAt);
+
+  return {
+    ok: true,
+    id,
+    deepLink: `https://t.me/${username}?start=${encodeURIComponent(`wpend_${id}`)}`,
+    botUsername: username,
+    expiresAt,
+    next: safeNext,
+  };
+}
+
+/**
+ * Browser polls until bot confirms. When ready, returns token once (consumed).
+ */
+export function pollTelegramLoginPending(id: string):
+  | {
+      ok: true;
+      status: 'pending';
+      expiresAt: string;
+      next: string;
+    }
+  | {
+      ok: true;
+      status: 'ready';
+      token: string;
+      user: NonNullable<ReturnType<typeof dbService.getUserById>>;
+      next: string;
+    }
+  | { ok: true; status: 'expired' | 'consumed' | 'missing'; error: string }
+  | { ok: false; reason: string; error: string } {
+  const rawId = String(id ?? '')
+    .trim()
+    .toLowerCase();
+  if (!/^[a-f0-9]{32}$/.test(rawId)) {
+    return { ok: false, reason: 'invalid_id', error: 'شناسه ورود نامعتبر است' };
+  }
+
+  const row = dbService.getTelegramLoginPending(rawId);
+  if (!row) {
+    return { ok: true, status: 'missing', error: 'درخواست ورود پیدا نشد' };
+  }
+
+  const expMs = Date.parse(row.expiresAt);
+  const expired = !Number.isFinite(expMs) || expMs < Date.now();
+
+  if (row.consumedAt || row.status === 'consumed') {
+    return { ok: true, status: 'consumed', error: 'این ورود قبلاً استفاده شده است' };
+  }
+
+  if (row.status === 'expired' || (row.status === 'pending' && expired)) {
+    if (row.status === 'pending') dbService.cancelTelegramLoginPending(rawId);
+    return { ok: true, status: 'expired', error: 'درخواست ورود منقضی شد — دوباره تلاش کن' };
+  }
+
+  if (row.status === 'pending') {
+    return {
+      ok: true,
+      status: 'pending',
+      expiresAt: row.expiresAt,
+      next: row.nextPath,
+    };
+  }
+
+  if (row.status === 'ready') {
+    if (expired) {
+      dbService.cancelTelegramLoginPending(rawId);
+      return { ok: true, status: 'expired', error: 'درخواست ورود منقضی شد — دوباره تلاش کن' };
+    }
+    const consumed = dbService.consumeTelegramLoginPending(rawId);
+    if (!consumed) {
+      return { ok: true, status: 'consumed', error: 'این ورود قبلاً استفاده شده است' };
+    }
+    const user = dbService.getUserById(consumed.userId);
+    if (!user) {
+      return { ok: false, reason: 'missing_user', error: 'کاربر پیدا نشد' };
+    }
+    return {
+      ok: true,
+      status: 'ready',
+      token: consumed.sessionToken,
+      user,
+      next: consumed.nextPath,
+    };
+  }
+
+  return { ok: true, status: 'expired', error: 'درخواست ورود نامعتبر است' };
+}
+
+/**
+ * Bot confirms pending login — create web session for the Telegram user.
+ * No website URL is opened; the original browser polls for the token.
+ */
+export async function completeTelegramLoginPending(input: {
+  id: string;
+  telegramId: string;
+  username?: string;
+  name?: string;
+}): Promise<
+  | {
+      ok: true;
+      user: NonNullable<ReturnType<typeof dbService.getUserById>>;
+      next: string;
+    }
+  | { ok: false; reason: string; error: string }
+> {
+  const rawId = String(input.id ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^wpend_/i, '');
+  if (!/^[a-f0-9]{32}$/.test(rawId)) {
+    return { ok: false, reason: 'invalid_id', error: 'شناسه ورود نامعتبر است' };
+  }
+
+  const telegramId = String(input.telegramId ?? '').trim();
+  if (!/^\d{3,20}$/.test(telegramId)) {
+    return { ok: false, reason: 'invalid_tg', error: 'شناسه تلگرام نامعتبر است' };
+  }
+
+  const row = dbService.getTelegramLoginPending(rawId);
+  if (!row) {
+    return { ok: false, reason: 'missing', error: 'درخواست ورود پیدا نشد یا منقضی شده' };
+  }
+  if (row.consumedAt || row.status === 'consumed') {
+    return { ok: false, reason: 'consumed', error: 'این ورود قبلاً استفاده شده است' };
+  }
+  if (row.status === 'ready') {
+    // Idempotent: same telegram user re-tapping confirm.
+    if (row.telegramId && row.telegramId === telegramId) {
+      const user = row.userId != null ? dbService.getUserById(row.userId) : null;
+      if (user) return { ok: true, user, next: row.nextPath };
+    }
+    return { ok: false, reason: 'already_ready', error: 'این درخواست قبلاً تأیید شده است' };
+  }
+  if (row.status !== 'pending') {
+    return { ok: false, reason: 'expired', error: 'درخواست ورود منقضی شده — از سایت دوباره بزن' };
+  }
+  const expMs = Date.parse(row.expiresAt);
+  if (!Number.isFinite(expMs) || expMs < Date.now()) {
+    dbService.cancelTelegramLoginPending(rawId);
+    return { ok: false, reason: 'expired', error: 'درخواست ورود منقضی شده — از سایت دوباره بزن' };
+  }
+
+  let user = dbService.getUserByTelegramId(telegramId);
+  if (!user) {
+    const created = dbService.findOrCreateUser({
+      telegramId,
+      name: input.name?.trim() || 'کاربر تلگرام',
+      username: input.username,
+    });
+    user = created.user;
+  } else if (input.name || input.username) {
+    dbService.linkTelegramIdentity(user.id, telegramId, {
+      username: input.username,
+      name: input.name,
+    });
+    user = dbService.getUserById(user.id) ?? user;
+  }
+
+  try {
+    const synced = await syncUserProfileFromTelegram(user.id, telegramId);
+    if (synced) user = synced;
+  } catch (err) {
+    console.warn('telegram profile sync on pending login failed:', (err as Error).message);
+  }
+
+  const sessionToken = randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + SESSION_TTL_MS).toISOString();
+  dbService.createWebSession(user.id, sessionToken, expiresAt);
+
+  const marked = dbService.markTelegramLoginPendingReady({
+    id: rawId,
+    telegramId,
+    userId: user.id,
+    sessionToken,
+  });
+  if (!marked) {
+    dbService.deleteWebSession(sessionToken);
+    return {
+      ok: false,
+      reason: 'race',
+      error: 'تأیید همزمان ناموفق بود — از سایت دوباره تلاش کن',
+    };
+  }
+
+  return { ok: true, user, next: row.nextPath };
 }
 
 /**
@@ -220,4 +444,8 @@ export async function completeTelegramAttach(input: {
 
 export function buildTelegramWebLinkTtlSec(): number {
   return LINK_TTL_SEC;
+}
+
+export function buildTelegramPendingLoginTtlSec(): number {
+  return PENDING_LOGIN_TTL_SEC;
 }

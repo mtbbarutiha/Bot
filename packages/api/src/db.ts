@@ -482,6 +482,28 @@ function migrateSchema() {
       ON telegram_attach_tokens (user_id)`
   );
 
+  /**
+   * Mobile same-browser Telegram login: browser creates pending id, bot confirms via
+   * callback (no website URL), browser polls until ready — same tab/browser.
+   */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS telegram_login_pending (
+      id TEXT PRIMARY KEY,
+      next_path TEXT NOT NULL DEFAULT '/home',
+      status TEXT NOT NULL DEFAULT 'pending',
+      telegram_id TEXT,
+      user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      session_token TEXT,
+      expires_at TEXT NOT NULL,
+      consumed_at TEXT,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(
+    `CREATE INDEX IF NOT EXISTS idx_telegram_login_pending_status
+      ON telegram_login_pending (status, expires_at)`
+  );
+
   db.exec(`
     CREATE TABLE IF NOT EXISTS playdate_chat_messages (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -4812,6 +4834,117 @@ export const dbService = {
     db.prepare(
       `INSERT INTO telegram_attach_tokens (token, user_id, expires_at) VALUES (?, ?, ?)`
     ).run(token, userId, expiresAt);
+  },
+
+  createTelegramLoginPending(id: string, nextPath: string, expiresAt: string) {
+    db.prepare(
+      `INSERT INTO telegram_login_pending (id, next_path, status, expires_at)
+       VALUES (?, ?, 'pending', ?)`
+    ).run(id, nextPath, expiresAt);
+  },
+
+  getTelegramLoginPending(id: string): {
+    id: string;
+    nextPath: string;
+    status: string;
+    telegramId: string | null;
+    userId: number | null;
+    sessionToken: string | null;
+    expiresAt: string;
+    consumedAt: string | null;
+  } | null {
+    const row = db
+      .prepare(
+        `SELECT id, next_path, status, telegram_id, user_id, session_token, expires_at, consumed_at
+         FROM telegram_login_pending WHERE id = ?`
+      )
+      .get(id) as
+      | {
+          id: string;
+          next_path: string;
+          status: string;
+          telegram_id: string | null;
+          user_id: number | null;
+          session_token: string | null;
+          expires_at: string;
+          consumed_at: string | null;
+        }
+      | undefined;
+    if (!row) return null;
+    return {
+      id: String(row.id),
+      nextPath: String(row.next_path || '/home'),
+      status: String(row.status),
+      telegramId: row.telegram_id != null ? String(row.telegram_id) : null,
+      userId: row.user_id != null ? Number(row.user_id) : null,
+      sessionToken: row.session_token != null ? String(row.session_token) : null,
+      expiresAt: String(row.expires_at),
+      consumedAt: row.consumed_at != null ? String(row.consumed_at) : null,
+    };
+  },
+
+  /** Mark pending login ready with a one-time session token (bot confirm). */
+  markTelegramLoginPendingReady(input: {
+    id: string;
+    telegramId: string;
+    userId: number;
+    sessionToken: string;
+  }): boolean {
+    const upd = db
+      .prepare(
+        `UPDATE telegram_login_pending
+         SET status = 'ready',
+             telegram_id = ?,
+             user_id = ?,
+             session_token = ?
+         WHERE id = ? AND status = 'pending' AND consumed_at IS NULL
+           AND datetime(expires_at) >= datetime('now')`
+      )
+      .run(input.telegramId, input.userId, input.sessionToken, input.id);
+    return upd.changes > 0;
+  },
+
+  /** One-time consume of a ready pending login (browser poll). */
+  consumeTelegramLoginPending(id: string): {
+    sessionToken: string;
+    userId: number;
+    nextPath: string;
+  } | null {
+    const row = this.getTelegramLoginPending(id);
+    if (!row) return null;
+    if (row.consumedAt || row.status === 'consumed') return null;
+    const expMs = Date.parse(row.expiresAt);
+    if (!Number.isFinite(expMs) || expMs < Date.now()) {
+      db.prepare(
+        `UPDATE telegram_login_pending SET status = 'expired' WHERE id = ? AND status = 'pending'`
+      ).run(id);
+      return null;
+    }
+    if (row.status !== 'ready' || !row.sessionToken || row.userId == null) return null;
+    const upd = db
+      .prepare(
+        `UPDATE telegram_login_pending
+         SET status = 'consumed', consumed_at = datetime('now'), session_token = NULL
+         WHERE id = ? AND status = 'ready' AND consumed_at IS NULL`
+      )
+      .run(id);
+    if (upd.changes === 0) return null;
+    return {
+      sessionToken: row.sessionToken,
+      userId: row.userId,
+      nextPath: row.nextPath,
+    };
+  },
+
+  cancelTelegramLoginPending(id: string): boolean {
+    const upd = db
+      .prepare(
+        `UPDATE telegram_login_pending
+         SET status = 'expired'
+         WHERE id = ? AND status IN ('pending', 'ready') AND consumed_at IS NULL`
+      )
+      .run(id);
+    return upd.changes > 0;
   },
 
   /** Consume a one-time attach token if still valid; returns owning web userId. */

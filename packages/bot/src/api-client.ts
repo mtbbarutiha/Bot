@@ -66,6 +66,23 @@ export async function completeWebTelegramLink(data: {
   });
 }
 
+/** Complete mobile pending Telegram login from callback confirm. */
+export async function completeTelegramPendingLogin(data: {
+  id: string;
+  telegramId: string;
+  username?: string;
+  name?: string;
+}): Promise<{
+  ok: true;
+  user: User;
+  next: string;
+}> {
+  return request('/api/auth/telegram/login-complete', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 export async function getUserByTelegramId(telegramId: string): Promise<User | null> {
   try {
     return await request<User>(`/api/users/telegram/${encodeURIComponent(telegramId)}`);
