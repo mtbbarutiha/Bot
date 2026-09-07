@@ -317,7 +317,7 @@ h1, h2, h3, h4, .landing-brand-en, .landing-brand-mark {
     min-height: calc(85vh - var(--pepito-nav-h));
   }
   .pepito-app-layout {
-    padding-top: 0;
+    padding-top: 0 !important;
     min-height: auto;
   }
   .pepito-app-rail {
@@ -8705,6 +8705,12 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
 
 /* Final mobile flush — wins over any earlier padding/radius in this file */
 @media (max-width: 859px) {
+  /* ROOT CAUSE of huge white band: base .pepito-app-layout { padding-top: nav-h }
+     was winning over an earlier mobile padding-top:0 (same specificity, later source). */
+  .pepito-app-shell .pepito-app-layout,
+  .pepito-app-layout {
+    padding-top: 0 !important;
+  }
   .pepito-app-shell .pepito-app-main,
   .pepito-app-main {
     padding-top: 0 !important;
@@ -8715,11 +8721,11 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
     margin-bottom: 0 !important;
     border-bottom: 0 !important;
     box-shadow: none !important;
-    padding-block: 0.4rem !important;
-    min-height: 52px !important;
+    padding-block: 0.35rem !important;
+    min-height: 48px !important;
   }
   .pepito-app-shell .pepito-nav-logo img {
-    height: 30px !important;
+    height: 28px !important;
   }
   .pepito-app-shell .pepito-profile-hero,
   .pepito-profile-hero {
@@ -8732,16 +8738,36 @@ body:has(.tg-chat) .pepito-landing-mobile-dock {
   }
   .pepito-app-shell .pepito-wallet-page,
   .pepito-app-shell .pepito-my-pets,
+  .pepito-app-shell .pepito-vet-consult,
   .pepito-wallet-page,
-  .pepito-my-pets {
+  .pepito-my-pets,
+  .pepito-vet-consult {
     padding-top: 0 !important;
     margin-top: 0 !important;
   }
+  /* Heroes: flush under nav, content at top — no tall empty wash */
   .pepito-app-shell .pepito-wallet-hero,
-  .pepito-app-shell .pepito-my-pets-head,
   .pepito-app-shell .pepito-my-pets-hero,
-  .pepito-app-shell .pepito-vet-hero {
-    margin-top: 0.15rem;
+  .pepito-app-shell .pepito-vet-hero,
+  .pepito-wallet-hero,
+  .pepito-my-pets-hero,
+  .pepito-vet-hero {
+    margin-top: 0 !important;
+    margin-inline: calc(-1 * var(--pepito-container-pad)) !important;
+    width: auto !important;
+    border-radius: 0 !important;
+    min-height: 0 !important;
+    align-items: flex-start !important;
+    animation: none !important;
+  }
+  .pepito-wallet-hero-inner,
+  .pepito-my-pets-hero-inner,
+  .pepito-vet-hero-inner {
+    padding: 0.85rem var(--pepito-container-pad) 1rem !important;
+    animation: none !important;
+  }
+  .pepito-app-shell .pepito-my-pets-head {
+    margin-top: 0;
   }
 }
 
