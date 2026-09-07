@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ClipboardList, FilePlus2, Loader2, PawPrint, Pill, X } from 'lucide-react';
 import {
   RX_CONDITION_CATEGORIES,
@@ -81,7 +82,7 @@ export function VetChatDoctorToolbar({
         data-testid="vet-chat-note-open"
       >
         <FilePlus2 size={16} aria-hidden />
-        ثبت پرونده
+        ثبت در پرونده
       </button>
       <button
         type="button"
@@ -107,9 +108,29 @@ export function VetChatDoctorSheets({
   onIssued,
   onNoteSaved,
 }: Props) {
+  // Lock page scroll while a doctor sheet is open (sheet is portaled to body).
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
+
+  // Escape closes the active sheet.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onClose]);
+
   if (!open) return null;
 
-  return (
+  const sheet = (
     <div
       className="tg-vet-sheet-overlay"
       role="presentation"
@@ -172,6 +193,11 @@ export function VetChatDoctorSheets({
       </div>
     </div>
   );
+
+  // Portal above chat stacking contexts (header ⋮ / foot transform / bottom dock)
+  // so sheets never paint under menus. Parent transform on .tg-thread-foot would
+  // otherwise trap position:fixed and clip the overlay to the composer only.
+  return createPortal(sheet, document.body);
 }
 
 function usePatientPets(consult: VetConsultation) {
