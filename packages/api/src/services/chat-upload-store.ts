@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { randomUUID } from 'crypto';
+import sharp from 'sharp';
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 
@@ -85,14 +86,94 @@ export function purgeChatUploadFolder(folderId: string | number): void {
   }
 }
 
+function sniffImageKind(
+  buffer: Buffer,
+  mimeType: string | undefined,
+  fileName: string | undefined
+): boolean {
+  const mime = (mimeType || '').toLowerCase();
+  const name = (fileName || '').toLowerCase();
+  if (mime.startsWith('image/')) return true;
+  if (/\.(jpe?g|png|gif|webp|heic|heif|bmp|tiff?)$/i.test(name)) return true;
+  if (buffer.length >= 8 && buffer[0] === 0x89 && buffer[1] === 0x50 && buffer[2] === 0x4e && buffer[3] === 0x47) {
+    return true;
+  }
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return true;
+  }
+  if (buffer.length >= 12 && buffer.toString('ascii', 4, 8) === 'ftyp') {
+    const brand = buffer.toString('ascii', 8, 12).toLowerCase();
+    if (brand.startsWith('heic') || brand.startsWith('heif') || brand.startsWith('mif1')) return true;
+  }
+  return false;
+}
+
+/**
+ * Normalize chat photos to browser-safe JPEG (fixes iOS 16-bit PNG / HEIC that
+ * upload fine but fail to render in <img> on Safari/Chrome).
+ */
+export async function normalizeChatUploadFile(opts: {
+  buffer: Buffer;
+  mimeType?: string;
+  originalName?: string;
+}): Promise<{ buffer: Buffer; mimeType: string; originalName: string }> {
+  const mime = (opts.mimeType || '').toLowerCase() || 'application/octet-stream';
+  const originalName = opts.originalName || 'file';
+  const nameLower = originalName.toLowerCase();
+
+  if (!sniffImageKind(opts.buffer, mime, originalName)) {
+    return { buffer: opts.buffer, mimeType: mime, originalName };
+  }
+
+  // Preserve animated GIF.
+  if (mime === 'image/gif' || nameLower.endsWith('.gif')) {
+    return {
+      buffer: opts.buffer,
+      mimeType: 'image/gif',
+      originalName: nameLower.endsWith('.gif') ? originalName : `${originalName}.gif`,
+    };
+  }
+
+  try {
+    const out = await sharp(opts.buffer, { failOn: 'none', animated: false })
+      .rotate()
+      .jpeg({ quality: 85, mozjpeg: true })
+      .toBuffer();
+    if (!out.length) throw new Error('EMPTY_JPEG');
+    if (out.length > MAX_UPLOAD_BYTES) throw new Error('FILE_TOO_LARGE');
+    const base = originalName.replace(/\.[^.]+$/, '') || 'photo';
+    return {
+      buffer: out,
+      mimeType: 'image/jpeg',
+      originalName: `${base}.jpg`,
+    };
+  } catch (err) {
+    if (err instanceof Error && err.message === 'FILE_TOO_LARGE') throw err;
+    // Fall back to original bytes (document/other may have been mis-sniffed).
+    console.warn('chat image normalize failed:', (err as Error).message);
+    return {
+      buffer: opts.buffer,
+      mimeType: mime.startsWith('image/') ? mime : 'application/octet-stream',
+      originalName,
+    };
+  }
+}
+
 export function inferMediaKind(
   mimeType: string | undefined,
   fileName: string | undefined
 ): 'photo' | 'video' | 'voice' | 'audio' | 'document' {
   const mime = (mimeType || '').toLowerCase();
   const name = (fileName || '').toLowerCase();
-  if (mime.startsWith('image/')) return 'photo';
-  if (mime.startsWith('video/')) return 'video';
+  if (
+    mime.startsWith('image/') ||
+    /\.(jpe?g|png|gif|webp|heic|heif|bmp|tiff?)$/i.test(name)
+  ) {
+    return 'photo';
+  }
+  if (mime.startsWith('video/') || /\.(mp4|mov|webm|m4v|avi)$/i.test(name)) {
+    return 'video';
+  }
   if (
     mime === 'audio/ogg' ||
     mime === 'audio/opus' ||

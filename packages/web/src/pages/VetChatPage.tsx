@@ -38,6 +38,12 @@ import { SiteLogo } from '../components/SiteLogo';
 import { PetAvatar } from '../components/PetAvatar';
 import { PresenceBadge } from '../components/PresenceBadge';
 import { EmojiPicker } from '../components/EmojiPicker';
+import {
+  CHAT_FILE_ACCEPT,
+  MAX_CHAT_ATTACH_BYTES,
+  isLikelyChatImage,
+  prepareChatUploadFile,
+} from '../lib/chatMediaUpload';
 import { RequestCountdown } from '../components/RequestCountdown';
 import { useAuthStore } from '../hooks/useAuthStore';
 import { useChatSocket, type ChatSocketEvent } from '../hooks/useChatSocket';
@@ -74,7 +80,6 @@ const CHAT_WIPE_HINT =
 
 const FALLBACK_POLL_MS = 45_000;
 const MESSAGE_FALLBACK_POLL_MS = 15_000;
-const MAX_ATTACH_BYTES = 15 * 1024 * 1024;
 const DESKTOP_MQ = '(min-width: 860px)';
 
 type UiMsg = {
@@ -596,7 +601,7 @@ export function VetChatPage() {
   }, [draft, consult?.status, hasThread]);
 
   useEffect(() => {
-    if (!pendingFile || !pendingFile.type.startsWith('image/')) {
+    if (!pendingFile || !isLikelyChatImage(pendingFile)) {
       setPendingPreview(null);
       return;
     }
@@ -728,16 +733,19 @@ export function VetChatPage() {
     });
   }
 
-  function onPickFile(fileList: FileList | null) {
-    const file = fileList?.[0];
-    if (!file) return;
-    if (file.size > MAX_ATTACH_BYTES) {
-      setSendError('حجم فایل بیش از حد مجاز است (حداکثر ۱۵ مگابایت)');
+  async function onPickFile(fileList: FileList | null) {
+    const raw = fileList?.[0];
+    if (!raw) return;
+    try {
+      const file = await prepareChatUploadFile(raw);
+      setSendError(null);
+      setPendingFile(file);
+    } catch (err) {
+      setSendError(err instanceof Error ? err.message : 'انتخاب فایل ناموفق بود');
       clearPendingFile();
-      return;
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-    setSendError(null);
-    setPendingFile(file);
   }
 
   async function sendMessage(e?: FormEvent) {
@@ -748,6 +756,10 @@ export function VetChatPage() {
     const text = draft.trim();
     const file = pendingFile;
     if (!text && !file) return;
+    if (file && file.size > MAX_CHAT_ATTACH_BYTES) {
+      setSendError('حجم فایل بیش از حد مجاز است (حداکثر ۱۵ مگابایت)');
+      return;
+    }
     setSending(true);
     setSendError(null);
     setError(null);
@@ -1489,8 +1501,10 @@ export function VetChatPage() {
                         ref={fileInputRef}
                         type="file"
                         className="tg-file-input"
-                        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.zip,.txt"
-                        onChange={(e) => onPickFile(e.target.files)}
+                        accept={CHAT_FILE_ACCEPT}
+                        onChange={(e) => {
+                          void onPickFile(e.target.files);
+                        }}
                         aria-hidden
                         tabIndex={-1}
                       />

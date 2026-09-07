@@ -15,6 +15,7 @@ import {
   MAX_UPLOAD_BYTES,
   deleteChatUpload,
   inferMediaKind,
+  normalizeChatUploadFile,
   purgeChatUploadFolder,
   resolveStoragePath,
   saveChatUpload,
@@ -341,13 +342,18 @@ playdatesRouter.post('/:id/messages/upload', (req, res) => {
     }
 
     try {
-      const originalName = file.originalname || 'file';
-      const mimeType = file.mimetype || 'application/octet-stream';
+      const normalized = await normalizeChatUploadFile({
+        buffer: file.buffer,
+        mimeType: file.mimetype || 'application/octet-stream',
+        originalName: file.originalname || 'file',
+      });
+      const originalName = normalized.originalName;
+      const mimeType = normalized.mimeType;
       const mediaKind = inferMediaKind(mimeType, originalName);
       const saved = saveChatUpload({
         folderId: playdateId,
         originalName,
-        buffer: file.buffer,
+        buffer: normalized.buffer,
       });
 
       const message = dbService.createPlaydateChatMessage({
