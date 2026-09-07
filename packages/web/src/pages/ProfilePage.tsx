@@ -1,6 +1,21 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, LogOut, MapPin, PawPrint, X } from 'lucide-react';
+import {
+  Ban,
+  Bell,
+  BellOff,
+  ChevronLeft,
+  Eye,
+  Heart,
+  LogOut,
+  MapPin,
+  PawPrint,
+  Pencil,
+  ShieldCheck,
+  Users,
+  Wallet,
+  X,
+} from 'lucide-react';
 import {
   BRAND,
   FACE_VERIFY_REWARD,
@@ -17,6 +32,13 @@ import {
   normalizeRoles,
   parseUserAge,
   primaryRole,
+  profileGenderEmoji,
+  profileLanguageCode,
+  profileLocationStatusLabel,
+  profilePhotoStatusLabel,
+  profileVerifyStatusLabel,
+  toPersianDigits,
+  userCommandId,
   userHasRole,
   type User,
   type UserGender,
@@ -47,7 +69,7 @@ function PawIcon({ size = 16 }: { size?: number }) {
   );
 }
 
-type PanelKind = 'contacts' | 'likes' | 'interactions' | 'blocked' | 'account' | null;
+type PanelKind = 'contacts' | 'likes' | 'interactions' | 'blocked' | 'account' | 'verify' | null;
 
 export function ProfilePage() {
   const navigate = useNavigate();
@@ -130,8 +152,21 @@ export function ProfilePage() {
   const genderLabel = display.gender ? USER_GENDER_LABELS[display.gender] : null;
   const likes = display.likesCount ?? 0;
   const contactsCount = display.contactsCount ?? 0;
+  const views = interactions?.views ?? display.profileViews ?? 0;
+  const coins = display.coins ?? 0;
   const verifyStatus = display.verificationStatus ?? 'none';
   const silentOn = Boolean(display.silentChatRequests);
+  const ageLabel =
+    display.age != null && Number(display.age) > 0 ? toPersianDigits(display.age) : null;
+  const interestsLabel =
+    display.interests && display.interests.length > 0
+      ? display.interests.join(' · ')
+      : 'هنوز انتخاب نشده';
+  const metaBits = [
+    ageLabel ? `${ageLabel} ساله` : null,
+    genderLabel,
+    profileLanguageCode(display),
+  ].filter(Boolean);
 
   function openEdit() {
     setSearchParams({ edit: '1' }, { replace: false });
@@ -232,6 +267,17 @@ export function ProfilePage() {
       `✅ پذیرفته: ${formatFaInt(interactions?.playdatesAccepted ?? 0)}`,
     ]);
   }
+  function openVerify() {
+    setPanel('verify');
+    setPanelLines([
+      faceVerifyButtonLabel(verifyStatus),
+      verifyStatus === 'verified'
+        ? 'پروفایلت احراز شده است.'
+        : verifyStatus === 'pending'
+          ? 'درخواست احراز در صف بررسی است.'
+          : `جایزه تأیید: ${formatFaInt(FACE_VERIFY_REWARD)} سکه — از ربات «احراز چهره» بزن.`,
+    ]);
+  }
   async function toggleSilent() {
     setBusy(true);
     try {
@@ -292,19 +338,35 @@ export function ProfilePage() {
           <div>
             <p className="pepito-eyebrow">{BRAND.displayName}</p>
             <h1>ویرایش پروفایل</h1>
-            <p>عکس، مشخصات و علایق را یک‌جا به‌روز کن.</p>
+            <p>هر بخش را جداگانه پر کن؛ در پایان ذخیره کن.</p>
           </div>
           <button type="button" className="pepito-profile-icon-btn" onClick={closeEdit} aria-label="انصراف">
             <X size={20} strokeWidth={2} />
           </button>
         </header>
         <form className="pepito-profile-edit-form" onSubmit={(e) => void onSave(e)} noValidate>
-          <section className="pepito-profile-edit-avatar-block" aria-label="عکس پروفایل">
-            <ProfileAvatarEditor imageUrl={avatarSrc} name={user.name} size="xl" />
-            <p className="pepito-profile-edit-avatar-hint">برای تغییر عکس، روی آیکون دوربین بزن.</p>
+          <section className="pepito-profile-edit-section pepito-profile-edit-section--photo" aria-label="عکس پروفایل">
+            <div className="pepito-profile-edit-section-head">
+              <span className="pepito-profile-edit-step" aria-hidden>۱</span>
+              <div>
+                <h2 className="pepito-profile-edit-section-title">عکس پروفایل</h2>
+                <p className="pepito-profile-edit-section-desc">چهره یا پت‌ات را واضح نشان بده.</p>
+              </div>
+            </div>
+            <div className="pepito-profile-edit-avatar-block">
+              <ProfileAvatarEditor imageUrl={avatarSrc} name={user.name} size="xl" />
+              <p className="pepito-profile-edit-avatar-hint">برای تغییر عکس، روی آیکون دوربین بزن.</p>
+            </div>
           </section>
+
           <section className="pepito-profile-edit-section" aria-label="مشخصات">
-            <h2 className="pepito-profile-edit-section-title">مشخصات</h2>
+            <div className="pepito-profile-edit-section-head">
+              <span className="pepito-profile-edit-step" aria-hidden>۲</span>
+              <div>
+                <h2 className="pepito-profile-edit-section-title">مشخصات</h2>
+                <p className="pepito-profile-edit-section-desc">نام، سن و جنسیت.</p>
+              </div>
+            </div>
             <div className="pepito-profile-edit-grid">
               <label className="pepito-field">
                 <span>نام نمایشی</span>
@@ -326,8 +388,15 @@ export function ProfilePage() {
               </div>
             </div>
           </section>
+
           <section className="pepito-profile-edit-section" aria-label="موقعیت">
-            <h2 className="pepito-profile-edit-section-title">موقعیت</h2>
+            <div className="pepito-profile-edit-section-head">
+              <span className="pepito-profile-edit-step" aria-hidden>۳</span>
+              <div>
+                <h2 className="pepito-profile-edit-section-title">موقعیت</h2>
+                <p className="pepito-profile-edit-section-desc">کشور، استان و شهر.</p>
+              </div>
+            </div>
             <div className="pepito-profile-edit-grid">
               <div className="pepito-field pepito-field--full">
                 <span>کشور</span>
@@ -361,8 +430,15 @@ export function ProfilePage() {
               </label>
             </div>
           </section>
+
           <section className="pepito-profile-edit-section" aria-label="درباره">
-            <h2 className="pepito-profile-edit-section-title">درباره من</h2>
+            <div className="pepito-profile-edit-section-head">
+              <span className="pepito-profile-edit-step" aria-hidden>۴</span>
+              <div>
+                <h2 className="pepito-profile-edit-section-title">درباره من</h2>
+                <p className="pepito-profile-edit-section-desc">بیو و علایق (تا ۶ مورد).</p>
+              </div>
+            </div>
             <div className="pepito-profile-edit-grid">
               <label className="pepito-field pepito-field--full">
                 <span>بیو</span>
@@ -380,6 +456,7 @@ export function ProfilePage() {
               </div>
             </div>
           </section>
+
           {error ? <p className="pepito-profile-error">{error}</p> : null}
           <div className="pepito-profile-edit-actions">
             <button type="submit" className="pepito-btn button-1" disabled={busy}>
@@ -398,7 +475,8 @@ export function ProfilePage() {
       : panel === 'likes' ? 'لایک‌ها'
         : panel === 'interactions' ? 'تعاملات'
           : panel === 'blocked' ? 'بلاک‌شده‌ها'
-            : panel === 'account' ? 'حذف / غیرفعال‌سازی' : '';
+            : panel === 'account' ? 'حذف / غیرفعال‌سازی'
+              : panel === 'verify' ? 'احراز چهره' : '';
 
   return (
     <div className="pepito-profile">
@@ -409,86 +487,216 @@ export function ProfilePage() {
             <span className="pepito-kicker-dot" aria-hidden><PawPrint size={16} /></span>
             {BRAND.displayName}
           </p>
-          <p className="pepito-home-brand pepito-profile-brand-sub">{BRAND.taglineFa}</p>
           <div className="pepito-profile-identity">
             <ProfileAvatarEditor imageUrl={avatarSrc} name={display.name} size="xl" />
             <div className="pepito-profile-identity-text">
-              <h1>{display.name || 'پروفایل من'}</h1>
+              <h1>
+                <span className="pepito-profile-name-emoji" aria-hidden>{profileGenderEmoji(display.gender)}</span>
+                {display.name || 'پروفایل من'}
+              </h1>
+              {metaBits.length ? (
+                <p className="pepito-profile-meta">{metaBits.join(' · ')}</p>
+              ) : null}
               <p className="pepito-profile-loc"><MapPin size={15} strokeWidth={2} aria-hidden />{locationLabel}</p>
               {mainRole ? (
                 <p className="pepito-profile-active-chip"><span>نقش فعال</span>{USER_ROLE_LABELS[mainRole]}</p>
               ) : null}
             </div>
           </div>
+
+          <div className="pepito-profile-hero-foot">
+            <div className="pepito-profile-completion" aria-label={cardLines.completion}>
+              <div className="pepito-profile-completion-top">
+                <span>تکمیل پروفایل</span>
+                <strong>{toPersianDigits(completion.percent)}٪</strong>
+              </div>
+              <span className="pepito-profile-completion-bar" aria-hidden>
+                <span style={{ width: `${completion.percent}%` }} />
+              </span>
+            </div>
+            <div className="pepito-profile-hero-cta">
+              <button type="button" className="pepito-btn button-1 pepito-profile-hero-edit" onClick={openEdit}>
+                <Pencil size={16} strokeWidth={2.25} aria-hidden />
+                ویرایش
+              </button>
+              {needsWizard ? (
+                <Link to="/onboarding/profile" className="pepito-btn pepito-btn--ghost pepito-profile-hero-complete">
+                  تکمیل پروفایل
+                </Link>
+              ) : null}
+            </div>
+          </div>
         </div>
       </section>
 
-      <section className="pepito-profile-block pepito-profile-card-block" aria-label="کارت پروفایل">
-        <ul className="pepito-profile-card-lines">
-          <li>{cardLines.likes}</li>
-          <li>
-            {cardLines.completion}
-            <span className="pepito-profile-completion-bar" aria-hidden><span style={{ width: `${completion.percent}%` }} /></span>
-          </li>
-          <li><code dir="ltr">{cardLines.userId}</code></li>
-          <li>{cardLines.identity}</li>
-          <li>{cardLines.location}</li>
-          <li>{cardLines.purpose}</li>
-          <li>{cardLines.interests}</li>
-          <li>{cardLines.walletViews}</li>
-          <li>{cardLines.contacts}</li>
-          <li>{cardLines.photo}</li>
-          <li>{cardLines.verification}</li>
-          <li>{cardLines.locationStatus}</li>
-        </ul>
-        {display.isActive === false ? <p className="pepito-profile-inactive-note">⏸ حساب فعلاً غیرفعال است</p> : null}
+      <section className="pepito-profile-block pepito-profile-stats" aria-label="آمار پروفایل">
+        <button type="button" className="pepito-profile-stat" onClick={openLikes}>
+          <Heart size={18} strokeWidth={2} aria-hidden />
+          <strong>{formatFaInt(likes)}</strong>
+          <span>لایک</span>
+        </button>
+        <button type="button" className="pepito-profile-stat" onClick={openInteractions}>
+          <Eye size={18} strokeWidth={2} aria-hidden />
+          <strong>{formatFaInt(views)}</strong>
+          <span>بازدید</span>
+        </button>
+        <div className="pepito-profile-stat" role="group" aria-label={cardLines.walletViews}>
+          <Wallet size={18} strokeWidth={2} aria-hidden />
+          <strong>{formatFaInt(coins)}</strong>
+          <span>سکه</span>
+        </div>
+        <button type="button" className="pepito-profile-stat" onClick={() => void openContacts()}>
+          <Users size={18} strokeWidth={2} aria-hidden />
+          <strong>{contactsCount > 0 ? formatFaInt(contactsCount) : '−'}</strong>
+          <span>مخاطب</span>
+        </button>
+      </section>
+
+      {display.isActive === false ? (
+        <p className="pepito-profile-inactive-banner" role="status">⏸ حساب فعلاً غیرفعال است</p>
+      ) : null}
+
+      <section className="pepito-profile-block pepito-profile-overview" aria-label="کارت پروفایل">
+        <header className="pepito-home-section-head">
+          <p className="pepito-eyebrow">کارت پروفایل</p>
+          <h2>خلاصه وضعیت</h2>
+          <p>همان اطلاعات ربات، با نمایش خواناتر.</p>
+        </header>
+        <dl className="pepito-profile-overview-list">
+          <div>
+            <dt>آیدی</dt>
+            <dd><code dir="ltr">{userCommandId(display)}</code></dd>
+          </div>
+          <div>
+            <dt>هویت</dt>
+            <dd>{cardLines.identity}</dd>
+          </div>
+          <div>
+            <dt>موقعیت</dt>
+            <dd>{cardLines.location}</dd>
+          </div>
+          <div>
+            <dt>هدف / نقش</dt>
+            <dd>{cardLines.purpose}</dd>
+          </div>
+          <div>
+            <dt>علاقه‌مندی‌ها</dt>
+            <dd>{interestsLabel}</dd>
+          </div>
+          <div>
+            <dt>عکس</dt>
+            <dd>{profilePhotoStatusLabel(display)}</dd>
+          </div>
+          <div>
+            <dt>احراز</dt>
+            <dd>
+              <span className={`pepito-profile-badge${verifyStatus === 'verified' ? ' is-ok' : verifyStatus === 'pending' ? ' is-warn' : ''}`}>
+                {profileVerifyStatusLabel(verifyStatus)}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt>وضعیت موقعیت</dt>
+            <dd>{profileLocationStatusLabel(display)}</dd>
+          </div>
+          <div className="pepito-profile-overview-likes">
+            <dt>لایک‌ها</dt>
+            <dd>{cardLines.likes}</dd>
+          </div>
+          <div>
+            <dt>کیف پول و بازدید</dt>
+            <dd>{cardLines.walletViews}</dd>
+          </div>
+          <div>
+            <dt>مخاطبین</dt>
+            <dd>{cardLines.contacts}</dd>
+          </div>
+          <div>
+            <dt>تکمیل</dt>
+            <dd>
+              {cardLines.completion}
+              <span className="pepito-profile-completion-bar pepito-profile-completion-bar--soft" aria-hidden>
+                <span style={{ width: `${completion.percent}%` }} />
+              </span>
+            </dd>
+          </div>
+        </dl>
       </section>
 
       <section className="pepito-profile-block" aria-label="اقدامات پروفایل">
-        <div className="pepito-profile-actions">
-          <button type="button" className="pepito-profile-action" onClick={openLikes}>❤️ {formatFaInt(likes)}</button>
-          <button type="button" className="pepito-profile-action" onClick={() => void openContacts()}>
-            👥 مخاطبین ({contactsCount > 0 ? formatFaInt(contactsCount) : '−'})
-          </button>
-          <button type="button" className="pepito-profile-action" onClick={openEdit}>📝 ویرایش پروفایل</button>
-          {needsWizard ? (
-            <Link to="/onboarding/profile" className="pepito-profile-action pepito-profile-action--ok">📋 تکمیل پروفایل</Link>
-          ) : (
-            <button type="button" className="pepito-profile-action" onClick={openEdit}>📋 تکمیل پروفایل</button>
-          )}
-          <button type="button" className="pepito-profile-action" onClick={openInteractions}>🔄 تعاملات</button>
-          <button
-            type="button"
-            className={`pepito-profile-action${verifyStatus === 'none' || verifyStatus === 'rejected' ? ' pepito-profile-action--ok' : ''}`}
-            onClick={() => {
-              setPanel('likes');
-              setPanelLines([
-                faceVerifyButtonLabel(verifyStatus),
-                verifyStatus === 'verified' ? 'پروفایلت احراز شده است.' : verifyStatus === 'pending' ? 'درخواست احراز در صف بررسی است.' : `جایزه تأیید: ${formatFaInt(FACE_VERIFY_REWARD)} سکه — از ربات «احراز چهره» بزن.`,
-              ]);
-            }}
-          >
-            {faceVerifyButtonLabel(verifyStatus)}
-          </button>
-          <button type="button" className="pepito-profile-action pepito-profile-action--wide pepito-profile-action--danger" onClick={() => void openBlocked()}>
-            🚫 بلاک‌شده‌ها
-          </button>
-          <button type="button" className="pepito-profile-action pepito-profile-action--wide" onClick={() => void toggleSilent()} disabled={busy}>
-            {silentOn ? '🔔 سایلنت خاموش (روشن است)' : '🔇 سایلنت درخواست چت'}
-          </button>
-          <button type="button" className="pepito-profile-action pepito-profile-action--wide pepito-profile-action--danger" onClick={() => setPanel('account')}>
-            🔴 حذف / غیرفعال‌سازی حساب
-          </button>
+        <header className="pepito-home-section-head">
+          <p className="pepito-eyebrow">اقدامات</p>
+          <h2>مدیریت پروفایل</h2>
+          <p>ویرایش، تعامل، احراز و تنظیمات حریم.</p>
+        </header>
+
+        <div className="pepito-profile-action-groups">
+          <div className="pepito-profile-action-group" aria-label="اصلی">
+            <button type="button" className="pepito-profile-action pepito-profile-action--primary" onClick={openEdit}>
+              <Pencil size={18} aria-hidden />
+              ویرایش پروفایل
+            </button>
+            {needsWizard ? (
+              <Link to="/onboarding/profile" className="pepito-profile-action pepito-profile-action--ok">
+                تکمیل پروفایل
+              </Link>
+            ) : (
+              <button type="button" className="pepito-profile-action" onClick={openEdit}>
+                تکمیل پروفایل
+              </button>
+            )}
+            <button type="button" className="pepito-profile-action" onClick={openInteractions}>
+              تعاملات
+            </button>
+            <button
+              type="button"
+              className={`pepito-profile-action${verifyStatus === 'none' || verifyStatus === 'rejected' ? ' pepito-profile-action--ok' : ''}`}
+              onClick={openVerify}
+            >
+              <ShieldCheck size={18} aria-hidden />
+              {faceVerifyButtonLabel(verifyStatus)}
+            </button>
+          </div>
+
+          <div className="pepito-profile-action-group pepito-profile-action-group--social" aria-label="اجتماعی">
+            <button type="button" className="pepito-profile-action pepito-profile-action--soft" onClick={openLikes}>
+              <Heart size={18} aria-hidden />
+              لایک‌ها ({formatFaInt(likes)})
+            </button>
+            <button type="button" className="pepito-profile-action pepito-profile-action--soft" onClick={() => void openContacts()}>
+              <Users size={18} aria-hidden />
+              مخاطبین ({contactsCount > 0 ? formatFaInt(contactsCount) : '−'})
+            </button>
+          </div>
+
+          <div className="pepito-profile-action-group pepito-profile-action-group--prefs" aria-label="حریم و حساب">
+            <button type="button" className="pepito-profile-action pepito-profile-action--wide pepito-profile-action--soft" onClick={() => void toggleSilent()} disabled={busy}>
+              {silentOn ? <Bell size={18} aria-hidden /> : <BellOff size={18} aria-hidden />}
+              {silentOn ? 'سایلنت خاموش (الان روشن است)' : 'سایلنت درخواست چت'}
+            </button>
+            <button type="button" className="pepito-profile-action pepito-profile-action--wide pepito-profile-action--warn" onClick={() => void openBlocked()}>
+              <Ban size={18} aria-hidden />
+              بلاک‌شده‌ها
+            </button>
+            <button type="button" className="pepito-profile-action pepito-profile-action--wide pepito-profile-action--danger" onClick={() => setPanel('account')}>
+              حذف / غیرفعال‌سازی حساب
+            </button>
+          </div>
         </div>
       </section>
 
       {panel ? (
         <section className="pepito-profile-block pepito-profile-panel" aria-label={panelTitle}>
-          <header className="pepito-home-section-head">
-            <p className="pepito-eyebrow">جزئیات</p>
-            <h2>{panelTitle}</h2>
+          <header className="pepito-profile-panel-head">
+            <div>
+              <p className="pepito-eyebrow">جزئیات</p>
+              <h2>{panelTitle}</h2>
+            </div>
+            <button type="button" className="pepito-profile-icon-btn" onClick={() => setPanel(null)} aria-label="بستن">
+              <X size={18} />
+            </button>
           </header>
-          {panelBusy ? <p>در حال بارگذاری…</p> : null}
+          {panelBusy ? <p className="pepito-profile-panel-loading">در حال بارگذاری…</p> : null}
           {panel === 'account' ? (
             <div className="pepito-profile-account-actions">
               {display.isActive !== false ? (
@@ -497,13 +705,9 @@ export function ProfilePage() {
                 <button type="button" className="pepito-btn button-1" disabled={busy} onClick={() => void activateAccount()}>▶️ فعال‌سازی</button>
               )}
               <button type="button" className="pepito-btn pepito-profile-action--danger-solid" disabled={busy} onClick={() => void deleteAccount()}>🗑 حذف حساب</button>
-              <button type="button" className="pepito-btn pepito-btn--ghost" onClick={() => setPanel(null)}>بستن</button>
             </div>
           ) : (
-            <>
-              <ul className="pepito-profile-panel-list">{panelLines.map((line) => <li key={line}>{line}</li>)}</ul>
-              <button type="button" className="pepito-btn pepito-btn--ghost" onClick={() => setPanel(null)}>بستن</button>
-            </>
+            <ul className="pepito-profile-panel-list">{panelLines.map((line) => <li key={line}>{line}</li>)}</ul>
           )}
         </section>
       ) : null}
@@ -524,7 +728,7 @@ export function ProfilePage() {
           <p>سن، جنسیت، وضعیت و چند خط از تو.</p>
         </header>
         <dl className="pepito-profile-facts">
-          {display.age ? <div><dt>سن</dt><dd>{display.age}</dd></div> : null}
+          {display.age ? <div><dt>سن</dt><dd>{toPersianDigits(display.age)}</dd></div> : null}
           {genderLabel ? <div><dt>جنسیت</dt><dd>{genderLabel}</dd></div> : null}
           <div>
             <dt>وضعیت</dt>
