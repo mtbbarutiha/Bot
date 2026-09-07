@@ -5,7 +5,7 @@ import { SITE_NAV_DESKTOP_GUEST, siteNavDesktopForUser } from '../lib/siteNav';
 
 /**
  * Desktop primary actions (≥860px) — follow active primary role.
- * Owner: شاپ / هم بازی
+ * Owner: شاپ / هم بازی (پت‌های من is in LandingChrome app nav)
  * Vet: شاپ / پنل پزشک / گفتگو
  * Wallet chip + circular profile avatar live in NavUserCluster.
  */

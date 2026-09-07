@@ -3,6 +3,7 @@ import {
   LogIn,
   MessagesSquare,
   HeartHandshake,
+  PawPrint,
   ShoppingBag,
   Stethoscope,
   UserRound,
@@ -41,6 +42,18 @@ const PLAYMATE_CHATS: SiteNavItem = {
   to: '/chats',
   icon: HeartHandshake,
   match: (p) => p === '/chats' || p.startsWith('/chats/') || p.startsWith('/vet-chats'),
+};
+
+const MY_PETS: SiteNavItem = {
+  key: 'my_pets',
+  label: 'پت‌های من',
+  to: '/my-pets',
+  icon: PawPrint,
+  match: (p) =>
+    p === '/my-pets' ||
+    p.startsWith('/my-pets/') ||
+    p === '/add-pet' ||
+    (p.startsWith('/pets/') && p.endsWith('/edit')),
 };
 
 const CHATS: SiteNavItem = {
@@ -90,23 +103,33 @@ const LOGIN: SiteNavItem = {
 export const SITE_NAV_GUEST: SiteNavItem[] = [
   SHOP,
   { ...PLAYMATE_CHATS, gate: true },
+  { ...MY_PETS, gate: true },
   LOGIN,
 ];
 
 /**
  * Logged-in owner set (legacy default). Prefer `siteNavMobileForUser`.
- * Owner: شاپ / هم بازی / کیف پول / پروفایل
+ * Owner: شاپ / هم بازی / پت‌های من / کیف پول / پروفایل
  */
-export const SITE_NAV_AUTH: SiteNavItem[] = [SHOP_AUTH, PLAYMATE_CHATS, WALLET, PROFILE];
+export const SITE_NAV_AUTH: SiteNavItem[] = [
+  SHOP_AUTH,
+  PLAYMATE_CHATS,
+  MY_PETS,
+  WALLET,
+  PROFILE,
+];
 
 /**
  * Desktop header shortcuts — avoid duplicating left-cluster tools.
  * Guest: cart lives in NavUserCluster; Auth: wallet chip + circular avatar cover wallet/profile.
+ * my_pets stays mobile-dock only (desktop app nav already links پت‌های من).
  */
-export const SITE_NAV_DESKTOP_GUEST: SiteNavItem[] = SITE_NAV_GUEST;
+export const SITE_NAV_DESKTOP_GUEST: SiteNavItem[] = SITE_NAV_GUEST.filter(
+  (item) => item.key !== 'my_pets',
+);
 
 export const SITE_NAV_DESKTOP_AUTH: SiteNavItem[] = SITE_NAV_AUTH.filter(
-  (item) => item.key !== 'wallet' && item.key !== 'profile',
+  (item) => item.key !== 'wallet' && item.key !== 'profile' && item.key !== 'my_pets',
 );
 
 /** Mobile dock items for the active primary role. */
@@ -116,24 +139,24 @@ export function siteNavMobileForRole(role?: UserRole | null): SiteNavItem[] {
       // دامپزشک: بدون همبازی — پنل پزشک + گفتگو
       return [SHOP_AUTH, VET_PANEL, CHATS, WALLET, PROFILE];
     case 'pet_owner':
-      // صاحب پت: یک مقصد «هم بازی» (= /chats با پیدا کردن همبازی داخلش)
-      return [SHOP_AUTH, PLAYMATE_CHATS, WALLET, PROFILE];
+      // صاحب پت: هم بازی + پت‌های من کنار هم (= /chats و /my-pets)
+      return [SHOP_AUTH, PLAYMATE_CHATS, MY_PETS, WALLET, PROFILE];
     case 'trainer':
     case 'pet_sitter':
     case 'pet_seeker':
     case 'community_seeker':
     case 'no_pet':
-      // بدون همبازی — فقط مقصدهای عمومی
-      return [SHOP_AUTH, CHATS, WALLET, PROFILE];
+      // بدون همبازی — گفتگو + پت‌های من
+      return [SHOP_AUTH, CHATS, MY_PETS, WALLET, PROFILE];
     default:
-      return [SHOP_AUTH, CHATS, WALLET, PROFILE];
+      return [SHOP_AUTH, CHATS, MY_PETS, WALLET, PROFILE];
   }
 }
 
-/** Desktop header items for the active primary role (no wallet/profile — in cluster). */
+/** Desktop header items (no wallet/profile/my_pets — cluster + chrome cover those). */
 export function siteNavDesktopForRole(role?: UserRole | null): SiteNavItem[] {
   return siteNavMobileForRole(role).filter(
-    (item) => item.key !== 'wallet' && item.key !== 'profile',
+    (item) => item.key !== 'wallet' && item.key !== 'profile' && item.key !== 'my_pets',
   );
 }
 
