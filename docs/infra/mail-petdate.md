@@ -4,6 +4,8 @@ Mailbox هدف: **`info@petdate.ir`** (آلیاس‌ها: `hello@` / `no-reply@`
 
 ارسال OTP اپ از **`no-reply@petdate.ir`** (هویت From + Return-Path؛ mailbox جدا لازم نیست).
 
+نام نمایشی From: **`پت‌دیت`** (فارسی — نه `PetDate`، تا جیمیل «Translate to English» نزند). لوگو داخل ایمیل به‌صورت **CID/پیوست inline** است (نه لینک ریموت)، تا در اینباکس دیده شود.
+
 VPS مبدأ: `185.110.189.218` — هاست میل: `mail.petdate.ir`
 
 ---

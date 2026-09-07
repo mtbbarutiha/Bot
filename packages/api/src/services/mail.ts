@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { dbService } from '../db';
+import { OTP_EMAIL_LOGO_CID, readEmailLogoBuffer } from './otp-email-html';
 
 function smtpHost(): string {
   return String(process.env.SMTP_HOST ?? '').trim();
@@ -19,7 +20,8 @@ function smtpAuth(): { user: string; pass: string } {
 function smtpFrom(): { addr: string; name: string } {
   const { user } = smtpAuth();
   const addr = String(process.env.SMTP_FROM ?? '').trim() || user || 'no-reply@petdate.ir';
-  const name = String(process.env.SMTP_FROM_NAME ?? '').trim() || 'PetDate';
+  // Persian display name — English "PetDate" triggers Gmail translate-to-English.
+  const name = String(process.env.SMTP_FROM_NAME ?? '').trim() || 'پت‌دیت';
   return { addr, name };
 }
 
@@ -151,6 +153,18 @@ export async function sendMail(opts: {
     const messageId = `<${Date.now().toString(36)}.${Math.random().toString(36).slice(2, 12)}@${fromDomain}>`;
     const isTransactional =
       purpose === 'login_otp' || purpose.endsWith('_otp') || purpose === 'admin_test';
+    const logoBuf = html.includes(`cid:${OTP_EMAIL_LOGO_CID}`) ? readEmailLogoBuffer() : null;
+    const attachments = logoBuf
+      ? [
+          {
+            filename: 'petdate-logo.png',
+            content: logoBuf,
+            cid: OTP_EMAIL_LOGO_CID,
+            contentType: 'image/png',
+            contentDisposition: 'inline' as const,
+          },
+        ]
+      : undefined;
 
     await transporter.sendMail({
       from: `"${fromName.replace(/"/g, '')}" <${fromAddr}>`,
@@ -161,9 +175,13 @@ export async function sendMail(opts: {
       subject: opts.subject,
       text: opts.text,
       html,
+      encoding: 'utf-8',
       messageId,
+      attachments,
       headers: {
         'MIME-Version': '1.0',
+        'Content-Language': 'fa',
+        'X-Language': 'fa',
         ...(isTransactional
           ? {
               'Auto-Submitted': 'auto-generated',
