@@ -1,7 +1,7 @@
 import { Bot } from 'grammy';
 import dns from 'dns';
 import { applyBotBranding } from './branding';
-import { assertBotToken, config } from './config';
+import { assertAdminPasswordConfigured, assertBotToken, config } from './config';
 import { requiredChannels } from './force-join';
 import { registerHandlers } from './handlers';
 import { reportBotError } from './report-error';
@@ -57,6 +57,7 @@ async function warnForceJoinAdminRights(bot: Bot): Promise<void> {
 }
 
 async function main(): Promise<void> {
+  assertAdminPasswordConfigured();
   const token = assertBotToken();
   await connectRedis();
 
