@@ -2,6 +2,8 @@ import { Router } from 'express';
 import type { OnboardingStatus, UserRole } from '@petdate/shared';
 import { FACE_VERIFY_REWARD, ONBOARDING_STATUS_LABELS, USER_ROLES } from '@petdate/shared';
 import { dbService } from '../db';
+import { isInternalRequest } from '../middleware/internal-auth';
+import { toPublicProviders } from '../serializers/public-user';
 import { sendPhoneOtp, verifyPhoneOtp } from '../services/phone-otp';
 import { sendVetEnabledSms } from '../services/vet-status-sms';
 
@@ -330,12 +332,14 @@ usersRouter.post('/:id/verification/approve', (req, res) => {
 
 /** دامپزشک‌های واجد شرایط اتصال سریع (نقش vet + آنلاین؛ ترجیح phoneVerified) */
 usersRouter.get('/vets/verified', (_req, res) => {
-  res.json(dbService.listVerifiedVets());
+  res.json(toPublicProviders(dbService.listVerifiedVets()));
 });
 
 /** لیست همه دامپزشک‌ها برای پنل ادمین (فعال و غیرفعال) */
-usersRouter.get('/vets', (_req, res) => {
-  res.json(dbService.listAllVets());
+usersRouter.get('/vets', (req, res) => {
+  const vets = dbService.listAllVets();
+  // رکورد کامل شامل phone است؛ فقط برای فراخوان داخلی ربات/پنل.
+  res.json(isInternalRequest(req) ? vets : toPublicProviders(vets));
 });
 
 /** فعال/غیرفعال کردن دامپزشک توسط ادمین + پیامک اطلاع‌رسانی */

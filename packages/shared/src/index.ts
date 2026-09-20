@@ -204,6 +204,27 @@ export interface User {
   createdAt: string;
 }
 
+/**
+ * کارت عمومی ارائه‌دهنده برای فهرست‌های بدون احراز هویت (دامپزشک/مربی).
+ * عمداً زیرمجموعه‌ای از `User` است: بدون phone، telegramId، کیف پول،
+ * ایمیل/تلفن تأییدشده و شناسه فایل مدارک.
+ */
+export interface PublicProvider {
+  id: number;
+  publicId?: string;
+  name: string;
+  avatarUrl?: string;
+  city?: string;
+  province?: string;
+  bio?: string;
+  roles: UserRole[];
+  vetOnline?: boolean;
+  vetEnabled?: boolean;
+  vetCredentialStatus?: VetCredentialStatus;
+  avgRating?: number;
+  ratingCount?: number;
+}
+
 /** امتیاز صاحب‌پت به دامپزشک پس از مشاوره */
 export interface VetRating {
   id: number;
