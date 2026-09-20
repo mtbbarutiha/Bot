@@ -12,6 +12,7 @@ import {
   hasS3Config,
   infra,
 } from './config/infra';
+import { TRUSTED_PROXY_HOPS } from './middleware/client-ip';
 import { catalogRouter } from './routes/catalog';
 import {
   consultationsRouter,
@@ -51,8 +52,8 @@ installProcessErrorLogging('api');
 const app = express();
 const PORT = Number(process.env.PORT) || 3001;
 
-/** Behind nginx / CDN — trust X-Forwarded-* for correct client IP (rate limits). */
-app.set('trust proxy', 1);
+/** Behind nginx / CDN — trust exactly the proxies we run, never the caller's header. */
+app.set('trust proxy', TRUSTED_PROXY_HOPS);
 
 const corsOrigins = [
   process.env.WEB_URL,

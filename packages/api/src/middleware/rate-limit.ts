@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { getClientIp } from './client-ip';
 
 type Bucket = { count: number; resetAt: number };
 
@@ -15,13 +16,7 @@ export function rateLimit(opts: {
   const message = opts.message ?? 'تعداد درخواست‌ها زیاد است. کمی بعد دوباره تلاش کن.';
 
   return (req: Request, res: Response, next: NextFunction): void => {
-    const ip =
-      (typeof req.headers['x-forwarded-for'] === 'string'
-        ? req.headers['x-forwarded-for'].split(',')[0]?.trim()
-        : '') ||
-      req.ip ||
-      req.socket.remoteAddress ||
-      'unknown';
+    const ip = getClientIp(req);
     const extra = opts.keyFn?.(req) ?? '';
     const key = `${req.method}:${req.path}:${ip}:${extra}`;
     const now = Date.now();
