@@ -13,6 +13,8 @@
 #   SKIP_PREDEPLOY=1 — skip integrity check (not recommended)
 #   RSYNC_DELETE=1 — use --delete only inside the scoped destination
 #                    (default: on for scope=all, off for package scopes)
+#   SKIP_DELETE_GUARD=1 — skip the rsync --delete dry-run guard (never do this)
+#   ACK_RSYNC_DELETIONS=1 — guard reports the deletions but lets them proceed
 #
 # IMPORTANT:
 # - Feature branches must not deploy. See docs/DEPLOY.md.
@@ -21,6 +23,10 @@
 # - Controlled path: GitHub Actions deploy.yml → this script with scope=all.
 #
 # Predeploy guard: scripts/predeploy-check.sh unless SKIP_PREDEPLOY=1.
+# Delete guard: every rsync that carries --delete is dry-run first by
+# scripts/rsync-delete-guard.sh, which aborts the deploy if --delete would
+# remove a remote path that is not present in git. Excludes live in
+# scripts/deploy-excludes.sh so the guard and the real sync cannot drift.
 
 set -euo pipefail
 
@@ -77,25 +83,32 @@ else
   "$ROOT/scripts/predeploy-check.sh"
 fi
 
-COMMON_EXCLUDES=(
-  --exclude node_modules
-  --exclude .git
-  --exclude .env
-  --exclude '.env.*'
-  --exclude 'packages/*/dist'
-  --exclude 'packages/api/data/*.db*'
-  --exclude 'packages/api/data/chat-uploads'
-  --exclude 'packages/api/data/pet-photos'
-  --exclude 'packages/api/data/user-avatars'
-  --exclude 'packages/api/data/prescriptions'
-  --exclude 'packages/bot/data/sessions.json'
-)
+# Exclude list lives in its own file so scripts/rsync-delete-guard.sh runs its
+# dry run with exactly the excludes this deploy will use.
+# shellcheck source=scripts/deploy-excludes.sh
+source "$ROOT/scripts/deploy-excludes.sh"
+
+# Any rsync that carries --delete gets a dry run first: the guard fails the
+# deploy when --delete would remove a remote path that is not in git.
+delete_guard() {
+  local src="$1" dest="$2"
+  if [[ "${SKIP_DELETE_GUARD:-}" == "1" ]]; then
+    echo "WARNING: SKIP_DELETE_GUARD=1 — not checking what --delete would remove"
+    return 0
+  fi
+  if [[ "${RSYNC_DELETE_GUARD_DONE:-}" == "1" ]]; then
+    echo "==> rsync --delete guard already run for this deploy — skipping"
+    return 0
+  fi
+  "$ROOT/scripts/rsync-delete-guard.sh" "$src" "$dest"
+}
 
 rsync_pkg() {
   local src="$1" dest="$2" use_delete="${3:-0}"
   local -a args=(-az)
   if [[ "$use_delete" == "1" ]]; then
     args+=(--delete)
+    delete_guard "$src" "$TARGET:$dest"
   fi
   # Package-scoped sync: never pass the repo root as dest with --delete.
   echo "==> rsync ${src} → ${TARGET}:${dest}  (delete=${use_delete})"
@@ -114,6 +127,7 @@ case "$DEPLOY_SCOPE" in
     rsync_args=(-az)
     if [[ "$RSYNC_DELETE" == "1" ]]; then
       rsync_args+=(--delete)
+      delete_guard "$ROOT/" "$TARGET:$REMOTE_DIR/"
     fi
     rsync "${rsync_args[@]}" "${COMMON_EXCLUDES[@]}" \
       "$ROOT/" "$TARGET:$REMOTE_DIR/"

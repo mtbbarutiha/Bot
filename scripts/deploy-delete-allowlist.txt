@@ -1,0 +1,23 @@
+# Paths scripts/rsync-delete-guard.sh may delete from the VPS without failing
+# the deploy. One glob per line (bash pattern, matched against the remote path
+# rsync reports, relative to the sync destination). `#` starts a comment.
+#
+# Keep this list short. Adding an entry means "it is fine for a deploy to
+# destroy this on the server". Anything that holds content — source, uploads,
+# generated media — belongs in git or in COMMON_EXCLUDES
+# (scripts/deploy-excludes.sh), not here.
+#
+# When a commit intentionally removes a file that is already on the VPS, add
+# the path here in that same commit and drop it again afterwards.
+
+# Patterns are matched with bash `==`, where `*` also matches `/`, so a single
+# `*.foo` entry covers the path at any depth.
+
+# Editor and OS droppings that occasionally land on the server.
+.DS_Store
+*/.DS_Store
+*.swp
+*~
+
+# Stale TypeScript incremental build metadata.
+*.tsbuildinfo
