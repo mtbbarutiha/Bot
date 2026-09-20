@@ -148,6 +148,24 @@ jobs:
           } > ~/.ssh/config
           chmod 600 ~/.ssh/config
 
+      # Fails the job before anything is written to the VPS if `--delete`
+      # would remove a remote path that is not in this checkout. See the
+      # 2026-09-20 17:23 UTC incident: a full-scope deploy wiped every
+      # live-only file under packages/api/src/ and packages/web/public/.
+      - name: Pre-deploy rsync --delete guard (dry run)
+        env:
+          VPS_PATH_SECRET: ${{ secrets.VPS_PATH }}
+          DEPLOY_SCOPE: ${{ needs.guard.outputs.scope }}
+        run: |
+          set -euo pipefail
+          if [[ "$DEPLOY_SCOPE" != "all" ]]; then
+            echo "Package scopes never sync with parent-level --delete — nothing to guard."
+            exit 0
+          fi
+          REMOTE_DIR="${VPS_PATH_SECRET:-/opt/petdate}"
+          ./scripts/rsync-delete-guard.sh "./" "petdate-vps:$REMOTE_DIR/"
+          echo "RSYNC_DELETE_GUARD_DONE=1" >> "$GITHUB_ENV"
+
       - name: Deploy consistent tree to VPS
         env:
           VPS_PATH_SECRET: ${{ secrets.VPS_PATH }}

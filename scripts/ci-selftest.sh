@@ -25,4 +25,8 @@ run src/services/telegram-profile-sync.selftest.ts
 # SQLite cascade (uses temp/local DB via API helpers — not production path)
 run src/services/user-delete-cascade.selftest.ts
 
+# Deploy safety: the rsync --delete guard (local dirs only, no VPS)
+echo "==> selftest: scripts/rsync-delete-guard.selftest.sh"
+bash "$ROOT/scripts/rsync-delete-guard.selftest.sh"
+
 echo "ci-selftest: all passed"
