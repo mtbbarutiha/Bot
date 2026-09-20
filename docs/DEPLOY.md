@@ -39,6 +39,40 @@ Also create Environment **production** (Settings → Environments) and optionall
 - **web-cta-once-v2** — CTA at most once per chat+user (api + bot markers checked in predeploy).
 - **Transactions / wallet** — api route markers must remain (predeploy greps).
 
+## The `--delete` guard
+
+A full-scope deploy syncs the repo root with `rsync -az --delete`. Anything on the
+VPS that is not in git and not excluded is deleted. On **2026-09-20 17:23 UTC** that
+removed the `magazine`, `hero` and `pet-lover-reviews` routers, the `pd-seo`
+prerender shell and 26 review photos, because `COMMON_EXCLUDES` covered `.env`,
+`node_modules`, `packages/*/dist` and the DB but not `packages/api/src/` or
+`packages/web/public/`.
+
+`scripts/rsync-delete-guard.sh` now runs the same rsync with `--dry-run` before
+anything is written, and **fails the deploy** if `--delete` would remove a remote
+path that is not present in git. It runs as its own step in `deploy.yml` and again
+from `deploy-vps.sh` for break-glass manual deploys.
+
+When it fails, pick one:
+
+1. Copy the live-only files off the VPS and **commit them** — best outcome, the
+   deploy then ships them instead of deleting them.
+2. If the path is runtime state the server owns (uploads, generated data), add it
+   to `COMMON_EXCLUDES` in `scripts/deploy-excludes.sh`. Excluded paths are
+   protected from `--delete`.
+3. If the removal is intended, add the path to `scripts/deploy-delete-allowlist.txt`
+   in the same commit.
+
+Overrides — `ACK_RSYNC_DELETIONS=1` (report, then delete anyway) and
+`SKIP_DELETE_GUARD=1` (do not check at all) — are for a human at a terminal who has
+read the report. CI must never set them.
+
+Excludes live in `scripts/deploy-excludes.sh`, sourced by both the guard and the
+real sync, so a dry run can never test a different exclude set than the deploy.
+Note that an exclude is path-exact: `packages/api/data/*.db*` protects the DB but
+would **not** protect a new `packages/api/data/review-photos/`. The whole
+`packages/api/data` tree is excluded for that reason.
+
 ## Root cause (ad-hoc rsync)
 
 Several Cloud Agents each ran something like:
