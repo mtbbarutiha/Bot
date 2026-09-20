@@ -59,8 +59,8 @@ export const config = {
   telegramBotUsername: optional('TELEGRAM_BOT_USERNAME'),
   /** شناسه‌های تلگرام ادمین (جدا با کاما) — پنل ادمین / احراز / تأیید پرداخت */
   telegramAdminIds: resolveAdminIds(),
-  /** رمز ورود پنل وقتی لیست ادمین خالی است (پیش‌فرض: petdate) */
-  adminPassword: optional('ADMIN_PASSWORD', 'petdate')!,
+  /** رمز ورود پنل وقتی لیست ادمین خالی است — بدون پیش‌فرض؛ باید در .env تنظیم شود */
+  adminPassword: optional('ADMIN_PASSWORD'),
   apiUrl: optional('API_URL', 'http://localhost:3001')!,
   webUrl: optional('WEB_URL', 'http://localhost:5173')!,
   /** Optional public URL (tunnel/prod) for Telegram inline link buttons. */
@@ -89,9 +89,23 @@ export function isTelegramAdmin(telegramId: string | number | undefined | null):
   return config.telegramAdminIds.includes(String(telegramId));
 }
 
-/** بررسی رمز پنل ادمین */
+export const ADMIN_PASSWORD_MISSING_MESSAGE =
+  'ADMIN_PASSWORD is not set. The admin panel has no default password; set ' +
+  'ADMIN_PASSWORD in .env to a value only you know, then restart.';
+
+/**
+ * بدون پیش‌فرض: اسکریپت دیپلوی وقتی `.env` وجود ندارد آن را از `.env.example`
+ * می‌سازد، پس هر مقدار پیش‌فرضی روی سرور تازه یعنی رمز ادمینِ عمومی.
+ */
+export function assertAdminPasswordConfigured(): void {
+  if (!config.adminPassword) throw new Error(ADMIN_PASSWORD_MISSING_MESSAGE);
+}
+
+/** بررسی رمز پنل ادمین — اگر رمزی تنظیم نشده باشد هیچ ورودی پذیرفته نمی‌شود */
 export function checkAdminPassword(password: string): boolean {
-  return password.trim() === config.adminPassword;
+  const expected = config.adminPassword;
+  if (!expected) return false;
+  return password.trim() === expected;
 }
 
 export function assertBotToken(): string {

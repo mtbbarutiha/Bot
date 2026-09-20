@@ -4,6 +4,7 @@ import net from 'net';
 import os from 'os';
 import type { UserRole } from '@petdate/shared';
 import { SITE, USER_ROLES } from '@petdate/shared';
+import { isAdminPasswordConfigured, requireAdminPassword } from '../config/admin-auth';
 import {
   hasElasticsearchConfig,
   hasPostgresConfig,
@@ -41,13 +42,26 @@ const adminLoginLimit = rateLimit({
   message: 'تلاش ورود ادمین زیاد است. کمی بعد دوباره تلاش کن.',
 });
 
-function adminPassword(): string {
-  return (process.env.ADMIN_PASSWORD || 'petdate').trim() || 'petdate';
+/**
+ * Never falls back to a built-in password: an unconfigured server must lock the
+ * panel, not open it with a value anyone can read in the repo.
+ */
+function matchesAdminPassword(candidate: string): boolean {
+  if (!candidate) return false;
+  return candidate === requireAdminPassword();
+}
+
+function adminPasswordUnavailable(res: Response): void {
+  res.status(503).json({ error: 'پنل ادمین پیکربندی نشده است' });
 }
 
 function requireAdmin(req: Request, res: Response, next: NextFunction): void {
   if (req.path === '/auth/login' && req.method === 'POST') {
     next();
+    return;
+  }
+  if (!isAdminPasswordConfigured()) {
+    adminPasswordUnavailable(res);
     return;
   }
   // Header only — never accept password via query string (leaks into access logs / Referer).
@@ -56,7 +70,7 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
     req.body && typeof req.body === 'object' && typeof (req.body as { password?: string }).password === 'string'
       ? (req.body as { password: string }).password
       : '';
-  if ((header || bodyPwd) !== adminPassword()) {
+  if (!matchesAdminPassword(header || bodyPwd)) {
     res.status(401).json({ error: 'دسترسی ادمین مجاز نیست' });
     return;
   }
@@ -66,8 +80,12 @@ function requireAdmin(req: Request, res: Response, next: NextFunction): void {
 adminRouter.use(requireAdmin);
 
 adminRouter.post('/auth/login', adminLoginLimit, (req, res) => {
+  if (!isAdminPasswordConfigured()) {
+    adminPasswordUnavailable(res);
+    return;
+  }
   const password = typeof req.body?.password === 'string' ? req.body.password : '';
-  if (password !== adminPassword()) {
+  if (!matchesAdminPassword(password)) {
     res.status(401).json({ error: 'رمز عبور اشتباه است' });
     return;
   }

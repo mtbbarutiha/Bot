@@ -15,7 +15,7 @@ export async function reportBotError(opts: {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-admin-password': config.adminPassword,
+        'x-admin-password': config.adminPassword ?? '',
       },
       body: JSON.stringify({
         level: opts.level ?? 'error',

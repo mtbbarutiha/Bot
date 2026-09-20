@@ -5,6 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import type { GameType } from '@petdate/shared';
 import { dbService, getDb, getResolvedDatabasePath } from './db';
+import { assertAdminPasswordConfigured } from './config/admin-auth';
 import {
   hasElasticsearchConfig,
   hasPostgresConfig,
@@ -42,6 +43,13 @@ try {
   dns.setDefaultResultOrder('ipv4first');
 } catch {
   /* older Node */
+}
+
+try {
+  assertAdminPasswordConfigured();
+} catch (err) {
+  console.error(`FATAL: ${(err as Error).message}`);
+  process.exit(1);
 }
 
 getDb();
