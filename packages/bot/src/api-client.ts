@@ -7,6 +7,7 @@ import type {
   PetSpecies,
   PlaydateRequest,
   PlaydateStatus,
+  PublicProvider,
   User,
   UserRole,
   VetConsultation,
@@ -15,7 +16,11 @@ import { config } from './config';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${config.apiUrl}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(config.internalApiToken ? { 'x-internal-token': config.internalApiToken } : {}),
+      ...init?.headers,
+    },
     ...init,
   });
   if (!res.ok) {
@@ -558,9 +563,9 @@ export async function updateVetConsultationStatus(
   });
 }
 
-/** دامپزشک‌های واجد شرایط اتصال سریع */
-export async function listVerifiedVets(): Promise<User[]> {
-  return request<User[]>('/api/users/vets/verified');
+/** دامپزشک‌های واجد شرایط اتصال سریع — کارت عمومی، بدون شماره تماس */
+export async function listVerifiedVets(): Promise<PublicProvider[]> {
+  return request<PublicProvider[]>('/api/users/vets/verified');
 }
 
 /** همه دامپزشک‌ها برای پنل ادمین */

@@ -62,6 +62,8 @@ export const config = {
   /** رمز ورود پنل وقتی لیست ادمین خالی است (پیش‌فرض: petdate) */
   adminPassword: optional('ADMIN_PASSWORD', 'petdate')!,
   apiUrl: optional('API_URL', 'http://localhost:3001')!,
+  /** توکن مشترک برای فراخوان داخلی API — بدون آن پاسخ‌ها عمومی/محدود می‌شوند */
+  internalApiToken: optional('INTERNAL_API_TOKEN'),
   webUrl: optional('WEB_URL', 'http://localhost:5173')!,
   /** Optional public URL (tunnel/prod) for Telegram inline link buttons. */
   publicWebUrl: optional('PUBLIC_WEB_URL'),
